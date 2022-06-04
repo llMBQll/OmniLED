@@ -3,9 +3,11 @@ use std::ptr::null_mut;
 
 use libloading::Library;
 
+use common_rs::managed_string::ManagedString;
+
 type Context = *mut c_void;
 type InitializeFn = fn(*mut Context) -> i32;
-type UpdateFn = fn(Context) -> i32;
+type UpdateFn = fn(Context, *mut ManagedString) -> i32;
 type FinalizeFn = fn(Context) -> i32;
 
 pub struct Plugin {
@@ -39,7 +41,9 @@ impl Plugin {
     }
 
     pub fn update(&self) {
-        (self.update_fn)(self.ctx);
+        let mut str = ManagedString::new();
+        (self.update_fn)(self.ctx, &mut str);
+        println!("{}", &str);
     }
 }
 
