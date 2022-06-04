@@ -15,7 +15,7 @@ typedef struct ManagedString
 
 void default_deleter(char* string, size_t _length)
 {
-    printf("[C] Deleter called on %p\n", string);
+    printf("[C]    Deleter called on [0x%p]\n", string);
     free(string);
 }
 

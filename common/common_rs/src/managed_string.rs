@@ -8,7 +8,7 @@ use std::ptr::{copy_nonoverlapping, null_mut};
 pub struct ManagedString {
     str: *mut u8,
     len: usize,
-    del: fn(*mut u8, usize),
+    del: extern fn(*mut u8, usize),
 }
 
 impl From<&String> for ManagedString {
@@ -37,13 +37,13 @@ impl Drop for ManagedString {
 }
 
 impl ManagedString {
-    fn default_deleter(str: *mut u8, len: usize) {
-        println!("[Rust] Deleter called on {:p}", str);
+    extern fn default_deleter(str: *mut u8, len: usize) {
+        println!("[Rust] Deleter called on [{:018p}]", str);
         if str.is_null() {
             return;
         }
         let layout = Layout::from_size_align(len + 1, 1).expect("Invalid layout");
-        unsafe { dealloc(str as *mut u8, layout); }
+        unsafe { dealloc(str, layout); }
     }
 
     pub fn new() -> Self {
