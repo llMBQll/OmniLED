@@ -13,13 +13,18 @@ typedef struct ManagedString
     deleter_t del;
 } ManagedString;
 
-void default_deleter(char* string, size_t _length)
+static void default_deleter(char* string, size_t _length)
 {
-    printf("[C]    Deleter called on [0x%p]\n", string);
+    printf("[0x%p] - C default deleter\n", string);
     free(string);
 }
 
-ManagedString managed_string_new()
+static void static_deleter(char* string, size_t _length)
+{
+    printf("[0x%p] - C static deleter\n", string);
+}
+
+static ManagedString managed_string_new()
 {
     ManagedString s = {
         .str = NULL,
@@ -29,9 +34,11 @@ ManagedString managed_string_new()
     return s;
 }
 
-ManagedString managed_string_from(const char* string, size_t length)
+static ManagedString managed_string_copy_temp(const char* string, size_t length)
 {
     char* str = (char*)malloc(length + 1);
+    printf("[0x%p] - C default alloc\n", str);
+    fflush(stdout);
     strcpy_s(str, length + 1, string);
 
     ManagedString s = {
@@ -42,7 +49,37 @@ ManagedString managed_string_from(const char* string, size_t length)
     return s;
 }
 
-void managed_string_delete(ManagedString* string)
+static ManagedString managed_string_move_temp(char* string, size_t length)
+{
+    ManagedString s = {
+        .str = string,
+        .len = length,
+        .del = default_deleter
+    };
+    return s;
+}
+
+static ManagedString managed_string_move_temp_with_deleter(char* string, size_t length, deleter_t deleter)
+{
+    ManagedString s = {
+        .str = string,
+        .len = length,
+        .del = deleter
+    };
+    return s;
+}
+
+static ManagedString managed_string_from_static(const char* string, size_t length)
+{
+    ManagedString s = {
+        .str = (char*)string,
+        .len = length,
+        .del = static_deleter
+    };
+    return s;
+}
+
+static void managed_string_delete(ManagedString* string)
 {
     string->del(string->str, string->len);
 }

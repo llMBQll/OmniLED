@@ -1,3 +1,3 @@
 [workspace]
 
-members = ["steelseries_oled", "plugins/rust_test", "common/common_rs", "plugins/c_test"]
+members = ["steelseries_oled", "plugins/rust_test", "common/common_rs", "plugins/clock"]
