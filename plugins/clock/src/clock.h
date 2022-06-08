@@ -1,11 +1,12 @@
 #pragma once
 
+#include <time.h>
 #include <stdint.h>
 #include <stdbool.h>
 
 typedef struct Clock
 {
-    uint64_t timestamp;
+    struct tm date_time;
     bool updated;
 } Clock;
 

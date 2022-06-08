@@ -1,16 +1,13 @@
+use std::collections::HashMap;
 use std::ffi::c_void;
 use std::ptr::null_mut;
 
 use libloading::Library;
+use serde_json::Value;
 
-use common_rs::managed_string::ManagedString;
-
-type Context = *mut c_void;
-type InitializeFn = fn(*mut Context) -> i32;
-type DisplayNameFn = fn(Context, *mut ManagedString) -> i32;
-type TypesFn = fn(Context, *mut ManagedString) -> i32;
-type UpdateFn = fn(Context, *mut ManagedString) -> i32;
-type FinalizeFn = fn(Context) -> i32;
+use common_rs::interface::{
+    Context, DisplayNameFn, FinalizeFn, InitializeFn, ManagedString, TypesFn, UpdateFn, StatusCode
+};
 
 pub struct Plugin {
     _lib: Library,
@@ -20,6 +17,12 @@ pub struct Plugin {
     update_fn: UpdateFn,
     finalize_fn: FinalizeFn,
 }
+
+// #[derive(Serialize, Deserialize, Debug)]
+// #[serde(transparent)]
+// pub struct Types {
+//     pub types: HashMap<String, String>
+// }
 
 impl Plugin {
     pub fn new(path: &String) -> Result<Plugin, Box<dyn std::error::Error>> {
@@ -35,7 +38,7 @@ impl Plugin {
             let ctx_handle: *mut Context = &mut ctx;
 
             match initialize_fn(ctx_handle) {
-                0 => Ok(Plugin {
+                StatusCode::Ok => Ok(Plugin {
                     _lib: library,
                     ctx,
                     display_name_fn,
@@ -43,7 +46,7 @@ impl Plugin {
                     update_fn,
                     finalize_fn,
                 }),
-                code => Err(format!("Init failed (code: {})", code))?
+                code => Err(format!("Init failed (code: {:?})", code))?
             }
         }
     }
@@ -54,16 +57,22 @@ impl Plugin {
         str.to_string()
     }
 
-    pub fn types(&self) -> String {
+    pub fn types(&self) -> Option<HashMap<String, String>> {
         let mut str = ManagedString::new();
         (self.types_fn)(self.ctx, &mut str);
-        str.to_string()
+        return match str.len() {
+            0 => None,
+            _ => serde_json::from_str(str.to_str().unwrap()).unwrap()
+        };
     }
 
-    pub fn update(&self) -> String {
+    pub fn update(&self) -> Option<HashMap<String, Value>> {
         let mut str = ManagedString::new();
         (self.update_fn)(self.ctx, &mut str);
-        str.to_string()
+        return match str.len() {
+            0 => None,
+            _ => serde_json::from_str(str.to_str().unwrap()).unwrap()
+        };
     }
 }
 

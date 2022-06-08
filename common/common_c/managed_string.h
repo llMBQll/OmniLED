@@ -15,13 +15,12 @@ typedef struct ManagedString
 
 static void default_deleter(char* string, size_t _length)
 {
-    printf("[0x%p] - C default deleter\n", string);
     free(string);
 }
 
 static void static_deleter(char* string, size_t _length)
 {
-    printf("[0x%p] - C static deleter\n", string);
+
 }
 
 static ManagedString managed_string_new()
@@ -37,8 +36,6 @@ static ManagedString managed_string_new()
 static ManagedString managed_string_copy_temp(const char* string, size_t length)
 {
     char* str = (char*)malloc(length + 1);
-    printf("[0x%p] - C default alloc\n", str);
-    fflush(stdout);
     strcpy_s(str, length + 1, string);
 
     ManagedString s = {

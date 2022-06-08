@@ -24,6 +24,20 @@ pub unsafe extern "C" fn initialize(ctx: *mut Context) -> i32 {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn display_name(ctx: Context, str: *mut ManagedString) -> i32 {
+    let data = ctx as *const Data;
+    *str = ManagedString::from(&(*data).msg);
+    0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn types(ctx: Context, str: *mut ManagedString) -> i32 {
+    let data = ctx as *const Data;
+    *str = ManagedString::from(&(*data).msg);
+    0
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn update(ctx: Context, str: *mut ManagedString) -> i32 {
     let data = ctx as *const Data;
     *str = ManagedString::from(&(*data).msg);

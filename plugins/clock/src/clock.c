@@ -2,16 +2,15 @@
 
 #include <time.h>
 #include <stdlib.h>
+#include <string.h>
 
 Clock* clock_new()
 {
     Clock* clock = malloc(sizeof(Clock));
     if (!clock)
         return NULL;
-
-    clock->timestamp = 0;
-    clock->updated = false;
-
+    memset(clock, 0, sizeof(Clock));
+    clock->date_time.tm_sec = -1; // force update on the first call
     return clock;
 }
 
@@ -22,10 +21,12 @@ void clock_delete(Clock* clock)
 
 void clock_update(Clock* clock)
 {
-    uint64_t last = clock->timestamp;
-    uint64_t current = time(NULL);
+    time_t raw_time;
+    struct tm current;
 
-    clock->updated = last != current;
-    if (clock->updated)
-        clock->timestamp = current;
+    time(&raw_time);
+    localtime_s(&current, &raw_time);
+
+    clock->updated = current.tm_sec != clock->date_time.tm_sec;
+    clock->date_time = current;
 }

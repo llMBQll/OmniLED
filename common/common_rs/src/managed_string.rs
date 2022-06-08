@@ -2,7 +2,7 @@ use std::alloc::{alloc, dealloc, Layout};
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 use std::os::raw::c_char;
-use std::ptr::{copy_nonoverlapping, null_mut};
+use std::ptr::copy_nonoverlapping;
 
 #[repr(C)]
 pub struct ManagedString {
@@ -38,7 +38,6 @@ impl Drop for ManagedString {
 
 impl ManagedString {
     extern fn default_deleter(str: *mut u8, len: usize) {
-        println!("[Rust] Deleter called on [{:018p}]", str);
         if str.is_null() {
             return;
         }
@@ -46,17 +45,23 @@ impl ManagedString {
         unsafe { dealloc(str, layout); }
     }
 
+    extern fn static_deleter(_str: *mut u8, _len: usize) {}
+
     pub fn new() -> Self {
         Self {
-            str: null_mut(),
+            str: "\0".as_ptr() as *mut u8,
             len: 0,
-            del: ManagedString::default_deleter,
+            del: ManagedString::static_deleter,
         }
     }
 
     pub fn to_str(&self) -> Result<&str, std::str::Utf8Error> {
         let tmp = unsafe { CStr::from_ptr(self.str as *const c_char) };
         tmp.to_str()
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
     }
 }
 
