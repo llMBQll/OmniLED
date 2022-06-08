@@ -9,9 +9,9 @@ pub enum StatusCode {
     Error = 1,
 }
 
-pub type Context = *mut c_void;
-pub type InitializeFn = fn(*mut Context) -> StatusCode;
-pub type DisplayNameFn = fn(Context, *mut ManagedString) -> StatusCode;
-pub type TypesFn = fn(Context, *mut ManagedString) -> StatusCode;
-pub type UpdateFn = fn(Context, *mut ManagedString) -> StatusCode;
-pub type FinalizeFn = fn(Context) -> StatusCode;
+pub type Context = c_void;
+pub type InitializeFn = fn(*mut *mut Context) -> StatusCode;
+pub type DisplayNameFn = fn(*mut Context, *mut ManagedString) -> StatusCode;
+pub type TypesFn = fn(*mut Context, *mut ManagedString) -> StatusCode;
+pub type UpdateFn = fn(*mut Context, *mut ManagedString) -> StatusCode;
+pub type FinalizeFn = fn(*mut Context) -> StatusCode;

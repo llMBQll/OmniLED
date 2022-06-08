@@ -1,17 +1,16 @@
 use std::collections::HashMap;
-use std::ffi::c_void;
 use std::ptr::null_mut;
 
 use libloading::Library;
 use serde_json::Value;
 
 use common_rs::interface::{
-    Context, DisplayNameFn, FinalizeFn, InitializeFn, ManagedString, TypesFn, UpdateFn, StatusCode
+    Context, DisplayNameFn, FinalizeFn, InitializeFn, ManagedString, StatusCode, TypesFn, UpdateFn,
 };
 
 pub struct Plugin {
     _lib: Library,
-    ctx: *mut c_void,
+    ctx: *mut Context,
     display_name_fn: DisplayNameFn,
     types_fn: TypesFn,
     update_fn: UpdateFn,
@@ -34,8 +33,8 @@ impl Plugin {
             let update_fn: UpdateFn = *library.get(b"update")?;
             let finalize_fn: FinalizeFn = *library.get(b"finalize")?;
 
-            let mut ctx: Context = null_mut();
-            let ctx_handle: *mut Context = &mut ctx;
+            let mut ctx: *mut Context = null_mut();
+            let ctx_handle: *mut *mut Context = &mut ctx;
 
             match initialize_fn(ctx_handle) {
                 StatusCode::Ok => Ok(Plugin {
