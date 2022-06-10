@@ -49,13 +49,13 @@ StatusCode update_impl(Context* ctx, ManagedString* json)
     struct tm* time = &clock->date_time;
     int n = snprintf(buf, BUF_SIZE,
         "{"
-            "\"Seconds\":\"%d\","
-            "\"Minutes\":\"%d\","
-            "\"Hours\":\"%d\","
-            "\"Month Day\":\"%d\","
-            "\"Month\":\"%d\","
-            "\"Year\":\"%d\","
-            "\"Week Day\":\"%d\""
+            "\"Seconds\":%d,"
+            "\"Minutes\":%d,"
+            "\"Hours\":%d,"
+            "\"Month Day\":%d,"
+            "\"Month\":%d,"
+            "\"Year\":%d,"
+            "\"Week Day\":%d"
         "}",
         time->tm_sec,
         time->tm_min,
