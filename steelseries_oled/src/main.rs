@@ -1,40 +1,42 @@
-use crate::renderer::renderer::Renderer;
-use crate::steelseries_api::SteelSeriesAPI;
+use std::collections::HashMap;
+use std::time;
 
-use std::{thread, time};
+use rust_lisp::model::Value;
+use rust_lisp::parser::parse;
 
-mod renderer;
-mod steelseries_api;
+use crate::lisp_handler::lisp_handler::LispHandler;
 
-const WIDTH: usize = 128;
-const HEIGHT: usize = 40;
+mod lisp_handler;
 
-const HANDLER: &str = r#"(handler \"CLOCK_UPDATE\" (lambda (data) (on-device 'screened show-image: (list-to-bytearray (image-data: (frame: data)))))) (add-event-zone-use-with-specifier \"CLOCK_UPDATE\" \"one\" 'screened)"#;
 
 fn main() {
-    let mut r = Renderer::new(HEIGHT, WIDTH);
+    let mut handlers = Vec::<Value>::new();
+    let mut ast = parse(r#" (text (format "{0:0>2}:{1:0>2}" CLOCK:Hours CLOCK:Minutes)) "#);
+    handlers.push(ast.next().unwrap().unwrap());
+    let mut ast = parse(r#" (bar (/ (* CLOCK:Seconds 100) 59)) "#);
+    handlers.push(ast.next().unwrap().unwrap());
+    let mut ast = parse(r#" (text (format "{0} {1}.{2:0>2}.{3:0>2}" (nth CLOCK:WeekDay (list "Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun")) CLOCK:MonthDay CLOCK:Month (% CLOCK:Year 100))) "#);
+    handlers.push(ast.next().unwrap().unwrap());
+    let mut ast = parse(r#" (text CLOCK:Seconds) "#);
+    handlers.push(ast.next().unwrap().unwrap());
 
-    let mut api = SteelSeriesAPI::new();
-    api.remove_game(r#"{"game":"RUST_STEELSERIES_OLED"}"#).expect("");
-    api.game_metadata(r#"{"game":"RUST_STEELSERIES_OLED", "game_display_name":"[Rust] Steelseries OLED", "developer":"MBQ"}"#).expect("");
-    api.load_lisp_handlers(format!(r#"{{"game":"RUST_STEELSERIES_OLED", "golisp":"{}"}}"#, HANDLER).as_str()).expect("");
+    let str = "{\"Seconds\":59,\"Minutes\":6,\"Hours\":0,\"MonthDay\":12,\"Month\":6,\"Year\":2022,\"WeekDay\":0}";
+    let json: HashMap<String, serde_json::Value> = serde_json::from_str(str).unwrap();
 
-    let duration = time::Duration::from_millis(250);
-    loop {
-        for percent in 0..100 {
-            let update = serde_json::json!({
-                "game": "RUST_STEELSERIES_OLED",
-                "event": "CLOCK_UPDATE",
-                "data": {
-                    "value": 0,
-                    "frame": {
-                        "image-data": r.render(percent)
-                    }
-                }
-            });
-            // println!("{}", serde_json::to_string(&update).unwrap().as_str());
-            api.game_event(serde_json::to_string(&update).unwrap().as_str()).expect("");
-            thread::sleep(duration);
-        }
+    let name = String::from("CLOCK");
+
+    let mut handler = LispHandler::new();
+    handler.register(&name);
+
+    let begin = time::Instant::now();
+
+    handler.update(&name, &json);
+    let results = handler.process_handlers(&handlers);
+
+    let end = time::Instant::now();
+    println!("{}", (end - begin).as_micros());
+
+    for result in results {
+        println!("{}", result);
     }
 }
