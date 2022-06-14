@@ -40,20 +40,6 @@ impl LispHandler {
         }
     }
 
-    // pub fn _update(&mut self, plugin: &String, values: &HashMap<String, JsonValue>) {
-    //     let env  = self.env.as_ref().borrow_mut();
-    //     let map = match env.get(&Symbol::from(plugin.as_str())).unwrap() {
-    //         Value::HashMap(map) => map,
-    //         _ => panic!("HashMap expected")
-    //     };
-    //     let mut map = map.as_ref().borrow_mut();
-    //     for (key, value) in values {
-    //         *map
-    //             .entry(Value::Symbol(Symbol::from(key.as_str())))
-    //             .or_insert(Value::NIL) = Self::json_to_lisp(value);
-    //     }
-    // }
-
     pub fn process_handlers(&mut self, handlers: &Vec<Value>) -> Vec<Value> {
         let mut vec = Vec::with_capacity(handlers.len());
         for handler in handlers {
