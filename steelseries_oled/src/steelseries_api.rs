@@ -64,6 +64,7 @@ impl SteelSeriesAPI {
         self.call("/game_metadata", json)
     }
 
+    #[allow(unused)]
     pub fn bind_game_event(&mut self, json: &str) -> Result<Response, ureq::Error> {
         self.call("/bind_game_event", json)
     }
