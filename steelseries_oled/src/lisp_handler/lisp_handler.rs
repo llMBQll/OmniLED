@@ -140,10 +140,14 @@ impl LispHandler {
     }
 
     fn load_handler_functions(env: &mut Env) {
-        env.define(Symbol::from("%"), Value::NativeFunc(modulo));
-        // replace division operator to allow mixed int and float division and
+        // replace math operators to allow mixed int and float division and
         // return an error on division by zero rather than panicking
+
+        env.define(Symbol::from("+"), Value::NativeFunc(add));
+        env.define(Symbol::from("-"), Value::NativeFunc(subtract));
+        env.define(Symbol::from("*"), Value::NativeFunc(multiply));
         env.define(Symbol::from("/"), Value::NativeFunc(divide));
+        env.define(Symbol::from("%"), Value::NativeFunc(modulo));
         env.define(Symbol::from(":"), Value::NativeFunc(from_hashmap));
         env.define(Symbol::from("format"), Value::NativeFunc(format));
         env.define(Symbol::from("bar"), Value::NativeFunc(bar));

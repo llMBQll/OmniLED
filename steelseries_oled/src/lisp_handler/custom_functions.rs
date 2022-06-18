@@ -53,6 +53,31 @@ macro_rules! cast {
     };
 }
 
+macro_rules! try_impl {
+    ($a: ident, $b: ident, $func: ident, $type_a: ty, $type_b: ty, $type_to: ty, $conv: tt) => {
+        {
+            if let (Ok($a), Ok($b)) = (
+                 TryInto::<$type_a>::try_into($a),
+                 TryInto::<$type_b>::try_into($b),
+            ) {
+                 let x = $func($a as $type_to, $b as $type_to)?;
+                 return Ok($conv!(x));
+            }
+        }
+    }
+}
+
+macro_rules! try_perform {
+    ($a: ident, $b: ident, $func_i: ident, $func_f: ident) => {
+        {
+            try_impl!($a, $b, $func_i, IntType, IntType, IntType, int);
+            try_impl!($a, $b, $func_f, IntType, FloatType, FloatType, float);
+            try_impl!($a, $b, $func_f, FloatType, IntType, FloatType, float);
+            try_impl!($a, $b, $func_f, FloatType, FloatType, FloatType, float);
+        }
+    }
+}
+
 pub const CURRENT_INDEX_KEY: &str = "__current_index";
 pub const HASH_MAP_KEY: &str = "__hash_map";
 
@@ -65,56 +90,82 @@ pub fn modulo(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, Runtim
     }
 }
 
-pub fn divide(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
-    let handle_int = |a, b| {
-        match b {
-            0 => Err(RuntimeError { msg: String::from("In function \"%\": attempt to calculate the remainder with a divisor of zero") }),
-            _ => Ok(a / b)
-        }
+pub fn add(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+    let add_int = |a, b| -> Result<IntType, RuntimeError> {
+        Ok(a + b)
     };
 
-    #[allow(illegal_floating_point_literal_pattern)]
-        let handle_float = |a, b| {
-        match b {
-            0.0f32 => Err(RuntimeError { msg: String::from("In function \"%\": attempt to calculate the remainder with a divisor of zero") }),
-            _ => Ok(a / b)
+    let add_float = |a, b| -> Result<FloatType, RuntimeError> {
+        Ok(a + b)
+    };
+
+    let a = require_parameter("+", args, 0)?;
+    let b = require_parameter("+", args, 1)?;
+
+    try_perform!(a, b, add_int, add_float);
+
+    Err(RuntimeError {
+        msg: String::from("Function \"+\" requires arguments to be numbers"),
+    })
+}
+
+pub fn subtract(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+    let subtract_int = |a, b| -> Result<IntType, RuntimeError> {
+        Ok(a - b)
+    };
+
+    let subtract_float = |a, b| -> Result<FloatType, RuntimeError> {
+        Ok(a - b)
+    };
+
+    let a = require_parameter("-", args, 0)?;
+    let b = require_parameter("-", args, 1)?;
+
+    try_perform!(a, b, subtract_int, subtract_float);
+
+    Err(RuntimeError {
+        msg: String::from("Function \"-\" requires arguments to be numbers"),
+    })
+}
+
+pub fn multiply(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+    let multiply_int = |a, b| -> Result<IntType, RuntimeError> {
+        Ok(a * b)
+    };
+
+    let multiply_float = |a, b| -> Result<FloatType, RuntimeError> {
+        Ok(a * b)
+    };
+
+    let a = require_parameter("*", args, 0)?;
+    let b = require_parameter("*", args, 1)?;
+
+    try_perform!(a, b, multiply_int, multiply_float);
+
+    Err(RuntimeError {
+        msg: String::from("Function \"*\" requires arguments to be numbers"),
+    })
+}
+
+pub fn divide(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+    let handle_int = |a, b| {
+        if b == 0 {
+            return Err(RuntimeError { msg: String::from("In function \"/\": attempt to divide zero") })
         }
+        Ok(a / b)
+    };
+
+    let handle_float = |a, b| {
+        if b == 0.0 {
+            return Err(RuntimeError { msg: String::from("In function \"/\": attempt to divide zero") })
+        }
+        return Ok(a / b)
     };
 
     let a = require_parameter("/", args, 0)?;
     let b = require_parameter("/", args, 1)?;
 
-    if let (Ok(a), Ok(b)) = (
-        TryInto::<IntType>::try_into(a),
-        TryInto::<IntType>::try_into(b),
-    ) {
-        let x = handle_int(a, b)?;
-        return Ok(int!(x));
-    }
-
-    if let (Ok(a), Ok(b)) = (
-        TryInto::<FloatType>::try_into(a),
-        TryInto::<IntType>::try_into(b),
-    ) {
-        let x = handle_float(a, b as FloatType)?;
-        return Ok(float!(x));
-    }
-
-    if let (Ok(a), Ok(b)) = (
-        TryInto::<IntType>::try_into(a),
-        TryInto::<FloatType>::try_into(b),
-    ) {
-        let x = handle_float(a as FloatType, b)?;
-        return Ok(float!(x));
-    }
-
-    if let (Ok(a), Ok(b)) = (
-        TryInto::<FloatType>::try_into(a),
-        TryInto::<FloatType>::try_into(b),
-    ) {
-        let x = handle_float(a, b)?;
-        return Ok(float!(x));
-    }
+    try_perform!(a, b, handle_int, handle_float);
 
     Err(RuntimeError {
         msg: String::from("Function \"/\" requires arguments to be numbers"),
