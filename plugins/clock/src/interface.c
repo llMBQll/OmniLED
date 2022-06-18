@@ -12,9 +12,9 @@ StatusCode initialize_impl(Context** ctx)
     return STATUS_OK;
 }
 
-StatusCode display_name_impl(Context* ctx, ManagedString* string)
+StatusCode name_impl(Context* ctx, ManagedString* string)
 {
-    const char* display_name = "Clock";
+    const char* display_name = "CLOCK";
 
     *string = managed_string_from_static(display_name, strlen(display_name));
     return STATUS_OK;
@@ -27,10 +27,10 @@ StatusCode types_impl(Context* ctx, ManagedString* json)
             "\"Seconds\":\"number\","
             "\"Minutes\":\"number\","
             "\"Hours\":\"number\","
-            "\"Month Day\":\"number\","
+            "\"MonthDay\":\"number\","
             "\"Month\":\"number\","
             "\"Year\":\"number\","
-            "\"Week Day\":\"number\""
+            "\"WeekDay\":\"number\""
         "}";
 
     *json = managed_string_from_static(types, strlen(types));
@@ -52,18 +52,18 @@ StatusCode update_impl(Context* ctx, ManagedString* json)
             "\"Seconds\":%d,"
             "\"Minutes\":%d,"
             "\"Hours\":%d,"
-            "\"Month Day\":%d,"
+            "\"MonthDay\":%d,"
             "\"Month\":%d,"
             "\"Year\":%d,"
-            "\"Week Day\":%d"
+            "\"WeekDay\":%d"
         "}",
         time->tm_sec,
         time->tm_min,
         time->tm_hour,
         time->tm_mday,
-        time->tm_mon + 1,                      // [0, 11] -> [1, 12]
-        time->tm_year + 1900,                  // years since 1900 -> current year
-        time->tm_wday == 0 ? 7 : time->tm_wday // [0, 6] -> [1, 7] - move Sunday from 0 to 7
+        time->tm_mon,
+        time->tm_year + 1900,                      // years since 1900 -> current year
+        time->tm_wday == 0 ? 6 : time->tm_wday - 1 // [Sun, Mon, Tue, Wed, Thu, Fri, Sat] -> [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
     );
     if (n < 0)
         return STATUS_ERROR;

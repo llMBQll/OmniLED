@@ -1,15 +1,22 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use rust_lisp::model::{FloatType, IntType};
 use rust_lisp::prelude::*;
 use serde_json::Value as JsonValue;
 
+use crate::cast;
 use crate::lisp_handler::custom_functions::*;
+use crate::model::display::Display;
+use crate::model::operation::{Bar, Operation, ScrollingText, Text};
+use crate::model::position::Position;
 
 pub struct LispHandler {
-    env: Rc<RefCell<Env>>,
+    global_env: Rc<RefCell<Env>>,
+    local_envs: HashMap<String, Rc<RefCell<Env>>>,
+    handlers: HashMap<String, Vec<(Value, Position)>>,
+    sensitivity_lists: Vec<(String, HashSet<String>)>,
 }
 
 impl LispHandler {
@@ -17,53 +24,131 @@ impl LispHandler {
         let mut env = default_env();
         Self::load_handler_functions(&mut env);
         Self {
-            env: Rc::new(RefCell::new(env))
+            global_env: Rc::new(RefCell::new(env)),
+            local_envs: HashMap::new(),
+            handlers: HashMap::new(),
+            sensitivity_lists: Vec::new(),
         }
     }
 
-    pub fn register(&mut self, plugin: &String) {
-        let mut env = self.env.as_ref().borrow_mut();
-        env.define(
-            Symbol::from(plugin.as_str()),
-            Value::HashMap(Rc::new(RefCell::new(HashMap::new()))),
-        )
+    pub fn register(&mut self, displays: Vec<Display>) -> Result<(), RuntimeError> {
+        self.local_envs = HashMap::new();
+        self.handlers = HashMap::new();
+        self.sensitivity_lists = Vec::new();
+
+        for display in displays {
+            self.register_single(display)?;
+        }
+        Ok(())
     }
 
-    pub fn update(&mut self, plugin: &String, values: &HashMap<String, JsonValue>) {
-        let mut env = self.env.as_ref().borrow_mut();
+    pub fn update(&mut self, plugins: &Vec<(String, Option<HashMap<String, JsonValue>>)>) -> Result<Vec<Operation>, RuntimeError> {
+        let mut changed = Vec::<String>::new();
 
-        for (key, value) in values {
-            env.define(
-                Symbol::from(format!("{}:{}", plugin, key).as_str()),
-                Self::json_to_lisp(value),
-            );
+        for (name, values) in plugins {
+            if values.is_none() {
+                continue;
+            }
+            for (key, value) in values.as_ref().unwrap() {
+                let symbol_name = format!("{}:{}", name, key);
+                self.global_env.as_ref().borrow_mut().define(
+                    Symbol::from(symbol_name.as_str()),
+                    Self::json_to_lisp(&value),
+                );
+                changed.push(symbol_name)
+            }
         }
+
+        for value in &changed {
+            for (name, list) in &self.sensitivity_lists {
+                if list.contains(value) {
+                    return self.process_handlers(&name);
+                }
+            }
+        }
+
+        Ok(Vec::new())
     }
 
-    pub fn process_handlers(&mut self, handlers: &Vec<Value>) -> Vec<Value> {
-        let mut vec = Vec::with_capacity(handlers.len());
-        for handler in handlers {
-            let x = eval(self.env.clone(), handler).unwrap();
-            vec.push(x);
+    fn register_single(&mut self, display: Display) -> Result<(), RuntimeError> {
+        let mut local = Env::extend(self.global_env.clone());
+        local.define(Symbol::from(HASH_MAP_KEY), Value::HashMap(Rc::new(RefCell::new(HashMap::new()))));
+        self.local_envs.insert(display.name.to_string(), Rc::new(RefCell::new(local)));
+
+        let mut handlers = Vec::new();
+        for (code, pos) in display.parts {
+            let mut ast = parse(code.as_str());
+            let res = match ast.next() {
+                Some(res) => res,
+                None => {
+                    // allow empty handlers as space fillers
+                    return Ok(());
+                }
+            };
+            let handler = match res {
+                Ok(handler) => handler,
+                Err(error) => {
+                    return Err(RuntimeError { msg: format!("Error while parsing the handler: {}", error.msg) });
+                }
+            };
+            handlers.push((handler, pos));
         }
-        vec
+
+        self.handlers.insert(display.name.to_string(), handlers);
+        self.sensitivity_lists.push((display.name, display.sensitivity_list));
+
+        Ok(())
+    }
+
+    fn process_handlers(&self, name: &String) -> Result<Vec<Operation>, RuntimeError> {
+        let env = self.local_envs.get(name).unwrap();
+        let local = env.clone();
+
+        let mut vec = Vec::new();
+        let mut hash = 0;
+        for (handler, position) in self.handlers.get(name).unwrap() {
+            local.as_ref().borrow_mut().define(Symbol::from(CURRENT_INDEX_KEY), Value::Int(hash));
+            let x = eval(env.clone(), handler)?;
+            vec.push(Self::value_to_operation(&x, position)?);
+            hash += 1;
+        }
+        Ok(vec)
+    }
+
+    fn value_to_operation(value: &Value, position: &Position) -> Result<Operation, RuntimeError> {
+        // TODO handle errors
+        // TODO better operation constructors
+        let list = cast!(value, Value::List);
+        let mut iter = list.into_iter();
+        let op = cast!(iter.next().unwrap(), Value::String);
+        match op.as_str() {
+            "bar" => {
+                let value = cast!(iter.next().unwrap(), Value::Float);
+                Ok(Operation::Bar(Bar { value, position: position.clone() }))
+            }
+            "text" => {
+                let text = cast!(iter.next().unwrap(), Value::String);
+                Ok(Operation::Text(Text { text, position: position.clone() }))
+            }
+            "scrolling-text" => {
+                let text = cast!(iter.next().unwrap(), Value::String);
+                let count = cast!(iter.next().unwrap(), Value::Int);
+                Ok(Operation::ScrollingText(ScrollingText { text, count, position: position.clone() }))
+            }
+            _ => Err(RuntimeError { msg: "Unknown operation".to_string() })
+        }
     }
 
     fn load_handler_functions(env: &mut Env) {
         env.define(Symbol::from("%"), Value::NativeFunc(modulo));
         // replace division operator to allow mixed int and float division and
         // return an error on division by zero rather than panicking
-
-        env.undefine(&Symbol::from("/"));
         env.define(Symbol::from("/"), Value::NativeFunc(divide));
-
         env.define(Symbol::from(":"), Value::NativeFunc(from_hashmap));
-
         env.define(Symbol::from("format"), Value::NativeFunc(format));
-
         env.define(Symbol::from("bar"), Value::NativeFunc(bar));
-
         env.define(Symbol::from("text"), Value::NativeFunc(text));
+        env.define(Symbol::from("scrolling-text"), Value::NativeFunc(scrolling_text));
     }
 
     fn json_to_lisp(json: &JsonValue) -> Value {

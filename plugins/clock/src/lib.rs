@@ -2,7 +2,7 @@ use common_rs::interface::{Context, StatusCode, ManagedString};
 
 extern {
     fn initialize_impl(ctx: *mut *mut Context) -> StatusCode;
-    fn display_name_impl(ctx: *mut Context, str: *mut ManagedString) -> StatusCode;
+    fn name_impl(ctx: *mut Context, str: *mut ManagedString) -> StatusCode;
     fn types_impl(ctx: *mut Context, str: *mut ManagedString) -> StatusCode;
     fn update_impl(ctx: *mut Context, str: *mut ManagedString) -> StatusCode;
     fn finalize_impl(ctx: *mut Context) -> StatusCode;
@@ -15,7 +15,7 @@ pub unsafe extern "C" fn initialize(ctx: *mut *mut Context) -> StatusCode {
 
 #[no_mangle]
 pub unsafe extern "C" fn display_name(ctx: *mut Context, str: *mut ManagedString) -> StatusCode {
-    display_name_impl(ctx, str)
+    name_impl(ctx, str)
 }
 
 #[no_mangle]

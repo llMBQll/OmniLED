@@ -1,3 +1,5 @@
+use crate::model::operation::Operation;
+use crate::Position;
 use crate::renderer::font_manager::FontManager;
 use crate::renderer::screen::Screen;
 
@@ -17,14 +19,26 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, percent: u32) -> Vec<u8> {
+    pub fn render(&mut self, operations: Vec<Operation>) -> Vec<u8> {
         let mut screen = Screen::new(self.height, self.width);
-        self.render_text(&mut screen, Position::new(0, 0, 11, self.width / 5), format!("{}%", percent));
-        self.render_progress(&mut screen, Position::new(2, self.width / 5, 9, self.width * 5 / 6), percent as usize);
-        self.render_text(&mut screen, Position::new(11, 0, 11, self.width / 2), String::from("XDDDDD"));
-        self.render_text(&mut screen, Position::new(22, 0, 11, self.width), String::from("Omegalul"));
-        self.render_progress(&mut screen, Position::new(38, 0, 2, self.width), percent as usize);
+        for operation in operations {
+            self.perform_operation(&mut screen, operation);
+        }
         screen.into()
+    }
+
+    fn perform_operation(&mut self, screen: &mut Screen, op: Operation) {
+        match op {
+            Operation::Bar(bar) => {
+                self.render_bar(screen, bar.position, bar.value)
+            }
+            Operation::Text(text) => {
+                self.render_text(screen, text.position, text.text)
+            }
+            Operation::ScrollingText(_scrolling_text) => {
+                todo!()
+            }
+        }
     }
 
     fn render_text(&mut self, screen: &mut Screen, pos: Position, text: String) {
@@ -59,31 +73,13 @@ impl Renderer {
         }
     }
 
-    fn render_progress(&mut self, screen: &mut Screen, pos: Position, percent: usize) {
+    fn render_bar(&mut self, screen: &mut Screen, pos: Position, percent: f32) {
+        let width = pos.width as f32 * percent / 100.0;
+
         for row in 0..pos.height {
-            for col in 0..pos.width * percent / 100  {
+            for col in 0..width as usize  {
                 screen.set(pos.y + row, pos.x + col);
             }
-        }
-    }
-}
-
-
-#[derive(Copy, Clone)]
-struct Position {
-    pub y: usize,
-    pub x: usize,
-    pub height: usize,
-    pub width: usize,
-}
-
-impl Position {
-    fn new(y: usize, x: usize, height: usize, width: usize) -> Self {
-        Self {
-            y,
-            x,
-            height,
-            width,
         }
     }
 }

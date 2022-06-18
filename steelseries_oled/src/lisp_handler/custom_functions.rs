@@ -10,7 +10,7 @@ use strfmt::strfmt;
 macro_rules! int {
     ($a:expr) => {
         {
-            Value::Int($a as IntType)
+            Value::Int(($a) as IntType)
         }
     }
 }
@@ -18,7 +18,7 @@ macro_rules! int {
 macro_rules! float {
     ($a:expr) => {
         {
-            Value::Float($a as FloatType)
+            Value::Float(($a) as FloatType)
         }
     }
 }
@@ -39,6 +39,22 @@ macro_rules! list {
         }
     }
 }
+
+#[macro_export]
+macro_rules! cast {
+    ($target: expr, $pat: path) => {
+        {
+            if let $pat(a) = $target {
+                a
+            } else {
+                panic!("mismatch variant when cast to {}", stringify!($pat));
+            }
+        }
+    };
+}
+
+pub const CURRENT_INDEX_KEY: &str = "__current_index";
+pub const HASH_MAP_KEY: &str = "__hash_map";
 
 pub fn modulo(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
     let a = require_int_parameter("%", args, 0)?;
@@ -165,6 +181,30 @@ pub fn text(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeE
     let text = require_parameter("text", args, 0)?;
 
     Ok(list![string!("text"), string!(value_to_string(text))])
+}
+
+pub fn scrolling_text(env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+    let text = require_parameter("scrolling_text", args, 0)?;
+    let text = string!(value_to_string(text));
+
+    let env = env.as_ref().borrow();
+    let key = env.get(&Symbol::from(CURRENT_INDEX_KEY)).unwrap();
+
+    let map = env.get(&Symbol::from(HASH_MAP_KEY)).unwrap();
+    let map = cast!(map, Value::HashMap);
+    let mut map = map.as_ref().borrow_mut();
+
+    let entry = map.entry(key).or_insert(list![text.clone(), int!(0)]);
+    let list = cast!(entry, Value::List);
+
+    let mut iter = list.into_iter();
+    let prev_str = iter.next().unwrap();
+    let mut cnt = cast!(iter.next().unwrap(), Value::Int);
+
+    cnt = if text == prev_str { cnt + 1 } else { 0 };
+    *entry = list![text.clone(), int!(cnt)];
+
+    Ok(list![string!("scrolling-text"), text, int!(cnt)])
 }
 
 fn value_to_string(value: &Value) -> String {

@@ -24,9 +24,9 @@ impl FontManager {
 
     pub fn get_character(&mut self, char_code: usize, height: usize) -> &Character {
         let characters = self.face_sizes.entry(height).or_insert(HashMap::new());
-        characters.entry(char_code).or_insert({
+        characters.entry(char_code).or_insert_with(|| {
             // TODO proper freetype error checking
-            self.face.set_char_size(0, (height * 5 * 64) as isize, 0, height as u32).unwrap();
+            self.face.set_char_size(0, (height * 2 * 60) as isize, 0, height as u32).unwrap();
             self.face.load_char(char_code, LoadFlag::RENDER).unwrap();
             self.face.glyph().get_glyph().unwrap().into()
         })
