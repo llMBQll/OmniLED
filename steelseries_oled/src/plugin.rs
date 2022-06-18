@@ -22,7 +22,7 @@ impl Plugin {
         unsafe {
             let library = Library::new(path)?;
             let initialize_fn: InitializeFn = *library.get(b"initialize")?;
-            let name_fn: NameFn = *library.get(b"display_name")?;
+            let name_fn: NameFn = *library.get(b"name")?;
             let types_fn: TypesFn = *library.get(b"types")?;
             let update_fn: UpdateFn = *library.get(b"update")?;
             let finalize_fn: FinalizeFn = *library.get(b"finalize")?;
@@ -44,7 +44,7 @@ impl Plugin {
         }
     }
 
-    pub fn display_name(&self) -> String {
+    pub fn name(&self) -> String {
         let mut str = ManagedString::new();
         (self.name_fn)(self.ctx, &mut str);
         str.to_string()

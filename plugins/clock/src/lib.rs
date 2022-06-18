@@ -14,7 +14,7 @@ pub unsafe extern "C" fn initialize(ctx: *mut *mut Context) -> StatusCode {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn display_name(ctx: *mut Context, str: *mut ManagedString) -> StatusCode {
+pub unsafe extern "C" fn name(ctx: *mut Context, str: *mut ManagedString) -> StatusCode {
     name_impl(ctx, str)
 }
 

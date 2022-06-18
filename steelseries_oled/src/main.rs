@@ -19,20 +19,8 @@ const HEIGHT: usize = 40;
 
 const HANDLER: &str = r#"(handler \"UPDATE\" (lambda (data) (on-device 'screened show-image: (list-to-bytearray (image-data: (frame: data)))))) (add-event-zone-use-with-specifier \"CLOCK_UPDATE\" \"one\" 'screened)"#;
 
-fn main() {
+fn clock_display() -> Display {
     let mut parts = Vec::new();
-    // parts.push((
-    //     r#" (text (format "{0} {1}.{2:0>2}.{3:0>2}" (nth CLOCK:WeekDay (list "Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun")) CLOCK:MonthDay CLOCK:Month (% CLOCK:Year 100))) "#.to_string(),
-    //     Position{ x: 0, y: 0, width: WIDTH, height: 12 }
-    // ));
-    // parts.push((
-    //     r#" (text (format "{0:0>2}:{1:0>2}:{2:0>2}" CLOCK:Hours CLOCK:Minutes CLOCK:Seconds)) "#.to_string(),
-    //     Position{ x: 0, y: 12, width: WIDTH, height: 12 }
-    // ));
-    // parts.push((
-    //     r#" (bar (/ (* CLOCK:Seconds 100) 59)) "#.to_string(),
-    //     Position{ x: 0, y: 25, width: WIDTH, height: 13 }
-    // ));
     parts.push((
         r#" (text (format "{0:0>2}:{1:0>2}" CLOCK:Hours CLOCK:Minutes)) "#.to_string(),
         Position{ x: 25, y: 0, width: WIDTH - 25, height: 36 }
@@ -47,14 +35,43 @@ fn main() {
     let mut sensitivity_list = HashSet::new();
     sensitivity_list.insert("CLOCK:Seconds".to_string());
 
-    let clock_display = Display::new(name, parts, sensitivity_list);
+    Display::new(name, parts, sensitivity_list)
+}
 
+fn audio_display() -> Display {
+    let mut parts = Vec::new();
+    parts.push((
+        r#" (if AUDIO:IsMuted (text "Muted") (text (format "{0:>3}" AUDIO:Volume))) "#.to_string(),
+        Position{ x: 0, y: 0, width: WIDTH, height: 20 }
+    ));
+    parts.push((
+        r#" (text AUDIO:Name) "#.to_string(),
+        Position{ x: 0, y: 20, width: WIDTH, height: 15 }
+    ));
+    parts.push((
+        r#" (bar AUDIO:Volume) "#.to_string(),
+        Position{ x: 0, y: 38, width: WIDTH, height: 2 }
+    ));
+
+    let name = String::from("__handler1");
+
+    let mut sensitivity_list = HashSet::new();
+    sensitivity_list.insert("AUDIO:Volume".to_string());
+    sensitivity_list.insert("AUDIO:IsMuted".to_string());
+
+    Display::new(name, parts, sensitivity_list)
+}
+
+fn main() {
     let c_plugin = Plugin::new(&String::from("target\\debug\\clock.dll")).expect("Failed to load");
+    let r_plugin = Plugin::new(&String::from("target\\debug\\audio.dll")).expect("Failed to load");
     let _ = c_plugin.types();
+    let _ = r_plugin.types();
 
     let mut handler = LispHandler::new();
     let mut displays = Vec::new();
-    displays.push(clock_display);
+    displays.push(clock_display());
+    displays.push(audio_display());
 
     let mut renderer = Renderer::new(HEIGHT, WIDTH);
     let mut api = SteelSeriesAPI::new();
@@ -64,13 +81,13 @@ fn main() {
 
     handler.register(displays).expect("Register failed");
 
-    let duration = time::Duration::from_millis(1000);
+    let duration = time::Duration::from_millis(50);
     loop {
         // let begin = time::Instant::now();
 
-        let map = c_plugin.update();
         let mut plugins = Vec::new();
-        plugins.push((c_plugin.display_name(), map));
+        plugins.push((r_plugin.name(), r_plugin.update()));
+        plugins.push((c_plugin.name(), c_plugin.update()));
         let results = handler.update(&plugins);
 
         match results {
