@@ -22,8 +22,16 @@ const HANDLER: &str = r#"(handler \"UPDATE\" (lambda (data) (on-device 'screened
 fn clock_display() -> Display {
     let mut parts = Vec::new();
     parts.push((
-        r#" (text (format "{0:0>2}:{1:0>2}" CLOCK:Hours CLOCK:Minutes)) "#.to_string(),
-        Position{ x: 25, y: 0, width: WIDTH - 25, height: 36 }
+        r#" (text (format "{0:0>2}" CLOCK:Hours)) "#.to_string(),
+        Position{ x: 20, y: 4, width: WIDTH - 20, height: 40 }
+    ));
+    parts.push((
+        r#" (text (format "{0:0>2}" CLOCK:Minutes)) "#.to_string(),
+        Position{ x: 67, y: 4, width: WIDTH - 65, height: 35 }
+    ));
+    parts.push((
+        r#" (text (format "{0:0>2} {1}" CLOCK:MonthDay (nth CLOCK:Month (list "Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec")))) "#.to_string(),
+        Position{ x: 69, y: 29, width: WIDTH - 65, height: 20 }
     ));
     parts.push((
         r#" (bar (/ (* CLOCK:Seconds 100) 59)) "#.to_string(),
@@ -41,12 +49,8 @@ fn clock_display() -> Display {
 fn audio_display() -> Display {
     let mut parts = Vec::new();
     parts.push((
-        r#" (if AUDIO:IsMuted (text "Muted") (text (format "{0:>3}" AUDIO:Volume))) "#.to_string(),
-        Position{ x: 0, y: 0, width: WIDTH, height: 20 }
-    ));
-    parts.push((
-        r#" (text AUDIO:Name) "#.to_string(),
-        Position{ x: 0, y: 20, width: WIDTH, height: 15 }
+        r#" (if AUDIO:IsMuted (text "MUTED") (text (format "[{0: >3}" AUDIO:Volume))) "#.to_string(),
+        Position{ x: 0, y: 4, width: WIDTH, height: 40 }
     ));
     parts.push((
         r#" (bar AUDIO:Volume) "#.to_string(),
@@ -63,15 +67,15 @@ fn audio_display() -> Display {
 }
 
 fn main() {
-    let c_plugin = Plugin::new(&String::from("target\\debug\\clock.dll")).expect("Failed to load");
-    let r_plugin = Plugin::new(&String::from("target\\debug\\audio.dll")).expect("Failed to load");
+    let c_plugin = Plugin::new(&String::from("target\\release\\clock.dll")).expect("Failed to load");
+    let r_plugin = Plugin::new(&String::from("target\\release\\audio.dll")).expect("Failed to load");
     let _ = c_plugin.types();
     let _ = r_plugin.types();
 
     let mut handler = LispHandler::new();
     let mut displays = Vec::new();
-    displays.push(clock_display());
     displays.push(audio_display());
+    displays.push(clock_display());
 
     let mut renderer = Renderer::new(HEIGHT, WIDTH);
     let mut api = SteelSeriesAPI::new();
@@ -83,12 +87,12 @@ fn main() {
 
     let duration = time::Duration::from_millis(50);
     loop {
-        // let begin = time::Instant::now();
+        let update_begin = time::Instant::now();
 
         let mut plugins = Vec::new();
         plugins.push((r_plugin.name(), r_plugin.update()));
         plugins.push((c_plugin.name(), c_plugin.update()));
-        let results = handler.update(&plugins);
+        let results = handler.update(&plugins, duration);
 
         match results {
             Ok(results) => {
@@ -120,6 +124,8 @@ fn main() {
             }
         }
 
-        thread::sleep(duration);
+        let update_end = time::Instant::now();
+        let update_duration = update_end - update_begin;
+        thread::sleep(duration.saturating_sub(update_duration));
     }
 }

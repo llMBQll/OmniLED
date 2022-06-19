@@ -34,6 +34,9 @@ impl Renderer {
             }
             Operation::Text(text) => {
                 self.render_text(screen, text.position, text.text)
+            },
+            Operation::FixedHeight(fixed_height) => {
+                self.render_text(screen, fixed_height.position, fixed_height.text)
             }
             Operation::ScrollingText(_scrolling_text) => {
                 todo!()
@@ -59,7 +62,7 @@ impl Renderer {
                     if y < 0 || x < 0 {
                         continue;
                     }
-                    if bitmap[(row, col)] > 32 {
+                    if bitmap[(row, col)] > 38 {
                         screen.set(y as usize + pos.y, x as usize + pos.x);
                     }
                 }

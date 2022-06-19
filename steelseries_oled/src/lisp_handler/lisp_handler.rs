@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use std::time::Duration;
 
 use rust_lisp::model::{FloatType, IntType};
 use rust_lisp::prelude::*;
@@ -9,7 +10,7 @@ use serde_json::Value as JsonValue;
 use crate::cast;
 use crate::lisp_handler::custom_functions::*;
 use crate::model::display::Display;
-use crate::model::operation::{Bar, Operation, ScrollingText, Text};
+use crate::model::operation::{Bar, FixedHeight, Operation, ScrollingText, Text};
 use crate::model::position::Position;
 
 pub struct LispHandler {
@@ -17,6 +18,8 @@ pub struct LispHandler {
     local_envs: HashMap<String, Rc<RefCell<Env>>>,
     handlers: HashMap<String, Vec<(Value, Position)>>,
     sensitivity_lists: Vec<(String, HashSet<String>)>,
+    last_priority: i64,
+    time_remaining: Duration,
 }
 
 impl LispHandler {
@@ -28,6 +31,8 @@ impl LispHandler {
             local_envs: HashMap::new(),
             handlers: HashMap::new(),
             sensitivity_lists: Vec::new(),
+            last_priority: 0,
+            time_remaining: Duration::ZERO,
         }
     }
 
@@ -42,7 +47,7 @@ impl LispHandler {
         Ok(())
     }
 
-    pub fn update(&mut self, plugins: &Vec<(String, Option<HashMap<String, JsonValue>>)>) -> Result<Vec<Operation>, RuntimeError> {
+    pub fn update(&mut self, plugins: &Vec<(String, Option<HashMap<String, JsonValue>>)>, interval: Duration) -> Result<Vec<Operation>, RuntimeError> {
         let mut changed = Vec::<String>::new();
 
         for (name, values) in plugins {
@@ -59,12 +64,20 @@ impl LispHandler {
             }
         }
 
-        for value in &changed {
-            for (name, list) in &self.sensitivity_lists {
+        self.time_remaining = self.time_remaining.saturating_sub(interval);
+        let mut priority = 0;
+        for (name, list) in &self.sensitivity_lists {
+            if self.last_priority < priority && !self.time_remaining.is_zero() {
+                return Ok(Vec::new())
+            }
+            for value in &changed {
                 if list.contains(value) {
+                    self.last_priority = priority;
+                    self.time_remaining = Duration::from_millis(2_000);
                     return self.process_handlers(&name);
                 }
             }
+            priority += 1;
         }
 
         Ok(Vec::new())
@@ -130,6 +143,10 @@ impl LispHandler {
                 let text = cast!(iter.next().unwrap(), Value::String);
                 Ok(Operation::Text(Text { text, position: position.clone() }))
             }
+            "fixed-height" => {
+                let text = cast!(iter.next().unwrap(), Value::String);
+                Ok(Operation::FixedHeight(FixedHeight { text, position: position.clone() }))
+            }
             "scrolling-text" => {
                 let text = cast!(iter.next().unwrap(), Value::String);
                 let count = cast!(iter.next().unwrap(), Value::Int);
@@ -152,6 +169,7 @@ impl LispHandler {
         env.define(Symbol::from("format"), Value::NativeFunc(format));
         env.define(Symbol::from("bar"), Value::NativeFunc(bar));
         env.define(Symbol::from("text"), Value::NativeFunc(text));
+        env.define(Symbol::from("fixed-height"), Value::NativeFunc(fixed_height));
         env.define(Symbol::from("scrolling-text"), Value::NativeFunc(scrolling_text));
     }
 

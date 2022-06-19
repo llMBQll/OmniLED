@@ -234,8 +234,14 @@ pub fn text(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeE
     Ok(list![string!("text"), string!(value_to_string(text))])
 }
 
+pub fn fixed_height(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+    let text = require_parameter("fixed-text", args, 0)?;
+
+    Ok(list![string!("fixed-height"), string!(value_to_string(text))])
+}
+
 pub fn scrolling_text(env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
-    let text = require_parameter("scrolling_text", args, 0)?;
+    let text = require_parameter("scrolling-text", args, 0)?;
     let text = string!(value_to_string(text));
 
     let env = env.as_ref().borrow();

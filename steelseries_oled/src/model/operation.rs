@@ -4,6 +4,7 @@ use crate::Position;
 pub enum Operation {
     Bar(Bar),
     Text(Text),
+    FixedHeight(FixedHeight),
     ScrollingText(ScrollingText),
 }
 
@@ -15,6 +16,12 @@ pub struct Bar {
 
 #[derive(Debug)]
 pub struct Text {
+    pub text: String,
+    pub position: Position,
+}
+
+#[derive(Debug)]
+pub struct FixedHeight {
     pub text: String,
     pub position: Position,
 }
