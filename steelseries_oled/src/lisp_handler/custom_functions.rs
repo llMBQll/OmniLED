@@ -234,10 +234,16 @@ pub fn text(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeE
     Ok(list![string!("text"), string!(value_to_string(text))])
 }
 
-pub fn fixed_height(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
-    let text = require_parameter("fixed-text", args, 0)?;
+pub fn text_strict(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+    let text = require_parameter("text-strict", args, 0)?;
 
-    Ok(list![string!("fixed-height"), string!(value_to_string(text))])
+    Ok(list![string!("text-strict"), string!(value_to_string(text))])
+}
+
+pub fn text_upper(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+    let text = require_parameter("text-upper", args, 0)?;
+
+    Ok(list![string!("text-upper"), string!(value_to_string(text))])
 }
 
 pub fn scrolling_text(env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {

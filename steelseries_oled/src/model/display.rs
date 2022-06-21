@@ -12,6 +12,7 @@ pub struct Display {
 }
 
 impl Display {
+    #[allow(unused)]
     pub fn new(name: String, parts: Vec<(String, Position)>, sensitivity_list: HashSet<String>) -> Self {
         Self {
             name,

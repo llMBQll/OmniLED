@@ -33,44 +33,41 @@ impl Renderer {
                 self.render_bar(screen, bar.position, bar.value)
             }
             Operation::Text(text) => {
-                self.render_text(screen, text.position, text.text)
+                self.render_text(screen, text.position, text.text, text.strict, text.upper)
             },
-            Operation::FixedHeight(fixed_height) => {
-                self.render_text(screen, fixed_height.position, fixed_height.text)
-            }
             Operation::ScrollingText(_scrolling_text) => {
                 todo!()
             }
         }
     }
 
-    fn render_text(&mut self, screen: &mut Screen, pos: Position, text: String) {
-        let mut cursor_x = 0;
+    fn render_text(&mut self, screen: &mut Screen, pos: Position, text: String, strict: bool, upper: bool) {
+        let mut cursor_x = 0 as i32;
+        let cursor_y = pos.height as i32;
 
+        let height = if upper { pos.height * 40 / 29 } else { pos.height };
         for character in text.chars() {
-            let character = self.font_manager.get_character(character as usize, pos.height);
+            let character = self.font_manager.get_character(character as usize, height);
             let bitmap = &character.bitmap;
-            let top = bitmap.top;
-            let left = bitmap.left;
+            let metrics = &character.metrics;
+
             for row in 0..bitmap.rows {
                 for col in 0..bitmap.cols {
-                    let y = pos.height as i32 + row as i32 - top;
-                    let x = cursor_x as i32 + col as i32 + left;
-                    // if y < 0 || y >= pos.height as i32 || x < 0 || x >= pos.width as i32 {
-                    //     continue;
-                    // }
-                    if y < 0 || x < 0 {
+                    let offset_y = (metrics.horiBearingY >> 6) as i32;
+                    let y = cursor_y + row as i32 - offset_y;
+                    let x = cursor_x + col as i32 + (metrics.horiBearingX >> 6) as i32;
+
+                    if y < 0 || x < 0 || x >= pos.width as i32 || (strict && y >= pos.height as i32) {
                         continue;
                     }
-                    if bitmap[(row, col)] > 38 {
+                    if bitmap[(row, col)] > 50 {
                         screen.set(y as usize + pos.y, x as usize + pos.x);
                     }
                 }
             }
 
-            let advance = character.bounding_box.x_max / 64 + 1;
-            cursor_x += if advance > 0 { advance as usize } else { 0 };
-            if cursor_x > pos.width {
+            cursor_x += (metrics.horiAdvance >> 6) as i32;
+            if cursor_x > pos.width as i32 {
                 break;
             }
         }

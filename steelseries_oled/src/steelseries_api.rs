@@ -80,4 +80,8 @@ impl SteelSeriesAPI {
     pub fn remove_game(&mut self, json: &str) -> Result<Response, ureq::Error> {
         self.call("/remove_game", json)
     }
+
+    pub fn game_heartbeat(&mut self, json: &str) -> Result<Response, ureq::Error> {
+        self.call("/game_heartbeat", json)
+    }
 }
