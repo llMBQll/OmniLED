@@ -1,3 +1,4 @@
+use serde_json::json;
 use common_rs::interface::{Context, ManagedString, StatusCode};
 use crate::spotify::Spotify;
 
@@ -33,7 +34,10 @@ pub unsafe extern "C" fn update(ctx: *mut Context, str: *mut ManagedString) -> S
     match (*spotify).update() {
         Some((artist, track)) => {
             *str = ManagedString::from(
-                &format!(r#" {{"Artist": "{}", "Track": "{}"}} "#, artist, track)
+                &json!({
+                    "Artist": artist,
+                    "Track": track
+                }).to_string()
             );
         }
         None => {}

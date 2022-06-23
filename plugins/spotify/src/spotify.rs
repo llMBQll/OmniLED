@@ -1,3 +1,4 @@
+use std::fs::File;
 use std::time::{Duration, Instant};
 use windows::{
     Win32::Foundation::{BOOL, HWND, LPARAM, HINSTANCE},
@@ -10,6 +11,13 @@ pub struct Spotify {
     hwnd: Option<HWND>,
     last_title: String,
     last_update: Instant,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Credentials {
+    pub client_id: String,
+    pub client_secret: String,
+    pub refresh_token: Option<String>
 }
 
 impl Spotify {
@@ -31,10 +39,10 @@ impl Spotify {
                         match title == self.last_title {
                             true => None,
                             false => {
-                                self.last_title = title.to_string();
-                                match title == "Spotify Premium" || title == "Spotify" {
+                                self.last_title = title;
+                                match self.last_title == "Spotify Premium" || self.last_title == "Spotify" {
                                     true => None,
-                                    false => Some(split_title(title))
+                                    false => Some(Self::split_title(&self.last_title))
                                 }
                             }
                         }
@@ -55,15 +63,25 @@ impl Spotify {
             }
         }
     }
+
+    fn split_title(title: &String) -> (String, String) {
+        let parts = title.split(" - ");
+        let mut iter = parts.into_iter();
+        let artist = iter.next().unwrap();
+        let track = iter.next().unwrap();
+        (artist.to_string(), track.to_string())
+    }
+
+    fn _login() {
+        // TODO handle errors
+
+        let file = File::open("spotify_credentials").unwrap();
+        let _credentials: Credentials = serde_json::from_reader(&file).unwrap();
+
+    }
 }
 
-fn split_title(title: String) -> (String, String) {
-    let parts = title.split(" - ");
-    let mut iter = parts.into_iter();
-    let artist = iter.next().unwrap();
-    let track = iter.next().unwrap();
-    (artist.to_string(), track.to_string())
-}
+
 
 fn get_title(hwnd: HWND) -> Option<String> {
     let mut buf: [u16; 256] = [0; 256];
@@ -78,13 +96,15 @@ fn get_title(hwnd: HWND) -> Option<String> {
 }
 
 fn get_hwnd() -> Option<HWND> {
-    let mut hwnd = HWND(0);
+    const EMPTY: HWND = HWND(0);
+
+    let mut hwnd = EMPTY;
     unsafe {
         let hwnd = &mut hwnd as *mut HWND;
         EnumWindows(Some(enum_callback), LPARAM(hwnd as isize));
     }
     match hwnd {
-        HWND(0) => None,
+        EMPTY => None,
         hwnd => Some(hwnd) 
     }
 }

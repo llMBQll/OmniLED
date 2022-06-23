@@ -19,14 +19,16 @@ const HEIGHT: usize = 40;
 
 const HANDLER: &str = r#"(handler \"UPDATE\" (lambda (data) (on-device 'screened show-image: (list-to-bytearray (image-data: (frame: data)))))) (add-event-zone-use-with-specifier \"CLOCK_UPDATE\" \"one\" 'screened)"#;
 
-
-
 fn path(name: &str) -> String {
     #[cfg(debug_assertions)]
-    return format!("target\\debug\\{}", name);
+    let str = format!("target\\debug\\{}", name);
 
     #[cfg(not(debug_assertions))]
-    return format!("target\\debug\\{}", name);
+    let str = format!("target\\release\\{}", name);
+
+    println!("Loading: {}", str);
+
+    str
 }
 
 fn main() {

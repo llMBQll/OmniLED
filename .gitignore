@@ -2,3 +2,4 @@
 /target
 cmake-build*
 Cargo.lock
+spotify_credentials
