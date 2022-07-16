@@ -1,52 +1,39 @@
-#include "clock.h"
 #include "interface.h"
+
+#include <time.h>
+#include <stdio.h>
+#include <Windows.h>
 
 #define BUF_SIZE 127
 
-StatusCode initialize_impl(Context** ctx)
+void send_update(OnUpdateCallbackFn on_update, struct tm* time);
+
+StatusCode run_impl(const int32_t* keep_running, OnUpdateCallbackFn on_update)
 {
-    Clock* clock = clock_new();
-    if (!clock)
-        return STATUS_ERROR;
-    *ctx = (Context*) clock;
+    struct tm last_update;
+    struct tm current;
+    time_t raw_time;
+
+    last_update.tm_sec = -1;
+    while (*keep_running)
+    {
+        time(&raw_time);
+        localtime_s(&current, &raw_time);
+        if (last_update.tm_sec != current.tm_sec)
+        {
+            last_update = current;
+            send_update(on_update, &current);
+        }
+        Sleep(50);
+    }
+
     return STATUS_OK;
 }
 
-StatusCode name_impl(Context* ctx, ManagedString* string)
-{
-    const char* display_name = "CLOCK";
-
-    *string = managed_string_from_static(display_name, strlen(display_name));
-    return STATUS_OK;
-}
-
-StatusCode types_impl(Context* ctx, ManagedString* json)
-{
-    const char* types =
-        "{"
-            "\"Seconds\":\"number\","
-            "\"Minutes\":\"number\","
-            "\"Hours\":\"number\","
-            "\"MonthDay\":\"number\","
-            "\"Month\":\"number\","
-            "\"Year\":\"number\","
-            "\"WeekDay\":\"number\""
-        "}";
-
-    *json = managed_string_from_static(types, strlen(types));
-    return STATUS_OK;
-}
-
-StatusCode update_impl(Context* ctx, ManagedString* json)
+void send_update(OnUpdateCallbackFn on_update, struct tm* time)
 {
     char buf[BUF_SIZE + 1];
 
-    Clock* clock = (Clock*) ctx;
-    clock_update(clock);
-    if (!clock->updated)
-        return STATUS_OK;
-
-    struct tm* time = &clock->date_time;
     int n = snprintf(buf, BUF_SIZE,
         "{"
             "\"Seconds\":%d,"
@@ -66,15 +53,6 @@ StatusCode update_impl(Context* ctx, ManagedString* json)
         time->tm_wday == 0 ? 6 : time->tm_wday - 1 // [Sun, Mon, Tue, Wed, Thu, Fri, Sat] -> [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
     );
     if (n < 0)
-        return STATUS_ERROR;
-
-    *json = managed_string_copy_temp(buf, (size_t) n);
-    return STATUS_OK;
-}
-
-StatusCode finalize_impl(Context* ctx)
-{
-    Clock* clock = (Clock*) ctx;
-    clock_delete(clock);
-    return STATUS_OK;
+        return;
+    on_update(buf, (uint32_t)n);
 }
