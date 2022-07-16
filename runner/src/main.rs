@@ -4,9 +4,8 @@ mod plugin;
 
 use std::{env, time};
 use std::net::{TcpStream};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::process;
-use std::str::from_utf8;
 use std::thread;
 use common_rs::interface::StatusCode;
 

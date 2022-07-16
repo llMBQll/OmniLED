@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::{thread, thread::JoinHandle};
 use std::sync::{Arc, Mutex};
 
@@ -42,16 +41,15 @@ impl Plugin {
         }
     }
 
-    pub async fn run(&mut self, on_update: OnUpdateCallbackFn) {
+    pub fn run(&mut self, on_update: OnUpdateCallbackFn) {
         self.running = 1;
         let ptr: Arc<Mutex<StatePtr>> = Arc::new(Mutex::new(StatePtr::new(&self.running)));
         let run_fn = self.run_fn;
 
-        unsafe {
-            self.handle = Some(thread::spawn(move || {
-                run_fn((*ptr.clone().lock().unwrap()).ptr, on_update)
-            }));
-        }
+
+        self.handle = Some(thread::spawn(move || {
+            run_fn((*ptr.clone().lock().unwrap()).ptr, on_update)
+        }));
     }
 
     pub fn stop(&mut self) -> Option<StatusCode> {
