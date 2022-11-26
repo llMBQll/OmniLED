@@ -1,5 +1,5 @@
 use crate::model::operation::Operation;
-use crate::Position;
+use crate::model::position::Position;
 use crate::renderer::font_manager::FontManager;
 use crate::renderer::screen::Screen;
 

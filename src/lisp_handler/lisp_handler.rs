@@ -3,8 +3,13 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::Duration;
 
-use rust_lisp::model::{FloatType, IntType};
-use rust_lisp::prelude::*;
+use rust_lisp::{
+    default_env,
+    model::{Env, FloatType, IntType, List, RuntimeError, Symbol, Value},
+    interpreter::eval,
+    parser::parse,
+};
+
 use serde_json::Value as JsonValue;
 
 use crate::cast;
@@ -165,6 +170,7 @@ impl LispHandler {
         // replace math operators to allow mixed int and float division and
         // return an error on division by zero rather than panicking
 
+        //fn(env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError>
         env.define(Symbol::from("+"), Value::NativeFunc(add));
         env.define(Symbol::from("-"), Value::NativeFunc(subtract));
         env.define(Symbol::from("*"), Value::NativeFunc(multiply));

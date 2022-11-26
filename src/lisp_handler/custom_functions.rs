@@ -2,9 +2,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use rust_lisp::model::{FloatType, IntType};
-use rust_lisp::prelude::*;
-use rust_lisp::utils::{require_int_parameter, require_parameter, require_string_parameter};
+use rust_lisp::model::{Env, FloatType, IntType, List, RuntimeError, Symbol, Value};
+use rust_lisp::utils::{require_arg, require_typed_arg};
 use strfmt::strfmt;
 
 macro_rules! int {
@@ -81,16 +80,16 @@ macro_rules! try_perform {
 pub const CURRENT_INDEX_KEY: &str = "__current_index";
 pub const HASH_MAP_KEY: &str = "__hash_map";
 
-pub fn modulo(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
-    let a = require_int_parameter("%", args, 0)?;
-    let b = require_int_parameter("%", args, 1)?;
+pub fn modulo(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
+    let a = require_typed_arg::<IntType>("%", args, 0)?;
+    let b = require_typed_arg::<IntType>("%", args, 1)?;
     match b {
         0 => Err(RuntimeError { msg: String::from("In function \"%\": attempt to calculate the remainder with a divisor of zero") }),
         _ => Ok(int!(a % b))
     }
 }
 
-pub fn add(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+pub fn add(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
     let add_int = |a, b| -> Result<IntType, RuntimeError> {
         Ok(a + b)
     };
@@ -99,8 +98,8 @@ pub fn add(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeEr
         Ok(a + b)
     };
 
-    let a = require_parameter("+", args, 0)?;
-    let b = require_parameter("+", args, 1)?;
+    let a = require_arg("+", args, 0)?;
+    let b = require_arg("+", args, 1)?;
 
     try_perform!(a, b, add_int, add_float);
 
@@ -109,7 +108,7 @@ pub fn add(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeEr
     })
 }
 
-pub fn subtract(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+pub fn subtract(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
     let subtract_int = |a, b| -> Result<IntType, RuntimeError> {
         Ok(a - b)
     };
@@ -118,8 +117,8 @@ pub fn subtract(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, Runt
         Ok(a - b)
     };
 
-    let a = require_parameter("-", args, 0)?;
-    let b = require_parameter("-", args, 1)?;
+    let a = require_arg("-", args, 0)?;
+    let b = require_arg("-", args, 1)?;
 
     try_perform!(a, b, subtract_int, subtract_float);
 
@@ -128,7 +127,7 @@ pub fn subtract(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, Runt
     })
 }
 
-pub fn multiply(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+pub fn multiply(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
     let multiply_int = |a, b| -> Result<IntType, RuntimeError> {
         Ok(a * b)
     };
@@ -137,8 +136,8 @@ pub fn multiply(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, Runt
         Ok(a * b)
     };
 
-    let a = require_parameter("*", args, 0)?;
-    let b = require_parameter("*", args, 1)?;
+    let a = require_arg("*", args, 0)?;
+    let b = require_arg("*", args, 1)?;
 
     try_perform!(a, b, multiply_int, multiply_float);
 
@@ -147,7 +146,7 @@ pub fn multiply(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, Runt
     })
 }
 
-pub fn divide(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
+pub fn divide(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
     let handle_int = |a, b| {
         if b == 0 {
             return Err(RuntimeError { msg: String::from("In function \"/\": attempt to divide zero") })
@@ -162,8 +161,8 @@ pub fn divide(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, Runtim
         return Ok(a / b)
     };
 
-    let a = require_parameter("/", args, 0)?;
-    let b = require_parameter("/", args, 1)?;
+    let a = require_arg("/", args, 0)?;
+    let b = require_arg("/", args, 1)?;
 
     try_perform!(a, b, handle_int, handle_float);
 
@@ -172,8 +171,8 @@ pub fn divide(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, Runtim
     })
 }
 
-pub fn format(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
-    let format = require_string_parameter("format", args, 0)?;
+pub fn format(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
+    let format = require_typed_arg::<&String>("format", args, 0)?;
 
     let mut vars = HashMap::new();
     let mut n = 0;
@@ -187,8 +186,8 @@ pub fn format(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, Runtim
     Ok(string!(strfmt(&format, &vars).unwrap()))
 }
 
-pub fn from_hashmap(env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
-    let string = require_string_parameter(":", args, 0)?;
+pub fn from_hashmap(env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
+    let string = require_typed_arg::<&String>(":", args, 0)?;
 
     let path = string.split(":");
 
@@ -213,8 +212,8 @@ pub fn from_hashmap(env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, R
     Ok(val)
 }
 
-pub fn bar(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
-    let bar = require_parameter("bar", args, 0)?;
+pub fn bar(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
+    let bar = require_arg("bar", args, 0)?;
 
     if let Ok(bar) = TryInto::<FloatType>::try_into(bar) {
         return Ok(list![string!("bar"), float!(bar)]);
@@ -228,26 +227,26 @@ pub fn bar(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeEr
     })
 }
 
-pub fn text(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
-    let text = require_parameter("text", args, 0)?;
+pub fn text(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
+    let text = require_arg("text", args, 0)?;
 
     Ok(list![string!("text"), string!(value_to_string(text))])
 }
 
-pub fn text_strict(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
-    let text = require_parameter("text-strict", args, 0)?;
+pub fn text_strict(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
+    let text = require_arg("text-strict", args, 0)?;
 
     Ok(list![string!("text-strict"), string!(value_to_string(text))])
 }
 
-pub fn text_upper(_env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
-    let text = require_parameter("text-upper", args, 0)?;
+pub fn text_upper(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
+    let text = require_arg("text-upper", args, 0)?;
 
     Ok(list![string!("text-upper"), string!(value_to_string(text))])
 }
 
-pub fn scrolling_text(env: Rc<RefCell<Env>>, args: &Vec<Value>) -> Result<Value, RuntimeError> {
-    let text = require_parameter("scrolling-text", args, 0)?;
+pub fn scrolling_text(env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
+    let text = require_arg("scrolling-text", args, 0)?;
     let text = string!(value_to_string(text));
 
     let env = env.as_ref().borrow();

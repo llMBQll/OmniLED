@@ -1,4 +1,4 @@
-use crate::Position;
+use crate::model::position::Position;
 
 #[derive(Debug)]
 pub enum Operation {
