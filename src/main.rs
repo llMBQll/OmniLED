@@ -222,11 +222,11 @@ use std::sync::{Arc, Mutex};
 use crate::ApplicationMetadataReplyData::{Reason, Token};
 
 use crate::lisp_handler::lisp_handler::LispHandler;
-use crate::steelseries_api::SteelSeriesAPI;
+use crate::keyboard_api::KeyboardAPI;
 use crate::renderer::renderer::Renderer;
 use crate::model::display::Display;
 
-mod steelseries_api;
+mod keyboard_api;
 mod lisp_handler;
 mod model;
 mod renderer;
@@ -360,17 +360,8 @@ async fn main() {
     run_server().await;
 }
 
-
-fn setup_keyboard_api() -> SteelSeriesAPI {
-    const HANDLER: &str = r#"(handler \"UPDATE\" (lambda (data) (on-device 'screened show-image: (list-to-bytearray (image-data: (frame: data)))))) (add-event-zone-use-with-specifier \"CLOCK_UPDATE\" \"one\" 'screened)"#;
-
-    let mut api = SteelSeriesAPI::new();
-    // register application
-    api.game_metadata(r#"{"game":"RUST_STEELSERIES_OLED", "game_display_name":"[Rust] Steelseries OLED", "developer":"MBQ"}"#).expect("/game_metadata");
-    // register
-    api.load_lisp_handlers(format!(r#"{{"game":"RUST_STEELSERIES_OLED", "golisp":"{}"}}"#, HANDLER).as_str()).expect("/load_lisp_handlers");
-
-    api
+fn setup_keyboard_api() -> KeyboardAPI {
+    KeyboardAPI::new()
 }
 
 fn setup_env() -> LispHandler {
