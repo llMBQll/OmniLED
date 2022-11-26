@@ -12,17 +12,13 @@ pub struct KeyboardAPI {
     address: Option<String>
 }
 
-const GAME: &str = "RUST_STEELSERIES_OLED";
-const GAME_DISPLAY_NAME: &str = "[Rust] Steelseries OLED";
+const GAME: &str = "RUST_STEELSERIES_OLED_TMP";
+const GAME_DISPLAY_NAME: &str = "[Rust] Steelseries OLED TMP";
 const DEVELOPER: &str = "MBQ";
+const TIMEOUT: u32 = 60000;
 
 impl KeyboardAPI {
     pub fn new() -> Self {
-        const METADATA: &str = concat!(r#"{"game":"#, GAME, r#"", "game_display_name":""#,
-            GAME_DISPLAY_NAME, r#"", "developer":""#, DEVELOPER, r#""}"#);
-        const GOLISP_HANDLERS: &str = concat!(r#"{"game":"#, GAME,
-            r#"", "golisp":"(handler \"UPDATE\" (lambda (data) (on-device 'screened show-image: (list-to-bytearray (image-data: (frame: data))))))"}"#);
-
         let mut api = KeyboardAPI {
             agent: Agent::new(),
             address: match Self::get_address() {
@@ -31,9 +27,16 @@ impl KeyboardAPI {
             }
         };
 
-        api.game_metadata(METADATA)
+        let metadata = format!(r#"{{"game":"{}", "game_display_name":"{}", "developer":"{}", "deinitialize_timer_length_ms": "{}"}}"#,
+            GAME, GAME_DISPLAY_NAME, DEVELOPER, TIMEOUT);
+        println!("{}", metadata);
+        api.game_metadata(metadata.as_str())
             .expect("Failed to register application with Steelseries API");
-        api.load_golisp_handlers(GOLISP_HANDLERS)
+
+        let handlers = format!(r#"{{"game":"{}", "golisp":"(handler \"UPDATE\" (lambda (data) (on-device 'screened show-image: (list-to-bytearray (image-data: (frame: data))))))"}}"#,
+            GAME);
+        println!("{}", handlers);
+        api.load_golisp_handlers(handlers.as_str())
             .expect("Failed to register handlers with Steelseries API");
 
         // TODO register heartbeat event

@@ -365,7 +365,7 @@ fn setup_keyboard_api() -> KeyboardAPI {
 }
 
 fn setup_env() -> LispHandler {
-    let mut file = File::open("../displays.json").unwrap();
+    let mut file = File::open("displays.json").unwrap();
     let displays: Vec<Display> = serde_json::from_reader(&mut file).unwrap();
 
     let mut env = LispHandler::new();
