@@ -1,0 +1,99 @@
+[
+  {
+    "name": "__handler1",
+    "parts": [
+      [
+        "(if AUDIO:IsMuted (text \"Muted\") (text-upper (format \"{0}\" AUDIO:Volume)))",
+        {
+          "x": 0,
+          "y": 0,
+          "width": 128,
+          "height": 37
+        }
+      ],
+      [
+        "(bar AUDIO:Volume)",
+        {
+          "x": 0,
+          "y": 38,
+          "width": 128,
+          "height": 2
+        }
+      ]
+    ],
+    "sensitivity_list": [
+      "AUDIO:Volume",
+      "AUDIO:IsMuted"
+    ]
+  },
+  {
+    "name": "__handler2",
+    "parts": [
+      [
+        "(text SPOTIFY:Artist)",
+        {
+          "x": 0,
+          "y": 0,
+          "width": 128,
+          "height": 16
+        }
+      ],
+      [
+        "(text SPOTIFY:Track)",
+        {
+          "x": 0,
+          "y": 20,
+          "width": 128,
+          "height": 16
+        }
+      ]
+    ],
+    "sensitivity_list": [
+      "SPOTIFY:Artist"
+    ]
+  },
+  {
+    "name": "__handler0",
+    "parts": [
+      [
+        "(text-upper (format \"{0:0>2}\" CLOCK:Hours))",
+        {
+          "x": 10,
+          "y": 1,
+          "width": 54,
+          "height": 35
+        }
+      ],
+      [
+        "(text-upper (format \"{0:0>2}\" CLOCK:Minutes))",
+        {
+          "x": 64,
+          "y": 0,
+          "width": 54,
+          "height": 26
+        }
+      ],
+      [
+        "(text-upper (format \"{0:0>2}{1}\" CLOCK:MonthDay (nth CLOCK:Month (list \"Jan\" \"Feb\" \"Mar\" \"Apr\" \"May\" \"Jun\" \"Jul\" \"Aug\" \"Sep\" \"Oct\" \"Nov\" \"Dec\"))))",
+        {
+          "x": 65,
+          "y": 27,
+          "width": 54,
+          "height": 10
+        }
+      ],
+      [
+        "(bar (/ (* CLOCK:Seconds 100) 59))",
+        {
+          "x": 0,
+          "y": 38,
+          "width": 128,
+          "height": 2
+        }
+      ]
+    ],
+    "sensitivity_list": [
+      "CLOCK:Seconds"
+    ]
+  }
+]

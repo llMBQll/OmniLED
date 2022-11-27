@@ -1,10 +1,9 @@
-use crate::Position;
+use crate::model::position::Position;
 
 #[derive(Debug)]
 pub enum Operation {
     Bar(Bar),
     Text(Text),
-    FixedHeight(FixedHeight),
     ScrollingText(ScrollingText),
 }
 
@@ -17,12 +16,8 @@ pub struct Bar {
 #[derive(Debug)]
 pub struct Text {
     pub text: String,
-    pub position: Position,
-}
-
-#[derive(Debug)]
-pub struct FixedHeight {
-    pub text: String,
+    pub strict: bool,
+    pub upper: bool,
     pub position: Position,
 }
 

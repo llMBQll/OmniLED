@@ -3,14 +3,19 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::Duration;
 
-use rust_lisp::model::{FloatType, IntType};
-use rust_lisp::prelude::*;
+use rust_lisp::{
+    default_env,
+    model::{Env, FloatType, IntType, List, RuntimeError, Symbol, Value},
+    interpreter::eval,
+    parser::parse,
+};
+
 use serde_json::Value as JsonValue;
 
 use crate::cast;
 use crate::lisp_handler::custom_functions::*;
 use crate::model::display::Display;
-use crate::model::operation::{Bar, FixedHeight, Operation, ScrollingText, Text};
+use crate::model::operation::{Bar, Operation, ScrollingText, Text};
 use crate::model::position::Position;
 
 pub struct LispHandler {
@@ -47,14 +52,11 @@ impl LispHandler {
         Ok(())
     }
 
-    pub fn update(&mut self, plugins: &Vec<(String, Option<HashMap<String, JsonValue>>)>, interval: Duration) -> Result<Vec<Operation>, RuntimeError> {
+    pub fn update(&mut self, plugins: &Vec<(String, HashMap<String, JsonValue>)>, interval: Duration) -> Result<Vec<Operation>, RuntimeError> {
         let mut changed = Vec::<String>::new();
 
         for (name, values) in plugins {
-            if values.is_none() {
-                continue;
-            }
-            for (key, value) in values.as_ref().unwrap() {
+            for (key, value) in values {
                 let symbol_name = format!("{}:{}", name, key);
                 self.global_env.as_ref().borrow_mut().define(
                     Symbol::from(symbol_name.as_str()),
@@ -141,11 +143,16 @@ impl LispHandler {
             }
             "text" => {
                 let text = cast!(iter.next().unwrap(), Value::String);
-                Ok(Operation::Text(Text { text, position: position.clone() }))
+                Ok(Operation::Text(Text { text, strict: false, upper: false, position: position.clone() }))
             }
-            "fixed-height" => {
+            "text-strict" => {
                 let text = cast!(iter.next().unwrap(), Value::String);
-                Ok(Operation::FixedHeight(FixedHeight { text, position: position.clone() }))
+                Ok(Operation::Text(Text { text, strict: true, upper: false, position: position.clone() }))
+            }
+            "text-upper" => {
+                let text = cast!(iter.next().unwrap(), Value::String);
+                // let text = text.to_uppercase();
+                Ok(Operation::Text(Text { text, strict: true, upper: true, position: position.clone() }))
             }
             "scrolling-text" => {
                 let text = cast!(iter.next().unwrap(), Value::String);
@@ -169,7 +176,8 @@ impl LispHandler {
         env.define(Symbol::from("format"), Value::NativeFunc(format));
         env.define(Symbol::from("bar"), Value::NativeFunc(bar));
         env.define(Symbol::from("text"), Value::NativeFunc(text));
-        env.define(Symbol::from("fixed-height"), Value::NativeFunc(fixed_height));
+        env.define(Symbol::from("text-strict"), Value::NativeFunc(text_strict));
+        env.define(Symbol::from("text-upper"), Value::NativeFunc(text_upper));
         env.define(Symbol::from("scrolling-text"), Value::NativeFunc(scrolling_text));
     }
 
@@ -209,3 +217,5 @@ impl LispHandler {
         }
     }
 }
+
+unsafe impl Send for LispHandler {}

@@ -1,3 +1,18 @@
-[workspace]
+[package]
+name = "steelseries_oled"
+version = "0.1.0"
+edition = "2021"
 
-members = ["steelseries_oled", "common/common_rs", "plugins/clock", "plugins/volume"]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+byteorder = "1.4"
+freetype-rs = "0.32"
+libloading = "0.7"
+rust_lisp = "0.16"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+strfmt = "0.2"
+tokio = { version = "1", features = ["full"] }
+ureq = { version = "2.4", features = ["json"] }
+warp = "0.3"
