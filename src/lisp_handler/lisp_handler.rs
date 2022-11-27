@@ -52,14 +52,11 @@ impl LispHandler {
         Ok(())
     }
 
-    pub fn update(&mut self, plugins: &Vec<(String, Option<HashMap<String, JsonValue>>)>, interval: Duration) -> Result<Vec<Operation>, RuntimeError> {
+    pub fn update(&mut self, plugins: &Vec<(String, HashMap<String, JsonValue>)>, interval: Duration) -> Result<Vec<Operation>, RuntimeError> {
         let mut changed = Vec::<String>::new();
 
         for (name, values) in plugins {
-            if values.is_none() {
-                continue;
-            }
-            for (key, value) in values.as_ref().unwrap() {
+            for (key, value) in values {
                 let symbol_name = format!("{}:{}", name, key);
                 self.global_env.as_ref().borrow_mut().define(
                     Symbol::from(symbol_name.as_str()),
@@ -170,7 +167,6 @@ impl LispHandler {
         // replace math operators to allow mixed int and float division and
         // return an error on division by zero rather than panicking
 
-        //fn(env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError>
         env.define(Symbol::from("+"), Value::NativeFunc(add));
         env.define(Symbol::from("-"), Value::NativeFunc(subtract));
         env.define(Symbol::from("*"), Value::NativeFunc(multiply));
@@ -221,3 +217,5 @@ impl LispHandler {
         }
     }
 }
+
+unsafe impl Send for LispHandler {}

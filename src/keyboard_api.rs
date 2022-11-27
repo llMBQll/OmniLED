@@ -1,19 +1,19 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::{thread, time};
+use std::ops::Div;
 use std::path::Path;
 use serde_json::Value;
 use ureq::{Agent, Response};
-use std::fmt::{Display, Formatter};
 
 
 pub struct KeyboardAPI {
     agent: Agent,
-    address: Option<String>
+    address: Option<String>,
 }
 
-const GAME: &str = "RUST_STEELSERIES_OLED_TMP";
-const GAME_DISPLAY_NAME: &str = "[Rust] Steelseries OLED TMP";
+const GAME: &str = "RUST_STEELSERIES_OLED";
+const GAME_DISPLAY_NAME: &str = "[Rust] Steelseries OLED";
 const DEVELOPER: &str = "MBQ";
 const TIMEOUT: u32 = 60000;
 
@@ -24,19 +24,23 @@ impl KeyboardAPI {
             address: match Self::get_address() {
                 Ok(address) => Some(address),
                 Err(_) => None
-            }
+            },
         };
 
-        let metadata = format!(r#"{{"game":"{}", "game_display_name":"{}", "developer":"{}", "deinitialize_timer_length_ms": "{}"}}"#,
-            GAME, GAME_DISPLAY_NAME, DEVELOPER, TIMEOUT);
-        println!("{}", metadata);
-        api.game_metadata(metadata.as_str())
+        let metadata = serde_json::json!({
+            "game": GAME,
+            "game_display_name": GAME_DISPLAY_NAME,
+            "developer": DEVELOPER,
+            "deinitialize_timer_length_ms": TIMEOUT
+        });
+        api.game_metadata(serde_json::to_string(&metadata).unwrap().as_str())
             .expect("Failed to register application with Steelseries API");
 
-        let handlers = format!(r#"{{"game":"{}", "golisp":"(handler \"UPDATE\" (lambda (data) (on-device 'screened show-image: (list-to-bytearray (image-data: (frame: data))))))"}}"#,
-            GAME);
-        println!("{}", handlers);
-        api.load_golisp_handlers(handlers.as_str())
+        let handlers = serde_json::json!({
+            "game": GAME,
+            "golisp": "(handler \"UPDATE\" (lambda (data) (on-device 'screened show-image: (list-to-bytearray (image-data: (frame: data))))))"
+        });
+        api.load_golisp_handlers(serde_json::to_string(&handlers).unwrap().as_str())
             .expect("Failed to register handlers with Steelseries API");
 
         // TODO register heartbeat event
@@ -44,9 +48,19 @@ impl KeyboardAPI {
         api
     }
 
-    // TODO figure out proper api
-    pub fn send_update(&mut self, json: &str) {
-        self.game_event(json).unwrap();
+    pub fn set_image(&mut self, image: &Vec<u8>) {
+        let json = serde_json::json!({
+            "game": GAME,
+            "event": "UPDATE",
+            "data": {
+                "value": 0,
+                "frame": {
+                    "image-data": image
+                }
+            }
+        });
+
+        self.game_event(serde_json::to_string(&json).unwrap().as_str()).unwrap();
     }
 
     fn get_address() -> Result<String, SilentError> {

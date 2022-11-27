@@ -83,3 +83,5 @@ impl Renderer {
         }
     }
 }
+
+unsafe impl Send for Renderer {}
