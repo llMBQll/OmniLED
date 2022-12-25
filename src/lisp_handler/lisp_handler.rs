@@ -70,7 +70,7 @@ impl LispHandler {
         let mut priority = 0;
         for (name, list) in &self.sensitivity_lists {
             if self.last_priority < priority && !self.time_remaining.is_zero() {
-                return Ok(Vec::new())
+                return Ok(Vec::new());
             }
             for value in &changed {
                 if list.contains(value) {
@@ -88,6 +88,7 @@ impl LispHandler {
     fn register_single(&mut self, display: Display) -> Result<(), RuntimeError> {
         let mut local = Env::extend(self.global_env.clone());
         local.define(Symbol::from(HASH_MAP_KEY), Value::HashMap(Rc::new(RefCell::new(HashMap::new()))));
+        local.define(Symbol::from(RESET_FLAG_KEY), Value::False);
         self.local_envs.insert(display.name.to_string(), Rc::new(RefCell::new(local)));
 
         let mut handlers = Vec::new();
@@ -127,6 +128,28 @@ impl LispHandler {
             vec.push(Self::value_to_operation(&x, position)?);
             hash += 1;
         }
+
+        let mut local = local.as_ref().borrow_mut();
+        let clear_flag = local.get(&Symbol::from(RESET_FLAG_KEY)).unwrap();
+        match clear_flag {
+            Value::True => {
+                // If clear flag was set then set all counts to 0
+                for op in &mut vec {
+                    match op {
+                        Operation::ScrollingText(text) => { text.count = 0; }
+                        _ => {}
+                    }
+                }
+
+                // Reset the count map so it will be zeroed on next 'process_handlers' call
+                local.set(Symbol::from(HASH_MAP_KEY), Value::HashMap(Rc::new(RefCell::new(HashMap::new())))).unwrap();
+
+                // Clear the reset flag
+                local.set(Symbol::from(RESET_FLAG_KEY), Value::False).unwrap();
+            }
+            _ => {}
+        }
+
         Ok(vec)
     }
 
@@ -157,7 +180,7 @@ impl LispHandler {
             "scrolling-text" => {
                 let text = cast!(iter.next().unwrap(), Value::String);
                 let count = cast!(iter.next().unwrap(), Value::Int);
-                Ok(Operation::ScrollingText(ScrollingText { text, count, position: position.clone() }))
+                Ok(Operation::ScrollingText(ScrollingText { text, strict: false, upper: false, count, position: position.clone() }))
             }
             _ => Err(RuntimeError { msg: "Unknown operation".to_string() })
         }

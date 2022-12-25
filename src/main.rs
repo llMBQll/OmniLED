@@ -2,23 +2,26 @@ use std::collections::hash_map::{DefaultHasher, Entry};
 use std::collections::HashMap;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
-use warp::Filter;
+use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use serde::{Deserialize, Serialize};
 use tokio::time::{Duration, Instant};
-use std::sync::{Arc, Mutex};
-use rust_lisp::model::RuntimeError;
-use crate::ApplicationMetadataReplyData::{Reason, Token};
+use warp::Filter;
 
-use crate::lisp_handler::lisp_handler::LispHandler;
+use crate::ApplicationMetadataReplyData::{Reason, Token};
 use crate::keyboard_api::KeyboardAPI;
-use crate::renderer::renderer::Renderer;
+use crate::lisp_handler::lisp_handler::LispHandler;
 use crate::model::display::Display;
-use crate::model::operation::Operation;
+// use crate::model::operation::Operation;
+use crate::plugin::plugin::Plugin;
+use crate::renderer::renderer::Renderer;
 
 mod keyboard_api;
 mod lisp_handler;
 mod model;
 mod renderer;
+mod plugin;
 
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -62,6 +65,11 @@ struct Applications {
     applications: HashMap<u64, (String, Instant)>,
 }
 
+#[derive(Deserialize, Serialize)]
+struct Application {
+    path: String,
+}
+
 impl Applications {
     fn new() -> Self {
         Applications {
@@ -74,18 +82,16 @@ impl Applications {
         let now = Instant::now();
         let mut valid = false;
 
-        self.applications.entry(token)
-            .and_modify(|(current, timeout)| {
-                if now > *timeout {
-                    *current = name.clone();
-                    *timeout = now + Duration::from_secs(30);
-                    valid = true;
-                }
-            })
-            .or_insert_with(|| {
+        self.applications.entry(token).and_modify(|(current, timeout)| {
+            if now > *timeout {
+                *current = name.clone();
+                *timeout = now + Duration::from_secs(30);
                 valid = true;
-                (name.clone(), now + Duration::from_secs(30))
-            });
+            }
+        }).or_insert_with(|| {
+            valid = true;
+            (name.clone(), now + Duration::from_secs(30))
+        });
 
         match valid {
             true => Some(token),
@@ -97,21 +103,19 @@ impl Applications {
         let now = Instant::now();
         let mut valid = false;
 
-        let entry = self.applications.entry(token)
-            .and_modify(|(_, timeout)| {
-                if now < *timeout {
-                    *timeout = now + Duration::from_secs(30);
-                    valid = true;
-                }
-            });
+        let entry = self.applications.entry(token).and_modify(|(_, timeout)| {
+            if now < *timeout {
+                *timeout = now + Duration::from_secs(30);
+                valid = true;
+            }
+        });
 
         match entry {
             Entry::Occupied(x) => {
                 if valid {
                     let (name, timeout) = x.get();
                     Some((name.clone(), timeout.clone()))
-                }
-                else {
+                } else {
                     None
                 }
             }
@@ -132,12 +136,9 @@ impl Applications {
 
 #[tokio::main]
 async fn main() {
-    // TODO load plugins
-
     let env = setup_env();
     let renderer = setup_renderer();
     let keyboard_api = setup_keyboard_api();
-    // let _endpoints = setup_endpoints();
 
     run_server(env, renderer, keyboard_api).await;
 }
@@ -157,6 +158,7 @@ fn setup_env() -> LispHandler {
 
 fn setup_renderer() -> Renderer {
     // TODO: allow to change screen size dynamically
+    // TODO: expose screen dimensions as lisp environment variables
 
     const WIDTH: usize = 128;
     const HEIGHT: usize = 40;
@@ -167,72 +169,65 @@ fn setup_renderer() -> Renderer {
 async fn run_server(mut env: LispHandler, mut renderer: Renderer, mut keyboard_api: KeyboardAPI) {
     let applications_src = Arc::new(Mutex::new(Applications::new()));
     let queue_src = Arc::new(Mutex::new(Vec::new()));
-    // let env = Arc::new(Mutex::new(env));
 
     let applications = Arc::clone(&applications_src);
-    let register = warp::post()
-        .and(warp::path("register"))
-        .and(warp::body::json())
-        .map(move |metadata: ApplicationMetadata| {
-            match applications.lock().unwrap().register(&metadata.name) {
-                Some(token) => {
-                    let reply = warp::reply::json(&ApplicationMetadataReply {
-                        metadata,
-                        data: Token(token),
-                    });
-                    warp::reply::with_status(reply, warp::http::StatusCode::OK)
-                }
-                None => {
-                    let reply = warp::reply::json(&ApplicationMetadataReply {
-                        metadata,
-                        data: Reason(String::from("Application with the same name is already registered.")),
-                    });
-                    warp::reply::with_status(reply, warp::http::StatusCode::BAD_REQUEST)
-                }
+    let register = warp::post().and(warp::path("register")).and(warp::body::json()).map(move |metadata: ApplicationMetadata| {
+        match applications.lock().unwrap().register(&metadata.name) {
+            Some(token) => {
+                let reply = warp::reply::json(&ApplicationMetadataReply {
+                    metadata,
+                    data: Token(token),
+                });
+                warp::reply::with_status(reply, warp::http::StatusCode::OK)
             }
-        });
+            None => {
+                let reply = warp::reply::json(&ApplicationMetadataReply {
+                    metadata,
+                    data: Reason(String::from("Application with the same name is already registered.")),
+                });
+                warp::reply::with_status(reply, warp::http::StatusCode::BAD_REQUEST)
+            }
+        }
+    });
 
     let applications = Arc::clone(&applications_src);
     let queue = Arc::clone(&queue_src);
-    let update = warp::path!("update" / u64)
-        .and(warp::body::json())
-        .map(move |token: u64, update: HashMap<String, serde_json::Value>| {
-            match applications.lock().unwrap().update(token) {
-                Some((name, timeout)) => {
-                    queue.lock().unwrap().push((name, update));
+    let update = warp::path!("update" / u64).and(warp::body::json()).map(move |token: u64, update: HashMap<String, serde_json::Value>| {
+        match applications.lock().unwrap().update(token) {
+            Some((name, timeout)) => {
+                queue.lock().unwrap().push((name, update));
 
-                    let reply = warp::reply::json(&UpdateReply {
-                        timeout_in: (timeout - Instant::now()).as_millis() as u64
-                    });
-                    warp::reply::with_status(reply, warp::http::StatusCode::OK)
-                }
-                None => {
-                    let reply = warp::reply::json(&GenericErr {
-                        reason: String::from("Application not registered or timed out.")
-                    });
-                    warp::reply::with_status(reply, warp::http::StatusCode::BAD_REQUEST)
-                }
+                let reply = warp::reply::json(&UpdateReply {
+                    timeout_in: (timeout - Instant::now()).as_millis() as u64
+                });
+                warp::reply::with_status(reply, warp::http::StatusCode::OK)
             }
-        });
+            None => {
+                let reply = warp::reply::json(&GenericErr {
+                    reason: String::from("Application not registered or timed out.")
+                });
+                warp::reply::with_status(reply, warp::http::StatusCode::BAD_REQUEST)
+            }
+        }
+    });
 
     let applications = Arc::clone(&applications_src);
-    let heartbeat = warp::path!("heartbeat" / u64)
-        .map(move |token: u64| {
-            match applications.lock().unwrap().update(token) {
-                Some((_, timeout)) => {
-                    let reply = warp::reply::json(&UpdateReply {
-                        timeout_in: (timeout - Instant::now()).as_millis() as u64
-                    });
-                    warp::reply::with_status(reply, warp::http::StatusCode::OK)
-                }
-                None => {
-                    let reply = warp::reply::json(&GenericErr {
-                        reason: String::from("Application not registered or timed out.")
-                    });
-                    warp::reply::with_status(reply, warp::http::StatusCode::BAD_REQUEST)
-                }
+    let heartbeat = warp::path!("heartbeat" / u64).map(move |token: u64| {
+        match applications.lock().unwrap().update(token) {
+            Some((_, timeout)) => {
+                let reply = warp::reply::json(&UpdateReply {
+                    timeout_in: (timeout - Instant::now()).as_millis() as u64
+                });
+                warp::reply::with_status(reply, warp::http::StatusCode::OK)
             }
-        });
+            None => {
+                let reply = warp::reply::json(&GenericErr {
+                    reason: String::from("Application not registered or timed out.")
+                });
+                warp::reply::with_status(reply, warp::http::StatusCode::BAD_REQUEST)
+            }
+        }
+    });
 
     let queue = Arc::clone(&queue_src);
     tokio::task::spawn(async move {
@@ -240,15 +235,18 @@ async fn run_server(mut env: LispHandler, mut renderer: Renderer, mut keyboard_a
         loop {
             let begin = Instant::now();
 
-            match env.update(&queue.lock().unwrap(),DURATION) {
+            match env.update(&queue.lock().unwrap(), DURATION) {
                 Ok(operations) => {
-                    let image = renderer.render(operations);
-                    keyboard_api.set_image(&image);
+                    if operations.len() > 0 {
+                        let image = renderer.render(operations);
+                        keyboard_api.set_image(&image);
+                    }
                 }
                 Err(error) => {
                     println!("{}", error);
                 }
             }
+            *queue.lock().unwrap() = Vec::new();
 
             let end = Instant::now();
             let update_duration = end - begin;
@@ -256,9 +254,50 @@ async fn run_server(mut env: LispHandler, mut renderer: Renderer, mut keyboard_a
         }
     });
 
-    let paths = warp::post()
-        .and(register
-            .or(update)
-            .or(heartbeat));
-    warp::serve(paths).run(([127, 0, 0, 1], 3030)).await;
+    let paths = warp::post().and(register.or(update).or(heartbeat));
+
+    // Try to bind server to first available port
+    let mut port: u16 = 6969;
+    let (address, server) = loop {
+        match warp::serve(paths.clone()).try_bind_ephemeral(([127, 0, 0, 1], port)) {
+            Ok((address, server)) => {
+                break (address.to_string(), server);
+            }
+            Err(_) => {
+                port += 1;
+            }
+        };
+    };
+
+    // Start handling requests
+    tokio::task::spawn(server);
+
+    // Start registered applications
+    let mut file = File::open("applications.json").unwrap();
+    let app_names: Vec<Application> = serde_json::from_reader(&mut file).unwrap();
+    let mut apps = Vec::with_capacity(app_names.len());
+    for app in app_names {
+        match Plugin::new(&app.path, &address) {
+            Ok(plugin) => {
+                apps.push(plugin);
+            }
+            Err(err) => {
+                println!("{}: '{}'", err, app.path);
+            }
+        }
+    }
+
+    // Write server address in case some non-registered application wants to send requests
+    let path = "server.json";
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+
+    let data = serde_json::json!({
+        "address": address,
+        "timestamp": timestamp
+    });
+    std::fs::write(path, serde_json::to_string(&data).unwrap()).unwrap();
+
+    // temporary way to stop program from exiting
+    // eventually UI will be here so this step won't be necessary
+    tokio::time::sleep(Duration::MAX).await;
 }

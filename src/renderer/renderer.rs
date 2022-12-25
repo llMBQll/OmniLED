@@ -1,3 +1,4 @@
+use std::cmp::max;
 use crate::model::operation::Operation;
 use crate::model::position::Position;
 use crate::renderer::font_manager::FontManager;
@@ -35,8 +36,44 @@ impl Renderer {
             Operation::Text(text) => {
                 self.render_text(screen, text.position, text.text, text.strict, text.upper)
             },
-            Operation::ScrollingText(_scrolling_text) => {
-                todo!()
+            Operation::ScrollingText(text) => {
+                // TODO sync scrolling reset between all operations
+
+                const TICKS_PER_MOVE: usize = 2;
+                const TICKS_AT_EDGE: usize = 8;
+
+                let height = text.position.height;
+                let width = text.position.width;
+                let character = self.font_manager.get_character('a' as usize, height);
+                let char_width = (character.metrics.horiAdvance >> 6) as usize;
+                let max_chars = width / max(char_width, 1);
+                let len = text.text.len();
+
+                if len <= max_chars {
+                    self.render_text(screen, text.position, text.text, text.strict, text.upper)
+                }
+                else {
+                    let shifts = len - max_chars;
+                    let tick = text.count as usize;
+                    let offset = if tick <= TICKS_AT_EDGE {
+                        0
+                    } else if tick < TICKS_AT_EDGE + shifts * TICKS_PER_MOVE {
+                        (tick -  TICKS_AT_EDGE) / 2
+                    } else {
+                        shifts
+                    };
+
+                    let mut chars = text.text.chars();
+                    for _ in 0..offset {
+                        let _ = chars.next();
+                    }
+                    let substr: String = chars.collect();
+
+                    // let substr = &text.text[offset..];
+                    // let substr = substr.to_string();
+
+                    self.render_text(screen, text.position, substr, text.strict, text.upper)
+                }
             }
         }
     }

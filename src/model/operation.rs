@@ -24,6 +24,8 @@ pub struct Text {
 #[derive(Debug)]
 pub struct ScrollingText {
     pub text: String,
+    pub strict: bool,
+    pub upper: bool,
     pub count: i32,
     pub position: Position,
 }
