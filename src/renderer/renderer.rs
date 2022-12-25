@@ -39,7 +39,7 @@ impl Renderer {
             Operation::ScrollingText(text) => {
                 // TODO sync scrolling reset between all operations
 
-                const TICKS_PER_MOVE: usize = 2;
+                const TICKS_PER_MOVE: usize = 3;
                 const TICKS_AT_EDGE: usize = 8;
 
                 let height = text.position.height;
@@ -54,11 +54,12 @@ impl Renderer {
                 }
                 else {
                     let shifts = len - max_chars;
-                    let tick = text.count as usize;
+                    let max_ticks = 2 * TICKS_AT_EDGE + shifts * TICKS_PER_MOVE;
+                    let tick = text.count as usize % max_ticks;
                     let offset = if tick <= TICKS_AT_EDGE {
                         0
                     } else if tick < TICKS_AT_EDGE + shifts * TICKS_PER_MOVE {
-                        (tick -  TICKS_AT_EDGE) / 2
+                        (tick - TICKS_AT_EDGE) / TICKS_PER_MOVE
                     } else {
                         shifts
                     };
@@ -68,9 +69,6 @@ impl Renderer {
                         let _ = chars.next();
                     }
                     let substr: String = chars.collect();
-
-                    // let substr = &text.text[offset..];
-                    // let substr = substr.to_string();
 
                     self.render_text(screen, text.position, substr, text.strict, text.upper)
                 }
