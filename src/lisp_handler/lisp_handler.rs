@@ -167,13 +167,13 @@ impl LispHandler {
             "text" => {
                 let text = cast!(iter.next().unwrap(), Value::String);
                 let modifiers = Self::parse_modifiers(iter);
-                Ok(Operation::Text(Text { text, strict: modifiers.strict, upper: modifiers.upper, position: position.clone() }))
+                Ok(Operation::Text(Text { text, modifiers, position: position.clone() }))
             }
             "scrolling-text" => {
                 let text = cast!(iter.next().unwrap(), Value::String);
                 let count = cast!(iter.next().unwrap(), Value::Int);
                 let modifiers = Self::parse_modifiers(iter);
-                Ok(Operation::ScrollingText(ScrollingText { text, strict: modifiers.strict, upper: modifiers.upper, count, position: position.clone() }))
+                Ok(Operation::ScrollingText(ScrollingText { text, modifiers, count, position: position.clone() }))
             }
             _ => Err(RuntimeError { msg: "Unknown operation".to_string() })
         }

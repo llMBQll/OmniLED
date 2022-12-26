@@ -1,5 +1,5 @@
 use std::cmp::max;
-use crate::model::operation::Operation;
+use crate::model::operation::{Operation, TextModifiers};
 use crate::model::position::Position;
 use crate::renderer::font_manager::FontManager;
 use crate::renderer::screen::Screen;
@@ -37,10 +37,10 @@ impl Renderer {
                 self.render_bar(screen, bar.position, bar.value)
             }
             Operation::Text(text) => {
-                self.render_text(screen, text.position, text.text, text.strict, text.upper)
+                self.render_text(screen, text.position, text.text, text.modifiers)
             }
             Operation::ScrollingText(text) => {
-                self.render_scrolling_text(screen, text.position, text.text, text.strict, text.upper, self.scrolling_text_data.ticks)
+                self.render_scrolling_text(screen, text.position, text.text, text.modifiers, self.scrolling_text_data.ticks)
             }
         }
     }
@@ -59,11 +59,11 @@ impl Renderer {
         if upper { height * 40 / 29 } else { height }
     }
 
-    fn render_text(&mut self, screen: &mut Screen, pos: Position, text: String, strict: bool, upper: bool) {
+    fn render_text(&mut self, screen: &mut Screen, pos: Position, text: String, modifiers: TextModifiers) {
         let mut cursor_x = 0 as i32;
         let cursor_y = pos.height as i32;
 
-        let height = Self::get_text_height(pos.height, upper);
+        let height = Self::get_text_height(pos.height, modifiers.upper);
         for character in text.chars() {
             let character = self.font_manager.get_character(character as usize, height);
             let bitmap = &character.bitmap;
@@ -75,7 +75,7 @@ impl Renderer {
                     let y = cursor_y + row as i32 - offset_y;
                     let x = cursor_x + col as i32 + (metrics.horiBearingX >> 6) as i32;
 
-                    if y < 0 || x < 0 || x >= pos.width as i32 || (strict && y >= pos.height as i32) {
+                    if y < 0 || x < 0 || x >= pos.width as i32 || (modifiers.strict && y >= pos.height as i32) {
                         continue;
                     }
                     if bitmap[(row, col)] > 50 {
@@ -96,7 +96,7 @@ impl Renderer {
         for op in operations {
             match op {
                 Operation::ScrollingText(text) => {
-                    let res = self.calculate_scrolling_text(&text.position, &text.text, text.strict, text.upper, Some(text.count));
+                    let res = self.calculate_scrolling_text(&text.position, &text.text, &text.modifiers, Some(text.count));
                     vec.push(res);
                 }
                 _ => {}
@@ -108,10 +108,10 @@ impl Renderer {
         }
     }
 
-    fn calculate_scrolling_text(&mut self, pos: &Position, text: &String, _strict: bool, upper: bool, count: Option<i32>) -> (usize, usize) {
+    fn calculate_scrolling_text(&mut self, pos: &Position, text: &String, modifiers: &TextModifiers, count: Option<i32>) -> (usize, usize) {
         // count is required to calculate tick, so if it is already known then it can be omitted
 
-        let height = Self::get_text_height(pos.height, upper);
+        let height = Self::get_text_height(pos.height, modifiers.upper);
         let width = pos.width;
         let character = self.font_manager.get_character('a' as usize, height);
         let char_width = (character.metrics.horiAdvance >> 6) as usize;
@@ -129,15 +129,15 @@ impl Renderer {
         (shifts, tick)
     }
 
-    fn render_scrolling_text(&mut self, screen: &mut Screen, pos: Position, text: String, strict: bool, upper: bool, tick: usize) {
+    fn render_scrolling_text(&mut self, screen: &mut Screen, pos: Position, text: String, modifiers: TextModifiers, tick: usize) {
         // Don't care about tick as we use the tick of a value that will have to be shifted the most times
         // This way all scrolling texts will be synchronized and will reset after last shift of the item that
         // requires the most shifts
 
-        let (shifts, _tick) = self.calculate_scrolling_text(&pos, &text, strict, upper, None);
+        let (shifts, _tick) = self.calculate_scrolling_text(&pos, &text, &modifiers, None);
 
         if shifts == 0 {
-            self.render_text(screen, pos, text, strict, upper)
+            self.render_text(screen, pos, text, modifiers)
         } else {
             let offset = if tick <= TICKS_AT_EDGE {
                 0
@@ -153,7 +153,7 @@ impl Renderer {
             }
             let substr: String = chars.collect();
 
-            self.render_text(screen, pos, substr, strict, upper)
+            self.render_text(screen, pos, substr, modifiers)
         }
     }
 }

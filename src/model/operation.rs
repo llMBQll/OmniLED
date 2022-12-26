@@ -16,16 +16,14 @@ pub struct Bar {
 #[derive(Debug)]
 pub struct Text {
     pub text: String,
-    pub strict: bool,
-    pub upper: bool,
+    pub modifiers: TextModifiers,
     pub position: Position,
 }
 
 #[derive(Debug)]
 pub struct ScrollingText {
     pub text: String,
-    pub strict: bool,
-    pub upper: bool,
+    pub modifiers: TextModifiers,
     pub count: i32,
     pub position: Position,
 }
