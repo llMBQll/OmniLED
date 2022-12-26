@@ -30,7 +30,7 @@
     "name": "__handler2",
     "parts": [
       [
-        "(text SPOTIFY:Artist)",
+        "(scrolling-text SPOTIFY:Artist)",
         {
           "x": 0,
           "y": 0,
@@ -39,17 +39,26 @@
         }
       ],
       [
-        "(text SPOTIFY:Track)",
+        "(scrolling-text SPOTIFY:Title)",
         {
           "x": 0,
           "y": 20,
           "width": 128,
           "height": 16
         }
-      ]
+      ],
+	  [
+		"(bar (/ (* SPOTIFY:Progress 100.0) SPOTIFY:Duration)))",
+		{
+		  "x": 0,
+		  "y": 38,
+		  "width": 128,
+		  "height": 2
+		}
+	  ]
     ],
     "sensitivity_list": [
-      "SPOTIFY:Artist"
+      "SPOTIFY:Progress"
     ]
   },
   {
@@ -74,7 +83,7 @@
         }
       ],
       [
-        "(text-upper (format \"{0:0>2}{1}\" CLOCK:MonthDay (nth CLOCK:Month (list \"Jan\" \"Feb\" \"Mar\" \"Apr\" \"May\" \"Jun\" \"Jul\" \"Aug\" \"Sep\" \"Oct\" \"Nov\" \"Dec\"))))",
+        "(text-upper (format \"{0:0>2}{1:.3}\" CLOCK:MonthDay (nth CLOCK:Month CLOCK:MonthNames)))",
         {
           "x": 65,
           "y": 27,

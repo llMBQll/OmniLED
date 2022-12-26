@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::{thread, time};
-use std::ops::Div;
 use std::path::Path;
 use serde_json::Value;
 use ureq::{Agent, Response};

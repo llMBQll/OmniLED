@@ -79,6 +79,7 @@ macro_rules! try_perform {
 
 pub const CURRENT_INDEX_KEY: &str = "__current_index";
 pub const HASH_MAP_KEY: &str = "__hash_map";
+pub const RESET_FLAG_KEY: &str = "__clear_flag";
 
 pub fn modulo(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
     let a = require_typed_arg::<IntType>("%", args, 0)?;
@@ -149,16 +150,16 @@ pub fn multiply(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, Runtime
 pub fn divide(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
     let handle_int = |a, b| {
         if b == 0 {
-            return Err(RuntimeError { msg: String::from("In function \"/\": attempt to divide zero") })
+            return Err(RuntimeError { msg: String::from("In function \"/\": attempt to divide zero") });
         }
         Ok(a / b)
     };
 
     let handle_float = |a, b| {
         if b == 0.0 {
-            return Err(RuntimeError { msg: String::from("In function \"/\": attempt to divide zero") })
+            return Err(RuntimeError { msg: String::from("In function \"/\": attempt to divide zero") });
         }
-        return Ok(a / b)
+        return Ok(a / b);
     };
 
     let a = require_arg("/", args, 0)?;
@@ -246,27 +247,41 @@ pub fn text_upper(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, Runti
 }
 
 pub fn scrolling_text(env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
+    let mut env = env.as_ref().borrow_mut();
+
     let text = require_arg("scrolling-text", args, 0)?;
     let text = string!(value_to_string(text));
 
-    let env = env.as_ref().borrow();
-    let key = env.get(&Symbol::from(CURRENT_INDEX_KEY)).unwrap();
-
+    // Get HashMap associated with currently processed local env
     let map = env.get(&Symbol::from(HASH_MAP_KEY)).unwrap();
     let map = cast!(map, Value::HashMap);
     let mut map = map.as_ref().borrow_mut();
 
-    let entry = map.entry(key).or_insert(list![text.clone(), int!(0)]);
+    // Get index of currently processed handler -- value is incremented inside 'process_handlers' function
+    let key = env.get(&Symbol::from(CURRENT_INDEX_KEY)).unwrap();
+
+    // Get already existing text-count pair or create a new one
+    // Set value to '-1' as it will be incremented immediately
+    let entry = map.entry(key).or_insert(list![text.clone(), int!(-1)]);
     let list = cast!(entry, Value::List);
 
     let mut iter = list.into_iter();
-    let prev_str = iter.next().unwrap();
-    let mut cnt = cast!(iter.next().unwrap(), Value::Int);
+    let previous_text = iter.next().unwrap();
+    let previous_count = cast!(iter.next().unwrap(), Value::Int);
 
-    cnt = if text == prev_str { cnt + 1 } else { 0 };
-    *entry = list![text.clone(), int!(cnt)];
+    // Count depending on value
+    //  - new value / value changed -> count = 0
+    //  - value didn't change       -> count = previous_count + 1
+    let count = if text == previous_text {
+        previous_count + 1
+    } else {
+        env.set(Symbol::from(RESET_FLAG_KEY), Value::True).unwrap();
+        0
+    };
 
-    Ok(list![string!("scrolling-text"), text, int!(cnt)])
+    *entry = list![text.clone(), int!(count)];
+
+    Ok(list![string!("scrolling-text"), text, int!(count)])
 }
 
 fn value_to_string(value: &Value) -> String {
