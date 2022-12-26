@@ -15,7 +15,7 @@ use serde_json::Value as JsonValue;
 use crate::cast;
 use crate::lisp_handler::custom_functions::*;
 use crate::model::display::Display;
-use crate::model::operation::{Bar, Operation, ScrollingText, Text};
+use crate::model::operation::{Bar, Operation, ScrollingText, Text, TextModifiers};
 use crate::model::position::Position;
 
 pub struct LispHandler {
@@ -166,23 +166,40 @@ impl LispHandler {
             }
             "text" => {
                 let text = cast!(iter.next().unwrap(), Value::String);
-                Ok(Operation::Text(Text { text, strict: false, upper: false, position: position.clone() }))
-            }
-            "text-strict" => {
-                let text = cast!(iter.next().unwrap(), Value::String);
-                Ok(Operation::Text(Text { text, strict: true, upper: false, position: position.clone() }))
-            }
-            "text-upper" => {
-                let text = cast!(iter.next().unwrap(), Value::String);
-                // let text = text.to_uppercase();
-                Ok(Operation::Text(Text { text, strict: true, upper: true, position: position.clone() }))
+                let modifiers = Self::parse_modifiers(iter);
+                Ok(Operation::Text(Text { text, strict: modifiers.strict, upper: modifiers.upper, position: position.clone() }))
             }
             "scrolling-text" => {
                 let text = cast!(iter.next().unwrap(), Value::String);
                 let count = cast!(iter.next().unwrap(), Value::Int);
-                Ok(Operation::ScrollingText(ScrollingText { text, strict: false, upper: false, count, position: position.clone() }))
+                let modifiers = Self::parse_modifiers(iter);
+                Ok(Operation::ScrollingText(ScrollingText { text, strict: modifiers.strict, upper: modifiers.upper, count, position: position.clone() }))
             }
             _ => Err(RuntimeError { msg: "Unknown operation".to_string() })
+        }
+    }
+
+    fn parse_modifiers<T: Iterator<Item = Value>>(mut iter: T) -> TextModifiers {
+        fn remove_whitespace(s: &mut String) {
+            s.retain(|c| !c.is_whitespace());
+        }
+
+        match iter.next() {
+            Some(value) => {
+                let mut string = cast!(value, Value::String);
+                remove_whitespace(&mut string);
+                let parts = string.split("|");
+                let mut modifiers = TextModifiers::default();
+                for part in parts {
+                    match part {
+                        "strict" => modifiers.strict = true,
+                        "upper" => modifiers.upper = true,
+                        _ => { }
+                    }
+                }
+                modifiers
+            }
+            None => TextModifiers::default()
         }
     }
 
@@ -199,8 +216,6 @@ impl LispHandler {
         env.define(Symbol::from("format"), Value::NativeFunc(format));
         env.define(Symbol::from("bar"), Value::NativeFunc(bar));
         env.define(Symbol::from("text"), Value::NativeFunc(text));
-        env.define(Symbol::from("text-strict"), Value::NativeFunc(text_strict));
-        env.define(Symbol::from("text-upper"), Value::NativeFunc(text_upper));
         env.define(Symbol::from("scrolling-text"), Value::NativeFunc(scrolling_text));
     }
 

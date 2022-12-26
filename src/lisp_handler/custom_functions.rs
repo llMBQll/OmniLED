@@ -231,19 +231,13 @@ pub fn bar(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError
 pub fn text(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
     let text = require_arg("text", args, 0)?;
 
-    Ok(list![string!("text"), string!(value_to_string(text))])
-}
-
-pub fn text_strict(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
-    let text = require_arg("text-strict", args, 0)?;
-
-    Ok(list![string!("text-strict"), string!(value_to_string(text))])
-}
-
-pub fn text_upper(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
-    let text = require_arg("text-upper", args, 0)?;
-
-    Ok(list![string!("text-upper"), string!(value_to_string(text))])
+    if args.len() > 1 {
+        let modifiers = require_typed_arg::<&String>(":", args, 1)?;
+        Ok(list![string!("text"), string!(value_to_string(text)), string!(modifiers)])
+    }
+    else {
+        Ok(list![string!("text"), string!(value_to_string(text))])
+    }
 }
 
 pub fn scrolling_text(env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
@@ -281,7 +275,13 @@ pub fn scrolling_text(env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, Ru
 
     *entry = list![text.clone(), int!(count)];
 
-    Ok(list![string!("scrolling-text"), text, int!(count)])
+    if args.len() > 1 {
+        let modifiers = require_typed_arg::<&String>(":", args, 1)?;
+        Ok(list![string!("scrolling-text"), text, int!(count), string!(modifiers)])
+    }
+    else {
+        Ok(list![string!("scrolling-text"), text, int!(count)])
+    }
 }
 
 fn value_to_string(value: &Value) -> String {

@@ -29,3 +29,9 @@ pub struct ScrollingText {
     pub count: i32,
     pub position: Position,
 }
+
+#[derive(Debug, Default)]
+pub struct TextModifiers {
+    pub strict: bool,
+    pub upper: bool,
+}
