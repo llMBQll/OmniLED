@@ -267,13 +267,13 @@ pub fn scrolling_text(env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, Ru
 
     let mut iter = list.into_iter();
     let previous_text = iter.next().unwrap();
-    let count = cast!(iter.next().unwrap(), Value::Int);
+    let previous_count = cast!(iter.next().unwrap(), Value::Int);
 
     // Count depending on value
     //  - new value / value changed -> count = 0
     //  - value didn't change       -> count = previous_count + 1
     let count = if text == previous_text {
-        count + 1
+        previous_count + 1
     } else {
         env.set(Symbol::from(RESET_FLAG_KEY), Value::True).unwrap();
         0

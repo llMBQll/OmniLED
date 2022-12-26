@@ -55,11 +55,15 @@ impl Renderer {
         }
     }
 
+    fn get_text_height(height: usize, upper: bool) -> usize {
+        if upper { height * 40 / 29 } else { height }
+    }
+
     fn render_text(&mut self, screen: &mut Screen, pos: Position, text: String, strict: bool, upper: bool) {
         let mut cursor_x = 0 as i32;
         let cursor_y = pos.height as i32;
 
-        let height = if upper { pos.height * 40 / 29 } else { pos.height };
+        let height = Self::get_text_height(pos.height, upper);
         for character in text.chars() {
             let character = self.font_manager.get_character(character as usize, height);
             let bitmap = &character.bitmap;
@@ -104,10 +108,10 @@ impl Renderer {
         }
     }
 
-    fn calculate_scrolling_text(&mut self, pos: &Position, text: &String, _strict: bool, _upper: bool, count: Option<i32>) -> (usize, usize) {
+    fn calculate_scrolling_text(&mut self, pos: &Position, text: &String, _strict: bool, upper: bool, count: Option<i32>) -> (usize, usize) {
         // count is required to calculate tick, so if it is already known then it can be omitted
 
-        let height = pos.height;
+        let height = Self::get_text_height(pos.height, upper);
         let width = pos.width;
         let character = self.font_manager.get_character('a' as usize, height);
         let char_width = (character.metrics.horiAdvance >> 6) as usize;
