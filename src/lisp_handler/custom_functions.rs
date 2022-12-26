@@ -275,7 +275,7 @@ pub fn scrolling_text(env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, Ru
     let count = if text == previous_text {
         count + 1
     } else {
-        env.set(Symbol::from(HASH_MAP_KEY), Value::True).unwrap();
+        env.set(Symbol::from(RESET_FLAG_KEY), Value::True).unwrap();
         0
     };
 

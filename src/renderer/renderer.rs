@@ -7,7 +7,8 @@ use crate::renderer::screen::Screen;
 pub struct Renderer {
     height: usize,
     width: usize,
-    font_manager: FontManager
+    font_manager: FontManager,
+    scrolling_text_data: ScrollingTextData,
 }
 
 impl Renderer {
@@ -16,12 +17,14 @@ impl Renderer {
         Self {
             height,
             width,
-            font_manager: FontManager::new()
+            font_manager: FontManager::new(),
+            scrolling_text_data: ScrollingTextData::new(),
         }
     }
 
     pub fn render(&mut self, operations: Vec<Operation>) -> Vec<u8> {
         let mut screen = Screen::new(self.height, self.width);
+        self.calculate_scrolling_text_data(&operations);
         for operation in operations {
             self.perform_operation(&mut screen, operation);
         }
@@ -35,43 +38,19 @@ impl Renderer {
             }
             Operation::Text(text) => {
                 self.render_text(screen, text.position, text.text, text.strict, text.upper)
-            },
+            }
             Operation::ScrollingText(text) => {
-                // TODO sync scrolling reset between all operations
+                self.render_scrolling_text(screen, text.position, text.text, text.strict, text.upper, self.scrolling_text_data.ticks)
+            }
+        }
+    }
 
-                const TICKS_PER_MOVE: usize = 3;
-                const TICKS_AT_EDGE: usize = 8;
+    fn render_bar(&mut self, screen: &mut Screen, pos: Position, percent: f32) {
+        let width = pos.width as f32 * percent / 100.0;
 
-                let height = text.position.height;
-                let width = text.position.width;
-                let character = self.font_manager.get_character('a' as usize, height);
-                let char_width = (character.metrics.horiAdvance >> 6) as usize;
-                let max_chars = width / max(char_width, 1);
-                let len = text.text.len();
-
-                if len <= max_chars {
-                    self.render_text(screen, text.position, text.text, text.strict, text.upper)
-                }
-                else {
-                    let shifts = len - max_chars;
-                    let max_ticks = 2 * TICKS_AT_EDGE + shifts * TICKS_PER_MOVE;
-                    let tick = text.count as usize % max_ticks;
-                    let offset = if tick <= TICKS_AT_EDGE {
-                        0
-                    } else if tick < TICKS_AT_EDGE + shifts * TICKS_PER_MOVE {
-                        (tick - TICKS_AT_EDGE) / TICKS_PER_MOVE
-                    } else {
-                        shifts
-                    };
-
-                    let mut chars = text.text.chars();
-                    for _ in 0..offset {
-                        let _ = chars.next();
-                    }
-                    let substr: String = chars.collect();
-
-                    self.render_text(screen, text.position, substr, text.strict, text.upper)
-                }
+        for row in 0..pos.height {
+            for col in 0..width as usize {
+                screen.set(pos.y + row, pos.x + col);
             }
         }
     }
@@ -108,15 +87,86 @@ impl Renderer {
         }
     }
 
-    fn render_bar(&mut self, screen: &mut Screen, pos: Position, percent: f32) {
-        let width = pos.width as f32 * percent / 100.0;
-
-        for row in 0..pos.height {
-            for col in 0..width as usize  {
-                screen.set(pos.y + row, pos.x + col);
+    fn calculate_scrolling_text_data(&mut self, operations: &Vec<Operation>) {
+        let mut vec = Vec::new();
+        for op in operations {
+            match op {
+                Operation::ScrollingText(text) => {
+                    let res = self.calculate_scrolling_text(&text.position, &text.text, text.strict, text.upper, Some(text.count));
+                    vec.push(res);
+                }
+                _ => {}
             }
+        }
+        if !vec.is_empty() {
+            vec.sort_by(|(a, _), (b, _)| b.cmp(a));
+            self.scrolling_text_data.ticks = vec[0].1;
+        }
+    }
+
+    fn calculate_scrolling_text(&mut self, pos: &Position, text: &String, _strict: bool, _upper: bool, count: Option<i32>) -> (usize, usize) {
+        // count is required to calculate tick, so if it is already known then it can be omitted
+
+        let height = pos.height;
+        let width = pos.width;
+        let character = self.font_manager.get_character('a' as usize, height);
+        let char_width = (character.metrics.horiAdvance >> 6) as usize;
+        let max_chars = width / max(char_width, 1);
+        let len = text.len();
+
+        if len <= max_chars {
+            return (0, 0);
+        }
+
+        let shifts = len - max_chars;
+        let max_ticks = 2 * TICKS_AT_EDGE + shifts * TICKS_PER_MOVE;
+        let tick = count.unwrap_or(0) as usize % max_ticks;
+
+        (shifts, tick)
+    }
+
+    fn render_scrolling_text(&mut self, screen: &mut Screen, pos: Position, text: String, strict: bool, upper: bool, tick: usize) {
+        // Don't care about tick as we use the tick of a value that will have to be shifted the most times
+        // This way all scrolling texts will be synchronized and will reset after last shift of the item that
+        // requires the most shifts
+
+        let (shifts, _tick) = self.calculate_scrolling_text(&pos, &text, strict, upper, None);
+
+        if shifts == 0 {
+            self.render_text(screen, pos, text, strict, upper)
+        } else {
+            let offset = if tick <= TICKS_AT_EDGE {
+                0
+            } else if tick >= TICKS_AT_EDGE + shifts * TICKS_PER_MOVE {
+                shifts
+            } else {
+                (tick - TICKS_AT_EDGE) / TICKS_PER_MOVE
+            };
+
+            let mut chars = text.chars();
+            for _ in 0..offset {
+                let _ = chars.next();
+            }
+            let substr: String = chars.collect();
+
+            self.render_text(screen, pos, substr, strict, upper)
         }
     }
 }
 
+const TICKS_PER_MOVE: usize = 2;
+const TICKS_AT_EDGE: usize = 8;
+
 unsafe impl Send for Renderer {}
+
+struct ScrollingTextData {
+    pub ticks: usize,
+}
+
+impl ScrollingTextData {
+    pub fn new() -> Self {
+        Self {
+            ticks: 0,
+        }
+    }
+}
