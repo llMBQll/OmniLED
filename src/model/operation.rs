@@ -10,26 +10,30 @@ pub enum Operation {
 #[derive(Debug)]
 pub struct Bar {
     pub value: f32,
+    pub modifiers: Modifiers,
     pub position: Position,
 }
 
 #[derive(Debug)]
 pub struct Text {
     pub text: String,
-    pub modifiers: TextModifiers,
+    pub modifiers: Modifiers,
     pub position: Position,
 }
 
 #[derive(Debug)]
 pub struct ScrollingText {
     pub text: String,
-    pub modifiers: TextModifiers,
     pub count: i32,
+    pub modifiers: Modifiers,
     pub position: Position,
 }
 
 #[derive(Debug, Default)]
-pub struct TextModifiers {
+pub struct Modifiers {
+    pub inverted: bool,
+    pub reverse: bool,
     pub strict: bool,
     pub upper: bool,
+    pub vertical: bool,
 }

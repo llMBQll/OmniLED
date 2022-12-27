@@ -15,7 +15,7 @@ use serde_json::Value as JsonValue;
 use crate::cast;
 use crate::lisp_handler::custom_functions::*;
 use crate::model::display::Display;
-use crate::model::operation::{Bar, Operation, ScrollingText, Text, TextModifiers};
+use crate::model::operation::{Bar, Operation, ScrollingText, Text, Modifiers};
 use crate::model::position::Position;
 
 pub struct LispHandler {
@@ -162,7 +162,8 @@ impl LispHandler {
         match op.as_str() {
             "bar" => {
                 let value = cast!(iter.next().unwrap(), Value::Float);
-                Ok(Operation::Bar(Bar { value, position: position.clone() }))
+                let modifiers = Self::parse_modifiers(iter);
+                Ok(Operation::Bar(Bar { value, modifiers, position: position.clone() }))
             }
             "text" => {
                 let text = cast!(iter.next().unwrap(), Value::String);
@@ -173,13 +174,13 @@ impl LispHandler {
                 let text = cast!(iter.next().unwrap(), Value::String);
                 let count = cast!(iter.next().unwrap(), Value::Int);
                 let modifiers = Self::parse_modifiers(iter);
-                Ok(Operation::ScrollingText(ScrollingText { text, modifiers, count, position: position.clone() }))
+                Ok(Operation::ScrollingText(ScrollingText { text, count, modifiers, position: position.clone() }))
             }
             _ => Err(RuntimeError { msg: "Unknown operation".to_string() })
         }
     }
 
-    fn parse_modifiers<T: Iterator<Item = Value>>(mut iter: T) -> TextModifiers {
+    fn parse_modifiers<T: Iterator<Item = Value>>(mut iter: T) -> Modifiers {
         fn remove_whitespace(s: &mut String) {
             s.retain(|c| !c.is_whitespace());
         }
@@ -189,17 +190,20 @@ impl LispHandler {
                 let mut string = cast!(value, Value::String);
                 remove_whitespace(&mut string);
                 let parts = string.split("|");
-                let mut modifiers = TextModifiers::default();
+                let mut modifiers = Modifiers::default();
                 for part in parts {
                     match part {
+                        "inverted" => modifiers.inverted = true,
+                        "reverse" => modifiers.reverse = true,
                         "strict" => modifiers.strict = true,
                         "upper" => modifiers.upper = true,
+                        "vertical" => modifiers.vertical = true,
                         _ => { }
                     }
                 }
                 modifiers
             }
-            None => TextModifiers::default()
+            None => Modifiers::default()
         }
     }
 

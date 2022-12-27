@@ -215,12 +215,17 @@ pub fn from_hashmap(env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, Runt
 
 pub fn bar(_env: Rc<RefCell<Env>>, args: &[Value]) -> Result<Value, RuntimeError> {
     let bar = require_arg("bar", args, 0)?;
+    let modifiers = if args.len() > 1 {
+        require_typed_arg::<&String>(":", args, 1)?.clone()
+    } else {
+        String::new()
+    };
 
     if let Ok(bar) = TryInto::<FloatType>::try_into(bar) {
-        return Ok(list![string!("bar"), float!(bar)]);
+        return Ok(list![string!("bar"), float!(bar), string!(modifiers)]);
     }
     if let Ok(bar) = TryInto::<IntType>::try_into(bar) {
-        return Ok(list![string!("bar"), float!(bar)]);
+        return Ok(list![string!("bar"), float!(bar), string!(modifiers)]);
     }
 
     Err(RuntimeError {

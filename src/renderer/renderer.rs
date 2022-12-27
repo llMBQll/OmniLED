@@ -1,5 +1,5 @@
 use std::cmp::max;
-use crate::model::operation::{Operation, TextModifiers};
+use crate::model::operation::{Operation, Modifiers};
 use crate::model::position::Position;
 use crate::renderer::font_manager::FontManager;
 use crate::renderer::screen::Screen;
@@ -59,7 +59,7 @@ impl Renderer {
         if upper { height * 40 / 29 } else { height }
     }
 
-    fn render_text(&mut self, screen: &mut Screen, pos: Position, text: String, modifiers: TextModifiers) {
+    fn render_text(&mut self, screen: &mut Screen, pos: Position, text: String, modifiers: Modifiers) {
         let mut cursor_x = 0 as i32;
         let cursor_y = pos.height as i32;
 
@@ -108,7 +108,7 @@ impl Renderer {
         }
     }
 
-    fn calculate_scrolling_text(&mut self, pos: &Position, text: &String, modifiers: &TextModifiers, count: Option<i32>) -> (usize, usize) {
+    fn calculate_scrolling_text(&mut self, pos: &Position, text: &String, modifiers: &Modifiers, count: Option<i32>) -> (usize, usize) {
         // count is required to calculate tick, so if it is already known then it can be omitted
 
         let height = Self::get_text_height(pos.height, modifiers.upper);
@@ -129,7 +129,7 @@ impl Renderer {
         (shifts, tick)
     }
 
-    fn render_scrolling_text(&mut self, screen: &mut Screen, pos: Position, text: String, modifiers: TextModifiers, tick: usize) {
+    fn render_scrolling_text(&mut self, screen: &mut Screen, pos: Position, text: String, modifiers: Modifiers, tick: usize) {
         // Don't care about tick as we use the tick of a value that will have to be shifted the most times
         // This way all scrolling texts will be synchronized and will reset after last shift of the item that
         // requires the most shifts
