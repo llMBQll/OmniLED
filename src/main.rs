@@ -17,11 +17,14 @@ use crate::model::display::Display;
 use crate::plugin::plugin::Plugin;
 use crate::renderer::renderer::Renderer;
 
+mod applications;
 mod keyboard_api;
 mod lisp_handler;
+mod environment;
 mod model;
 mod renderer;
 mod plugin;
+mod plugins;
 
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
