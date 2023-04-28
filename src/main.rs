@@ -14,17 +14,17 @@ use crate::keyboard_api::KeyboardAPI;
 use crate::lisp_handler::lisp_handler::LispHandler;
 use crate::model::display::Display;
 // use crate::model::operation::Operation;
-use crate::plugin::plugin::Plugin;
+// use crate::plugin::plugin::Plugin;
 use crate::renderer::renderer::Renderer;
 
-mod applications;
+mod application_loader;
 mod keyboard_api;
 mod lisp_handler;
 mod environment;
 mod model;
 mod renderer;
-mod plugin;
 mod plugins;
+mod logging;
 
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -278,17 +278,17 @@ async fn run_server(mut env: LispHandler, mut renderer: Renderer, mut keyboard_a
     // Start registered applications
     let mut file = File::open("applications.json").unwrap();
     let app_names: Vec<Application> = serde_json::from_reader(&mut file).unwrap();
-    let mut apps = Vec::with_capacity(app_names.len());
-    for app in app_names {
-        match Plugin::new(&app.path, &address) {
-            Ok(plugin) => {
-                apps.push(plugin);
-            }
-            Err(err) => {
-                println!("{}: '{}'", err, app.path);
-            }
-        }
-    }
+    // let mut apps = Vec::with_capacity(app_names.len());
+    // for app in app_names {
+    //     match Plugin::new(&app.path, &address) {
+    //         Ok(plugin) => {
+    //             apps.push(plugin);
+    //         }
+    //         Err(err) => {
+    //             println!("{}: '{}'", err, app.path);
+    //         }
+    //     }
+    // }
 
     // Write server address in case some non-registered application wants to send requests
     let path = "server.json";

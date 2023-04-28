@@ -66,10 +66,10 @@ pub struct BoundingBox {
 impl From<ft::BBox> for BoundingBox {
     fn from(bbox: ft::BBox) -> Self {
         Self {
-            x_min: bbox.xMin,
-            x_max: bbox.xMax,
-            y_min: bbox.yMin,
-            y_max: bbox.yMax,
+            x_min: bbox.xMin as i32,
+            x_max: bbox.xMax as i32,
+            y_min: bbox.yMin as i32,
+            y_max: bbox.yMax as i32,
         }
     }
 }
