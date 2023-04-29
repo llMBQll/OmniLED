@@ -1,2 +1,2 @@
-update_interval_ms = 100
-applications_filename = './applications.lua'
+update_interval = 100
+applications_file = 'applications.lua'

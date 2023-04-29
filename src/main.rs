@@ -4,27 +4,29 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
+use mlua::Lua;
 
 use serde::{Deserialize, Serialize};
 use tokio::time::{Duration, Instant};
 use warp::Filter;
+use crate::application_loader::application_loader::ApplicationLoader;
 
 use crate::ApplicationMetadataReplyData::{Reason, Token};
 use crate::keyboard_api::KeyboardAPI;
-use crate::lisp_handler::lisp_handler::LispHandler;
 use crate::model::display::Display;
 // use crate::model::operation::Operation;
 // use crate::plugin::plugin::Plugin;
 use crate::renderer::renderer::Renderer;
+use crate::settings::settings::Settings;
 
 mod application_loader;
 mod keyboard_api;
-mod lisp_handler;
-mod environment;
+mod script_handler;
 mod model;
 mod renderer;
 mod plugins;
 mod logging;
+mod settings;
 
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -137,26 +139,25 @@ impl Applications {
     }
 }
 
-#[tokio::main]
-async fn main() {
-    let env = setup_env();
-    let renderer = setup_renderer();
-    let keyboard_api = setup_keyboard_api();
+fn main() {
+    let lua = Lua::new();
 
-    run_server(env, renderer, keyboard_api).await;
+    let _settings = Settings::new(&lua);
+
+    let application_loader = ApplicationLoader::new(&lua);
+    application_loader.load_applications().unwrap();
 }
+
+// #[tokio::main]
+// async fn main() {
+//     let renderer = setup_renderer();
+//     let keyboard_api = setup_keyboard_api();
+//
+//     run_server(renderer, keyboard_api).await;
+// }
 
 fn setup_keyboard_api() -> KeyboardAPI {
     KeyboardAPI::new()
-}
-
-fn setup_env() -> LispHandler {
-    let mut file = File::open("displays.json").unwrap();
-    let displays: Vec<Display> = serde_json::from_reader(&mut file).unwrap();
-
-    let mut env = LispHandler::new();
-    env.register(displays).expect("Register displays failed");
-    env
 }
 
 fn setup_renderer() -> Renderer {
@@ -169,7 +170,7 @@ fn setup_renderer() -> Renderer {
     Renderer::new(HEIGHT, WIDTH)
 }
 
-async fn run_server(mut env: LispHandler, mut renderer: Renderer, mut keyboard_api: KeyboardAPI) {
+async fn run_server(mut renderer: Renderer, mut keyboard_api: KeyboardAPI) {
     let applications_src = Arc::new(Mutex::new(Applications::new()));
     let queue_src = Arc::new(Mutex::new(Vec::new()));
 
@@ -238,17 +239,17 @@ async fn run_server(mut env: LispHandler, mut renderer: Renderer, mut keyboard_a
         loop {
             let begin = Instant::now();
 
-            match env.update(&queue.lock().unwrap(), DURATION) {
-                Ok(operations) => {
-                    if operations.len() > 0 {
-                        let image = renderer.render(operations);
-                        keyboard_api.set_image(&image);
-                    }
-                }
-                Err(error) => {
-                    println!("{}", error);
-                }
-            }
+            // match env.update(&queue.lock().unwrap(), DURATION) {
+            //     Ok(operations) => {
+            //         if operations.len() > 0 {
+            //             let image = renderer.render(operations);
+            //             keyboard_api.set_image(&image);
+            //         }
+            //     }
+            //     Err(error) => {
+            //         println!("{}", error);
+            //     }
+            // }
             *queue.lock().unwrap() = Vec::new();
 
             let end = Instant::now();

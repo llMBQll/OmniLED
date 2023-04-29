@@ -9,7 +9,7 @@ edition = "2021"
 byteorder = "1.4"
 freetype-rs = "0.32"
 libloading = "0.8"
-mlua = { version = "0.8", features = ["lua54", "vendored"] }
+mlua = { version = "0.8", features = ["lua54", "vendored", "macros", "serialize"] }
 once_cell = "1.17"
 quote = "1.0"
 rust_lisp = "0.16"
