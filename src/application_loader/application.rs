@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::process::{Child, Command, Stdio};
-use mlua::{FromLua, Lua, Table, UserData, UserDataFields, Value};
+use mlua::UserData;
 
 pub struct Application {
     process: Child,

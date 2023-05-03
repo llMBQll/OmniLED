@@ -1,31 +1,34 @@
 use std::collections::hash_map::{DefaultHasher, Entry};
 use std::collections::HashMap;
-use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
 use mlua::Lua;
 
 use serde::{Deserialize, Serialize};
 use tokio::time::{Duration, Instant};
 use warp::Filter;
+use warp::sse::Event;
 use crate::application_loader::application_loader::ApplicationLoader;
 
 use crate::ApplicationMetadataReplyData::{Reason, Token};
+use crate::events::events::Events;
 use crate::keyboard_api::KeyboardAPI;
-use crate::model::display::Display;
+use crate::logging::logger::Logger;
+// use crate::model::display::Display;
 // use crate::model::operation::Operation;
 // use crate::plugin::plugin::Plugin;
 use crate::renderer::renderer::Renderer;
 use crate::settings::settings::Settings;
 
 mod application_loader;
+mod events;
 mod keyboard_api;
-mod script_handler;
-mod model;
-mod renderer;
-mod plugins;
 mod logging;
+mod model;
+mod plugins;
+mod renderer;
+mod script_handler;
+mod server;
 mod settings;
 
 #[derive(Deserialize, Serialize)]
@@ -68,11 +71,6 @@ struct GenericErr {
 
 struct Applications {
     applications: HashMap<u64, (String, Instant)>,
-}
-
-#[derive(Deserialize, Serialize)]
-struct Application {
-    path: String,
 }
 
 impl Applications {
@@ -142,10 +140,12 @@ impl Applications {
 fn main() {
     let lua = Lua::new();
 
-    let _settings = Settings::new(&lua);
+    let _logger = Logger::new(&lua);
+    Events::load(&lua);
+    Settings::load(&lua);
 
-    let application_loader = ApplicationLoader::new(&lua);
-    application_loader.load_applications().unwrap();
+    // let application_loader = ApplicationLoader::new(&lua);
+    // application_loader.load_applications().unwrap();
 }
 
 // #[tokio::main]
@@ -156,11 +156,11 @@ fn main() {
 //     run_server(renderer, keyboard_api).await;
 // }
 
-fn setup_keyboard_api() -> KeyboardAPI {
+fn _setup_keyboard_api() -> KeyboardAPI {
     KeyboardAPI::new()
 }
 
-fn setup_renderer() -> Renderer {
+fn _setup_renderer() -> Renderer {
     // TODO: allow to change screen size dynamically
     // TODO: expose screen dimensions as lisp environment variables
 
@@ -170,7 +170,7 @@ fn setup_renderer() -> Renderer {
     Renderer::new(HEIGHT, WIDTH)
 }
 
-async fn run_server(mut renderer: Renderer, mut keyboard_api: KeyboardAPI) {
+async fn _run_server(_renderer: Renderer, _keyboard_api: KeyboardAPI) {
     let applications_src = Arc::new(Mutex::new(Applications::new()));
     let queue_src = Arc::new(Mutex::new(Vec::new()));
 
@@ -258,50 +258,8 @@ async fn run_server(mut renderer: Renderer, mut keyboard_api: KeyboardAPI) {
         }
     });
 
-    let paths = warp::post().and(register.or(update).or(heartbeat));
+    let _paths = warp::post().and(register.or(update).or(heartbeat));
 
-    // Try to bind server to first available port
-    let mut port: u16 = 6969;
-    let (address, server) = loop {
-        match warp::serve(paths.clone()).try_bind_ephemeral(([127, 0, 0, 1], port)) {
-            Ok((address, server)) => {
-                break (address.to_string(), server);
-            }
-            Err(_) => {
-                port += 1;
-            }
-        };
-    };
-
-    // Start handling requests
-    tokio::task::spawn(server);
-
-    // Start registered applications
-    let mut file = File::open("applications.json").unwrap();
-    let app_names: Vec<Application> = serde_json::from_reader(&mut file).unwrap();
-    // let mut apps = Vec::with_capacity(app_names.len());
-    // for app in app_names {
-    //     match Plugin::new(&app.path, &address) {
-    //         Ok(plugin) => {
-    //             apps.push(plugin);
-    //         }
-    //         Err(err) => {
-    //             println!("{}: '{}'", err, app.path);
-    //         }
-    //     }
-    // }
-
-    // Write server address in case some non-registered application wants to send requests
-    let path = "server.json";
-    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
-
-    let data = serde_json::json!({
-        "address": address,
-        "timestamp": timestamp
-    });
-    std::fs::write(path, serde_json::to_string(&data).unwrap()).unwrap();
-
-    // temporary way to stop program from exiting
-    // eventually UI will be here so this step won't be necessary
+    // stop the program from exiting
     tokio::time::sleep(Duration::MAX).await;
 }

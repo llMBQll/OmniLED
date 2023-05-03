@@ -1,8 +1,6 @@
-use std::ops::Deref;
 use std::sync::{Arc, Mutex};
-use mlua::{AnyUserData, Lua, LuaSerdeExt, Nil, Table, TableExt, Value};
-use serde::Serialize;
-use crate::application_loader::application::{Config, Application};
+use mlua::{Lua, LuaSerdeExt, Nil, Table, TableExt, Value};
+use crate::application_loader::application::Application;
 
 pub struct ApplicationLoader<'a> {
     lua: &'a Lua,
@@ -18,7 +16,7 @@ impl<'a> ApplicationLoader<'a> {
         let loader: Table = lua.globals().get("LOADER").unwrap();
 
         let applications = Arc::new(Mutex::new(Vec::new()));
-        let mut apps = applications.clone();
+        let apps = applications.clone();
         let start_application = lua.create_function(move |lua, app_config: Value| {
             let app_config = lua.from_value(app_config)?;
             match Application::new(&app_config) {
@@ -28,7 +26,6 @@ impl<'a> ApplicationLoader<'a> {
                 }
                 Err(err) => {
                     println!("{}: '{}'", err, serde_json::to_string(&app_config).unwrap());
-
                 }
             }
             Ok(())
