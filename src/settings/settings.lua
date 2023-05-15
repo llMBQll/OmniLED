@@ -13,6 +13,7 @@ for key, val in pairs(_user_input) do
     elseif not SETTINGS.key_exists(key) then
         LOG.warn('Unrecognized setting "' .. key .. '"')
     else
+        LOG.debug('Changing setting "' .. key .. '" from "' .. SETTINGS[key] .. '" to "' .. val .. '"')
         SETTINGS[key] = val
     end
 end

@@ -1,50 +1,56 @@
 use std::fmt::format;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use mlua::{Lua, Nil, Table, TableExt, UserData, UserDataFields, UserDataMethods};
+use mlua::{chunk, Lua, Nil, Table, TableExt, UserData, UserDataFields, UserDataMethods};
 
 pub const ON_SETTINGS_CHANGED: &str = "on_settings_changed";
 
 pub struct Settings {
     update_interval: Duration,
     applications_file: String,
+    application_timeout: Duration,
 }
 
 impl Settings {
     pub fn load(lua: &Lua) {
         static SETTINGS_SRC: &str = include_str!("settings.lua");
 
-        lua.load(format!("Event:new('{}')", ON_SETTINGS_CHANGED).as_str()).exec().unwrap();
-
         let settings = Settings {
             update_interval: Duration::from_millis(100),
             applications_file: String::from("applications.lua"),
+            application_timeout: Duration::from_millis(30000),
         };
-        lua.globals().set("SETTINGS",settings).unwrap();
+        lua.globals().set("SETTINGS", settings).unwrap();
 
         lua.load(SETTINGS_SRC).exec().unwrap();
     }
 }
 
 impl UserData for Settings {
+    // TODO use a macro for the repetitive code
+
     fn add_fields<'lua, F: UserDataFields<'lua, Self>>(fields: &mut F) {
         fields.add_field_method_get("update_interval", |_, this| {
             Ok(this.update_interval.as_millis())
         });
-        fields.add_field_method_set("update_interval", |lua, this, val: u64| {
+        fields.add_field_method_set("update_interval", |_, this, val: u64| {
             this.update_interval = Duration::from_millis(val);
-            let on_settings_changed: Table = lua.load(format!("EVENTS['{}']", ON_SETTINGS_CHANGED).as_str()).eval().unwrap();
-            on_settings_changed.call_method("emit", ("update_interval", val))?;
             Ok(())
         });
 
         fields.add_field_method_get("applications_file", |_, this| {
             Ok(this.applications_file.clone())
         });
-        fields.add_field_method_set("applications_file", |lua, this, val: String| {
-            this.applications_file = val.clone();
-            let on_settings_changed: Table = lua.load(format!("EVENTS['{}']", ON_SETTINGS_CHANGED).as_str()).eval().unwrap();
-            on_settings_changed.call_method("emit", ("applications_file", val))?;
+        fields.add_field_method_set("applications_file", |_, this, val: String| {
+            this.applications_file = val;
+            Ok(())
+        });
+
+        fields.add_field_method_get("application_timeout", |_, this| {
+            Ok(this.application_timeout.as_millis())
+        });
+        fields.add_field_method_set("application_timeout", |_, this, val: u64| {
+            this.application_timeout = Duration::from_millis(val);
             Ok(())
         });
     }
@@ -54,6 +60,7 @@ impl UserData for Settings {
             let res = match key.as_str() {
                 "update_interval" => true,
                 "applications_file" => true,
+                "application_timeout" => true,
                 _ => false,
             };
             Ok(res)

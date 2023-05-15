@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use log::{debug, error, info, LevelFilter, trace, warn};
 use log4rs::{
     Config, Handle, init_config,
@@ -7,17 +8,15 @@ use log4rs::{
 };
 use mlua::{Lua, UserData, UserDataMethods};
 
+#[derive(Clone, Debug)]
 pub struct Logger {
     _handle: Handle,
 }
 
 impl Logger {
-    pub fn new(lua: &Lua) {
-        // TODO path
-        // TODO pattern
-
+    pub fn new(lua: &Lua) -> Logger {
         let logfile = FileAppender::builder()
-            .encoder(Box::new(PatternEncoder::new("[{d(%Y-%m-%d %H:%M:%S)}][{l}] {m}\n")))
+            .encoder(Box::new(PatternEncoder::new("[{d(%Y-%m-%d %H:%M:%S:%3f)}][{l}] {m}\n")))
             .build("logging.log")
             .unwrap();
 
@@ -32,7 +31,9 @@ impl Logger {
         let handle = init_config(config).unwrap();
         let logger = Logger { _handle: handle };
 
-        lua.globals().set("LOG", logger).unwrap();
+        lua.globals().set("LOG", logger.clone()).unwrap();
+
+        logger
     }
 }
 

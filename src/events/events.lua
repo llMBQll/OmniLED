@@ -2,8 +2,12 @@ EVENTS = {}
 
 Event = {}
 
-function Event:new(name)
+function Event:register(name)
     LOG.trace('Registering "' .. name .. '" event')
+
+    if EVENTS[name] ~= nil then
+        return EVENTS[name]
+    end
 
     obj = {}
     setmetatable(obj, Event)
@@ -39,6 +43,3 @@ function Event:emit(...)
         slot(...)
     end
 end
-
-e = Event:new('XD')
-e:emit(nil)

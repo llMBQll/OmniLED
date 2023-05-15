@@ -2,12 +2,12 @@ use serde::{Deserialize, Serialize};
 use std::process::{Child, Command, Stdio};
 use mlua::UserData;
 
-pub struct Application {
+pub struct Process {
     process: Child,
 }
 
-impl Application {
-    pub fn new(config: &Config) -> std::io::Result<Application> {
+impl Process {
+    pub fn new(config: &Config) -> std::io::Result<Process> {
         let process = Command::new(&config.path)
             .args(&config.args)
             .stdin(Stdio::piped())
@@ -21,7 +21,7 @@ impl Application {
     }
 }
 
-impl Drop for Application {
+impl Drop for Process {
     fn drop(&mut self) {
         self.process.wait().expect("Command wasn't running");
     }

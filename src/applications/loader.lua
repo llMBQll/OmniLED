@@ -9,11 +9,11 @@ function LOADER.load_app(app_config)
         LOG.warn('Starting application without parameters')
     end
 
-    LOADER.start_application(app_config)
+    LOADER.start_process(app_config)
 end
 
 function LOADER.load_applications()
-    f, err = loadfile(SETTINGS.applications_file, 't', { load_app = LOADER.load_app })
+    f, err = loadfile(SETTINGS.applications_file, 't', { load_app = LOADER.load_app, SERVER = SERVER })
     if err then
         LOG.error('Failed to load the applications file - ' .. err)
         return

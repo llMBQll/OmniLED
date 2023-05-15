@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use mlua::Lua;
 
 pub struct Events;
