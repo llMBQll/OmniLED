@@ -52,9 +52,6 @@ impl UpdateHandler {
             let interval_integer = lua.load(chunk!{ SETTINGS["update_interval"] }).eval().unwrap();
             let interval = Duration::from_millis(interval_integer);
             let update_handler: Arc<Mutex<UpdateHandler>> = lua.load(chunk!{ UPDATE_HANDLER.rust_object }).eval().unwrap();
-            // let send_value: Function = lua.load(chunk!{ UPDATE_HANDLER:send_value }).eval().unwrap();
-            // let update: Function = lua.load(chunk!{ UPDATE_HANDLER:update }).eval().unwrap();
-            // let table = lua.globals().met
             let lua_update_handler: Table = lua.globals().get("UPDATE_HANDLER").unwrap();
 
             loop {
@@ -80,6 +77,7 @@ impl UpdateHandler {
 
                 let end = Instant::now();
                 let update_duration = end - begin;
+                println!("Update took {} us", update_duration.as_micros());
                 tokio::time::sleep(interval.saturating_sub(update_duration)).await;
             }
             Ok(())

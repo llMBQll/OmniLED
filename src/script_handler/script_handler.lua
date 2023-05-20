@@ -1,9 +1,35 @@
-local function register(fn, sensitivity_list)
-    UPDATE_HANDLER:register_user_script(fn, sensitivity_list)
-end
+SCRIPT_HANDLER = {}
 
-local function get_sandbox_env()
-    local sandbox_env = {
+function SCRIPT_HANDLER.make_sandbox_env()
+    local function register(fn, sensitivity_list)
+        if type(fn) ~= 'function' then
+            LOG.warn('Expected the first argument to be "function", got "' .. type(fn) .. '"! User script not registered.')
+            return
+        end
+
+        -- If we get a string - convert it to a one element array
+        if type(sensitivity_list) == 'string' then
+            sensitivity_list = { sensitivity_list }
+        end
+
+        -- Assert that we got a table...
+        if type(sensitivity_list) ~= 'table' then
+            LOG.warn('Expected the second argument to be "table", got "' .. type(sensitivity_list) .. '"! User script not registered.')
+            return
+        end
+
+        -- ... and every element is a string
+        for i, element in ipairs(sensitivity_list) do
+            if type(element) ~= 'string' then
+                LOG.warn('Expected the second argument to be an array of "string", got "' .. type(element) .. '" at index ' .. i .. '! User script not registered.')
+                return
+            end
+        end
+
+        UPDATE_HANDLER:register_user_script(fn, sensitivity_list)
+    end
+
+    sandbox_env = {
         ipairs = ipairs,
         next = next,
         pairs = pairs,
@@ -24,11 +50,11 @@ local function get_sandbox_env()
     return sandbox_env
 end
 
-sandbox = get_sandbox_env()
+SCRIPT_HANDLER.env = SCRIPT_HANDLER.make_sandbox_env()
 
 -- Compile a handler and assign it to a context with a given name
-function compile(chunk)
-    local fn, err = loadfile('scripts.lua', 't', sandbox)
+function SCRIPT_HANDLER:compile()
+    local fn, err = loadfile('scripts.lua', 't', self.env)
 
     if err then
         print(err)

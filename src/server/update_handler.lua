@@ -11,7 +11,7 @@ UPDATE_HANDLER.DEFAULT_UPDATE_TIME = 1000
 
 function UPDATE_HANDLER:register_user_script(script, sensitivity_list)
     if self.user_scripts[script] ~= nil then
-        LOG.warn('Function ' .. script .. ' is already registered! Skipping...')
+        LOG.warn('Script ' .. script .. ' was already registered! Skipping...')
         return
     end
     self.user_scripts[script] = true
@@ -63,13 +63,15 @@ function UPDATE_HANDLER:update(time_passed)
 end
 
 function UPDATE_HANDLER:send_value(application_name, variable_name, value)
-    if _G[application_name] == nil then
-        _G[application_name] = {}
+    local env = SCRIPT_HANDLER.env
+
+    if env[application_name] == nil then
+        env[application_name] = {}
     end
 
     -- TODO consider running updates only if the value has changed
-    -- local old_value = _G[application_name][variable_name]
-    _G[application_name][variable_name] = value
+    -- local old_value = env[application_name][variable_name]
+    env[application_name][variable_name] = value
 
     local key = application_name .. '.' .. variable_name
     local event = EVENTS[key]

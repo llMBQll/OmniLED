@@ -1,20 +1,17 @@
-use serde::{Serialize, Deserialize};
-
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
-pub struct Position {
+#[derive(Copy)]
+pub struct Point {
     pub x: usize,
     pub y: usize,
+}
+
+#[derive(Copy)]
+pub struct Size {
     pub width: usize,
     pub height: usize,
 }
 
-// impl Position {
-//     pub fn new(x: usize, y: usize, width: usize, height: usize) -> Self {
-//         Self {
-//             x,
-//             y,
-//             width,
-//             height,
-//         }
-//     }
-// }
+#[derive(Copy)]
+pub struct Rectangle {
+    pub origin: Point,
+    pub size: Size,
+}

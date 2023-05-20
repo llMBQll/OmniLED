@@ -23,7 +23,6 @@ impl Server {
                 move |metadata: ApplicationMetadata| {
                     match applications.lock().unwrap().register(&metadata.name) {
                         Some(token) => {
-                            debug!("Registered application {} : {}", metadata.name, token);
                             let reply = warp::reply::json(&ApplicationMetadataReply {
                                 metadata,
                                 data: Token(token),
@@ -31,7 +30,6 @@ impl Server {
                             warp::reply::with_status(reply, warp::http::StatusCode::OK)
                         }
                         None => {
-                            debug!("Failed to register {}", metadata.name);
                             let reply = warp::reply::json(&ApplicationMetadataReply {
                                 metadata,
                                 data: Reason(String::from("Application with the same name is already registered.")),
@@ -70,7 +68,6 @@ impl Server {
                 let applications = Arc::clone(&applications);
                 let handler = Arc::clone(&handler);
                 move |token: u64, update: HashMap<String, serde_json::Value>| {
-                    println!("{}", serde_json::to_string(&update).unwrap());
                     match applications.lock().unwrap().update(token) {
                         Some((name, timeout)) => {
                             handler.lock().unwrap().push((name, update));

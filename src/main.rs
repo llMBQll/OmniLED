@@ -28,11 +28,11 @@ mod events;
 mod keyboard_api;
 mod logging;
 mod model;
-mod plugins;
 mod renderer;
 mod script_handler;
 mod server;
 mod settings;
+mod screen;
 
 #[tokio::main]
 async fn main() {
@@ -50,14 +50,6 @@ async fn main() {
     let runner = UpdateHandler::make_runner(&lua);
     runner.call_async::<_ ,()>(()).await.unwrap();
 }
-
-
-// async fn main() {
-//     let renderer = setup_renderer();
-//     let keyboard_api = setup_keyboard_api();
-//
-//     run_server(renderer, keyboard_api).await;
-// }
 
 fn _setup_keyboard_api() -> KeyboardAPI {
     KeyboardAPI::new()

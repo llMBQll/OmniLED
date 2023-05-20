@@ -1,12 +1,13 @@
-use mlua::{Function, Lua};
+use mlua::{Function, Lua, Table, TableExt};
 
 pub struct ScriptHandler;
 
 impl ScriptHandler {
     pub fn load(lua: &Lua){
-        static SANDBOX_ENV: &str = include_str!("sandbox_env.lua");
+        static SANDBOX_ENV: &str = include_str!("script_handler.lua");
 
         lua.load(SANDBOX_ENV).exec().unwrap();
-        lua.globals().get::<_, Function>("compile").unwrap().call::<_, ()>(()).unwrap();
+        let handler: Table = lua.globals().get("SCRIPT_HANDLER").unwrap();
+        handler.call_method::<_, _, ()>("compile", ()).unwrap();
     }
 }
