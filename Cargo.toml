@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 byteorder = "1.4"
 freetype-rs = "0.32"
-libloading = "0.8"
+lazy_static = "1.4"
 log = "0.4"
 log4rs = "1.2"
 mlua = { version = "0.8", features = ["async", "lua54", "vendored", "macros", "send", "serialize"] }
