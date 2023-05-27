@@ -1,14 +1,13 @@
-use log::{debug, error, info, LevelFilter, trace, warn};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use mlua::{chunk, Function, Lua};
+use std::sync::{Arc};
+use mlua::Lua;
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::time::Instant;
 use warp::{Filter};
-use crate::applications::applications::{Applications, load_applications};
+use crate::applications::applications::load_applications;
 use crate::server::server::ApplicationMetadataReplyData::{Reason, Token};
-use crate::server::update_handler::{load_update_handler, UpdateHandler};
+use crate::server::update_handler::load_update_handler;
 
 pub struct Server {}
 

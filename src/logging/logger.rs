@@ -1,4 +1,3 @@
-use std::sync::{Arc, Mutex};
 use log::{debug, error, info, LevelFilter, trace, warn};
 use log4rs::{
     Config, Handle, init_config,

@@ -1,16 +1,16 @@
-use std::marker::PhantomData;
-use mlua::{Lua, Nil, Table, UserData, UserDataFields, UserDataMethods, Value};
+use mlua::{UserData,UserDataMethods};
 
-pub use crate::model::position::Size;
+pub use crate::model::rectangle::Size;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[derive(Debug)]
 pub enum Error {
     NameAlreadyRegistered(String),
-    InitFailed(String),
-    TemporarilyUnavailable,
-    Offline,
-    Custom(String),
+    // InitFailed(String),
+    // TemporarilyUnavailable,
+    // Offline,
+    // Custom(String),
 }
 
 pub trait Screen {
@@ -25,25 +25,7 @@ pub trait Screen {
     // fn partial_update(pixels: &Vec<u8>) -> Result<()>;
 }
 
-fn register_screen<T: Send + Screen + 'static>(lua: &Lua, mut screen: T) -> Result<()> {
-    screen.init()?;
-
-    let name = screen.name()?;
-    let screens: Table = lua.globals().get("SCREENS").unwrap();
-    match screens.get::<_, Value>(name.clone()).unwrap() {
-        Nil => {}
-        _ => {
-            return Err(Error::NameAlreadyRegistered(name));
-        }
-    }
-
-    let wrapped = ScreenWrapper::new(screen);
-    screens.set(name, wrapped).unwrap();
-
-    Ok(())
-}
-
-struct ScreenWrapper<T: Send + Screen> {
+pub struct ScreenWrapper<T: Send + Screen> {
     screen: T,
 }
 
@@ -57,9 +39,18 @@ impl<T: Send + Screen> ScreenWrapper<T> {
 
 impl<T: Send + Screen> UserData for ScreenWrapper<T> {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut("update", |_, this, data: i32| {
-            todo!("Make data copiable Rust -> Lua -> Rust");
+        methods.add_method_mut("update", |_, this, data: Vec<u8>| {
+            // TODO Make movable without copying Rust -> Lua -> Rust
+            this.screen.update(&data).unwrap();
             Ok(())
-        })
+        });
+
+        methods.add_method_mut("size", |_, this, _: ()| {
+            let size = match this.screen.size() {
+                Ok(size) => size,
+                Err(_) => Size { width: 0, height: 0 }
+            };
+            Ok(size)
+        });
     }
 }

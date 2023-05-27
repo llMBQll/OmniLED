@@ -1,16 +1,18 @@
-pub struct Screen {
+use crate::model::rectangle::Size;
+
+pub struct Buffer {
     height: usize,
     width: usize,
     buffer: Vec<u8>,
 }
 
-impl Screen {
-    pub fn new(height: usize, width: usize) -> Self {
-        assert_eq!(width % 8, 0);
+impl Buffer {
+    pub fn new(size: Size) -> Self {
+        assert_eq!(size.width % 8, 0);
         Self {
-            width,
-            height,
-            buffer: vec![0; height * width / 8]
+            width: size.width,
+            height: size.height,
+            buffer: vec![0; size.height * size.width / 8]
         }
     }
 
@@ -39,7 +41,7 @@ impl Screen {
     }
 }
 
-impl Into<Vec<u8>> for Screen {
+impl Into<Vec<u8>> for Buffer {
     fn into(self) -> Vec<u8> {
         self.buffer
     }

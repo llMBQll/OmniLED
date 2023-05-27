@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 use std::ffi::c_int;
-use std::future::Future;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use mlua::{chunk, Function, Lua, Table, TableExt, UserData, UserDataFields, UserDataMethods, Value};
+use mlua::{chunk, Function, Lua, Table, TableExt, UserData, Value};
 use tokio::time::Instant;
-use warp::trace::named;
 
 pub fn load_update_handler(lua: &Lua) -> Arc<Mutex<UpdateHandler>> {
     const UPDATE_HANDLER_SRC: &str = include_str!("update_handler.lua");
@@ -48,7 +46,7 @@ impl UpdateHandler {
     }
 
     pub fn make_runner(lua: &Lua) -> Function {
-        lua.create_async_function(|lua, _: ()| async {
+        lua.create_async_function::<(), (), _, _>(|lua, _| async {
             let interval_integer = lua.load(chunk!{ SETTINGS["update_interval"] }).eval().unwrap();
             let interval = Duration::from_millis(interval_integer);
             let update_handler: Arc<Mutex<UpdateHandler>> = lua.load(chunk!{ UPDATE_HANDLER.rust_object }).eval().unwrap();
@@ -73,14 +71,13 @@ impl UpdateHandler {
                     }
                 }
                 // TODO error handling
-                lua_update_handler.call_method::<_, _, ()>("update", (interval_integer)).unwrap();
+                lua_update_handler.call_method::<_, _, ()>("update", interval_integer).unwrap();
 
                 let end = Instant::now();
                 let update_duration = end - begin;
                 println!("Update took {} us", update_duration.as_micros());
                 tokio::time::sleep(interval.saturating_sub(update_duration)).await;
             }
-            Ok(())
         }).unwrap()
     }
 }

@@ -1,9 +1,5 @@
-use std::fmt::format;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use mlua::{chunk, Lua, Nil, Table, TableExt, UserData, UserDataFields, UserDataMethods};
-
-pub const ON_SETTINGS_CHANGED: &str = "on_settings_changed";
+use mlua::{Lua, UserData, UserDataFields, UserDataMethods};
 
 pub struct Settings {
     update_interval: Duration,

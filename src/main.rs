@@ -1,23 +1,10 @@
-use std::collections::HashMap;
-
-use std::sync::{Arc, Mutex};
 use mlua::Lua;
 
-
-use tokio::time::{Duration, Instant};
-use warp::Filter;
-use warp::sse::Event;
 use crate::applications::loader::Loader;
-
-// use crate::ApplicationMetadataReplyData::{Reason, Token};
-use crate::applications::applications::{Applications, load_applications};
 use crate::events::events::Events;
-use crate::keyboard_api::KeyboardAPI;
 use crate::logging::logger::Logger;
-// use crate::model::display::Display;
-// use crate::model::operation::Operation;
-// use crate::plugin::plugin::Plugin;
 use crate::renderer::renderer::Renderer;
+use crate::screen::screens::Screens;
 use crate::script_handler::script_handler::ScriptHandler;
 use crate::server::server::Server;
 use crate::server::update_handler::UpdateHandler;
@@ -25,7 +12,6 @@ use crate::settings::settings::Settings;
 
 mod applications;
 mod events;
-mod keyboard_api;
 mod logging;
 mod model;
 mod renderer;
@@ -42,29 +28,13 @@ async fn main() {
     Events::load(&lua);
     Settings::load(&lua);
     Server::new(&lua);
+    Screens::load(&lua);
+    Renderer::load(&lua);
 
     let _sandbox = ScriptHandler::load(&lua);
 
     let loader = Loader::new(&lua);
-    loader.load_applications().unwrap();
+    loader.load().unwrap();
     let runner = UpdateHandler::make_runner(&lua);
     runner.call_async::<_ ,()>(()).await.unwrap();
-}
-
-fn _setup_keyboard_api() -> KeyboardAPI {
-    KeyboardAPI::new()
-}
-
-fn _setup_renderer() -> Renderer {
-    // TODO: allow to change screen size dynamically
-    // TODO: expose screen dimensions as lisp environment variables
-
-    const WIDTH: usize = 128;
-    const HEIGHT: usize = 40;
-
-    Renderer::new(HEIGHT, WIDTH)
-}
-
-async fn _run_server(_renderer: Renderer, _keyboard_api: KeyboardAPI) {
-    tokio::time::sleep(Duration::MAX).await;
 }

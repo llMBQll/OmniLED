@@ -1,2 +1,4 @@
-pub mod screen;
-pub mod steelseries_engine;
+pub mod screens;
+
+mod screen;
+mod steelseries_engine;

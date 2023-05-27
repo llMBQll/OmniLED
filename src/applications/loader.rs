@@ -3,9 +3,8 @@ use mlua::{Lua, LuaSerdeExt, Nil, Table, TableExt, Value};
 use crate::applications::process::Process;
 
 pub struct Loader<'a> {
-    lua: &'a Lua,
     loader: Table<'a>,
-    processes: Arc<Mutex<Vec<Process>>>,
+    _processes: Arc<Mutex<Vec<Process>>>,
 }
 
 impl<'a> Loader<'a> {
@@ -34,13 +33,18 @@ impl<'a> Loader<'a> {
         loader.set("start_process", start_process).unwrap();
 
         Self {
-            lua,
             loader,
-            processes,
+            _processes: processes,
         }
     }
 
-    pub fn load_applications(&self) -> mlua::Result<()> {
+    pub fn load(&self) -> mlua::Result<()> {
         self.loader.call_function("load_applications", Nil)
+    }
+}
+
+impl<'a> Drop for Loader<'a> {
+    fn drop(&mut self) {
+        todo!("Stop processes")
     }
 }

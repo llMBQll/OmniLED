@@ -1,7 +1,7 @@
 SCRIPT_HANDLER = {}
 
 function SCRIPT_HANDLER.make_sandbox_env()
-    local function register(fn, sensitivity_list)
+    local function register(fn, sensitivity_list, screens)
         if type(fn) ~= 'function' then
             LOG.warn('Expected the first argument to be "function", got "' .. type(fn) .. '"! User script not registered.')
             return
@@ -26,7 +26,32 @@ function SCRIPT_HANDLER.make_sandbox_env()
             end
         end
 
-        UPDATE_HANDLER:register_user_script(fn, sensitivity_list)
+        -- Assert that we got a table...
+        if type(screens) ~= 'table' then
+            LOG.warn('Expected the third argument to be "table", got "' .. type(screens) .. '"! User script not registered.')
+            return
+        end
+
+        -- ... and every element is a string
+        local found_screens = {}
+        for i, element in ipairs(screens) do
+            if type(element) ~= 'string' then
+                LOG.warn('Expected the third argument to be an array of "string", got "' .. type(element) .. '" at index ' .. i .. '! User script not registered.')
+                return
+            else
+                local screen = SCREENS[element]
+                if screen == nil then
+                    LOG.warn('Screen ' .. screens .. ' not found')
+                else
+                    table.insert(found_screens, screen)
+                end
+            end
+        end
+        if #found_screens == 0 then
+            LOG.warn('No valid screens found - there will be no visible output for this script')
+        end
+
+        UPDATE_HANDLER:register_user_script(fn, sensitivity_list, found_screens)
     end
 
     sandbox_env = {
@@ -45,6 +70,13 @@ function SCRIPT_HANDLER.make_sandbox_env()
         os = { clock = os.clock, difftime = os.difftime, time = os.time },
         register = register,
         print = print,
+        Point = OPERATIONS.Point,
+        Size = OPERATIONS.Size,
+        Rectangle = OPERATIONS.Rectangle,
+        Bar = OPERATIONS.Bar,
+        Text = OPERATIONS.Text,
+        ScrollingText = OPERATIONS.ScrollingText,
+        Modifiers = OPERATIONS.Modifiers,
     }
 
     return sandbox_env

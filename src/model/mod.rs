@@ -1,3 +1,2 @@
-pub mod display;
-pub mod position;
+pub mod rectangle;
 pub mod operation;

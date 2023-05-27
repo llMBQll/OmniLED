@@ -1,4 +1,4 @@
 pub mod renderer;
 
-mod screen;
+mod buffer;
 mod font_manager;

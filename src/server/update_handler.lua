@@ -9,7 +9,7 @@ UPDATE_HANDLER.DEFAULT_UPDATE_TIME = 1000
 -- TODO pass data from incoming requests directly to lua
 -- Swap the data vectors on update to minimize downtime on update
 
-function UPDATE_HANDLER:register_user_script(script, sensitivity_list)
+function UPDATE_HANDLER:register_user_script(script, sensitivity_list, screens)
     if self.user_scripts[script] ~= nil then
         LOG.warn('Script ' .. script .. ' was already registered! Skipping...')
         return
@@ -21,14 +21,21 @@ function UPDATE_HANDLER:register_user_script(script, sensitivity_list)
 
     local function slot()
         local function wrapper()
-            local result = script()
-            self.last_priority = priority
+            for _, screen in ipairs(screens) do
+                local env = SCRIPT_HANDLER.env
+                local size = screen:size()
+                env["SCREEN"] = size
 
-            -- TODO take care of this code
-            --if result then
-            --    self.time_remaining = result.duration or self.DEFAULT_DURATION
-            --end
-            --EVENTS['UPDATE_READY']:emit(result)
+                local result = script()
+                self.last_priority = priority
+
+                -- TODO verify result
+                if result then
+                    self.time_remaining = result.duration or self.DEFAULT_DURATION
+                    local image = RENDERER:render(size, result.data)
+                    screen:update(image)
+                end
+            end
         end
 
         self.to_update[priority] = wrapper
@@ -48,7 +55,7 @@ function UPDATE_HANDLER:update(time_passed)
     end
 
     for priority, script in ipairs(self.to_update) do
-        if self.time_remaining > 0 and self.last_priority > priority then
+        if self.time_remaining > 0 and self.last_priority < priority then
             break
         end
         if script ~= false then

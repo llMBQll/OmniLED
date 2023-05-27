@@ -5,12 +5,12 @@ load_app {
     args = { SERVER.address },
 }
 
---load_app {
---    path = APPLICATIONS_PATH .. 'audio.exe',
---    args = { SERVER.address },
---}
---
---load_app {
---    path = APPLICATIONS_PATH .. 'spotify.exe',
---    args = { SERVER.address },
---}
+load_app {
+    path = APPLICATIONS_PATH .. 'audio.exe',
+    args = { SERVER.address },
+}
+
+load_app {
+    path = APPLICATIONS_PATH .. 'spotify.exe',
+    args = { SERVER.address },
+}

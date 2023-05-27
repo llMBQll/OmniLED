@@ -1,56 +1,60 @@
 use std::cmp::max;
+use mlua::{Lua, UserData, UserDataMethods};
 use crate::model::operation::{Operation, Modifiers};
-use crate::model::position::Position;
+use crate::model::rectangle::{Rectangle, Size};
 use crate::renderer::font_manager::FontManager;
-use crate::renderer::screen::Screen;
+use crate::renderer::buffer::Buffer;
 
 pub struct Renderer {
-    height: usize,
-    width: usize,
     font_manager: FontManager,
     scrolling_text_data: ScrollingTextData,
 }
 
+const TICKS_PER_MOVE: usize = 2;
+const TICKS_AT_EDGE: usize = 8;
+
 impl Renderer {
-    pub fn new(height: usize, width: usize) -> Self {
-        assert_eq!(width % 8, 0);
+    pub fn load(lua: &Lua) {
+        let renderer = Self::new();
+        lua.globals().set("RENDERER", renderer).unwrap();
+    }
+
+    pub fn new() -> Self {
         Self {
-            height,
-            width,
             font_manager: FontManager::new(),
             scrolling_text_data: ScrollingTextData::new(),
         }
     }
 
-    pub fn render(&mut self, operations: Vec<Operation>) -> Vec<u8> {
-        let mut screen = Screen::new(self.height, self.width);
+    pub fn render(&mut self, size: Size, operations: Vec<Operation>) -> Vec<u8> {
+        let mut buffer = Buffer::new(size);
         self.calculate_scrolling_text_data(&operations);
         for operation in operations {
-            self.perform_operation(&mut screen, operation);
+            self.perform_operation(&mut buffer, operation);
         }
-        screen.into()
+        buffer.into()
     }
 
-    fn perform_operation(&mut self, screen: &mut Screen, op: Operation) {
+    fn perform_operation(&mut self, buffer: &mut Buffer, op: Operation) {
         match op {
             Operation::Bar(bar) => {
-                self.render_bar(screen, bar.position, bar.value)
+                self.render_bar(buffer, bar.position, bar.value)
             }
             Operation::Text(text) => {
-                self.render_text(screen, text.position, text.text, text.modifiers)
+                self.render_text(buffer, text.position, text.text, text.modifiers)
             }
             Operation::ScrollingText(text) => {
-                self.render_scrolling_text(screen, text.position, text.text, text.modifiers, self.scrolling_text_data.ticks)
+                self.render_scrolling_text(buffer, text.position, text.text, text.modifiers, self.scrolling_text_data.ticks)
             }
         }
     }
 
-    fn render_bar(&mut self, screen: &mut Screen, pos: Position, percent: f32) {
-        let width = pos.width as f32 * percent / 100.0;
+    fn render_bar(&mut self, buffer: &mut Buffer, rect: Rectangle, percent: f32) {
+        let width = rect.size.width as f32 * percent / 100.0;
 
-        for row in 0..pos.height {
+        for row in 0..rect.size.height {
             for col in 0..width as usize {
-                screen.set(pos.y + row, pos.x + col);
+                buffer.set(rect.origin.y + row, rect.origin.x + col);
             }
         }
     }
@@ -59,11 +63,11 @@ impl Renderer {
         if upper { height * 40 / 29 } else { height }
     }
 
-    fn render_text(&mut self, screen: &mut Screen, pos: Position, text: String, modifiers: Modifiers) {
+    fn render_text(&mut self, buffer: &mut Buffer, rect: Rectangle, text: String, modifiers: Modifiers) {
         let mut cursor_x = 0 as i32;
-        let cursor_y = pos.height as i32;
+        let cursor_y = rect.size.height as i32;
 
-        let height = Self::get_text_height(pos.height, modifiers.upper);
+        let height = Self::get_text_height(rect.size.height, modifiers.upper);
         for character in text.chars() {
             let character = self.font_manager.get_character(character as usize, height);
             let bitmap = &character.bitmap;
@@ -75,17 +79,17 @@ impl Renderer {
                     let y = cursor_y + row as i32 - offset_y;
                     let x = cursor_x + col as i32 + (metrics.horiBearingX >> 6) as i32;
 
-                    if y < 0 || x < 0 || x >= pos.width as i32 || (modifiers.strict && y >= pos.height as i32) {
+                    if y < 0 || x < 0 || x >= rect.size.width as i32 || (modifiers.strict && y >= rect.size.height as i32) {
                         continue;
                     }
                     if bitmap[(row, col)] > 50 {
-                        screen.set(y as usize + pos.y, x as usize + pos.x);
+                        buffer.set(y as usize + rect.origin.y, x as usize + rect.origin.x);
                     }
                 }
             }
 
             cursor_x += (metrics.horiAdvance >> 6) as i32;
-            if cursor_x > pos.width as i32 {
+            if cursor_x > rect.size.width as i32 {
                 break;
             }
         }
@@ -108,11 +112,11 @@ impl Renderer {
         }
     }
 
-    fn calculate_scrolling_text(&mut self, pos: &Position, text: &String, modifiers: &Modifiers, count: Option<i32>) -> (usize, usize) {
+    fn calculate_scrolling_text(&mut self, rect: &Rectangle, text: &String, modifiers: &Modifiers, count: Option<i32>) -> (usize, usize) {
         // count is required to calculate tick, so if it is already known then it can be omitted
 
-        let height = Self::get_text_height(pos.height, modifiers.upper);
-        let width = pos.width;
+        let height = Self::get_text_height(rect.size.height, modifiers.upper);
+        let width = rect.size.width;
         let character = self.font_manager.get_character('a' as usize, height);
         let char_width = (character.metrics.horiAdvance >> 6) as usize;
         let max_chars = width / max(char_width, 1);
@@ -129,15 +133,15 @@ impl Renderer {
         (shifts, tick)
     }
 
-    fn render_scrolling_text(&mut self, screen: &mut Screen, pos: Position, text: String, modifiers: Modifiers, tick: usize) {
+    fn render_scrolling_text(&mut self, screen: &mut Buffer, rect: Rectangle, text: String, modifiers: Modifiers, tick: usize) {
         // Don't care about tick as we use the tick of a value that will have to be shifted the most times
         // This way all scrolling texts will be synchronized and will reset after last shift of the item that
         // requires the most shifts
 
-        let (shifts, _tick) = self.calculate_scrolling_text(&pos, &text, &modifiers, None);
+        let (shifts, _tick) = self.calculate_scrolling_text(&rect, &text, &modifiers, None);
 
         if shifts == 0 {
-            self.render_text(screen, pos, text, modifiers)
+            self.render_text(screen, rect, text, modifiers)
         } else {
             let offset = if tick <= TICKS_AT_EDGE {
                 0
@@ -153,13 +157,18 @@ impl Renderer {
             }
             let substr: String = chars.collect();
 
-            self.render_text(screen, pos, substr, modifiers)
+            self.render_text(screen, rect, substr, modifiers)
         }
     }
 }
 
-const TICKS_PER_MOVE: usize = 2;
-const TICKS_AT_EDGE: usize = 8;
+impl UserData for Renderer {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method_mut("render", |_, this, (size, operations): (Size, Vec<Operation>)| -> mlua::Result<Vec<u8>> {
+            Ok(this.render(size, operations))
+        })
+    }
+}
 
 unsafe impl Send for Renderer {}
 

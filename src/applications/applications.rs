@@ -2,7 +2,7 @@ use std::collections::hash_map::{DefaultHasher, Entry};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
-use mlua::{chunk, Lua, Nil, UserData, UserDataFields, UserDataMethods};
+use mlua::{chunk, Lua, UserData, UserDataFields, UserDataMethods};
 use tokio::time::{Duration, Instant};
 
 pub struct Applications {
