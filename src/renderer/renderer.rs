@@ -50,11 +50,16 @@ impl Renderer {
     }
 
     fn render_bar(&mut self, buffer: &mut Buffer, rect: Rectangle, value: f32, modifiers: Modifiers) {
-        let width = rect.size.width as f32 * value / 100.0;
+        buffer.fill(&rect, &modifiers);
 
-        for row in 0..rect.size.height {
-            for col in 0..width as usize {
-                buffer.set(row, col, &rect);
+        let (height, width) = match modifiers.vertical {
+            true => ((rect.size.height as f32 * value / 100.0) as usize, rect.size.width),
+            false => (rect.size.height, (rect.size.width as f32 * value / 100.0) as usize)
+        };
+
+        for row in 0..height {
+            for col in 0..width {
+                buffer.set(row, col, &rect, &modifiers);
             }
         }
     }
@@ -64,6 +69,8 @@ impl Renderer {
     }
 
     fn render_text(&mut self, buffer: &mut Buffer, rect: Rectangle, text: String, modifiers: Modifiers) {
+        buffer.fill(&rect, &modifiers);
+
         let mut cursor_x = 0 as i32;
         let cursor_y = rect.size.height as i32;
 
@@ -83,7 +90,7 @@ impl Renderer {
                         continue;
                     }
                     if bitmap[(row, col)] > 50 {
-                        buffer.set(y as usize, x as usize, &rect);
+                        buffer.set(y as usize, x as usize, &rect, &modifiers);
                     }
                 }
             }
@@ -164,7 +171,7 @@ impl Renderer {
 
 impl UserData for Renderer {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut("render", |_, this, (size, operations): (Size, Vec<Operation>)| -> mlua::Result<Vec<u8>> {
+        methods.add_method_mut("render", |_, this, (size, operations): (Size, Vec<Operation>)| {
             Ok(this.render(size, operations))
         })
     }

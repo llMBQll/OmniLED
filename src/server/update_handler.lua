@@ -78,6 +78,9 @@ function UPDATE_HANDLER:send_value(application_name, variable_name, value)
 
     -- TODO consider running updates only if the value has changed
     -- local old_value = env[application_name][variable_name]
+    -- if value == old_value then
+    --     return
+    -- end
     env[application_name][variable_name] = value
 
     local key = application_name .. '.' .. variable_name

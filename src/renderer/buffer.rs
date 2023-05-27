@@ -1,3 +1,4 @@
+use crate::model::operation::Modifiers;
 use crate::model::rectangle::{Rectangle, Size};
 
 pub struct Buffer {
@@ -12,37 +13,76 @@ impl Buffer {
         Self {
             width: size.width,
             height: size.height,
-            buffer: vec![0; size.height * size.width / 8]
+            buffer: vec![0; size.height * size.width / 8],
         }
     }
 
-    #[allow(unused)]
-    pub fn get(&self, row: usize, col: usize) -> bool {
-        let (index, mask) = self.get_index_and_mask(row, col);
-        self.buffer[index] & mask != 0
-    }
-
-    pub fn set(&mut self, row: usize, col: usize, area: &Rectangle) {
-        let (row, col) = Self::local_to_global(row, col, area);
-        if row >= self.height || col >= self.width {
+    pub fn fill(&mut self, area: &Rectangle, modifiers: &Modifiers) {
+        if !modifiers.inverted && !modifiers.strict {
+            // since buffer is empty by default we can save some time by skipping a lot of
+            // potential no-ops but may leave some pixels set in other areas that didn't use the
+            // strict mode or were overlapping
             return;
         }
+
+        for y in 0..area.size.height {
+            for x in 0..area.size.width {
+                self.reset(y, x, area, modifiers)
+            }
+        }
+    }
+
+    pub fn set(&mut self, y: usize, x: usize, area: &Rectangle, modifiers: &Modifiers) {
+        let (row, col) = match self.translate(y, x, area, modifiers) {
+            Some(pos) => pos,
+            None => { return; }
+        };
+
+        let func = match modifiers.inverted {
+            true => |buf: &mut Vec<u8>, index: usize, mask: u8| { buf[index] &= !mask },
+            false => |buf: &mut Vec<u8>, index: usize, mask: u8| { buf[index] |= mask }
+        };
+
         let (index, mask) = self.get_index_and_mask(row, col);
-        self.buffer[index] |= mask;
+        func(&mut self.buffer, index, mask)
     }
 
-    #[allow(unused)]
-    pub fn reset(&mut self, row: usize, col: usize) {
+    pub fn reset(&mut self, y: usize, x: usize, area: &Rectangle, modifiers: &Modifiers) {
+        // TODO extract common parts from set and reset
+        let (row, col) = match self.translate(y, x, area, modifiers) {
+            Some(pos) => pos,
+            None => { return; }
+        };
+
+        let func = match modifiers.inverted {
+            true => |buf: &mut Vec<u8>, index: usize, mask: u8| { buf[index] |= mask },
+            false => |buf: &mut Vec<u8>, index: usize, mask: u8| { buf[index] &= !mask },
+        };
+
         let (index, mask) = self.get_index_and_mask(row, col);
-        self.buffer[index] &= !mask
+        func(&mut self.buffer, index, mask)
     }
 
-    fn get_index_and_mask(&self, row: usize, col: usize) -> (usize, u8) {
-        ((row * self.width + col) / 8, (1 as u8) << ((7 - col % 8) as u8))
+    fn get_index_and_mask(&self, y: usize, x: usize) -> (usize, u8) {
+        ((y * self.width + x) / 8, (1 as u8) << ((7 - x % 8) as u8))
     }
 
-    fn local_to_global(row: usize, col: usize, local: &Rectangle) -> (usize, usize) {
-        (row + local.origin.y, col + local.origin.x)
+    fn translate(&self, y: usize, x: usize, area: &Rectangle, modifiers: &Modifiers) -> Option<(usize, usize)> {
+        let (y, x) = match modifiers.flip_vertical {
+            true => (area.size.height - y, x),
+            false => (y, x)
+        };
+
+        let (y, x) = match modifiers.flip_horizontal {
+            true => (y, area.size.width - x),
+            false => (y, x)
+        };
+
+        let (y, x) = (y + area.origin.y, x + area.origin.x);
+        match y < self.height && x < self.width {
+            true => Some((y, x)),
+            false => None
+        }
     }
 }
 
