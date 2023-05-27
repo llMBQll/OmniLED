@@ -50,8 +50,6 @@ impl Renderer {
     }
 
     fn render_bar(&mut self, buffer: &mut Buffer, rect: Rectangle, value: f32, modifiers: Modifiers) {
-        buffer.fill(&rect, &modifiers);
-
         let (height, width) = match modifiers.vertical {
             true => ((rect.size.height as f32 * value / 100.0) as usize, rect.size.width),
             false => (rect.size.height, (rect.size.width as f32 * value / 100.0) as usize)
@@ -69,8 +67,6 @@ impl Renderer {
     }
 
     fn render_text(&mut self, buffer: &mut Buffer, rect: Rectangle, text: String, modifiers: Modifiers) {
-        buffer.fill(&rect, &modifiers);
-
         let mut cursor_x = 0 as i32;
         let cursor_y = rect.size.height as i32;
 

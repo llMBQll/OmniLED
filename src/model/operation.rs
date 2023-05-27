@@ -40,7 +40,6 @@ impl UserData for ScrollingText {}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Modifiers {
-    pub inverted: bool,
     pub flip_horizontal: bool,
     pub flip_vertical: bool,
     pub strict: bool,

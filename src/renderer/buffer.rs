@@ -1,5 +1,6 @@
 use crate::model::operation::Modifiers;
 use crate::model::rectangle::{Rectangle, Size};
+use crate::renderer::bit::Bit;
 
 pub struct Buffer {
     height: usize,
@@ -17,54 +18,22 @@ impl Buffer {
         }
     }
 
-    pub fn fill(&mut self, area: &Rectangle, modifiers: &Modifiers) {
-        if !modifiers.inverted && !modifiers.strict {
-            // since buffer is empty by default we can save some time by skipping a lot of
-            // potential no-ops but may leave some pixels set in other areas that didn't use the
-            // strict mode or were overlapping
-            return;
-        }
-
-        for y in 0..area.size.height {
-            for x in 0..area.size.width {
-                self.reset(y, x, area, modifiers)
-            }
-        }
-    }
-
     pub fn set(&mut self, y: usize, x: usize, area: &Rectangle, modifiers: &Modifiers) {
         let (row, col) = match self.translate(y, x, area, modifiers) {
             Some(pos) => pos,
             None => { return; }
         };
 
-        let func = match modifiers.inverted {
-            true => |buf: &mut Vec<u8>, index: usize, mask: u8| { buf[index] &= !mask },
-            false => |buf: &mut Vec<u8>, index: usize, mask: u8| { buf[index] |= mask }
+        let mut bit = self.bit_at(row, col);
+        match modifiers.strict || !bit.get() {
+            true => bit.set(),
+            false => bit.reset()
         };
-
-        let (index, mask) = self.get_index_and_mask(row, col);
-        func(&mut self.buffer, index, mask)
     }
 
-    pub fn reset(&mut self, y: usize, x: usize, area: &Rectangle, modifiers: &Modifiers) {
-        // TODO extract common parts from set and reset
-        let (row, col) = match self.translate(y, x, area, modifiers) {
-            Some(pos) => pos,
-            None => { return; }
-        };
-
-        let func = match modifiers.inverted {
-            true => |buf: &mut Vec<u8>, index: usize, mask: u8| { buf[index] |= mask },
-            false => |buf: &mut Vec<u8>, index: usize, mask: u8| { buf[index] &= !mask },
-        };
-
-        let (index, mask) = self.get_index_and_mask(row, col);
-        func(&mut self.buffer, index, mask)
-    }
-
-    fn get_index_and_mask(&self, y: usize, x: usize) -> (usize, u8) {
-        ((y * self.width + x) / 8, (1 as u8) << ((7 - x % 8) as u8))
+    fn bit_at(&mut self, y: usize, x: usize) -> Bit {
+        let index = (y * self.width + x) / 8;
+        Bit::new(&mut self.buffer[index], 7 - x % 8)
     }
 
     fn translate(&self, y: usize, x: usize, area: &Rectangle, modifiers: &Modifiers) -> Option<(usize, usize)> {

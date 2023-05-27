@@ -5,18 +5,18 @@ function volume()
                 text = AUDIO.IsMuted and 'Off' or AUDIO.Volume,
                 position = Rectangle {
                     origin = Point { x = 0, y = 0 },
-                    size = Size { width = 3 * SCREEN.width / 4, height = SCREEN.height - 1 },
+                    size = Size { width = SCREEN.width, height = SCREEN.height },
                 },
                 modifiers = Modifiers { upper = true },
             },
             Bar {
                 value = AUDIO.Volume,
                 position = Rectangle {
-                    origin = Point { x = 3 * SCREEN.width / 4, y = 0 },
-                    size = Size { width = SCREEN.width / 4, height = SCREEN.height },
+                    origin = Point { x = 0, y = 0 },
+                    size = Size { width = SCREEN.width, height = SCREEN.height },
                 },
                 modifiers = Modifiers { vertical = true, flip_vertical = true },
-            }
+            },
         },
         duration = 2000,
     }
@@ -45,7 +45,6 @@ function spotify()
                     origin = Point { x = 0, y = SCREEN.height - 2 },
                     size = Size { width = SCREEN.width, height = 2 },
                 },
-                modifiers = Modifiers { flip_horizontal = true }
             },
         },
         duration = 1000,

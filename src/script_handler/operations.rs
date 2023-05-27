@@ -64,12 +64,11 @@ fn scrolling_text(_: &Lua, args: Table) -> mlua::Result<Operation> {
 }
 
 fn modifiers(_: &Lua, args: Table) -> mlua::Result<Modifiers> {
-    let inverted = args.get("inverted").unwrap_or(false);
     let flip_horizontal = args.get("flip_horizontal").unwrap_or(false);
     let flip_vertical = args.get("flip_vertical").unwrap_or(false);
     let strict = args.get("strict").unwrap_or(false);
     let upper = args.get("upper").unwrap_or(false);
     let vertical = args.get("vertical").unwrap_or(false);
 
-    Ok(Modifiers { inverted, flip_horizontal, flip_vertical, strict, upper, vertical })
+    Ok(Modifiers { flip_horizontal, flip_vertical, strict, upper, vertical })
 }
