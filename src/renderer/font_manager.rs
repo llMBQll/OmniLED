@@ -26,7 +26,6 @@ impl FontManager {
         let characters = self.face_sizes.entry(height).or_insert(HashMap::new());
         characters.entry(char_code).or_insert_with(|| {
             // TODO proper freetype error checking
-            // self.face.set_char_size(0, (height * 12 * 19) as isize, 0, 114).unwrap();
             self.face.set_pixel_sizes(height as u32, height as u32).unwrap();
             self.face.load_char(char_code, LoadFlag::DEFAULT).unwrap();
             let slot = self.face.glyph();
@@ -66,10 +65,10 @@ pub struct BoundingBox {
 impl From<ft::BBox> for BoundingBox {
     fn from(bbox: ft::BBox) -> Self {
         Self {
-            x_min: bbox.xMin,
-            x_max: bbox.xMax,
-            y_min: bbox.yMin,
-            y_max: bbox.yMax,
+            x_min: bbox.xMin as i32,
+            x_max: bbox.xMax as i32,
+            y_min: bbox.yMin as i32,
+            y_max: bbox.yMax as i32,
         }
     }
 }

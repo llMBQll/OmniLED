@@ -1,4 +1,5 @@
 pub mod renderer;
 
-mod screen;
+mod bit;
+mod buffer;
 mod font_manager;
