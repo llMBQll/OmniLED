@@ -1,4 +1,4 @@
-use crate::model::rectangle::Size;
+use crate::model::rectangle::{Rectangle, Size};
 
 pub struct Buffer {
     height: usize,
@@ -22,7 +22,8 @@ impl Buffer {
         self.buffer[index] & mask != 0
     }
 
-    pub fn set(&mut self, row: usize, col: usize) {
+    pub fn set(&mut self, row: usize, col: usize, area: &Rectangle) {
+        let (row, col) = Self::local_to_global(row, col, area);
         if row >= self.height || col >= self.width {
             return;
         }
@@ -38,6 +39,10 @@ impl Buffer {
 
     fn get_index_and_mask(&self, row: usize, col: usize) -> (usize, u8) {
         ((row * self.width + col) / 8, (1 as u8) << ((7 - col % 8) as u8))
+    }
+
+    fn local_to_global(row: usize, col: usize, local: &Rectangle) -> (usize, usize) {
+        (row + local.origin.y, col + local.origin.x)
     }
 }
 

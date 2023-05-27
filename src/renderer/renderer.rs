@@ -38,7 +38,7 @@ impl Renderer {
     fn perform_operation(&mut self, buffer: &mut Buffer, op: Operation) {
         match op {
             Operation::Bar(bar) => {
-                self.render_bar(buffer, bar.position, bar.value)
+                self.render_bar(buffer, bar.position, bar.value, bar.modifiers)
             }
             Operation::Text(text) => {
                 self.render_text(buffer, text.position, text.text, text.modifiers)
@@ -49,12 +49,12 @@ impl Renderer {
         }
     }
 
-    fn render_bar(&mut self, buffer: &mut Buffer, rect: Rectangle, percent: f32) {
-        let width = rect.size.width as f32 * percent / 100.0;
+    fn render_bar(&mut self, buffer: &mut Buffer, rect: Rectangle, value: f32, modifiers: Modifiers) {
+        let width = rect.size.width as f32 * value / 100.0;
 
         for row in 0..rect.size.height {
             for col in 0..width as usize {
-                buffer.set(rect.origin.y + row, rect.origin.x + col);
+                buffer.set(row, col, &rect);
             }
         }
     }
@@ -83,7 +83,7 @@ impl Renderer {
                         continue;
                     }
                     if bitmap[(row, col)] > 50 {
-                        buffer.set(y as usize + rect.origin.y, x as usize + rect.origin.x);
+                        buffer.set(y as usize, x as usize, &rect);
                     }
                 }
             }
