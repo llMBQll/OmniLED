@@ -31,8 +31,7 @@ impl Renderer {
 
     pub fn render(&mut self, ctx: i64, size: Size, operations: Vec<Operation>) -> Vec<u8> {
         let mut buffer = Buffer::new(size);
-        let text_data = self.precalculate_text(ctx, &operations);
-        let mut text_data = text_data.into_iter();
+        let mut text_offsets = self.precalculate_text(ctx, &operations).into_iter();
 
         for operation in operations {
             match operation {
@@ -40,7 +39,7 @@ impl Renderer {
                     self.render_bar(&mut buffer, bar.position, bar.value, bar.modifiers)
                 }
                 Operation::Text(text) => {
-                    self.render_text(&mut buffer, text.position, text.text, text.modifiers, &mut text_data)
+                    self.render_text(&mut buffer, text.position, text.text, text.modifiers, &mut text_offsets)
                 }
             }
         }
@@ -65,13 +64,13 @@ impl Renderer {
         if upper { height * 40 / 29 } else { height }
     }
 
-    fn render_text(&mut self, buffer: &mut Buffer, rect: Rectangle, text: String, modifiers: Modifiers, data: &mut IntoIter<usize>) {
+    fn render_text(&mut self, buffer: &mut Buffer, rect: Rectangle, text: String, modifiers: Modifiers, offsets: &mut IntoIter<usize>) {
         const RENDER_THRESHOLD: u8 = 50;
 
         let mut cursor_x = 0 as i32;
         let cursor_y = rect.size.height as i32;
 
-        let offset = data.next().unwrap();
+        let offset = offsets.next().unwrap();
         let mut characters = text.chars();
         for _ in 0..offset {
             _ = characters.next();
@@ -108,7 +107,7 @@ impl Renderer {
     fn precalculate_text(&mut self, ctx: i64, operations: &Vec<Operation>) -> Vec<usize> {
         let mut ctx = self.scrolling_text_data.get_context(ctx);
 
-        let data: Vec<usize> = operations.iter().filter_map(|op| {
+        let offsets: Vec<usize> = operations.iter().filter_map(|op| {
             match op {
                 Operation::Text(text) => Some(Self::precalculate_single(&mut ctx, &mut self.font_manager, text)),
                 _ => None
@@ -116,9 +115,9 @@ impl Renderer {
         }).collect();
 
         if ctx.was_reset() {
-            vec![0; data.len()]
+            vec![0; offsets.len()]
         } else {
-            data
+            offsets
         }
     }
 
@@ -236,7 +235,7 @@ impl<'a> Context<'a> {
 impl<'a> Drop for Context<'a> {
     fn drop(&mut self) {
         if self.reset {
-            // remove all stale entries from map
+            // remove all stale entries from map - old keys will not be present in context_info
             *self.map = self.map.iter().filter_map(|(key, value)| match self.context_info.contains_key(key) {
                 true => Some((key.clone(), *value)),
                 false => None
