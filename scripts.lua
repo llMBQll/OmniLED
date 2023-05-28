@@ -31,6 +31,7 @@ function spotify()
                     origin = Point { x = 0, y = 0 },
                     size = Size { width = SCREEN.width, height = 16 },
                 },
+                modifiers = Modifiers { scrolling = true },
             },
             Text {
                 text = SPOTIFY.Title,
@@ -38,6 +39,7 @@ function spotify()
                     origin = Point { x = 0, y = 20 },
                     size = Size { width = SCREEN.width, height = 16 },
                 },
+                modifiers = Modifiers { scrolling = true },
             },
             Bar {
                 value = SPOTIFY.Progress * 100.0 / SPOTIFY.Duration,

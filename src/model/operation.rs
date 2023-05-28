@@ -5,7 +5,6 @@ use crate::model::rectangle::Rectangle;
 pub enum Operation {
     Bar(Bar),
     Text(Text),
-    ScrollingText(ScrollingText),
 }
 
 impl UserData for Operation {}
@@ -13,8 +12,8 @@ impl UserData for Operation {}
 #[derive(Clone, Debug)]
 pub struct Bar {
     pub value: f32,
-    pub modifiers: Modifiers,
     pub position: Rectangle,
+    pub modifiers: Modifiers,
 }
 
 impl UserData for Bar {}
@@ -22,21 +21,11 @@ impl UserData for Bar {}
 #[derive(Clone, Debug)]
 pub struct Text {
     pub text: String,
-    pub modifiers: Modifiers,
     pub position: Rectangle,
+    pub modifiers: Modifiers,
 }
 
 impl UserData for Text {}
-
-#[derive(Clone, Debug)]
-pub struct ScrollingText {
-    pub text: String,
-    pub count: i32,
-    pub modifiers: Modifiers,
-    pub position: Rectangle,
-}
-
-impl UserData for ScrollingText {}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Modifiers {
@@ -45,6 +34,7 @@ pub struct Modifiers {
     pub strict: bool,
     pub upper: bool,
     pub vertical: bool,
+    pub scrolling: bool,
 }
 
 impl UserData for Modifiers {}

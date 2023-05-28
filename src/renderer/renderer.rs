@@ -1,6 +1,9 @@
 use std::cmp::max;
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
+use std::vec::IntoIter;
 use mlua::{Lua, UserData, UserDataMethods};
-use crate::model::operation::{Operation, Modifiers};
+use crate::model::operation::{Operation, Modifiers, Text};
 use crate::model::rectangle::{Rectangle, Size};
 use crate::renderer::font_manager::FontManager;
 use crate::renderer::buffer::Buffer;
@@ -26,30 +29,26 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, size: Size, operations: Vec<Operation>) -> Vec<u8> {
+    pub fn render(&mut self, ctx: i64, size: Size, operations: Vec<Operation>) -> Vec<u8> {
         let mut buffer = Buffer::new(size);
-        self.calculate_scrolling_text_data(&operations);
+        let text_data = self.precalculate_text(ctx, &operations);
+        let mut text_data = text_data.into_iter();
+
         for operation in operations {
-            self.perform_operation(&mut buffer, operation);
+            match operation {
+                Operation::Bar(bar) => {
+                    self.render_bar(&mut buffer, bar.position, bar.value, bar.modifiers)
+                }
+                Operation::Text(text) => {
+                    self.render_text(&mut buffer, text.position, text.text, text.modifiers, &mut text_data)
+                }
+            }
         }
         buffer.into()
     }
 
-    fn perform_operation(&mut self, buffer: &mut Buffer, op: Operation) {
-        match op {
-            Operation::Bar(bar) => {
-                self.render_bar(buffer, bar.position, bar.value, bar.modifiers)
-            }
-            Operation::Text(text) => {
-                self.render_text(buffer, text.position, text.text, text.modifiers)
-            }
-            Operation::ScrollingText(text) => {
-                self.render_scrolling_text(buffer, text.position, text.text, text.modifiers, self.scrolling_text_data.ticks)
-            }
-        }
-    }
-
-    fn render_bar(&mut self, buffer: &mut Buffer, rect: Rectangle, value: f32, modifiers: Modifiers) {
+    fn render_bar(&self, buffer: &mut Buffer, rect: Rectangle, value: f32, modifiers: Modifiers) {
+        // TODO: consider making it a static function
         let (height, width) = match modifiers.vertical {
             true => ((rect.size.height as f32 * value / 100.0) as usize, rect.size.width),
             false => (rect.size.height, (rect.size.width as f32 * value / 100.0) as usize)
@@ -66,13 +65,21 @@ impl Renderer {
         if upper { height * 40 / 29 } else { height }
     }
 
-    fn render_text(&mut self, buffer: &mut Buffer, rect: Rectangle, text: String, modifiers: Modifiers) {
+    fn render_text(&mut self, buffer: &mut Buffer, rect: Rectangle, text: String, modifiers: Modifiers, data: &mut IntoIter<usize>) {
+        const RENDER_THRESHOLD: u8 = 50;
+
         let mut cursor_x = 0 as i32;
         let cursor_y = rect.size.height as i32;
 
-        let height = Self::get_text_height(rect.size.height, modifiers.upper);
-        for character in text.chars() {
-            let character = self.font_manager.get_character(character as usize, height);
+        let offset = data.next().unwrap();
+        let mut characters = text.chars();
+        for _ in 0..offset {
+            _ = characters.next();
+        }
+
+        let character_height = Self::get_text_height(rect.size.height, modifiers.upper);
+        for character in characters {
+            let character = self.font_manager.get_character(character as usize, character_height);
             let bitmap = &character.bitmap;
             let metrics = &character.metrics;
 
@@ -85,7 +92,7 @@ impl Renderer {
                     if y < 0 || x < 0 || x >= rect.size.width as i32 || (modifiers.strict && y >= rect.size.height as i32) {
                         continue;
                     }
-                    if bitmap[(row, col)] > 50 {
+                    if bitmap[(row, col)] > RENDER_THRESHOLD {
                         buffer.set(y as usize, x as usize, &rect, &modifiers);
                     }
                 }
@@ -98,77 +105,63 @@ impl Renderer {
         }
     }
 
-    fn calculate_scrolling_text_data(&mut self, operations: &Vec<Operation>) {
-        let mut vec = Vec::new();
-        for op in operations {
+    fn precalculate_text(&mut self, ctx: i64, operations: &Vec<Operation>) -> Vec<usize> {
+        let mut ctx = self.scrolling_text_data.get_context(ctx);
+
+        let data: Vec<usize> = operations.iter().filter_map(|op| {
             match op {
-                Operation::ScrollingText(text) => {
-                    let res = self.calculate_scrolling_text(&text.position, &text.text, &text.modifiers, Some(text.count));
-                    vec.push(res);
-                }
-                _ => {}
+                Operation::Text(text) => Some(Self::precalculate_single(&mut ctx, &mut self.font_manager, text)),
+                _ => None
             }
-        }
-        if !vec.is_empty() {
-            vec.sort_by(|(a, _), (b, _)| b.cmp(a));
-            self.scrolling_text_data.ticks = vec[0].1;
-        }
-    }
+        }).collect();
 
-    fn calculate_scrolling_text(&mut self, rect: &Rectangle, text: &String, modifiers: &Modifiers, count: Option<i32>) -> (usize, usize) {
-        // count is required to calculate tick, so if it is already known then it can be omitted
-
-        let height = Self::get_text_height(rect.size.height, modifiers.upper);
-        let width = rect.size.width;
-        let character = self.font_manager.get_character('a' as usize, height);
-        let char_width = (character.metrics.horiAdvance >> 6) as usize;
-        let max_chars = width / max(char_width, 1);
-        let len = text.len();
-
-        if len <= max_chars {
-            return (0, 0);
-        }
-
-        let shifts = len - max_chars;
-        let max_ticks = 2 * TICKS_AT_EDGE + shifts * TICKS_PER_MOVE;
-        let tick = count.unwrap_or(0) as usize % max_ticks;
-
-        (shifts, tick)
-    }
-
-    fn render_scrolling_text(&mut self, screen: &mut Buffer, rect: Rectangle, text: String, modifiers: Modifiers, tick: usize) {
-        // Don't care about tick as we use the tick of a value that will have to be shifted the most times
-        // This way all scrolling texts will be synchronized and will reset after last shift of the item that
-        // requires the most shifts
-
-        let (shifts, _tick) = self.calculate_scrolling_text(&rect, &text, &modifiers, None);
-
-        if shifts == 0 {
-            self.render_text(screen, rect, text, modifiers)
+        if ctx.was_reset() {
+            vec![0; data.len()]
         } else {
-            let offset = if tick <= TICKS_AT_EDGE {
-                0
-            } else if tick >= TICKS_AT_EDGE + shifts * TICKS_PER_MOVE {
-                shifts
-            } else {
-                (tick - TICKS_AT_EDGE) / TICKS_PER_MOVE
-            };
+            data
+        }
+    }
 
-            let mut chars = text.chars();
-            for _ in 0..offset {
-                let _ = chars.next();
-            }
-            let substr: String = chars.collect();
+    fn precalculate_single(ctx: &mut Context, font_manager: &mut FontManager, text: &Text) -> usize {
+        let tick = ctx.read(&text.text);
+        if !text.modifiers.scrolling {
+            return 0;
+        }
 
-            self.render_text(screen, rect, substr, modifiers)
+        let height = Self::get_text_height(text.position.size.height, text.modifiers.upper);
+        let width = text.position.size.width;
+        let character = font_manager.get_character('a' as usize, height);
+        let char_width = (character.metrics.horiAdvance >> 6) as usize;
+        let max_characters = width / max(char_width, 1);
+        // let max_characters = width as f64 / max(char_width, 1) as f64;
+        // let max_characters = max_characters.ceil() as usize;
+        let len = text.text.len();
+
+        if len <= max_characters {
+            ctx.set(&text.text, true);
+            return 0;
+        }
+
+        let max_shifts = len - max_characters;
+        let max_ticks = 2 * TICKS_AT_EDGE + max_shifts * TICKS_PER_MOVE;
+        if tick >= max_ticks {
+            ctx.set(&text.text, true);
+        }
+
+        if tick <= TICKS_AT_EDGE {
+            0
+        } else if tick >= TICKS_AT_EDGE + max_shifts * TICKS_PER_MOVE {
+            max_shifts
+        } else {
+            (tick - TICKS_AT_EDGE) / TICKS_PER_MOVE
         }
     }
 }
 
 impl UserData for Renderer {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut("render", |_, this, (size, operations): (Size, Vec<Operation>)| {
-            Ok(this.render(size, operations))
+        methods.add_method_mut("render", |_, this, (ctx, size, operations): (i64, Size, Vec<Operation>)| {
+            Ok(this.render(ctx, size, operations))
         })
     }
 }
@@ -176,13 +169,78 @@ impl UserData for Renderer {
 unsafe impl Send for Renderer {}
 
 struct ScrollingTextData {
-    pub ticks: usize,
+    contexts: HashMap<i64, HashMap<String, usize>>,
 }
 
 impl ScrollingTextData {
     pub fn new() -> Self {
         Self {
-            ticks: 0,
+            contexts: HashMap::new(),
+        }
+    }
+
+    pub fn get_context(&mut self, ctx: i64) -> Context {
+        let map = self.contexts.entry(ctx).or_insert(HashMap::new());
+        Context::new(map)
+    }
+}
+
+struct Context<'a> {
+    map: &'a mut HashMap<String, usize>,
+    context_info: HashMap<String, bool>,
+    reset: bool,
+}
+
+impl<'a> Context<'a> {
+    pub fn new(map: &'a mut HashMap<String, usize>) -> Self {
+        Self {
+            map,
+            context_info: HashMap::new(),
+            reset: false,
+        }
+    }
+
+    pub fn read(&mut self, key: &String) -> usize {
+        match self.context_info.entry(key.clone()) {
+            Entry::Occupied(_) => {
+                return *self.map.get(key).unwrap();
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(false);
+            }
+        }
+
+        match self.map.entry(key.clone()) {
+            Entry::Occupied(entry) => {
+                let ticks = entry.get() + 1;
+                *entry.into_mut() = ticks;
+                ticks
+            }
+            Entry::Vacant(entry) => {
+                self.reset = true;
+
+                let ticks = 0;
+                entry.insert(ticks);
+                ticks
+            }
+        }
+    }
+
+    pub fn set(&mut self, key: &String, can_wrap: bool) {
+        self.context_info.insert(key.clone(), can_wrap);
+    }
+
+    pub fn was_reset(&self) -> bool {
+        self.reset
+    }
+}
+
+impl<'a> Drop for Context<'a> {
+    fn drop(&mut self) {
+        if self.reset || self.context_info.iter().all(|(_, can_wrap)| { *can_wrap }) {
+            for (_, tick) in &mut *self.map {
+                *tick = 0;
+            }
         }
     }
 }
