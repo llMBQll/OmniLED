@@ -123,7 +123,6 @@ impl Renderer {
     }
 
     fn precalculate_single(ctx: &mut Context, font_manager: &mut FontManager, text: &Text) -> usize {
-        let tick = ctx.read(&text.text);
         if !text.modifiers.scrolling {
             return 0;
         }
@@ -133,9 +132,8 @@ impl Renderer {
         let character = font_manager.get_character('a' as usize, height);
         let char_width = (character.metrics.horiAdvance >> 6) as usize;
         let max_characters = width / max(char_width, 1);
-        // let max_characters = width as f64 / max(char_width, 1) as f64;
-        // let max_characters = max_characters.ceil() as usize;
         let len = text.text.len();
+        let tick = ctx.read(&text.text);
 
         if len <= max_characters {
             ctx.set(&text.text, true);
@@ -237,6 +235,14 @@ impl<'a> Context<'a> {
 
 impl<'a> Drop for Context<'a> {
     fn drop(&mut self) {
+        if self.reset {
+            // remove all stale entries from map
+            *self.map = self.map.iter().filter_map(|(key, value)| match self.context_info.contains_key(key) {
+                true => Some((key.clone(), *value)),
+                false => None
+            }).collect();
+        }
+
         if self.reset || self.context_info.iter().all(|(_, can_wrap)| { *can_wrap }) {
             for (_, tick) in &mut *self.map {
                 *tick = 0;
