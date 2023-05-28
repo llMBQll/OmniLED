@@ -1,5 +1,5 @@
 use mlua::{Lua, Table};
-use crate::model::operation::{Modifiers, Operation, ScrollingText, Text};
+use crate::model::operation::{Modifiers, Operation, Text};
 use crate::model::operation::Bar;
 use crate::model::rectangle::{Point, Rectangle, Size};
 
@@ -11,7 +11,6 @@ pub fn load_operations(lua: &Lua) {
     operations.set("Rectangle", lua.create_function(rectangle).unwrap()).unwrap();
     operations.set("Bar", lua.create_function(bar).unwrap()).unwrap();
     operations.set("Text", lua.create_function(text).unwrap()).unwrap();
-    operations.set("ScrollingText", lua.create_function(scrolling_text).unwrap()).unwrap();
     operations.set("Modifiers", lua.create_function(modifiers).unwrap()).unwrap();
 
     lua.globals().set("OPERATIONS", operations).unwrap();
@@ -40,27 +39,18 @@ fn rectangle(_: &Lua, args: Table) -> mlua::Result<Rectangle> {
 
 fn bar(_: &Lua, args: Table) -> mlua::Result<Operation> {
     let value = args.get("value")?;
-    let modifiers = args.get("modifiers").unwrap_or(Modifiers::default());
     let position = args.get("position")?;
+    let modifiers = args.get("modifiers").unwrap_or(Modifiers::default());
 
-    Ok(Operation::Bar(Bar { value, modifiers, position }))
+    Ok(Operation::Bar(Bar { value, position, modifiers }))
 }
 
 fn text(_: &Lua, args: Table) -> mlua::Result<Operation> {
     let text = args.get("text")?;
-    let modifiers = args.get("modifiers").unwrap_or(Modifiers::default());
     let position = args.get("position")?;
-
-    Ok(Operation::Text(Text { text, modifiers, position }))
-}
-
-fn scrolling_text(_: &Lua, args: Table) -> mlua::Result<Operation> {
-    let text = args.get("text")?;
-    let count = args.get("count")?;
     let modifiers = args.get("modifiers").unwrap_or(Modifiers::default());
-    let position = args.get("position")?;
 
-    Ok(Operation::ScrollingText(ScrollingText { text, count, modifiers, position }))
+    Ok(Operation::Text(Text { text, position, modifiers }))
 }
 
 fn modifiers(_: &Lua, args: Table) -> mlua::Result<Modifiers> {
@@ -69,6 +59,7 @@ fn modifiers(_: &Lua, args: Table) -> mlua::Result<Modifiers> {
     let strict = args.get("strict").unwrap_or(false);
     let upper = args.get("upper").unwrap_or(false);
     let vertical = args.get("vertical").unwrap_or(false);
+    let scrolling = args.get("scrolling").unwrap_or(false);
 
-    Ok(Modifiers { flip_horizontal, flip_vertical, strict, upper, vertical })
+    Ok(Modifiers { flip_horizontal, flip_vertical, strict, upper, vertical, scrolling })
 }

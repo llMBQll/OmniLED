@@ -5,17 +5,16 @@ function volume()
                 text = AUDIO.IsMuted and 'Off' or AUDIO.Volume,
                 position = Rectangle {
                     origin = Point { x = 0, y = 0 },
-                    size = Size { width = SCREEN.width, height = SCREEN.height },
+                    size = Size { width = SCREEN.width, height = SCREEN.height - 4 },
                 },
                 modifiers = Modifiers { upper = true },
             },
             Bar {
                 value = AUDIO.Volume,
                 position = Rectangle {
-                    origin = Point { x = 0, y = 0 },
-                    size = Size { width = SCREEN.width, height = SCREEN.height },
+                    origin = Point { x = 0, y = SCREEN.height - 2},
+                    size = Size { width = SCREEN.width, height = 2 },
                 },
-                modifiers = Modifiers { vertical = true, flip_vertical = true },
             },
         },
         duration = 2000,
@@ -25,22 +24,39 @@ end
 function spotify()
     return {
         data = {
-            Text {
-                text = SPOTIFY.Artist,
-                position = Rectangle {
-                    origin = Point { x = 0, y = 0 },
-                    size = Size { width = SCREEN.width, height = 16 },
-                },
-            },
-            Text {
-                text = SPOTIFY.Title,
-                position = Rectangle {
-                    origin = Point { x = 0, y = 20 },
-                    size = Size { width = SCREEN.width, height = 16 },
-                },
-            },
             Bar {
                 value = SPOTIFY.Progress * 100.0 / SPOTIFY.Duration,
+                position = Rectangle {
+                    origin = Point { x = 0, y = 0 },
+                    size = Size { width = SCREEN.width, height = 2 },
+                },
+            },
+            Text {
+                text = string.format("%s - %s", SPOTIFY.Artist, SPOTIFY.Title),
+                position = Rectangle {
+                    origin = Point { x = 0, y = 1 },
+                    size = Size { width = SCREEN.width, height = 16 },
+                },
+                modifiers = Modifiers { scrolling = true },
+            },
+            Text {
+                text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),
+                position = Rectangle {
+                    origin = Point { x = 0, y = SCREEN.height - 16 },
+                    size = Size { width = 50, height = 12 },
+                },
+                modifiers = Modifiers { upper = true },
+            },
+            Text {
+                text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month + 1], CLOCK.MonthDay),
+                position = Rectangle {
+                    origin = Point { x = SCREEN.width - 45, y = SCREEN.height - 16 },
+                    size = Size { width = 45, height = 12 },
+                },
+                modifiers = Modifiers { upper = true },
+            },
+            Bar {
+                value = CLOCK.Seconds * 100.0 / 59,
                 position = Rectangle {
                     origin = Point { x = 0, y = SCREEN.height - 2 },
                     size = Size { width = SCREEN.width, height = 2 },
@@ -71,7 +87,7 @@ function clock()
                 modifiers = Modifiers { upper = true },
             },
             Text {
-                text = string.format("%02d%.3s", CLOCK.MonthDay, CLOCK.MonthNames[CLOCK.Month]),
+                text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month + 1], CLOCK.MonthDay),
                 position = Rectangle {
                     origin = Point { x = 65, y = 27 },
                     size = Size { width = 54, height = 10 },

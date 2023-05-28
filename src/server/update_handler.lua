@@ -32,7 +32,7 @@ function UPDATE_HANDLER:register_user_script(script, sensitivity_list, screens)
                 -- TODO verify result
                 if result then
                     self.time_remaining = result.duration or self.DEFAULT_DURATION
-                    local image = RENDERER:render(size, result.data)
+                    local image = RENDERER:render(priority, size, result.data)
                     screen:update(image)
                 end
             end
