@@ -1,3 +1,4 @@
+
 use log::{debug, error, info, LevelFilter, trace, warn};
 use log4rs::{
     Config, Handle, init_config,
@@ -15,12 +16,17 @@ pub struct Logger {
 impl Logger {
     pub fn new(lua: &Lua) -> Logger {
         let logfile = FileAppender::builder()
-            .encoder(Box::new(PatternEncoder::new("[{d(%Y-%m-%d %H:%M:%S:%3f)}][{l}] {m}\n")))
+            .encoder(Box::new(PatternEncoder::new("{t} [{d(%Y-%m-%d %H:%M:%S:%3f)}][{l}] {m}\n")))
             .build("logging.log")
             .unwrap();
 
         let config = Config::builder()
             .appender(Appender::builder().build("logfile", Box::new(logfile)))
+            .logger(log4rs::config::Logger::builder().build("mio", LevelFilter::Error))
+            .logger(log4rs::config::Logger::builder().build("hyper", LevelFilter::Error))
+            .logger(log4rs::config::Logger::builder().build("tracing", LevelFilter::Error))
+            .logger(log4rs::config::Logger::builder().build("warp", LevelFilter::Error))
+            .logger(log4rs::config::Logger::builder().build("ureq", LevelFilter::Error))
             .build(Root::builder()
                 .appender("logfile")
                 .build(LevelFilter::Trace)
