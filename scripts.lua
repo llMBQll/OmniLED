@@ -5,16 +5,17 @@ function volume()
                 text = AUDIO.IsMuted and 'Off' or AUDIO.Volume,
                 position = Rectangle {
                     origin = Point { x = 0, y = 0 },
-                    size = Size { width = SCREEN.width, height = SCREEN.height - 4 },
+                    size = Size { width = SCREEN.width, height = SCREEN.height / 2 },
                 },
                 modifiers = Modifiers { upper = true },
             },
-            Bar {
-                value = AUDIO.Volume,
+            Text {
+                text = AUDIO.Name,
                 position = Rectangle {
-                    origin = Point { x = 0, y = SCREEN.height - 2},
-                    size = Size { width = SCREEN.width, height = 2 },
+                    origin = Point { x = 0, y = SCREEN.height / 2 },
+                    size = Size { width = SCREEN.width, height = SCREEN.height / 2 - 4 },
                 },
+                modifiers = Modifiers { scrolling = true },
             },
         },
         duration = 2000,
@@ -106,6 +107,6 @@ function clock()
     }
 end
 
-register(volume, { 'AUDIO.Volume', 'AUDIO.IsMuted' }, { 'Steelseries Engine' })
+register(volume, { 'AUDIO.Volume', 'AUDIO.IsMuted', 'AUDIO.Name' }, { 'Steelseries Engine' })
 register(spotify, { 'SPOTIFY.Progress', 'SPOTIFY.Artist', 'SPOTIFY.Title' }, { 'Steelseries Engine' })
 register(clock, { 'CLOCK.Seconds' }, { 'Steelseries Engine' })
