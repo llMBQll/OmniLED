@@ -3,6 +3,8 @@ UPDATE_HANDLER = {}
 UPDATE_HANDLER.user_scripts = {}
 UPDATE_HANDLER.to_update = {}
 UPDATE_HANDLER.last_priority = 0
+UPDATE_HANDLER.last_script = {}
+UPDATE_HANDLER.auto_repeat = false
 UPDATE_HANDLER.time_remaining = 0
 UPDATE_HANDLER.DEFAULT_UPDATE_TIME = 1000
 
@@ -32,8 +34,17 @@ function UPDATE_HANDLER:register_user_script(script, sensitivity_list, screens)
                 -- TODO verify result
                 if result then
                     self.time_remaining = result.duration or self.DEFAULT_DURATION
-                    local image = RENDERER:render(priority, size, result.data)
+                    local end_auto_repeat, image = RENDERER:render(priority, size, result.data)
                     screen:update(image)
+
+                    local auto_repeat = result.auto_repeat or false
+                    if auto_repeat and not end_auto_repeat then
+                        self.last_script = wrapper
+                        self.auto_repeat = true
+                    else
+                        self.last_script = {}
+                        self.auto_repeat = false
+                    end
                 end
             end
         end
@@ -58,6 +69,12 @@ function UPDATE_HANDLER:update(time_passed)
         if self.time_remaining > 0 and self.last_priority < priority then
             break
         end
+
+        if self.last_priority == priority and self.auto_repeat then
+            self.last_script()
+            break
+        end
+
         if script ~= false then
             script()
             break

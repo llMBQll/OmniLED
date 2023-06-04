@@ -19,6 +19,7 @@ function volume()
             },
         },
         duration = 2000,
+        auto_repeat = true,
     }
 end
 

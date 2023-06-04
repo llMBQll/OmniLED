@@ -29,9 +29,10 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, ctx: i64, size: Size, operations: Vec<Operation>) -> Vec<u8> {
+    pub fn render(&mut self, ctx: i64, size: Size, operations: Vec<Operation>) -> (bool, Vec<u8>) {
         let mut buffer = Buffer::new(size);
-        let mut text_offsets = self.precalculate_text(ctx, &operations).into_iter();
+        let (end_auto_repeat, text_offsets) = self.precalculate_text(ctx, &operations);
+        let mut text_offsets = text_offsets.into_iter();
 
         for operation in operations {
             match operation {
@@ -43,7 +44,8 @@ impl Renderer {
                 }
             }
         }
-        buffer.into()
+
+        (end_auto_repeat, buffer.into())
     }
 
     fn render_bar(&self, buffer: &mut Buffer, rect: Rectangle, value: f32, modifiers: Modifiers) {
@@ -104,7 +106,7 @@ impl Renderer {
         }
     }
 
-    fn precalculate_text(&mut self, ctx: i64, operations: &Vec<Operation>) -> Vec<usize> {
+    fn precalculate_text(&mut self, ctx: i64, operations: &Vec<Operation>) -> (bool, Vec<usize>) {
         let mut ctx = self.scrolling_text_data.get_context(ctx);
 
         let offsets: Vec<usize> = operations.iter().filter_map(|op| {
@@ -114,10 +116,9 @@ impl Renderer {
             }
         }).collect();
 
-        if ctx.was_reset() {
-            vec![0; offsets.len()]
-        } else {
-            offsets
+        match ctx.was_reset() {
+            true => (false, vec![0; offsets.len()]),
+            false => (ctx.can_wrap(), offsets)
         }
     }
 
@@ -230,6 +231,10 @@ impl<'a> Context<'a> {
     pub fn was_reset(&self) -> bool {
         self.reset
     }
+
+    pub fn can_wrap(&self) -> bool {
+        self.context_info.iter().all(|(_, can_wrap)| { *can_wrap })
+    }
 }
 
 impl<'a> Drop for Context<'a> {
@@ -242,7 +247,7 @@ impl<'a> Drop for Context<'a> {
             }).collect();
         }
 
-        if self.reset || self.context_info.iter().all(|(_, can_wrap)| { *can_wrap }) {
+        if self.reset || self.can_wrap() {
             for (_, tick) in &mut *self.map {
                 *tick = 0;
             }
