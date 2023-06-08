@@ -29,7 +29,7 @@ impl Logger {
             .logger(log4rs::config::Logger::builder().build("ureq", LevelFilter::Error))
             .build(Root::builder()
                 .appender("logfile")
-                .build(LevelFilter::Trace)
+                .build(LevelFilter::Debug)
             )
             .unwrap();
 

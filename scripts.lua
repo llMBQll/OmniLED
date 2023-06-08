@@ -1,8 +1,11 @@
 function volume()
+    local first, last = string.match(AUDIO.Name, '(.+)%s%((.+)%)')
+    local name = first == 'Speakers' and last or first
+
     return {
         data = {
             Text {
-                text = AUDIO.IsMuted and 'Off' or AUDIO.Volume,
+                text = AUDIO.IsMuted and 'Muted' or AUDIO.Volume,
                 position = Rectangle {
                     origin = Point { x = 0, y = 0 },
                     size = Size { width = SCREEN.width, height = SCREEN.height / 2 },
@@ -10,7 +13,7 @@ function volume()
                 modifiers = Modifiers { upper = true },
             },
             Text {
-                text = AUDIO.Name,
+                text = name,
                 position = Rectangle {
                     origin = Point { x = 0, y = SCREEN.height / 2 },
                     size = Size { width = SCREEN.width, height = SCREEN.height / 2 - 4 },
@@ -108,6 +111,6 @@ function clock()
     }
 end
 
-register(volume, { 'AUDIO.Volume', 'AUDIO.IsMuted', 'AUDIO.Name' }, { 'Steelseries Engine' })
-register(spotify, { 'SPOTIFY.Progress', 'SPOTIFY.Artist', 'SPOTIFY.Title' }, { 'Steelseries Engine' })
+register(volume, { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' }, { 'Steelseries Engine' })
+register(spotify, { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' }, { 'Steelseries Engine' })
 register(clock, { 'CLOCK.Seconds' }, { 'Steelseries Engine' })

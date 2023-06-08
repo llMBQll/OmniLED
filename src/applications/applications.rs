@@ -56,7 +56,6 @@ impl Applications {
         let mut valid = false;
 
         let entry = self.applications.entry(token).and_modify(|(_, timeout)| {
-
             if now < *timeout {
                 *timeout = now + self.timeout;
                 valid = true;
