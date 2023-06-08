@@ -67,6 +67,22 @@ impl Api {
         });
         self.load_golisp_handlers(serde_json::to_string(&handlers).unwrap().as_str());
 
+        // bind dummy event or else steelseries api seems to ignore golisp updates
+        let dummy_event = serde_json::json!({
+            "game": GAME,
+            "event": "DUMMY_EVENT",
+            "handlers": [{
+                "device-type": "screened",
+                "mode": "screen",
+                "zone": "one",
+                "datas": [{
+                    "has-text": true,
+                    "context-frame-key": "dummy-text"
+                }]
+            }]
+        });
+        self.bind_game_event(serde_json::to_string(&dummy_event).unwrap().as_str());
+
         // todo!("Register heartbeat event")
     }
 
@@ -84,6 +100,10 @@ impl Api {
 
     fn load_golisp_handlers(&mut self, json: &str) {
         self.call("/load_golisp_handlers", json)
+    }
+
+    fn bind_game_event(&mut self, json: &str) {
+        self.call("/bind_game_event", json)
     }
 
     fn game_event(&mut self, json: &str) {
