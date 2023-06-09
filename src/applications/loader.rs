@@ -42,9 +42,3 @@ impl<'a> Loader<'a> {
         self.loader.call_function("load_applications", Nil)
     }
 }
-
-impl<'a> Drop for Loader<'a> {
-    fn drop(&mut self) {
-        todo!("Stop processes")
-    }
-}

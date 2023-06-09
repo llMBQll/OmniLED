@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::c_int;
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use mlua::{chunk, Function, Lua, Table, TableExt, UserData, Value};
 use tokio::time::Instant;
@@ -45,14 +46,14 @@ impl UpdateHandler {
         data
     }
 
-    pub fn make_runner(lua: &Lua) -> Function {
+    pub fn make_runner<'a>(lua: &'a Lua, running: &'static AtomicBool) -> Function<'a> {
         lua.create_async_function::<(), (), _, _>(|lua, _| async {
             let interval_integer = lua.load(chunk! { SETTINGS["update_interval"] }).eval().unwrap();
             let interval = Duration::from_millis(interval_integer);
             let update_handler: Arc<Mutex<UpdateHandler>> = lua.load(chunk! { UPDATE_HANDLER.rust_object }).eval().unwrap();
             let lua_update_handler: Table = lua.globals().get("UPDATE_HANDLER").unwrap();
 
-            loop {
+            while running.load(Ordering::Relaxed) {
                 let begin = Instant::now();
 
                 let data = update_handler.lock().unwrap().get_data();
@@ -78,6 +79,7 @@ impl UpdateHandler {
                 // println!("Update took {} us", update_duration.as_micros());
                 tokio::time::sleep(interval.saturating_sub(update_duration)).await;
             }
+            Ok(())
         }).unwrap()
     }
 }
