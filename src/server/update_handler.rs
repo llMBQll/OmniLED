@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::c_int;
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use mlua::{chunk, Function, Lua, Table, TableExt, UserData, Value};
 use tokio::time::Instant;
@@ -12,12 +13,6 @@ pub fn load_update_handler(lua: &Lua) -> Arc<Mutex<UpdateHandler>> {
     let update_handler = Arc::new(Mutex::new(UpdateHandler::new()));
     let table: Table = lua.globals().get("UPDATE_HANDLER").unwrap();
     table.set("rust_object", Arc::clone(&update_handler)).unwrap();
-
-    // let lua_update_handler = Arc::clone(&update_handler);
-    // lua.load(chunk! {
-    //     UPDATE_HANDLER = $lua_update_handler
-    //     UPDATE_HANDLER:set_interval(SETTINGS["update_interval"])
-    // }).exec().unwrap();
 
     update_handler
 }
@@ -45,20 +40,20 @@ impl UpdateHandler {
         data
     }
 
-    pub fn make_runner(lua: &Lua) -> Function {
+    pub fn make_runner<'a>(lua: &'a Lua, running: &'static AtomicBool) -> Function<'a> {
         lua.create_async_function::<(), (), _, _>(|lua, _| async {
-            let interval_integer = lua.load(chunk!{ SETTINGS["update_interval"] }).eval().unwrap();
+            let interval_integer = lua.load(chunk! { SETTINGS["update_interval"] }).eval().unwrap();
             let interval = Duration::from_millis(interval_integer);
-            let update_handler: Arc<Mutex<UpdateHandler>> = lua.load(chunk!{ UPDATE_HANDLER.rust_object }).eval().unwrap();
+            let update_handler: Arc<Mutex<UpdateHandler>> = lua.load(chunk! { UPDATE_HANDLER.rust_object }).eval().unwrap();
             let lua_update_handler: Table = lua.globals().get("UPDATE_HANDLER").unwrap();
 
-            loop {
+            while running.load(Ordering::Relaxed) {
                 let begin = Instant::now();
 
                 let data = update_handler.lock().unwrap().get_data();
                 for (application, variables) in data {
                     for (name, value) in variables {
-                        let value = match json_to_lua_value(lua,value) {
+                        let value = match json_to_lua_value(lua, value) {
                             Ok(value) => value,
                             Err(_) => {
                                 // TODO log error
@@ -75,9 +70,10 @@ impl UpdateHandler {
 
                 let end = Instant::now();
                 let update_duration = end - begin;
-                println!("Update took {} us", update_duration.as_micros());
+                // println!("Update took {} us", update_duration.as_micros());
                 tokio::time::sleep(interval.saturating_sub(update_duration)).await;
             }
+            Ok(())
         }).unwrap()
     }
 }
@@ -88,14 +84,14 @@ fn json_to_lua_value(lua: &Lua, json_value: serde_json::Value) -> mlua::Result<V
         serde_json::Value::Bool(bool) => Ok(Value::Boolean(bool)),
         serde_json::Value::Number(number) => {
             if let Some(integer) = number.as_i64() {
-                return Ok(Value::Integer(integer))
+                return Ok(Value::Integer(integer));
             }
             Ok(Value::Number(number.as_f64().unwrap()))
         }
         serde_json::Value::String(string) => {
             let string = lua.create_string(&string)?;
             Ok(Value::String(string))
-        },
+        }
         serde_json::Value::Array(array) => {
             let size = array.len();
             let table = lua.create_table_with_capacity(size as c_int, 0)?;
@@ -115,11 +111,4 @@ fn json_to_lua_value(lua: &Lua, json_value: serde_json::Value) -> mlua::Result<V
     }
 }
 
-impl UserData for UpdateHandler {
-    // fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-    //     methods.add_method_mut("set_interval", |_, this, interval: u64| {
-    //         this.interval = Duration::from_millis(interval);
-    //         Ok(())
-    //     })
-    // }
-}
+impl UserData for UpdateHandler {}
