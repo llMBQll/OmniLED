@@ -1,62 +1,28 @@
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
-use std::sync::{Arc};
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex};
 use mlua::Lua;
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::time::Instant;
 use warp::{Filter};
-use crate::applications::applications::load_applications;
-use crate::server::server::ApplicationMetadataReplyData::{Reason, Token};
 use crate::server::update_handler::load_update_handler;
 
 pub struct Server {}
 
 impl Server {
     pub fn new(lua: &Lua) {
-        let applications = load_applications(lua);
+        let state = Arc::new(Mutex::new(State::new()));
 
         let register = warp::path!("register")
             .and(warp::body::json())
             .map({
-                let applications = Arc::clone(&applications);
-                move |metadata: ApplicationMetadata| {
-                    match applications.lock().unwrap().register(&metadata.name) {
-                        Some(token) => {
-                            let reply = warp::reply::json(&ApplicationMetadataReply {
-                                metadata,
-                                data: Token(token),
-                            });
-                            warp::reply::with_status(reply, warp::http::StatusCode::OK)
-                        }
-                        None => {
-                            let reply = warp::reply::json(&ApplicationMetadataReply {
-                                metadata,
-                                data: Reason(String::from("Application with the same name is already registered.")),
-                            });
-                            warp::reply::with_status(reply, warp::http::StatusCode::BAD_REQUEST)
-                        }
-                    }
-                }
-            });
+                let state = Arc::clone(&state);
+                move |data: RegisterData| {
+                    let token = state.lock().unwrap().add(data.name);
 
-        let heartbeat = warp::path!("heartbeat" / u64)
-            .map({
-                let applications = Arc::clone(&applications);
-                move |token: u64| {
-                    match applications.lock().unwrap().update(token) {
-                        Some((_, timeout)) => {
-                            let reply = warp::reply::json(&UpdateReply {
-                                timeout_in: (timeout - Instant::now()).as_millis() as u64
-                            });
-                            warp::reply::with_status(reply, warp::http::StatusCode::OK)
-                        }
-                        None => {
-                            let reply = warp::reply::json(&GenericErr {
-                                reason: String::from("Application not registered or timed out.")
-                            });
-                            warp::reply::with_status(reply, warp::http::StatusCode::BAD_REQUEST)
-                        }
-                    }
+                    let reply = warp::reply::json(&RegisterReply { token });
+                    warp::reply::with_status(reply, warp::http::StatusCode::OK)
                 }
             });
 
@@ -64,21 +30,19 @@ impl Server {
         let update = warp::path!("update" / u64)
             .and(warp::body::json())
             .map({
-                let applications = Arc::clone(&applications);
+                let state = Arc::clone(&state);
                 let handler = Arc::clone(&handler);
-                move |token: u64, update: HashMap<String, serde_json::Value>| {
-                    match applications.lock().unwrap().update(token) {
-                        Some((name, timeout)) => {
-                            handler.lock().unwrap().push((name, update));
+                move |token: u64, update_data: UpdateData| {
+                    match state.lock().unwrap().get(token) {
+                        Some(name) => {
+                            handler.lock().unwrap().push((name.clone(), update_data.fields));
 
-                            let reply = warp::reply::json(&UpdateReply {
-                                timeout_in: (timeout - Instant::now()).as_millis() as u64
-                            });
+                            let reply = warp::reply::json(&UpdateReply { error: None });
                             warp::reply::with_status(reply, warp::http::StatusCode::OK)
                         }
                         None => {
-                            let reply = warp::reply::json(&GenericErr {
-                                reason: String::from("Application not registered or timed out.")
+                            let reply = warp::reply::json(&UpdateReply {
+                                error: Some(String::from("Application not registered."))
                             });
                             warp::reply::with_status(reply, warp::http::StatusCode::BAD_REQUEST)
                         }
@@ -88,8 +52,7 @@ impl Server {
 
         let paths = warp::post()
             .and(register)
-            .or(update)
-            .or(heartbeat);
+            .or(update);
 
         // Try to bind server to first available port and start accepting requests
         let mut port: u16 = 6969;
@@ -128,40 +91,51 @@ impl Server {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ApplicationMetadata {
+struct RegisterData {
     name: String,
-    timeout_ms: u64,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all = "lowercase")]
-enum ApplicationMetadataReplyData {
-    Token(u64),
-    Reason(String),
+struct RegisterReply {
+    token: u64,
 }
 
-#[derive(Serialize)]
-struct ApplicationMetadataReply {
-    #[serde(flatten)]
-    metadata: ApplicationMetadata,
-    #[serde(flatten)]
-    data: ApplicationMetadataReplyData,
-}
-
-#[derive(Deserialize, Serialize)]
-struct Update {
+#[derive(Deserialize)]
+struct UpdateData {
     #[serde(flatten)]
     fields: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Serialize)]
 struct UpdateReply {
-    timeout_in: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
 }
 
-#[derive(Deserialize, Serialize)]
-struct GenericErr {
-    reason: String,
+struct State {
+    names: HashMap<u64, String>,
+}
+
+impl State {
+    pub fn new() -> Self {
+        Self {
+            names: HashMap::new(),
+        }
+    }
+
+    pub fn add(&mut self, name: String) -> u64 {
+        let mut s = DefaultHasher::new();
+        name.hash(&mut s);
+        let token = s.finish();
+
+        self.names.insert(token, name);
+
+        token
+    }
+
+    pub fn get(&self, token: u64) -> Option<&String> {
+        self.names.get(&token)
+    }
 }
