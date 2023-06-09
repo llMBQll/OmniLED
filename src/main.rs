@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use mlua::Lua;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::applications::loader::Loader;
+use crate::app_loader::app_loader::AppLoader;
 use crate::events::events::Events;
 use crate::logging::logger::Logger;
 use crate::renderer::renderer::Renderer;
@@ -13,7 +13,7 @@ use crate::server::update_handler::UpdateHandler;
 use crate::settings::settings::Settings;
 use crate::tray_icon::tray_icon::TrayIcon;
 
-mod applications;
+mod app_loader;
 mod events;
 mod logging;
 mod model;
@@ -43,7 +43,7 @@ async fn main() {
 
     let _tray = TrayIcon::new(|| RUNNING.store(false, Ordering::Relaxed));
 
-    let loader = Loader::new(&lua);
+    let loader = AppLoader::new(&lua);
     loader.load().unwrap();
     let runner = UpdateHandler::make_runner(&lua, &RUNNING);
     runner.call_async::<_, ()>(()).await.unwrap();

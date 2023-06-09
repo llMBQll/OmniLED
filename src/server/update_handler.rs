@@ -14,12 +14,6 @@ pub fn load_update_handler(lua: &Lua) -> Arc<Mutex<UpdateHandler>> {
     let table: Table = lua.globals().get("UPDATE_HANDLER").unwrap();
     table.set("rust_object", Arc::clone(&update_handler)).unwrap();
 
-    // let lua_update_handler = Arc::clone(&update_handler);
-    // lua.load(chunk! {
-    //     UPDATE_HANDLER = $lua_update_handler
-    //     UPDATE_HANDLER:set_interval(SETTINGS["update_interval"])
-    // }).exec().unwrap();
-
     update_handler
 }
 
