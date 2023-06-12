@@ -8,24 +8,25 @@ use crate::model::rectangle::{Rectangle, Size};
 use crate::renderer::font_manager::FontManager;
 use crate::renderer::buffer::Buffer;
 
+use crate::settings::settings::Settings;
+
 pub struct Renderer {
     font_manager: FontManager,
     scrolling_text_data: ScrollingTextData,
+    scrolling_text_control: ScrollingTextControl,
 }
-
-const TICKS_PER_MOVE: usize = 2;
-const TICKS_AT_EDGE: usize = 8;
 
 impl Renderer {
     pub fn load(lua: &Lua) {
-        let renderer = Self::new();
+        let renderer = Self::new(lua);
         lua.globals().set("RENDERER", renderer).unwrap();
     }
 
-    pub fn new() -> Self {
+    pub fn new(lua: &Lua) -> Self {
         Self {
             font_manager: FontManager::new(),
             scrolling_text_data: ScrollingTextData::new(),
+            scrolling_text_control: ScrollingTextControl::new(lua),
         }
     }
 
@@ -111,7 +112,7 @@ impl Renderer {
 
         let offsets: Vec<usize> = operations.iter().filter_map(|op| {
             match op {
-                Operation::Text(text) => Some(Self::precalculate_single(&mut ctx, &mut self.font_manager, text)),
+                Operation::Text(text) => Some(Self::precalculate_single(&mut ctx, &mut self.font_manager, &self.scrolling_text_control, text)),
                 _ => None
             }
         }).collect();
@@ -122,7 +123,7 @@ impl Renderer {
         }
     }
 
-    fn precalculate_single(ctx: &mut Context, font_manager: &mut FontManager, text: &Text) -> usize {
+    fn precalculate_single(ctx: &mut Context, font_manager: &mut FontManager, control: &ScrollingTextControl, text: &Text) -> usize {
         if !text.modifiers.scrolling {
             return 0;
         }
@@ -141,17 +142,17 @@ impl Renderer {
         }
 
         let max_shifts = len - max_characters;
-        let max_ticks = 2 * TICKS_AT_EDGE + max_shifts * TICKS_PER_MOVE;
+        let max_ticks = 2 * control.ticks_at_edge + max_shifts * control.ticks_per_move;
         if tick >= max_ticks {
             ctx.set(&text.text, true);
         }
 
-        if tick <= TICKS_AT_EDGE {
+        if tick <= control.ticks_at_edge {
             0
-        } else if tick >= TICKS_AT_EDGE + max_shifts * TICKS_PER_MOVE {
+        } else if tick >= control.ticks_at_edge + max_shifts * control.ticks_per_move {
             max_shifts
         } else {
-            (tick - TICKS_AT_EDGE) / TICKS_PER_MOVE
+            (tick - control.ticks_at_edge) / control.ticks_per_move
         }
     }
 }
@@ -165,6 +166,23 @@ impl UserData for Renderer {
 }
 
 unsafe impl Send for Renderer {}
+
+struct ScrollingTextControl {
+    ticks_at_edge: usize,
+    ticks_per_move: usize,
+}
+
+const TICKS_AT_EDGE: &str = "scrolling_text_ticks_at_edge";
+const TICKS_PER_MOVE: &str = "scrolling_text_ticks_per_move";
+
+impl ScrollingTextControl {
+    pub fn new(lua: &Lua) -> Self {
+        Self {
+            ticks_at_edge: Settings::get(lua, TICKS_AT_EDGE).unwrap(),
+            ticks_per_move: Settings::get(lua, TICKS_PER_MOVE).unwrap(),
+        }
+    }
+}
 
 struct ScrollingTextData {
     contexts: HashMap<i64, HashMap<String, usize>>,

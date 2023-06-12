@@ -25,7 +25,7 @@ struct Api {
 const GAME: &str = "RUST_STEELSERIES_OLED";
 const GAME_DISPLAY_NAME: &str = "[Rust] Steelseries OLED";
 const DEVELOPER: &str = "MBQ";
-const TIMEOUT: u32 = 60000; // TODO: set this timeout from settings.lua ?
+const TIMEOUT: u32 = 60000;
 
 impl Api {
     pub fn new() -> Self {
