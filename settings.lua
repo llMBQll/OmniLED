@@ -1,3 +1,4 @@
 update_interval = 100
 applications_file = 'applications.lua'
-application_timeout = 30000
+scrolling_text_ticks_at_edge = 8
+scrolling_text_ticks_per_move = 2
