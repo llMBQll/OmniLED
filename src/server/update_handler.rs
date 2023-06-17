@@ -6,6 +6,8 @@ use std::time::Duration;
 use mlua::{chunk, Function, Lua, Table, TableExt, UserData, Value};
 use tokio::time::Instant;
 
+use crate::settings::settings::Settings;
+
 pub fn load_update_handler(lua: &Lua) -> Arc<Mutex<UpdateHandler>> {
     const UPDATE_HANDLER_SRC: &str = include_str!("update_handler.lua");
 
@@ -42,7 +44,7 @@ impl UpdateHandler {
 
     pub fn make_runner<'a>(lua: &'a Lua, running: &'static AtomicBool) -> Function<'a> {
         lua.create_async_function::<(), (), _, _>(|lua, _| async {
-            let interval_integer = lua.load(chunk! { SETTINGS["update_interval"] }).eval().unwrap();
+            let interval_integer = Settings::get(lua, "update_interval").unwrap();
             let interval = Duration::from_millis(interval_integer);
             let update_handler: Arc<Mutex<UpdateHandler>> = lua.load(chunk! { UPDATE_HANDLER.rust_object }).eval().unwrap();
             let lua_update_handler: Table = lua.globals().get("UPDATE_HANDLER").unwrap();
