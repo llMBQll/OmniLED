@@ -1,32 +1,56 @@
-use mlua::{Lua, Table, Value};
-use crate::screen::screen::{Error, Screen, ScreenWrapper, Result};
-use crate::screen::steelseries_engine::steelseries_engine::SteelseriesEngine;
+use std::collections::HashMap;
+use std::ffi::c_void;
+use mlua::{LightUserData, Lua, MetaMethod, Table, UserData, UserDataMethods, Value};
+use crate::screen::raw_usb::raw_usb::RawUSB;
+use crate::screen::screen::Screen;
+use crate::screen::supported_devices::supported_devices::load_supported_devices;
 
-pub struct Screens;
+pub struct Screens {
+    screens: HashMap<String, Box<dyn Screen + Send>>,
+}
 
 impl Screens {
     pub fn load(lua: &Lua) {
-        let screens = lua.create_table().unwrap();
-        lua.globals().set("SCREENS", screens).unwrap();
+        let this = Self {
+            screens: HashMap::new(),
+        };
 
-        Self::register_screen(lua, SteelseriesEngine::new()).unwrap();
+        lua.globals().set("SCREENS", this).unwrap();
+        load_supported_devices(lua);
     }
 
-    fn register_screen<T: Send + Screen + 'static>(lua: &Lua, mut screen: T) -> Result<()> {
-        screen.init()?;
+    fn load_screen(name: String) -> Box<dyn Screen + Send> {
+        // TODO add error handling and other creation options
 
-        let name = screen.name()?;
-        let screens: Table = lua.globals().get("SCREENS").unwrap();
-        match screens.get::<_, Value>(name.clone()).unwrap() {
-            Value::Nil => {}
-            _ => {
-                return Err(Error::NameAlreadyRegistered(name));
+        let screen = RawUSB::new(name).unwrap();
+        Box::new(screen)
+    }
+}
+
+impl UserData for Screens {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method_mut("load_screen", |lua, this, key: String| {
+            // TODO add error
+            let screen = this.screens.entry(key.clone())
+                .or_insert_with(|| Self::load_screen(key));
+
+            Ok(LightUserData(screen as *mut _ as *mut c_void))
+        });
+
+        methods.add_method("update", |_, _, (screen, data): (LightUserData, Vec<u8>)| {
+            // TODO Make movable without copying Rust -> Lua -> Rust: use LightUserData too?
+
+            let screen = unsafe { &mut *(screen.0 as *mut Box<dyn Screen + Send>) };
+            screen.update(&data).unwrap();
+            Ok(())
+        });
+
+        methods.add_method("size", |_, _, screen: LightUserData| {
+            let screen = unsafe { &mut *(screen.0 as *mut Box<dyn Screen + Send>) };
+            match screen.size() {
+                Ok(size) => Ok(Some(size)),
+                Err(_) => Ok(None)
             }
-        }
-
-        let wrapped = ScreenWrapper::new(screen);
-        screens.set(name, wrapped).unwrap();
-
-        Ok(())
+        });
     }
 }

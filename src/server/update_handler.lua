@@ -25,7 +25,7 @@ function UPDATE_HANDLER:register_user_script(script, sensitivity_list, screens)
         local function wrapper()
             for _, screen in ipairs(screens) do
                 local env = SCRIPT_HANDLER.env
-                local size = screen:size()
+                local size = SCREENS:size(screen)
                 env["SCREEN"] = size
 
                 local result = script()
@@ -35,7 +35,7 @@ function UPDATE_HANDLER:register_user_script(script, sensitivity_list, screens)
                 if result then
                     self.time_remaining = result.duration or self.DEFAULT_DURATION
                     local end_auto_repeat, image = RENDERER:render(priority, size, result.data)
-                    screen:update(image)
+                    SCREENS:update(screen, image)
 
                     local auto_repeat = result.auto_repeat or false
                     if auto_repeat and not end_auto_repeat then

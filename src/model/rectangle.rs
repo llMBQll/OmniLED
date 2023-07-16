@@ -1,6 +1,7 @@
 use mlua::{UserData, UserDataFields};
+use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub struct Point {
     pub x: usize,
     pub y: usize,
@@ -8,7 +9,7 @@ pub struct Point {
 
 impl UserData for Point {}
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub struct Size {
     pub width: usize,
     pub height: usize,
@@ -26,7 +27,7 @@ impl UserData for Size {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub struct Rectangle {
     pub origin: Point,
     pub size: Size,

@@ -7,16 +7,19 @@ edition = "2021"
 
 [dependencies]
 freetype-rs = "0.32"
+hex = { version = "0.4", features = ["serde"] }
 lazy_static = "1.4"
 log = "0.4"
 log4rs = "1.2"
 mlua = { version = "0.8", features = ["async", "lua54", "vendored", "macros", "send", "serialize"] }
+once_cell = "1.18"
+rusb = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
 ureq = { version = "2.4", features = ["json"] }
 warp = "0.3"
-tray-item = "0.8"
+# tray-item = "0.8"
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
 windres = "0.2"

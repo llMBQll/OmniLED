@@ -111,6 +111,6 @@ function clock()
     }
 end
 
-register(volume, { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' }, { 'Steelseries Engine' })
-register(spotify, { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' }, { 'Steelseries Engine' })
-register(clock, { 'CLOCK.Seconds' }, { 'Steelseries Engine' })
+register(volume, { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' }, { 'Steelseries Apex 7 TKL' })
+register(spotify, { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' }, { 'Steelseries Apex 7 TKL' })
+register(clock, { 'CLOCK.Seconds' }, { 'Steelseries Apex 7 TKL' })
