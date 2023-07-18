@@ -6,27 +6,15 @@ use crate::screen::supported_devices::device_info::DeviceInfo;
 
 static DEVICES: OnceCell<Vec<DeviceInfo>> = OnceCell::new();
 
+pub fn get_supported_devices() -> &'static Vec<DeviceInfo> {
+    DEVICES.get().expect("Call to load_supported_devices has to be done before call to this function")
+}
+
 pub fn load_supported_devices(lua: &Lua) {
     let supported_devices = lua.create_table().unwrap();
     lua.globals().set("SUPPORTED_DEVICES", supported_devices).unwrap();
 
-    let load_device = lua.create_function(|lua, device: Value| {
-        let device_info: DeviceInfo = match lua.from_value(device.clone()) {
-            Ok(device_info) => device_info,
-            Err(err) => {
-                error!("Failed to parse device data: {}", err);
-                return Ok(());
-            }
-        };
-
-        let supported_devices: Table = lua.globals().get("SUPPORTED_DEVICES").unwrap();
-        match supported_devices.get::<_, Value>(device_info.name.clone()).unwrap() {
-            Value::Nil => supported_devices.set(device_info.name, device).unwrap(),
-            _ => warn!("Device '{}' is already added", device_info.name)
-        };
-
-        Ok(())
-    }).unwrap();
+    let load_device = lua.create_function(load_device).unwrap();
 
     lua.load(chunk! {
         f, err = loadfile(SETTINGS.supported_devices_file, "t", { device = $load_device })
@@ -44,6 +32,25 @@ pub fn load_supported_devices(lua: &Lua) {
     }).collect()).unwrap();
 }
 
-pub fn get_supported_devices() -> &'static Vec<DeviceInfo> {
-    DEVICES.get().unwrap()
+fn load_device(lua: &Lua, device: Value) -> mlua::Result<()> {
+    let device_info: DeviceInfo = match lua.from_value(device.clone()) {
+        Ok(device_info) => device_info,
+        Err(err) => {
+            error!("Failed to parse device data: {}", err);
+            return Ok(());
+        }
+    };
+
+    let supported_devices: Table = lua.globals().get("SUPPORTED_DEVICES").unwrap();
+    match supported_devices.get::<_, Value>(device_info.name.clone()).unwrap() {
+        Value::Nil => supported_devices.set(device_info.name, device).unwrap(),
+        _ => warn!("Device '{}' is already added", device_info.name)
+    };
+
+    Ok(())
+}
+
+fn steelseries_engine_device(lua: &Lua, device: Value) -> mlua::Result<()> {
+
+    Ok(())
 }

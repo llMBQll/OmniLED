@@ -15,7 +15,7 @@ pub struct RawUSB {
 
 impl RawUSB {
     pub fn new(name: String) -> Result<Self> {
-        let device_info = match get_supported_devices().iter().find(|&x| x.name == name) {
+        let device_info = match get_supported_devices().iter().find(|&x| x.name == *name) {
             Some(device_info) => device_info,
             None => return Err(DeviceNotSupported),
         };
@@ -24,8 +24,8 @@ impl RawUSB {
             Some(usb_info) => usb_info,
             None => return Err(DeviceNotSupported)
         };
-        let vendor_id = (usb_info.vendor_id[0] as u16) << 8 | (usb_info.vendor_id[1] as u16);
-        let product_id = (usb_info.product_id[0] as u16) << 8 | (usb_info.product_id[1] as u16);
+        let vendor_id = usb_info.vendor_id;
+        let product_id = usb_info.product_id;
 
         let device = rusb::devices().unwrap().iter().find(|device| {
             let desc = device.device_descriptor().unwrap();
@@ -42,13 +42,13 @@ impl RawUSB {
             Err(err) => return Err(InitFailed(format!("{err}")))
         };
 
-        match handle.kernel_driver_active(usb_info.interface[0]) {
-            Ok(true) => handle.detach_kernel_driver(usb_info.interface[0]).unwrap(),
+        match handle.kernel_driver_active(usb_info.interface) {
+            Ok(true) => handle.detach_kernel_driver(usb_info.interface).unwrap(),
             _ => {}
         };
 
-        handle.claim_interface(usb_info.interface[0]).unwrap();
-        handle.set_alternate_setting(usb_info.interface[0], 0).unwrap();
+        handle.claim_interface(usb_info.interface).unwrap();
+        handle.set_alternate_setting(usb_info.interface, 0).unwrap();
 
         Ok(Self {
             name,
@@ -88,6 +88,6 @@ impl Screen for RawUSB {
     }
 
     fn name(&self) -> Result<String> {
-        todo!()
+        Ok(self.name.clone())
     }
 }

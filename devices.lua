@@ -5,9 +5,9 @@ device {
         height = 40,
     },
     usb_info = {
-        vendor_id = '1038',
-        product_id = '1618',
-        interface = '01',
-        endpoint = '00',
+        vendor_id = '0x1038',
+        product_id = '0x1618',
+        interface = '0x01',
+        endpoint = '0x00',
     },
 }

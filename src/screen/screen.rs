@@ -1,5 +1,3 @@
-use mlua::{LightUserData, UserData, UserDataMethods};
-
 pub use crate::model::rectangle::Size;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -7,7 +5,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
 pub enum Error {
     DeviceNotSupported,
-    NameAlreadyRegistered(String),
+    // NameAlreadyRegistered(String),
     InitFailed(String),
     // TemporarilyUnavailable,
     // Offline,

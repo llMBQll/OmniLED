@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::ffi::c_void;
-use mlua::{LightUserData, Lua, MetaMethod, Table, UserData, UserDataMethods, Value};
+use mlua::{LightUserData, Lua, UserData, UserDataMethods};
 use crate::screen::raw_usb::raw_usb::RawUSB;
 use crate::screen::screen::Screen;
 use crate::screen::supported_devices::supported_devices::load_supported_devices;
@@ -29,8 +29,8 @@ impl Screens {
 
 impl UserData for Screens {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut("load_screen", |lua, this, key: String| {
-            // TODO add error
+        methods.add_method_mut("load_screen", |_, this, key: String| {
+            // TODO add error handling
             let screen = this.screens.entry(key.clone())
                 .or_insert_with(|| Self::load_screen(key));
 
