@@ -3,29 +3,35 @@ use rusb::{DeviceHandle, GlobalContext};
 use crate::screen::screen::{Screen, Size};
 use crate::screen::screen::Error::{DeviceNotSupported, InitFailed};
 use crate::screen::screen::Result;
-use crate::screen::supported_devices::device_info::USBInfo;
-use crate::screen::supported_devices::supported_devices::get_supported_devices;
+use crate::screen::supported_devices::device_info::{Output, USBSettings};
+use crate::screen::supported_devices::supported_devices::get_supported_outputs;
 
 pub struct RawUSB {
     name: String,
     size: Size,
-    info: USBInfo,
+    info: USBSettings,
     handle: DeviceHandle<GlobalContext>,
 }
 
 impl RawUSB {
     pub fn new(name: String) -> Result<Self> {
-        let device_info = match get_supported_devices().iter().find(|&x| x.name == *name) {
+        let usb_device = get_supported_outputs().iter().find_map(|x| {
+            match &x {
+                Output::SteelseriesEngineDevice(_) => None,
+                Output::USBDevice(usb_device) => match usb_device.name == name {
+                    true => Some(usb_device),
+                    false => None,
+                }
+            }
+        });
+
+        let device_info = match usb_device {
             Some(device_info) => device_info,
             None => return Err(DeviceNotSupported),
         };
 
-        let usb_info = match &device_info.usb_info {
-            Some(usb_info) => usb_info,
-            None => return Err(DeviceNotSupported)
-        };
-        let vendor_id = usb_info.vendor_id;
-        let product_id = usb_info.product_id;
+        let vendor_id = device_info.usb_settings.vendor_id;
+        let product_id = device_info.usb_settings.product_id;
 
         let device = rusb::devices().unwrap().iter().find(|device| {
             let desc = device.device_descriptor().unwrap();
@@ -42,18 +48,20 @@ impl RawUSB {
             Err(err) => return Err(InitFailed(format!("{err}")))
         };
 
-        match handle.kernel_driver_active(usb_info.interface) {
-            Ok(true) => handle.detach_kernel_driver(usb_info.interface).unwrap(),
+        let interface = device_info.usb_settings.interface;
+
+        match handle.kernel_driver_active(interface) {
+            Ok(true) => handle.detach_kernel_driver(interface).unwrap(),
             _ => {}
         };
 
-        handle.claim_interface(usb_info.interface).unwrap();
-        handle.set_alternate_setting(usb_info.interface, 0).unwrap();
+        handle.claim_interface(interface).unwrap();
+        handle.set_alternate_setting(interface, 0).unwrap();
 
         Ok(Self {
             name,
             size: device_info.screen_size,
-            info: usb_info.clone(),
+            info: device_info.usb_settings.clone(),
             handle,
         })
     }

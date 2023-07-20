@@ -3,7 +3,7 @@ use std::ffi::c_void;
 use mlua::{LightUserData, Lua, UserData, UserDataMethods};
 use crate::screen::raw_usb::raw_usb::RawUSB;
 use crate::screen::screen::Screen;
-use crate::screen::supported_devices::supported_devices::load_supported_devices;
+use crate::screen::supported_devices::supported_devices::load_supported_outputs;
 
 pub struct Screens {
     screens: HashMap<String, Box<dyn Screen + Send>>,
@@ -16,7 +16,7 @@ impl Screens {
         };
 
         lua.globals().set("SCREENS", this).unwrap();
-        load_supported_devices(lua);
+        load_supported_outputs(lua);
     }
 
     fn load_screen(name: String) -> Box<dyn Screen + Send> {
