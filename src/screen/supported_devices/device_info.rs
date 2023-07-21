@@ -7,20 +7,20 @@ use std::marker::PhantomData;
 use crate::screen::screen::Size;
 
 #[derive(Deserialize, Debug)]
-pub enum Output {
-    SteelseriesEngineDevice(SteelseriesEngineDevice),
-    USBDevice(USBDevice),
+pub enum OutputSettings {
+    SteelseriesEngineDevice(SteelseriesEngineDeviceSettings),
+    USBDevice(USBDeviceSettings),
     // HTTP, Bluetooth etc ?
 }
 
 #[derive(Deserialize, Debug)]
-pub struct SteelseriesEngineDevice {
+pub struct SteelseriesEngineDeviceSettings {
     pub name: String,
     pub screen_size: Size,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct USBDevice {
+pub struct USBDeviceSettings {
     pub name: String,
     pub screen_size: Size,
     pub usb_settings: USBSettings,

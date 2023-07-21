@@ -1,6 +1,6 @@
 pub mod screens;
 
-mod raw_usb;
+mod usb_device;
 mod screen;
 mod supported_devices;
 mod steelseries_engine;

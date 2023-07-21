@@ -3,35 +3,20 @@ use rusb::{DeviceHandle, GlobalContext};
 use crate::screen::screen::{Screen, Size};
 use crate::screen::screen::Error::{DeviceNotSupported, InitFailed};
 use crate::screen::screen::Result;
-use crate::screen::supported_devices::device_info::{Output, USBSettings};
+use crate::screen::supported_devices::device_info::{OutputSettings, USBDeviceSettings, USBSettings};
 use crate::screen::supported_devices::supported_devices::get_supported_outputs;
 
-pub struct RawUSB {
+pub struct USBDevice {
     name: String,
     size: Size,
-    info: USBSettings,
+    settings: USBSettings,
     handle: DeviceHandle<GlobalContext>,
 }
 
-impl RawUSB {
-    pub fn new(name: String) -> Result<Self> {
-        let usb_device = get_supported_outputs().iter().find_map(|x| {
-            match &x {
-                Output::SteelseriesEngineDevice(_) => None,
-                Output::USBDevice(usb_device) => match usb_device.name == name {
-                    true => Some(usb_device),
-                    false => None,
-                }
-            }
-        });
-
-        let device_info = match usb_device {
-            Some(device_info) => device_info,
-            None => return Err(DeviceNotSupported),
-        };
-
-        let vendor_id = device_info.usb_settings.vendor_id;
-        let product_id = device_info.usb_settings.product_id;
+impl USBDevice {
+    pub fn new(settings: USBDeviceSettings) -> Result<Self> {
+        let vendor_id = settings.usb_settings.vendor_id;
+        let product_id = settings.usb_settings.product_id;
 
         let device = rusb::devices().unwrap().iter().find(|device| {
             let desc = device.device_descriptor().unwrap();
@@ -48,7 +33,7 @@ impl RawUSB {
             Err(err) => return Err(InitFailed(format!("{err}")))
         };
 
-        let interface = device_info.usb_settings.interface;
+        let interface = settings.usb_settings.interface;
 
         match handle.kernel_driver_active(interface) {
             Ok(true) => handle.detach_kernel_driver(interface).unwrap(),
@@ -59,15 +44,15 @@ impl RawUSB {
         handle.set_alternate_setting(interface, 0).unwrap();
 
         Ok(Self {
-            name,
-            size: device_info.screen_size,
-            info: device_info.usb_settings.clone(),
+            name: settings.name,
+            size: settings.screen_size,
+            settings: settings.usb_settings.clone(),
             handle,
         })
     }
 }
 
-impl Screen for RawUSB {
+impl Screen for USBDevice {
     fn init(&mut self) -> Result<()> {
         Ok(())
     }

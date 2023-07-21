@@ -1,4 +1,4 @@
-device {
+usb_device {
     name = 'Steelseries Apex 7 TKL',
     screen_size = {
         width = 128,
