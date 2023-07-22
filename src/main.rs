@@ -1,6 +1,5 @@
-use lazy_static::lazy_static;
 use mlua::Lua;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 
 use crate::app_loader::app_loader::AppLoader;
 use crate::events::events::Events;
@@ -24,13 +23,16 @@ mod server;
 mod settings;
 mod tray_icon;
 
-lazy_static! {
-    static ref RUNNING: AtomicBool = AtomicBool::new(true);
-}
+static RUNNING: AtomicBool = AtomicBool::new(true);
 
 #[tokio::main]
 async fn main() {
     let lua = Lua::new();
+
+    // TODO find a better place for this
+    let table = lua.create_table().unwrap();
+    table.set("os", os()).unwrap();
+    lua.globals().set("PLATFORM", table).unwrap();
 
     let _logger = Logger::new(&lua);
     Events::load(&lua);
@@ -41,10 +43,19 @@ async fn main() {
 
     let _sandbox = ScriptHandler::load(&lua);
 
-    let _tray = TrayIcon::new(|| RUNNING.store(false, Ordering::Relaxed));
+    let _tray = TrayIcon::new(&RUNNING);
 
     let loader = AppLoader::new(&lua);
     loader.load().unwrap();
     let runner = UpdateHandler::make_runner(&lua, &RUNNING);
     runner.call_async::<_, ()>(()).await.unwrap();
+}
+
+// TODO find a better place for this
+fn os() -> String {
+    #[cfg(target_os = "windows")]
+    return String::from("windows");
+
+    #[cfg(target_os = "linux")]
+    return String::from("linux");
 }

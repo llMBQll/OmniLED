@@ -39,9 +39,9 @@ function SCRIPT_HANDLER.make_sandbox_env()
                 LOG.warn('Expected the third argument to be an array of "string", got "' .. type(element) .. '" at index ' .. i .. '! User script not registered.')
                 return
             else
-                local screen = SCREENS[element]
+                local screen = SCREENS:load_screen(element)
                 if screen == nil then
-                    LOG.warn('Screen ' .. screens .. ' not found')
+                    LOG.warn('Could not load screen' .. element)
                 else
                     table.insert(found_screens, screen)
                 end
