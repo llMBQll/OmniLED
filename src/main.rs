@@ -11,7 +11,7 @@ use crate::script_handler::script_handler::ScriptHandler;
 use crate::server::server::Server;
 use crate::server::update_handler::UpdateHandler;
 use crate::settings::settings::Settings;
-// use crate::tray_icon::tray_icon::TrayIcon;
+use crate::tray_icon::tray_icon::TrayIcon;
 
 mod app_loader;
 mod events;
@@ -41,7 +41,7 @@ async fn main() {
 
     let _sandbox = ScriptHandler::load(&lua);
 
-    // let _tray = TrayIcon::new(|| RUNNING.store(false, Ordering::Relaxed));
+    let _tray = TrayIcon::new(&RUNNING);
 
     let loader = AppLoader::new(&lua);
     loader.load().unwrap();
