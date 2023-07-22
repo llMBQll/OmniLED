@@ -1,20 +1,23 @@
 use crate::screen::screen::{Screen, Size};
 use crate::screen::screen::Result;
 use crate::screen::steelseries_engine::api;
+use crate::screen::supported_devices::device_info::SteelseriesEngineDeviceSettings;
 
-pub struct SteelseriesEngine {
+pub struct SteelseriesEngineDevice {
+    name: String,
     size: Size,
 }
 
-impl SteelseriesEngine {
-    pub fn new() -> Self {
+impl SteelseriesEngineDevice {
+    pub fn new(settings: SteelseriesEngineDeviceSettings) -> Self {
         Self {
-            size: Size { width: 128, height: 40 },
+            name: settings.name,
+            size: settings.screen_size,
         }
     }
 }
 
-impl Screen for SteelseriesEngine {
+impl Screen for SteelseriesEngineDevice {
     fn init(&mut self) -> Result<()> {
         Ok(())
     }
@@ -29,6 +32,6 @@ impl Screen for SteelseriesEngine {
     }
 
     fn name(&self) -> Result<String> {
-        Ok(String::from("Steelseries Engine"))
+        Ok(self.name.clone())
     }
 }

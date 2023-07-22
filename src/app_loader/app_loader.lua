@@ -13,7 +13,7 @@ function APP_LOADER.load_app(app_config)
 end
 
 function APP_LOADER.load_applications()
-    f, err = loadfile(SETTINGS.applications_file, 't', { load_app = APP_LOADER.load_app, SERVER = SERVER })
+    f, err = loadfile(SETTINGS.applications_file, 't', { load_app = APP_LOADER.load_app, SERVER = SERVER, PLATFORM = PLATFORM })
     if err then
         LOG.error('Failed to load the applications file - ' .. err)
         return
