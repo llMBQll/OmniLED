@@ -1,6 +1,5 @@
-use lazy_static::lazy_static;
 use mlua::Lua;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 
 use crate::app_loader::app_loader::AppLoader;
 use crate::events::events::Events;
@@ -24,9 +23,7 @@ mod server;
 mod settings;
 mod tray_icon;
 
-lazy_static! {
-    static ref RUNNING: AtomicBool = AtomicBool::new(true);
-}
+static RUNNING: AtomicBool = AtomicBool::new(true);
 
 #[tokio::main]
 async fn main() {

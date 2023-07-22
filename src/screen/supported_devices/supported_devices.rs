@@ -1,14 +1,7 @@
 use log::{error, warn};
 use mlua::{chunk, Lua, LuaSerdeExt, Table, Value};
-use once_cell::sync::OnceCell;
 
-use crate::screen::supported_devices::device_info::{OutputSettings, SteelseriesEngineDeviceSettings, USBDeviceSettings};
-
-static OUTPUTS: OnceCell<Vec<OutputSettings>> = OnceCell::new();
-
-pub fn get_supported_outputs() -> &'static Vec<OutputSettings> {
-    OUTPUTS.get().expect("Call to load_supported_outputs has to be done before call to this function")
-}
+use crate::screen::supported_devices::device_info::{SteelseriesEngineDeviceSettings, USBDeviceSettings};
 
 pub fn load_supported_outputs(lua: &Lua) {
     let supported_outputs = lua.create_table().unwrap();
@@ -28,12 +21,6 @@ pub fn load_supported_outputs(lua: &Lua) {
         end
         f()
     }).exec().unwrap();
-
-    let supported_outputs: Table = lua.globals().get("SUPPORTED_OUTPUTS").unwrap();
-    OUTPUTS.set(supported_outputs.pairs::<Value, Value>().map(|pair| -> OutputSettings {
-        let (_, output) = pair.unwrap();
-        lua.from_value(output).unwrap()
-    }).collect()).unwrap();
 }
 
 // TODO make a generic function for all output types

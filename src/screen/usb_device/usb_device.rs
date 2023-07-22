@@ -2,10 +2,9 @@ use std::time::Duration;
 use log::{debug, warn};
 use rusb::{DeviceHandle, GlobalContext};
 use crate::screen::screen::{Screen, Size};
-use crate::screen::screen::Error::{DeviceNotSupported, InitFailed};
+use crate::screen::screen::Error::InitFailed;
 use crate::screen::screen::Result;
-use crate::screen::supported_devices::device_info::{OutputSettings, USBDeviceSettings, USBSettings};
-use crate::screen::supported_devices::supported_devices::get_supported_outputs;
+use crate::screen::supported_devices::device_info::{USBDeviceSettings, USBSettings};
 
 pub struct USBDevice {
     name: String,
