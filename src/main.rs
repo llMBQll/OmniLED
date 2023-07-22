@@ -29,6 +29,11 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 async fn main() {
     let lua = Lua::new();
 
+    // TODO find a better place for this
+    let table = lua.create_table().unwrap();
+    table.set("os", os()).unwrap();
+    lua.globals().set("PLATFORM", table).unwrap();
+
     let _logger = Logger::new(&lua);
     Events::load(&lua);
     Settings::load(&lua);
@@ -44,4 +49,13 @@ async fn main() {
     loader.load().unwrap();
     let runner = UpdateHandler::make_runner(&lua, &RUNNING);
     runner.call_async::<_, ()>(()).await.unwrap();
+}
+
+// TODO find a better place for this
+fn os() -> String {
+    #[cfg(target_os = "windows")]
+    return String::from("windows");
+
+    #[cfg(target_os = "linux")]
+    return String::from("linux");
 }

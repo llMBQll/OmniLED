@@ -13,7 +13,8 @@ pub fn load_supported_outputs(lua: &Lua) {
     lua.load(chunk! {
         f, err = loadfile(SETTINGS.supported_outputs_file, "t", {
             usb_device = $load_usb_device,
-            steelseries_engine_device = $load_steelseries_engine_device
+            steelseries_engine_device = $load_steelseries_engine_device,
+            PLATFORM = PLATFORM
         })
         if err then
             LOG.error("Failed to load the supported outputs file - " .. err)
