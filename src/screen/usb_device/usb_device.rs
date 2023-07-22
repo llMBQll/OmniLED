@@ -1,4 +1,5 @@
 use std::time::Duration;
+use log::{debug, warn};
 use rusb::{DeviceHandle, GlobalContext};
 use crate::screen::screen::{Screen, Size};
 use crate::screen::screen::Error::{DeviceNotSupported, InitFailed};
@@ -82,5 +83,25 @@ impl Screen for USBDevice {
 
     fn name(&self) -> Result<String> {
         Ok(self.name.clone())
+    }
+}
+
+impl Drop for USBDevice {
+    fn drop(&mut self) {
+        let interface = self.settings.interface;
+
+        match self.handle.release_interface(interface) {
+            Ok(_) => {
+                debug!("Released interface for {}", self.name);
+                match self.handle.kernel_driver_active(self.settings.interface) {
+                    Ok(false) => match self.handle.attach_kernel_driver(self.settings.interface) {
+                        Ok(_) => debug!("Reattached kernel driver for {}", self.name),
+                        Err(err) => warn!("Failed to reattach kernel driver for {}: {}", self.name, err)
+                    }
+                    _ => debug!("Kernel driver was already attached for {}", self.name)
+                }
+            }
+            Err(err) => warn!("Failed to release interface for {}: {}", self.name, err)
+        }
     }
 }
