@@ -1,7 +1,14 @@
 use log::error;
 use mlua::{Lua, Table, TableExt, Value};
 
-pub fn eval_file(lua: &Lua, name: &str, env: Table) {
+#[macro_export]
+macro_rules! create_table {
+    ($lua:ident, $values:tt) => {
+        $lua.load(chunk! { $values }).eval::<mlua::Table>().unwrap()
+    };
+}
+
+pub fn exec_file(lua: &Lua, name: &str, env: Table) {
     let (func, err): (Value, Value) = lua
         .globals()
         .call_function("loadfile", (name, "t", env))
