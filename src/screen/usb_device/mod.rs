@@ -1,3 +1,2 @@
 pub mod usb_device;
-
-mod api;
+pub mod usb_device_settings;

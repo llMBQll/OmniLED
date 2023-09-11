@@ -11,7 +11,7 @@ local function make_path(path)
         return APPLICATIONS_PATH .. path .. EXTENSION
     end
 
-    return ''
+    LOG:error('Unexpected platform: ' .. tostring(PLATFORM.os))
 end
 
 load_app {
@@ -19,12 +19,12 @@ load_app {
     args = { SERVER.address },
 }
 
--- load_app {
---     path = APPLICATIONS_PATH .. 'audio.exe',
---     args = { SERVER.address },
--- }
+load_app {
+    path = make_path('audio'),
+    args = { SERVER.address },
+}
 
--- load_app {
---     path = APPLICATIONS_PATH .. 'spotify.exe',
---     args = { SERVER.address },
--- }
+load_app {
+    path = make_path('spotify'),
+    args = { SERVER.address },
+}

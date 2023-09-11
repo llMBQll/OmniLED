@@ -16,9 +16,7 @@ impl Process {
             .stderr(Stdio::inherit())
             .spawn()?;
 
-        Ok(Self {
-            process,
-        })
+        Ok(Self { process })
     }
 }
 
@@ -36,6 +34,7 @@ impl Drop for Process {
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     path: String,
+    #[serde(default)]
     args: Vec<String>,
 }
 

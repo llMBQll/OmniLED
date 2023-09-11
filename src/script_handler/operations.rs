@@ -1,17 +1,30 @@
 use mlua::{Lua, Table};
-use crate::model::operation::{Modifiers, Operation, Text};
+
 use crate::model::operation::Bar;
+use crate::model::operation::{Modifiers, Operation, Text};
 use crate::model::rectangle::{Point, Rectangle, Size};
 
 pub fn load_operations(lua: &Lua) {
     let operations = lua.create_table().unwrap();
 
-    operations.set("Point", lua.create_function(point).unwrap()).unwrap();
-    operations.set("Size", lua.create_function(size).unwrap()).unwrap();
-    operations.set("Rectangle", lua.create_function(rectangle).unwrap()).unwrap();
-    operations.set("Bar", lua.create_function(bar).unwrap()).unwrap();
-    operations.set("Text", lua.create_function(text).unwrap()).unwrap();
-    operations.set("Modifiers", lua.create_function(modifiers).unwrap()).unwrap();
+    operations
+        .set("Point", lua.create_function(point).unwrap())
+        .unwrap();
+    operations
+        .set("Size", lua.create_function(size).unwrap())
+        .unwrap();
+    operations
+        .set("Rectangle", lua.create_function(rectangle).unwrap())
+        .unwrap();
+    operations
+        .set("Bar", lua.create_function(bar).unwrap())
+        .unwrap();
+    operations
+        .set("Text", lua.create_function(text).unwrap())
+        .unwrap();
+    operations
+        .set("Modifiers", lua.create_function(modifiers).unwrap())
+        .unwrap();
 
     lua.globals().set("OPERATIONS", operations).unwrap();
 }
@@ -42,7 +55,11 @@ fn bar(_: &Lua, args: Table) -> mlua::Result<Operation> {
     let position = args.get("position")?;
     let modifiers = args.get("modifiers").unwrap_or(Modifiers::default());
 
-    Ok(Operation::Bar(Bar { value, position, modifiers }))
+    Ok(Operation::Bar(Bar {
+        value,
+        position,
+        modifiers,
+    }))
 }
 
 fn text(_: &Lua, args: Table) -> mlua::Result<Operation> {
@@ -50,7 +67,11 @@ fn text(_: &Lua, args: Table) -> mlua::Result<Operation> {
     let position = args.get("position")?;
     let modifiers = args.get("modifiers").unwrap_or(Modifiers::default());
 
-    Ok(Operation::Text(Text { text, position, modifiers }))
+    Ok(Operation::Text(Text {
+        text,
+        position,
+        modifiers,
+    }))
 }
 
 fn modifiers(_: &Lua, args: Table) -> mlua::Result<Modifiers> {
@@ -61,5 +82,12 @@ fn modifiers(_: &Lua, args: Table) -> mlua::Result<Modifiers> {
     let vertical = args.get("vertical").unwrap_or(false);
     let scrolling = args.get("scrolling").unwrap_or(false);
 
-    Ok(Modifiers { flip_horizontal, flip_vertical, strict, upper, vertical, scrolling })
+    Ok(Modifiers {
+        flip_horizontal,
+        flip_vertical,
+        strict,
+        upper,
+        vertical,
+        scrolling,
+    })
 }

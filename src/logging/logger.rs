@@ -1,10 +1,9 @@
-
-use log::{debug, error, info, LevelFilter, trace, warn};
+use log::{debug, error, info, trace, warn, LevelFilter};
 use log4rs::{
-    Config, Handle, init_config,
     append::file::FileAppender,
     config::{Appender, Root},
     encode::pattern::PatternEncoder,
+    init_config, Config, Handle,
 };
 use mlua::{Lua, UserData, UserDataMethods};
 
@@ -16,7 +15,9 @@ pub struct Logger {
 impl Logger {
     pub fn new(lua: &Lua) -> Logger {
         let logfile = FileAppender::builder()
-            .encoder(Box::new(PatternEncoder::new("{t} [{d(%Y-%m-%d %H:%M:%S:%3f)}][{l}] {m}\n")))
+            .encoder(Box::new(PatternEncoder::new(
+                "{t} [{d(%Y-%m-%d %H:%M:%S:%3f)}][{l}] {m}\n",
+            )))
             .build("logging.log")
             .unwrap();
 
@@ -27,9 +28,10 @@ impl Logger {
             .logger(log4rs::config::Logger::builder().build("tracing", LevelFilter::Error))
             .logger(log4rs::config::Logger::builder().build("warp", LevelFilter::Error))
             .logger(log4rs::config::Logger::builder().build("ureq", LevelFilter::Error))
-            .build(Root::builder()
-                .appender("logfile")
-                .build(LevelFilter::Debug)
+            .build(
+                Root::builder()
+                    .appender("logfile")
+                    .build(LevelFilter::Debug),
             )
             .unwrap();
 

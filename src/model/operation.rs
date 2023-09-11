@@ -1,7 +1,8 @@
-use mlua::UserData;
+use mlua::{FromLua, UserData};
+
 use crate::model::rectangle::Rectangle;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FromLua)]
 pub enum Operation {
     Bar(Bar),
     Text(Text),
@@ -9,7 +10,7 @@ pub enum Operation {
 
 impl UserData for Operation {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FromLua)]
 pub struct Bar {
     pub value: f32,
     pub position: Rectangle,
@@ -18,7 +19,7 @@ pub struct Bar {
 
 impl UserData for Bar {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FromLua)]
 pub struct Text {
     pub text: String,
     pub position: Rectangle,
@@ -27,7 +28,7 @@ pub struct Text {
 
 impl UserData for Text {}
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, FromLua)]
 pub struct Modifiers {
     pub flip_horizontal: bool,
     pub flip_vertical: bool,

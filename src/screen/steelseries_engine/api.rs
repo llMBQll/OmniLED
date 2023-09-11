@@ -1,10 +1,10 @@
+use lazy_static::lazy_static;
+use log::error;
+use serde_json::Value;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::sync::Mutex;
-use lazy_static::lazy_static;
-use log::error;
-use serde_json::Value;
 use ureq::{Agent, Error};
 
 pub fn update(data: &Vec<u8>) {
@@ -87,9 +87,7 @@ impl Api {
     }
 
     fn unregister(&mut self) {
-        let remove_game = serde_json::json!({
-            "game": GAME
-        });
+        let remove_game = serde_json::json!({ "game": GAME });
 
         self.remove_game(serde_json::to_string(&remove_game).unwrap().as_str());
     }
@@ -135,33 +133,36 @@ impl Api {
 
         let address = match &self.address {
             Some(address) => address,
-            None => return
+            None => return,
         };
 
         let url = format!("http://{}{}", address, endpoint);
-        let result = self.agent.post(url.as_str())
+        let result = self
+            .agent
+            .post(url.as_str())
             .set("Content-Type", "application/json")
             .send_string(json);
         match result {
             Ok(_) => {}
-            Err(error) => {
-                match error {
-                    Error::Status(status, response) => {
-                        error!("API call to {} failed with code {}: {:?}", endpoint, status, response);
-                    }
-                    Error::Transport(transport) => {
-                        error!("API call to {} failed: {:?}", endpoint, transport);
-                        self.address = None;
-                    }
+            Err(error) => match error {
+                Error::Status(status, response) => {
+                    error!(
+                        "API call to {} failed with code {}: {:?}",
+                        endpoint, status, response
+                    );
                 }
-            }
+                Error::Transport(transport) => {
+                    error!("API call to {} failed: {:?}", endpoint, transport);
+                    self.address = None;
+                }
+            },
         }
     }
 
     fn read_address() -> Option<String> {
         // Missing directories are fatal errors
-        let program_data = std::env::var("PROGRAMDATA")
-            .expect("PROGRAMDATA env variable not found");
+        let program_data =
+            std::env::var("PROGRAMDATA").expect("PROGRAMDATA env variable not found");
         let dir = format!("{}/SteelSeries/SteelSeries Engine 3", program_data);
         if !Path::new(&dir).is_dir() {
             panic!("{} doesn't exist", dir);
@@ -171,20 +172,20 @@ impl Api {
         let path = format!("{}/coreProps.json", dir);
         let file = match File::open(path) {
             Ok(file) => file,
-            Err(_) => return None
+            Err(_) => return None,
         };
         let reader = BufReader::new(file);
         let json: Value = match serde_json::from_reader(reader) {
             Ok(json) => json,
-            Err(_) => return None
+            Err(_) => return None,
         };
 
-        Some(json["address"]
-            .as_str()
-            .map(|address| {
-                String::from(address)
-            })
-            .unwrap())
+        Some(
+            json["address"]
+                .as_str()
+                .map(|address| String::from(address))
+                .unwrap(),
+        )
     }
 }
 

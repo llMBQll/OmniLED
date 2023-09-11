@@ -1,2 +1,2 @@
-pub mod rectangle;
 pub mod operation;
+pub mod rectangle;

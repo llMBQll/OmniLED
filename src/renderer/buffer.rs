@@ -21,13 +21,15 @@ impl Buffer {
     pub fn set(&mut self, y: usize, x: usize, area: &Rectangle, modifiers: &Modifiers) {
         let (row, col) = match self.translate(y, x, area, modifiers) {
             Some(pos) => pos,
-            None => { return; }
+            None => {
+                return;
+            }
         };
 
         let mut bit = self.bit_at(row, col);
         match modifiers.strict || !bit.get() {
             true => bit.set(),
-            false => bit.reset()
+            false => bit.reset(),
         };
     }
 
@@ -36,21 +38,27 @@ impl Buffer {
         Bit::new(&mut self.buffer[index], 7 - x % 8)
     }
 
-    fn translate(&self, y: usize, x: usize, area: &Rectangle, modifiers: &Modifiers) -> Option<(usize, usize)> {
+    fn translate(
+        &self,
+        y: usize,
+        x: usize,
+        area: &Rectangle,
+        modifiers: &Modifiers,
+    ) -> Option<(usize, usize)> {
         let (y, x) = match modifiers.flip_vertical {
             true => (area.size.height - y, x),
-            false => (y, x)
+            false => (y, x),
         };
 
         let (y, x) = match modifiers.flip_horizontal {
             true => (y, area.size.width - x),
-            false => (y, x)
+            false => (y, x),
         };
 
         let (y, x) = (y + area.origin.y, x + area.origin.x);
         match y < self.height && x < self.width {
             true => Some((y, x)),
-            false => None
+            false => None,
         }
     }
 }

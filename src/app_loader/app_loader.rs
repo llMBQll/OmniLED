@@ -1,45 +1,68 @@
-use std::sync::{Arc, Mutex};
-use mlua::{Lua, LuaSerdeExt, Nil, Table, TableExt, Value};
+use log::error;
+use mlua::{chunk, Lua, LuaSerdeExt, MetaMethod, UserData, Value};
 
 use crate::app_loader::process::Process;
 
-pub struct AppLoader<'a> {
-    app_loader: Table<'a>,
-    _processes: Arc<Mutex<Vec<Process>>>,
+pub struct AppLoader {
+    processes: Vec<Process>,
 }
 
-impl<'a> AppLoader<'a> {
-    pub fn new(lua: &'a Lua) -> AppLoader<'a> {
-        static LOADER_SRC: &str = include_str!("app_loader.lua");
+impl AppLoader {
+    pub fn load(lua: &Lua) {
+        let app_loader = Self {
+            processes: Vec::new(),
+        };
+        lua.load(chunk! {
+            APP_LOADER = $app_loader
 
-        let processes = Arc::new(Mutex::new(Vec::new()));
-        let start_process = lua.create_function({
-            let processes = Arc::clone(&processes);
-            move |lua, app_config: Value| {
-                let app_config = lua.from_value(app_config)?;
-                match Process::new(&app_config) {
-                    Ok(process) => {
-                        (*processes.lock().unwrap()).push(process);
-                    }
-                    Err(err) => {
-                        println!("{}: '{}'", err, serde_json::to_string(&app_config).unwrap());
-                    }
-                }
-                Ok(())
-            }
-        }).unwrap();
+            f, err = loadfile(SETTINGS.applications_file, 't', {
+                load_app = function(config) APP_LOADER:start_process(config) end,
+                SERVER = SERVER,
+                PLATFORM = PLATFORM
+            })
+            if err then
+                // this is not a fatal error since there can also be
+                // external applications that will not ne loaded here
+                LOG.error(err)
+            else
+                f()
+            end
 
-        lua.load(LOADER_SRC).exec().unwrap();
-        let app_loader: Table = lua.globals().get("APP_LOADER").unwrap();
-        app_loader.set("start_process", start_process).unwrap();
-
-        Self {
-            app_loader,
-            _processes: processes,
-        }
+            if #APP_LOADER == 0 then
+                LOG.warn("App loader didn't load any applications")
+            end
+        })
+        .exec()
+        .unwrap();
     }
+}
 
-    pub fn load(&self) -> mlua::Result<()> {
-        self.app_loader.call_function("load_applications", Nil)
+impl UserData for AppLoader {
+    fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method_mut("start_process", |lua, this, app_config: Value| {
+            let app_config = match lua.from_value(app_config) {
+                Ok(app_config) => app_config,
+                Err(err) => {
+                    error!("Failed to parse process config: {}", err);
+                    return Ok(());
+                }
+            };
+
+            match Process::new(&app_config) {
+                Ok(process) => {
+                    this.processes.push(process);
+                }
+                Err(err) => {
+                    error!(
+                        "Failed to run {}: '{}'",
+                        serde_json::to_string(&app_config).unwrap(),
+                        err
+                    );
+                }
+            }
+            Ok(())
+        });
+
+        methods.add_meta_method(MetaMethod::Len, |_, this, ()| Ok(this.processes.len()))
     }
 }

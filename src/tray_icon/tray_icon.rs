@@ -6,18 +6,13 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
-    pub fn new(running: &'static AtomicBool) -> Self
-    {
-        let mut tray = TrayItem::new(
-            "Steelseries OLED",
-            Self::load_icon(),
-        ).unwrap();
+    pub fn new(running: &'static AtomicBool) -> Self {
+        let mut tray = TrayItem::new("Steelseries OLED", Self::load_icon()).unwrap();
 
-        tray.add_menu_item("Quit", || { running.store(false, Ordering::Relaxed) }).unwrap();
+        tray.add_menu_item("Quit", || running.store(false, Ordering::Relaxed))
+            .unwrap();
 
-        Self {
-            _tray: tray,
-        }
+        Self { _tray: tray }
     }
 
     #[cfg(target_os = "windows")]
@@ -38,6 +33,10 @@ impl TrayIcon {
             (data, width as i32, height as i32)
         };
 
-        IconSource::Data { data, width, height }
+        IconSource::Data {
+            data,
+            width,
+            height,
+        }
     }
 }

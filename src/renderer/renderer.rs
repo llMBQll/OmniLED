@@ -1,14 +1,14 @@
-use std::cmp::max;
-use std::collections::HashMap;
-use std::collections::hash_map::Entry;
-use std::vec::IntoIter;
 use mlua::{Lua, UserData, UserDataMethods};
-use crate::model::operation::{Operation, Modifiers, Text};
-use crate::model::rectangle::{Rectangle, Size};
-use crate::renderer::font_manager::FontManager;
-use crate::renderer::buffer::Buffer;
+use std::cmp::max;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::vec::IntoIter;
 
-use crate::settings::settings::Settings;
+use crate::model::operation::{Modifiers, Operation, Text};
+use crate::model::rectangle::{Rectangle, Size};
+use crate::renderer::buffer::Buffer;
+use crate::renderer::font_manager::FontManager;
+use crate::settings::settings::NewSettings;
 
 pub struct Renderer {
     font_manager: FontManager,
@@ -18,15 +18,16 @@ pub struct Renderer {
 
 impl Renderer {
     pub fn load(lua: &Lua) {
-        let renderer = Self::new(lua);
-        lua.globals().set("RENDERER", renderer).unwrap();
+        lua.globals()
+            .set("RENDERER_FACTORY", RendererFactory)
+            .unwrap();
     }
 
-    pub fn new(lua: &Lua) -> Self {
+    pub fn new() -> Self {
         Self {
             font_manager: FontManager::new(),
             scrolling_text_data: ScrollingTextData::new(),
-            scrolling_text_control: ScrollingTextControl::new(lua),
+            scrolling_text_control: ScrollingTextControl::new(),
         }
     }
 
@@ -40,9 +41,13 @@ impl Renderer {
                 Operation::Bar(bar) => {
                     self.render_bar(&mut buffer, bar.position, bar.value, bar.modifiers)
                 }
-                Operation::Text(text) => {
-                    self.render_text(&mut buffer, text.position, text.text, text.modifiers, &mut text_offsets)
-                }
+                Operation::Text(text) => self.render_text(
+                    &mut buffer,
+                    text.position,
+                    text.text,
+                    text.modifiers,
+                    &mut text_offsets,
+                ),
             }
         }
 
@@ -52,8 +57,14 @@ impl Renderer {
     fn render_bar(&self, buffer: &mut Buffer, rect: Rectangle, value: f32, modifiers: Modifiers) {
         // TODO: consider making it a static function
         let (height, width) = match modifiers.vertical {
-            true => ((rect.size.height as f32 * value / 100.0) as usize, rect.size.width),
-            false => (rect.size.height, (rect.size.width as f32 * value / 100.0) as usize)
+            true => (
+                (rect.size.height as f32 * value / 100.0) as usize,
+                rect.size.width,
+            ),
+            false => (
+                rect.size.height,
+                (rect.size.width as f32 * value / 100.0) as usize,
+            ),
         };
 
         for row in 0..height {
@@ -64,10 +75,21 @@ impl Renderer {
     }
 
     fn get_text_height(height: usize, upper: bool) -> usize {
-        if upper { height * 40 / 29 } else { height }
+        if upper {
+            height * 40 / 29
+        } else {
+            height
+        }
     }
 
-    fn render_text(&mut self, buffer: &mut Buffer, rect: Rectangle, text: String, modifiers: Modifiers, offsets: &mut IntoIter<usize>) {
+    fn render_text(
+        &mut self,
+        buffer: &mut Buffer,
+        rect: Rectangle,
+        text: String,
+        modifiers: Modifiers,
+        offsets: &mut IntoIter<usize>,
+    ) {
         const RENDER_THRESHOLD: u8 = 50;
 
         let mut cursor_x = 0 as i32;
@@ -81,7 +103,9 @@ impl Renderer {
 
         let character_height = Self::get_text_height(rect.size.height, modifiers.upper);
         for character in characters {
-            let character = self.font_manager.get_character(character as usize, character_height);
+            let character = self
+                .font_manager
+                .get_character(character as usize, character_height);
             let bitmap = &character.bitmap;
             let metrics = &character.metrics;
 
@@ -91,7 +115,11 @@ impl Renderer {
                     let y = cursor_y + row as i32 - offset_y;
                     let x = cursor_x + col as i32 + (metrics.horiBearingX >> 6) as i32;
 
-                    if y < 0 || x < 0 || x >= rect.size.width as i32 || (modifiers.strict && y >= rect.size.height as i32) {
+                    if y < 0
+                        || x < 0
+                        || x >= rect.size.width as i32
+                        || (modifiers.strict && y >= rect.size.height as i32)
+                    {
                         continue;
                     }
                     if bitmap[(row, col)] > RENDER_THRESHOLD {
@@ -110,20 +138,31 @@ impl Renderer {
     fn precalculate_text(&mut self, ctx: i64, operations: &Vec<Operation>) -> (bool, Vec<usize>) {
         let mut ctx = self.scrolling_text_data.get_context(ctx);
 
-        let offsets: Vec<usize> = operations.iter().filter_map(|op| {
-            match op {
-                Operation::Text(text) => Some(Self::precalculate_single(&mut ctx, &mut self.font_manager, &self.scrolling_text_control, text)),
-                _ => None
-            }
-        }).collect();
+        let offsets: Vec<usize> = operations
+            .iter()
+            .filter_map(|op| match op {
+                Operation::Text(text) => Some(Self::precalculate_single(
+                    &mut ctx,
+                    &mut self.font_manager,
+                    &self.scrolling_text_control,
+                    text,
+                )),
+                _ => None,
+            })
+            .collect();
 
         match ctx.was_reset() {
             true => (false, vec![0; offsets.len()]),
-            false => (ctx.can_wrap(), offsets)
+            false => (ctx.can_wrap(), offsets),
         }
     }
 
-    fn precalculate_single(ctx: &mut Context, font_manager: &mut FontManager, control: &ScrollingTextControl, text: &Text) -> usize {
+    fn precalculate_single(
+        ctx: &mut Context,
+        font_manager: &mut FontManager,
+        control: &ScrollingTextControl,
+        text: &Text,
+    ) -> usize {
         if !text.modifiers.scrolling {
             return 0;
         }
@@ -159,9 +198,12 @@ impl Renderer {
 
 impl UserData for Renderer {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut("render", |_, this, (ctx, size, operations): (i64, Size, Vec<Operation>)| {
-            Ok(this.render(ctx, size, operations))
-        })
+        methods.add_method_mut(
+            "render",
+            |_, this, (ctx, size, operations): (i64, Size, Vec<Operation>)| {
+                Ok(this.render(ctx, size, operations))
+            },
+        )
     }
 }
 
@@ -172,14 +214,11 @@ struct ScrollingTextControl {
     ticks_per_move: usize,
 }
 
-const TICKS_AT_EDGE: &str = "scrolling_text_ticks_at_edge";
-const TICKS_PER_MOVE: &str = "scrolling_text_ticks_per_move";
-
 impl ScrollingTextControl {
-    pub fn new(lua: &Lua) -> Self {
+    pub fn new() -> Self {
         Self {
-            ticks_at_edge: Settings::get(lua, TICKS_AT_EDGE).unwrap(),
-            ticks_per_move: Settings::get(lua, TICKS_PER_MOVE).unwrap(),
+            ticks_at_edge: NewSettings::get().scrolling_text_ticks_at_edge,
+            ticks_per_move: NewSettings::get().scrolling_text_ticks_per_move,
         }
     }
 }
@@ -251,7 +290,7 @@ impl<'a> Context<'a> {
     }
 
     pub fn can_wrap(&self) -> bool {
-        self.context_info.iter().all(|(_, can_wrap)| { *can_wrap })
+        self.context_info.iter().all(|(_, can_wrap)| *can_wrap)
     }
 }
 
@@ -259,10 +298,14 @@ impl<'a> Drop for Context<'a> {
     fn drop(&mut self) {
         if self.reset {
             // remove all stale entries from map - old keys will not be present in context_info
-            *self.map = self.map.iter().filter_map(|(key, value)| match self.context_info.contains_key(key) {
-                true => Some((key.clone(), *value)),
-                false => None
-            }).collect();
+            *self.map = self
+                .map
+                .iter()
+                .filter_map(|(key, value)| match self.context_info.contains_key(key) {
+                    true => Some((key.clone(), *value)),
+                    false => None,
+                })
+                .collect();
         }
 
         if self.reset || self.can_wrap() {
@@ -270,5 +313,16 @@ impl<'a> Drop for Context<'a> {
                 *tick = 0;
             }
         }
+    }
+}
+
+struct RendererFactory;
+
+impl UserData for RendererFactory {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method("create", |_, _, _: ()| {
+            let renderer = Renderer::new();
+            Ok(renderer)
+        });
     }
 }

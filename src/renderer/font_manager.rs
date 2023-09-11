@@ -1,14 +1,14 @@
+use freetype as ft;
+use ft::{face::LoadFlag, ffi};
 use std::collections::HashMap;
 use std::ops::Index;
-use freetype as ft;
-use ft::{ffi, face::LoadFlag};
 
 const FONT_PATH: &str = "assets/fonts/CascadiaMonoPL.ttf";
 
 pub struct FontManager {
     _library: ft::Library,
     face: ft::Face,
-    face_sizes: HashMap<usize, HashMap<usize, Character>>
+    face_sizes: HashMap<usize, HashMap<usize, Character>>,
 }
 
 impl FontManager {
@@ -18,7 +18,7 @@ impl FontManager {
         Self {
             _library: library,
             face,
-            face_sizes: HashMap::new()
+            face_sizes: HashMap::new(),
         }
     }
 
@@ -26,7 +26,9 @@ impl FontManager {
         let characters = self.face_sizes.entry(height).or_insert(HashMap::new());
         characters.entry(char_code).or_insert_with(|| {
             // TODO proper freetype error checking
-            self.face.set_pixel_sizes(height as u32, height as u32).unwrap();
+            self.face
+                .set_pixel_sizes(height as u32, height as u32)
+                .unwrap();
             self.face.load_char(char_code, LoadFlag::DEFAULT).unwrap();
             let slot = self.face.glyph();
             let metrics = slot.metrics();
@@ -49,7 +51,10 @@ impl From<(ft::GlyphMetrics, ft::Glyph)> for Character {
         Self {
             metrics,
             bounding_box: glyph.get_cbox(ffi::FT_GLYPH_BBOX_UNSCALED).into(),
-            bitmap: glyph.to_bitmap(ft::RenderMode::Normal, None).unwrap().into(),
+            bitmap: glyph
+                .to_bitmap(ft::RenderMode::Normal, None)
+                .unwrap()
+                .into(),
         }
     }
 }
@@ -96,7 +101,7 @@ impl From<ft::BitmapGlyph> for Bitmap {
             left: bitmap_glyph.left(),
             rows: bitmap.rows() as usize,
             cols: bitmap.width() as usize,
-            buffer: bitmap.buffer().to_vec()
+            buffer: bitmap.buffer().to_vec(),
         }
     }
 }

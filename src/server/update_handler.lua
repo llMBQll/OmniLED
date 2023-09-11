@@ -20,6 +20,7 @@ function UPDATE_HANDLER:register_user_script(script, sensitivity_list, screens)
     table.insert(self.to_update, false)
 
     local priority = #self.to_update
+    local renderer = RENDERER_FACTORY:create()
 
     local function slot()
         local function wrapper()
@@ -34,7 +35,7 @@ function UPDATE_HANDLER:register_user_script(script, sensitivity_list, screens)
                 -- TODO verify result
                 if result then
                     self.time_remaining = result.duration or self.DEFAULT_DURATION
-                    local end_auto_repeat, image = RENDERER:render(priority, size, result.data)
+                    local end_auto_repeat, image = renderer:render(priority, size, result.data)
                     SCREENS:update(screen, image)
 
                     local auto_repeat = result.auto_repeat or false
@@ -53,7 +54,7 @@ function UPDATE_HANDLER:register_user_script(script, sensitivity_list, screens)
     end
 
     for _, key in ipairs(sensitivity_list) do
-        local event = Event:register(key)
+        local event = EVENTS:get_or_create(key)
         event:connect(slot)
     end
 end

@@ -1,7 +1,7 @@
-use mlua::{UserData, UserDataFields};
+use mlua::{FromLua, UserData, UserDataFields};
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, FromLua)]
 pub struct Point {
     pub x: usize,
     pub y: usize,
@@ -9,7 +9,7 @@ pub struct Point {
 
 impl UserData for Point {}
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, FromLua)]
 pub struct Size {
     pub width: usize,
     pub height: usize,
@@ -17,17 +17,13 @@ pub struct Size {
 
 impl UserData for Size {
     fn add_fields<'lua, F: UserDataFields<'lua, Self>>(fields: &mut F) {
-        fields.add_field_method_get("width", |_, this| {
-            Ok(this.width)
-        });
+        fields.add_field_method_get("width", |_, this| Ok(this.width));
 
-        fields.add_field_method_get("height", |_, this| {
-            Ok(this.height)
-        });
+        fields.add_field_method_get("height", |_, this| Ok(this.height));
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, FromLua)]
 pub struct Rectangle {
     pub origin: Point,
     pub size: Size,
