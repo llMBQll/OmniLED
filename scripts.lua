@@ -1,7 +1,4 @@
 function volume()
-    local first, last = string.match(AUDIO.Name, '(.+)%s%((.+)%)')
-    local name = first == 'Speakers' and last or first
-
     return {
         data = {
             Text {
@@ -13,7 +10,7 @@ function volume()
                 modifiers = Modifiers { upper = true },
             },
             Text {
-                text = name,
+                text = AUDIO.Name,
                 position = Rectangle {
                     origin = Point { x = 0, y = SCREEN.height / 2 },
                     size = Size { width = SCREEN.width, height = SCREEN.height / 2 - 4 },
@@ -22,7 +19,7 @@ function volume()
             },
         },
         duration = 2000,
-        auto_repeat = true,
+        repeat_once = true,
     }
 end
 
@@ -68,7 +65,8 @@ function spotify()
                 },
             },
         },
-        duration = 1000,
+        duration = 6000,
+        repeat_to_fit = true,
     }
 end
 
