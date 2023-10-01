@@ -15,8 +15,10 @@ pub struct Media {
     current_session: Arc<Mutex<Option<String>>>,
 }
 
+type Callback = dyn FnMut(&String, &SessionData, bool) + Send;
+
 impl Media {
-    pub fn new(callback: fn(&SessionData, bool)) -> Self {
+    pub fn new(callback: Arc<Mutex<Callback>>) -> Self {
         let mut media = Self {
             system_media: GlobalSystemMedia::new(),
             sessions: Arc::new(Mutex::new(HashMap::new())),
@@ -28,7 +30,7 @@ impl Media {
         media
     }
 
-    fn setup(&mut self, callback: fn(&SessionData, bool)) {
+    fn setup(&mut self, callback: Arc<Mutex<Callback>>) {
         self.system_media.register_on_session_added({
             let sessions = Arc::clone(&self.sessions);
             move |(_, session)| {
@@ -72,6 +74,7 @@ impl Media {
         self.system_media.register_on_playback_info_changed({
             let sessions = Arc::clone(&self.sessions);
             let current_session = Arc::clone(&self.current_session);
+            let callback = Arc::clone(&callback);
             move |(_, session)| {
                 let name = Self::get_name(&session);
 
@@ -81,7 +84,11 @@ impl Media {
                         entry.playing = Self::get_status(&session);
 
                         if entry.playing {
-                            callback(entry, Self::is_current(&name, &current_session));
+                            callback.lock().unwrap()(
+                                &name,
+                                entry,
+                                Self::is_current(&name, &current_session),
+                            );
                         }
                     }
                     None => {}
@@ -92,6 +99,7 @@ impl Media {
         self.system_media.register_on_media_properties_changed({
             let sessions = Arc::clone(&self.sessions);
             let current_session = Arc::clone(&self.current_session);
+            let callback = Arc::clone(&callback);
             move |(_, session)| {
                 let name = Self::get_name(&session);
 
@@ -103,7 +111,11 @@ impl Media {
                         entry.title = title;
 
                         if entry.playing {
-                            callback(entry, Self::is_current(&name, &current_session));
+                            callback.lock().unwrap()(
+                                &name,
+                                entry,
+                                Self::is_current(&name, &current_session),
+                            );
                         }
                     }
                     None => {}
@@ -114,6 +126,7 @@ impl Media {
         self.system_media.register_on_timeline_properties_changed({
             let sessions = Arc::clone(&self.sessions);
             let current_session = Arc::clone(&self.current_session);
+            let callback = Arc::clone(&callback);
             move |(_, session)| {
                 let name = Self::get_name(&session);
 
@@ -125,7 +138,11 @@ impl Media {
                         entry.duration = duration;
 
                         if entry.playing {
-                            callback(entry, Self::is_current(&name, &current_session));
+                            callback.lock().unwrap()(
+                                &name,
+                                entry,
+                                Self::is_current(&name, &current_session),
+                            );
                         }
                     }
                     None => {}
