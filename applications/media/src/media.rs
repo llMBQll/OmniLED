@@ -16,19 +16,19 @@ pub struct Media {
 }
 
 impl Media {
-    pub fn new() -> Self {
+    pub fn new(callback: fn(&SessionData, bool)) -> Self {
         let mut media = Self {
             system_media: GlobalSystemMedia::new(),
             sessions: Arc::new(Mutex::new(HashMap::new())),
             current_session: Arc::new(Mutex::new(None)),
         };
 
-        media.setup();
+        media.setup(callback);
 
         media
     }
 
-    fn setup(&mut self) {
+    fn setup(&mut self, callback: fn(&SessionData, bool)) {
         self.system_media.register_on_session_added({
             let sessions = Arc::clone(&self.sessions);
             move |(_, session)| {
@@ -79,7 +79,10 @@ impl Media {
                 match guard.get_mut(&name) {
                     Some(entry) => {
                         entry.playing = Self::get_status(&session);
-                        println!("{:?}", entry);
+
+                        if entry.playing {
+                            callback(entry, Self::is_current(&name, &current_session));
+                        }
                     }
                     None => {}
                 }
@@ -98,7 +101,10 @@ impl Media {
                         let (artist, title) = Self::get_song(&session);
                         entry.artist = artist;
                         entry.title = title;
-                        println!("{:?}", entry);
+
+                        if entry.playing {
+                            callback(entry, Self::is_current(&name, &current_session));
+                        }
                     }
                     None => {}
                 }
@@ -117,7 +123,10 @@ impl Media {
                         let (progress, duration) = Self::get_progress(&session);
                         entry.progress = progress;
                         entry.duration = duration;
-                        println!("{:?}", entry);
+
+                        if entry.playing {
+                            callback(entry, Self::is_current(&name, &current_session));
+                        }
                     }
                     None => {}
                 }
@@ -168,11 +177,21 @@ impl Media {
     }
 }
 
-#[derive(Debug)]
-struct SessionData {
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct SessionData {
     artist: String,
     title: String,
+    #[serde(serialize_with = "duration_to_ms")]
     progress: Duration,
+    #[serde(serialize_with = "duration_to_ms")]
     duration: Duration,
     playing: bool,
+}
+
+fn duration_to_ms<S: serde::Serializer>(
+    duration: &Duration,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serializer.serialize_u128(duration.as_millis())
 }
