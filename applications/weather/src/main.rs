@@ -11,22 +11,22 @@ fn main() {
 
     let api = Api::new(options.address, NAME.to_owned());
 
-    let coordinates = match options.selector {
-        Selector::In(name) => get_coordinates_from_name(name),
-        Selector::At(coordinates) => coordinates,
+    let (coordinates, name) = match options.selector {
+        Selector::In(name) => (get_coordinates_from_name(&name), name.city),
+        Selector::At(coordinates) => (coordinates, "N/A".to_string()),
     };
 
     let agent = Agent::new();
 
     loop {
-        let weather = get_weather(&agent, &coordinates);
+        let weather = get_weather(&agent, &coordinates, &name);
         api.update(&weather);
 
         thread::sleep(time::Duration::from_secs(15 * 60));
     }
 }
 
-fn get_coordinates_from_name(name: Name) -> Coordinates {
+fn get_coordinates_from_name(name: &Name) -> Coordinates {
     const GEOCODING_URL_BASE: &str = "https://geocoding-api.open-meteo.com/v1/search";
 
     let agent = Agent::new();
@@ -63,7 +63,7 @@ fn get_coordinates_from_name(name: Name) -> Coordinates {
         .expect("Couldn't find coordinates for the given query")
 }
 
-fn get_weather(agent: &Agent, coordinates: &Coordinates) -> Data {
+fn get_weather(agent: &Agent, coordinates: &Coordinates, city: &String) -> Data {
     const OPEN_METEO_BASE: &str = "https://api.open-meteo.com/v1/forecast";
 
     let res = agent
@@ -84,29 +84,30 @@ fn get_weather(agent: &Agent, coordinates: &Coordinates) -> Data {
         latitude: result.latitude,
         longitude: result.longitude,
         temperature: result.current_weather.temperature,
-        windspeed: result.current_weather.windspeed,
+        wind_speed: result.current_weather.windspeed,
         wind_direction: result.current_weather.winddirection,
         weather_code: result.current_weather.weathercode,
         is_day: result.current_weather.is_day != 0,
         update_hour: time.hour(),
         update_minute: time.minute(),
+        city: city.clone(),
     }
 }
 
 #[derive(serde::Serialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 struct Data {
     latitude: f64,
     longitude: f64,
     temperature: f64,
-    windspeed: f64,
+    wind_speed: f64,
     wind_direction: u32,
     weather_code: u32,
     is_day: bool,
     update_hour: u32,
     update_minute: u32,
+    city: String,
 }
-
-// {current_weather":{"temperature":25.7,"windspeed":11.1,"winddirection":167,"weathercode":3,"is_day":1,"time":"2023-09-18T13:00"}}
 
 #[derive(serde::Deserialize)]
 struct CurrentWeatherResult {
@@ -166,7 +167,7 @@ struct Options {
 
     /// Interval between getting new weather data in minutes
     #[clap(short, long, default_value = "15")]
-    period: u32,
+    interval: u32,
 
     /// Temperature unit
     #[clap(short, long, value_parser = ["C", "Celsius", "F", "Fahrenheit"], default_value = "Celsius", ignore_case = true)]

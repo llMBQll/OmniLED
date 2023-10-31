@@ -1,18 +1,30 @@
-UPDATE_HANDLER = {}
+EVENT_HANDLER = {}
 
-UPDATE_HANDLER.user_scripts = {}
-UPDATE_HANDLER.to_update = {}
-UPDATE_HANDLER.last_priority = 0
-UPDATE_HANDLER.last_script = {}
-UPDATE_HANDLER.repeat_to_fit = false
-UPDATE_HANDLER.repeat_once = false
-UPDATE_HANDLER.time_remaining = 0
-UPDATE_HANDLER.DEFAULT_UPDATE_TIME = 1000
+EVENT_HANDLER.user_scripts = {}
+EVENT_HANDLER.to_update = {}
+EVENT_HANDLER.last_priority = 0
+EVENT_HANDLER.last_script = {}
+EVENT_HANDLER.repeat_to_fit = false
+EVENT_HANDLER.repeat_once = false
+EVENT_HANDLER.time_remaining = 0
+EVENT_HANDLER.DEFAULT_UPDATE_TIME = 1000
+EVENT_HANDLER.listeners = {}
+
+EVENTS:add_listener(
+    function(event, _data)
+        local listeners = EVENT_HANDLER.listeners[event]
+        if listeners ~= nil then
+            for _, listener in ipairs(listeners) do
+                listener()
+            end
+        end
+    end
+)
 
 -- TODO pass data from incoming requests directly to lua
 -- Swap the data vectors on update to minimize downtime on update
 
-function UPDATE_HANDLER:register_user_script(script, sensitivity_list, screens)
+function EVENT_HANDLER:register_user_script(script, sensitivity_list, screens)
     if self.user_scripts[script] ~= nil then
         LOG.warn('Script ' .. script .. ' was already registered! Skipping...')
         return
@@ -61,12 +73,15 @@ function UPDATE_HANDLER:register_user_script(script, sensitivity_list, screens)
     end
 
     for _, key in ipairs(sensitivity_list) do
-        local event = EVENTS:get_or_create(key)
-        event:connect(slot)
+        if self.listeners[key] == nil then
+            self.listeners[key] = {}
+        end
+
+        table.insert(self.listeners[key], slot)
     end
 end
 
-function UPDATE_HANDLER:update(time_passed)
+function EVENT_HANDLER:update(time_passed)
     if self.time_remaining > time_passed then
         self.time_remaining = self.time_remaining - time_passed
     else
@@ -102,7 +117,7 @@ function UPDATE_HANDLER:update(time_passed)
     end
 end
 
-function UPDATE_HANDLER:send_value(application_name, variable_name, value)
+function EVENT_HANDLER:send_value(application_name, variable_name, value)
     local env = SCRIPT_HANDLER.env
 
     if env[application_name] == nil then
@@ -117,8 +132,13 @@ function UPDATE_HANDLER:send_value(application_name, variable_name, value)
     env[application_name][variable_name] = value
 
     local key = application_name .. '.' .. variable_name
-    local event = EVENTS[key]
-    if event ~= nil then
-        event:emit(key)
-    end
+    EVENTS(key, value)
+end
+
+function EVENT_HANDLER:reset()
+    self.last_priority = 0
+    self.last_script = {}
+    self.repeat_to_fit = false
+    self.repeat_once = false
+    self.time_remaining = 0
 end

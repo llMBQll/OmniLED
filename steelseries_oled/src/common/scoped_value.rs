@@ -1,11 +1,13 @@
-use mlua::{Lua, OwnedFunction};
+use mlua::{IntoLua, Lua, OwnedFunction};
 
-pub struct CleanupGuard {
+pub struct ScopedValue {
     cleanup: OwnedFunction,
 }
 
-impl CleanupGuard {
-    pub fn with_name(lua: &Lua, name: &str) -> Self {
+impl ScopedValue {
+    pub fn new<'a, T: IntoLua<'a>>(lua: &'a Lua, name: &str, value: T) -> Self {
+        lua.globals().set(name, value).unwrap();
+
         let cleanup = lua
             .load(format!("{} = nil", name))
             .into_function()
@@ -16,7 +18,7 @@ impl CleanupGuard {
     }
 }
 
-impl Drop for CleanupGuard {
+impl Drop for ScopedValue {
     fn drop(&mut self) {
         self.cleanup.call::<_, ()>(()).unwrap()
     }

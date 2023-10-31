@@ -1,25 +1,33 @@
-local function make_path(path)
-    if PLATFORM.os == 'windows' then
-        APPLICATIONS_PATH = 'target\\release\\'
-        EXTENSION = '.exe'
-
-        return APPLICATIONS_PATH .. path .. EXTENSION
-    elseif PLATFORM.os == 'linux' then
-        APPLICATIONS_PATH = 'target/release/'
-        EXTENSION = ''
-
-        return APPLICATIONS_PATH .. path .. EXTENSION
-    end
-
-    LOG:error('Unexpected platform: ' .. tostring(PLATFORM.os))
+local function get_path(application)
+    local executable = application .. PLATFORM.ExeSuffix
+    local parts = {'target', 'release', executable}
+    return table.concat(parts, PLATFORM.PathSeparator)
 end
 
 load_app {
-    path = make_path('clock'),
+    path = get_path('clock'),
     args = { SERVER.address },
 }
 
 load_app {
-    path = make_path('audio'),
+    path = get_path('audio'),
     args = { SERVER.address },
+}
+
+load_app {
+    path = get_path('media'),
+    args = {
+        '--address', SERVER.address,
+        '--mode', 'individual',
+        '--map', 'Spotify.exe=SPOTIFY',
+    },
+}
+
+load_app {
+    path = get_path('weather'),
+    args = {
+        '--address', SERVER.address,
+        '--interval', '10',
+        'in', 'Katowice',
+    }
 }

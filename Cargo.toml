@@ -4,6 +4,7 @@ members = [
     "steelseries_oled",
     "applications/audio",
     "applications/clock",
+    "applications/media",
     "applications/weather",
 ]
 

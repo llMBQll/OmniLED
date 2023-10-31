@@ -1,23 +1,30 @@
+use std::{
+    env::consts::{
+        ARCH, DLL_EXTENSION, DLL_PREFIX, DLL_SUFFIX, EXE_EXTENSION, EXE_SUFFIX, FAMILY, OS,
+    },
+    path::MAIN_SEPARATOR_STR,
+};
+
 use mlua::{chunk, Lua};
 
 pub struct Constants;
 
 impl Constants {
     pub fn load(lua: &Lua) {
-        let os = Self::get_os();
-
         lua.load(chunk! {
-            PLATFORM = { os = $os }
+            PLATFORM = {
+                Arch = $ARCH,
+                DllExtension = $DLL_EXTENSION,
+                DllPrefix = $DLL_PREFIX,
+                DllSuffix = $DLL_SUFFIX,
+                ExeExtension = $EXE_EXTENSION,
+                ExeSuffix = $EXE_SUFFIX,
+                Family = $FAMILY,
+                PathSeparator = $MAIN_SEPARATOR_STR,
+                Os = $OS,
+            }
         })
         .exec()
         .unwrap();
-    }
-
-    fn get_os() -> &'static str {
-        #[cfg(target_os = "windows")]
-        return "windows";
-
-        #[cfg(target_os = "linux")]
-        return "linux";
     }
 }

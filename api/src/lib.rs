@@ -18,10 +18,11 @@ impl Api {
     }
 
     pub fn update<T: Serialize>(&self, data: &T) {
-        let update_data = UpdateData {
-            name: &self.name,
-            fields: data,
-        };
+        self.update_with_name(data, &self.name)
+    }
+
+    pub fn update_with_name<T: Serialize>(&self, data: &T, name: &String) {
+        let update_data = UpdateData { name, fields: data };
 
         match self.call("/update", &update_data) {
             Ok(_) => {}

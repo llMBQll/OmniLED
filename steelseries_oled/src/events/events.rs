@@ -1,49 +1,74 @@
-use mlua::{Lua, MetaMethod, UserData};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
+use log::trace;
+use mlua::{
+    Function, Lua, MetaMethod, OwnedFunction, Table, TableExt, UserData, UserDataMethods, Value,
 };
 
-use crate::{common::cleanup_guard::CleanupGuard, events::signal::Signal};
+use crate::common::scoped_value::ScopedValue;
 
 pub struct Events {
-    signals: HashMap<String, Arc<Mutex<Signal>>>,
+    filter: Option<OwnedFunction>,
+    listeners: Vec<OwnedFunction>,
 }
 
 impl Events {
-    pub fn load(lua: &Lua) -> CleanupGuard {
+    pub fn load(lua: &Lua) -> ScopedValue {
         let events = Events {
-            signals: HashMap::new(),
+            filter: None,
+            listeners: Vec::new(),
         };
-        lua.globals().set("EVENTS", events).unwrap();
 
-        CleanupGuard::with_name(lua, "EVENTS")
-    }
-
-    pub fn get_or_create(&mut self, name: String) -> Arc<Mutex<Signal>> {
-        let signal = self
-            .signals
-            .entry(name.clone())
-            .or_insert(Arc::new(Mutex::new(Signal::new(name))));
-        Arc::clone(signal)
-    }
-
-    pub fn get(&self, name: &String) -> Option<Arc<Mutex<Signal>>> {
-        match self.signals.get(name) {
-            Some(signal) => Some(Arc::clone(signal)),
-            None => None,
-        }
+        ScopedValue::new(lua, "EVENTS", events)
     }
 }
 
 impl UserData for Events {
-    fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut("get_or_create", |_, this, name: String| {
-            Ok(this.get_or_create(name))
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method_mut("set_filter", |_, this, filter: Function| {
+            trace!("Setting filter {:?}", filter);
+
+            this.filter = Some(filter.into_owned());
+            Ok(())
         });
 
-        methods.add_meta_method(MetaMethod::Index, |_, this, name: String| {
-            Ok(this.get(&name))
+        methods.add_method_mut("add_listener", |_, this, filter: Function| {
+            trace!("Registering {:?}", filter);
+
+            this.listeners.push(filter.into_owned());
+            Ok(())
         });
+
+        methods.add_method("reset_state", |lua, _, _: ()| {
+            trace!("Resetting EVENT_HANDLER state");
+
+            let event_handler: Table = lua.globals().get("EVENT_HANDLER")?;
+            event_handler.call_method::<_, ()>("reset", ())?;
+
+            Ok(())
+        });
+
+        methods.add_meta_method(
+            MetaMethod::Call,
+            |_, this, (event, data): (Value, Value)| {
+                let event = match &this.filter {
+                    Some(filter) => filter.call::<_, Option<Value>>((event, data.clone()))?,
+                    None => Some(event),
+                };
+
+                match event {
+                    Some(event) => {
+                        trace!("Emitting {:?}({:?})", event, data);
+
+                        for listener in &this.listeners {
+                            listener.call::<_, ()>((event.clone(), data.clone()))?;
+                        }
+                    }
+                    None => {
+                        trace!("Filtered {:?}({:?})", event, data);
+                    }
+                }
+
+                Ok(())
+            },
+        )
     }
 }

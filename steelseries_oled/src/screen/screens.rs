@@ -2,8 +2,8 @@ use mlua::{chunk, Function, LightUserData, Lua, UserData, UserDataMethods, Value
 use std::collections::HashMap;
 use std::ffi::c_void;
 
-use crate::common::cleanup_guard::CleanupGuard;
 use crate::common::common::exec_file;
+use crate::common::scoped_value::ScopedValue;
 use crate::create_table;
 use crate::screen::screen::Screen;
 use crate::screen::steelseries_engine::steelseries_engine_device::SteelseriesEngineDevice;
@@ -15,22 +15,22 @@ pub struct Screens {
 }
 
 impl Screens {
-    pub fn load(lua: &Lua) -> CleanupGuard {
+    pub fn load(lua: &Lua) -> ScopedValue {
         lua.globals()
             .set("SCREEN_INITIALIZERS", lua.create_table().unwrap())
             .unwrap();
 
-        lua.globals()
-            .set(
-                "SCREENS",
-                Screens {
-                    screens: HashMap::new(),
-                },
-            )
-            .unwrap();
+        let screens = ScopedValue::new(
+            lua,
+            "SCREENS",
+            Screens {
+                screens: HashMap::new(),
+            },
+        );
+
         Self::load_screens(lua);
 
-        CleanupGuard::with_name(lua, "SCREENS")
+        screens
     }
 
     pub fn load_screens(lua: &Lua) {

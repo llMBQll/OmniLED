@@ -1,3 +1,4 @@
+use crate::events::event_queue::EventQueue;
 use log::error;
 use mlua::{Lua, LuaSerdeExt};
 use serde::{Deserialize, Serialize};
@@ -5,22 +6,25 @@ use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use warp::Filter;
 
-use crate::server::update_handler::load_update_handler;
+use crate::events;
 use crate::settings::settings::Settings;
 
 pub struct Server {}
 
 impl Server {
-    pub fn new(lua: &Lua) {
-        let handler = load_update_handler(lua);
+    pub fn load(lua: &Lua) {
+        let event_queue = EventQueue::instance();
         let update =
             warp::path!("update")
                 .and(warp::body::json())
                 .map(move |update_data: UpdateData| {
-                    handler
+                    event_queue
                         .lock()
                         .unwrap()
-                        .push((update_data.name, update_data.fields));
+                        .push(events::event_queue::Event::Application((
+                            update_data.name,
+                            update_data.fields,
+                        )));
 
                     let reply = warp::reply::json(&UpdateReply { error: None });
                     warp::reply::with_status(reply, warp::http::StatusCode::OK)

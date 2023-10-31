@@ -172,7 +172,7 @@ impl Renderer {
         let character = font_manager.get_character('a' as usize, height);
         let char_width = (character.metrics.horiAdvance >> 6) as usize;
         let max_characters = width / max(char_width, 1);
-        let len = text.text.len();
+        let len = text.text.chars().count();
         let tick = ctx.read(&text.text);
 
         if len <= max_characters {

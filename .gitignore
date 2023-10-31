@@ -3,7 +3,5 @@
 /target
 cmake-build*
 Cargo.lock
-spotify_credentials
 server.json
-.spotify_token_cache.json
 logging.log
