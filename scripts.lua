@@ -159,7 +159,7 @@ local current_screen = 1
 local screen_count = 2
 
 EVENTS:set_filter(function (event, data)
-    check(1, 'KEY(AltGr)', event, data)
+    check(1, 'KEY(RAlt)', event, data)
     check(2, 'KEY(Slash)', event, data)
 
     return current_screen .. '(' .. event .. ')'

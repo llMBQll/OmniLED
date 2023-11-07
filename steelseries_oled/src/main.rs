@@ -52,9 +52,7 @@ async fn main() {
 
     let _apps = AppLoader::load(&lua);
 
-    std::thread::spawn(|| {
-        process_events();
-    });
+    tokio::task::spawn(process_events());
 
     let interval = Settings::get().update_interval;
     let event_loop = EventLoop::new();
@@ -87,15 +85,14 @@ async fn main() {
                         }
                     }
                     Event::Keyboard(event) => {
+                        let event_name = format!("KEY({})", event.key);
                         let event_type = match event.event_type {
                             KeyboardEventEventType::Press => "Pressed",
                             KeyboardEventEventType::Release => "Released",
                         };
-                        let name = serde_json::to_string(&event.key).unwrap();
-                        let event = format!("KEY({})", &name[1..name.len() - 1]);
 
                         lua.load(chunk! {
-                            EVENTS($event, $event_type)
+                            EVENTS($event_name, $event_type)
                         })
                         .exec()
                         .unwrap();
