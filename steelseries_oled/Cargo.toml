@@ -7,6 +7,7 @@ default-run = "steelseries_oled"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+device_query = "1.1"
 font-kit = "0.11"
 freetype-rs = "*"
 image = "0.24"
@@ -15,7 +16,6 @@ log = "0.4"
 log4rs = "1.2"
 mlua = { version = "0.9", features = ["async", "lua54", "vendored", "macros", "serialize", "unstable"] }
 num-traits = "0.2"
-rdev = { version =  "0.5", features = ["serialize"] }
 rusb = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
