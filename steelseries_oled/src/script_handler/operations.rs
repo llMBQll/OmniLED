@@ -78,16 +78,16 @@ fn modifiers(_: &Lua, args: Table) -> mlua::Result<Modifiers> {
     let flip_horizontal = args.get("flip_horizontal").unwrap_or(false);
     let flip_vertical = args.get("flip_vertical").unwrap_or(false);
     let strict = args.get("strict").unwrap_or(false);
-    let upper = args.get("upper").unwrap_or(false);
     let vertical = args.get("vertical").unwrap_or(false);
     let scrolling = args.get("scrolling").unwrap_or(false);
+    let font_size = args.get("font_size").unwrap_or(None);
 
     Ok(Modifiers {
         flip_horizontal,
         flip_vertical,
         strict,
-        upper,
         vertical,
         scrolling,
+        font_size,
     })
 }

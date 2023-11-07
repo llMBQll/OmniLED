@@ -31,7 +31,7 @@ impl MediaImpl {
     }
 
     pub async fn run(&self) {
-        tokio::time::sleep(tokio::time::Duration::MAX).await;
+        tokio::time::sleep(Duration::MAX).await;
     }
 
     fn setup(&mut self, callback: Arc<Mutex<Callback>>) {

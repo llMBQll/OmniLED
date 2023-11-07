@@ -1,3 +1,4 @@
+pub mod font_selector;
 pub mod renderer;
 
 mod bit;

@@ -1,60 +1,130 @@
-use freetype as ft;
-use ft::{face::LoadFlag, ffi};
+use font_kit::font::Font;
+use font_kit::properties::Properties;
+use font_kit::source::SystemSource;
+use freetype::face::LoadFlag;
+use freetype::{ffi, RenderMode};
+use log::{error, info};
 use std::collections::HashMap;
-use std::ops::Index;
+use std::sync::Arc;
 
-const FONT_PATH: &str = "steelseries_oled/assets/fonts/CascadiaMonoPL.ttf";
+use crate::renderer::bit::Bit;
+use crate::renderer::font_selector::FontSelector;
 
 pub struct FontManager {
-    _library: ft::Library,
-    face: ft::Face,
-    face_sizes: HashMap<usize, HashMap<usize, Character>>,
+    _library: freetype::Library,
+    face: freetype::Face,
+    cache: HashMap<(char, usize), Character>,
 }
 
 impl FontManager {
-    pub fn new() -> Self {
-        let library = ft::Library::init().unwrap();
-        let face = library.new_face(FONT_PATH, 0).unwrap();
+    pub fn new(selector: FontSelector) -> Self {
+        let library = freetype::Library::init().unwrap();
+
+        let (data, font_index) = Self::load_font(selector);
+        let face = library
+            .new_memory_face(data.to_vec(), font_index as isize)
+            .unwrap();
+
         Self {
             _library: library,
             face,
-            face_sizes: HashMap::new(),
+            cache: HashMap::new(),
         }
     }
 
-    pub fn get_character(&mut self, char_code: usize, height: usize) -> &Character {
-        let characters = self.face_sizes.entry(height).or_insert(HashMap::new());
-        characters.entry(char_code).or_insert_with(|| {
-            // TODO proper freetype error checking
+    pub fn get_character(&mut self, character: char, height: usize) -> &Character {
+        self.cache.entry((character, height)).or_insert_with(|| {
             self.face
                 .set_pixel_sizes(height as u32, height as u32)
                 .unwrap();
-            self.face.load_char(char_code, LoadFlag::DEFAULT).unwrap();
+            self.face
+                .load_char(character as usize, LoadFlag::TARGET_MONO)
+                .unwrap();
             let slot = self.face.glyph();
             let metrics = slot.metrics();
             let glyph = slot.get_glyph().unwrap();
-            (metrics, glyph).into()
+
+            Character {
+                metrics: metrics.into(),
+                bounding_box: glyph.get_cbox(ffi::FT_GLYPH_BBOX_UNSCALED).into(),
+                bitmap: glyph.to_bitmap(RenderMode::Mono, None).unwrap().into(),
+            }
         })
+    }
+
+    fn select_font(selector: FontSelector) -> Result<(Font, u32), Box<dyn std::error::Error>> {
+        match selector.clone() {
+            FontSelector::Default => Ok(Self::load_default_font()),
+            FontSelector::Filesystem(selector) => {
+                let font_index = selector.font_index.unwrap_or(0);
+                let font = Font::from_path(&selector.path, font_index)?;
+                Ok((font, font_index))
+            }
+            FontSelector::System(selector) => {
+                let names: Vec<_> = selector.names.into_iter().map(|name| name.0).collect();
+                let properties = Properties {
+                    style: selector.style.0,
+                    weight: selector.weight.0,
+                    stretch: selector.stretch.0,
+                };
+                let handle = SystemSource::new().select_best_match(&names, &properties)?;
+                let font = handle.load()?;
+                Ok((font, 0 /* will this always be zero? */))
+            }
+        }
+    }
+
+    fn load_font(selector: FontSelector) -> (Arc<Vec<u8>>, u32) {
+        let (font, font_index) = match Self::select_font(selector.clone()) {
+            Ok((font, font_index)) => (font, font_index),
+            Err(err) => {
+                error!(
+                    "Failed to load font with selector '{:?}': {:?}. Falling back to default",
+                    selector, err
+                );
+                Self::load_default_font()
+            }
+        };
+        info!(
+            "Loaded font: {:?}, {:?}",
+            font.full_name(),
+            font.properties()
+        );
+
+        (font.copy_font_data().unwrap(), font_index)
+    }
+
+    fn load_default_font() -> (Font, u32) {
+        const DEFAULT_FONT: &[u8] =
+            include_bytes!("../../assets/fonts/Meslo/MesloLGLNerdFontMono-Bold.ttf");
+        const DEFAULT_FONT_INDEX: u32 = 0;
+
+        let default_font = Arc::new(DEFAULT_FONT.to_vec());
+        let font = Font::from_bytes(default_font, DEFAULT_FONT_INDEX).unwrap();
+
+        (font, DEFAULT_FONT_INDEX)
     }
 }
 
 pub struct Character {
-    pub metrics: ft::GlyphMetrics,
+    pub metrics: Metrics,
     pub bounding_box: BoundingBox,
     pub bitmap: Bitmap,
 }
 
-impl From<(ft::GlyphMetrics, ft::Glyph)> for Character {
-    fn from(params: (ft::GlyphMetrics, ft::Glyph)) -> Self {
-        // TODO proper freetype error checking
-        let (metrics, glyph) = params;
+#[derive(Debug)]
+pub struct Metrics {
+    pub offset_y: i32,
+    pub offset_x: i32,
+    pub advance: i32,
+}
+
+impl From<freetype::GlyphMetrics> for Metrics {
+    fn from(metrics: freetype::GlyphMetrics) -> Self {
         Self {
-            metrics,
-            bounding_box: glyph.get_cbox(ffi::FT_GLYPH_BBOX_UNSCALED).into(),
-            bitmap: glyph
-                .to_bitmap(ft::RenderMode::Normal, None)
-                .unwrap()
-                .into(),
+            offset_y: metrics.horiBearingY >> 6,
+            offset_x: metrics.horiBearingX >> 6,
+            advance: metrics.horiAdvance >> 6,
         }
     }
 }
@@ -67,8 +137,8 @@ pub struct BoundingBox {
     pub y_max: i32,
 }
 
-impl From<ft::BBox> for BoundingBox {
-    fn from(bbox: ft::BBox) -> Self {
+impl From<freetype::BBox> for BoundingBox {
+    fn from(bbox: freetype::BBox) -> Self {
         Self {
             x_min: bbox.xMin as i32,
             x_max: bbox.xMax as i32,
@@ -84,32 +154,29 @@ pub struct Bitmap {
     pub left: i32,
     pub rows: usize,
     pub cols: usize,
+    stride: usize,
     buffer: Vec<u8>,
 }
 
 impl Bitmap {
-    fn get_index(&self, indices: (usize, usize)) -> usize {
-        indices.0 * self.cols + indices.1
+    pub fn get(&self, row: usize, col: usize) -> bool {
+        let row_begin = row * self.stride;
+        let mut byte = self.buffer[row_begin + col / 8];
+        let bit = Bit::new(&mut byte, 7 - col % 8);
+        bit.get()
     }
 }
 
-impl From<ft::BitmapGlyph> for Bitmap {
-    fn from(bitmap_glyph: ft::BitmapGlyph) -> Self {
+impl From<freetype::BitmapGlyph> for Bitmap {
+    fn from(bitmap_glyph: freetype::BitmapGlyph) -> Self {
         let bitmap = bitmap_glyph.bitmap();
         Self {
             top: bitmap_glyph.top(),
             left: bitmap_glyph.left(),
             rows: bitmap.rows() as usize,
             cols: bitmap.width() as usize,
+            stride: bitmap.pitch() as usize,
             buffer: bitmap.buffer().to_vec(),
         }
-    }
-}
-
-impl Index<(usize, usize)> for Bitmap {
-    type Output = u8;
-
-    fn index(&self, indices: (usize, usize)) -> &Self::Output {
-        &self.buffer[self.get_index(indices)]
     }
 }

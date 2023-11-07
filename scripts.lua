@@ -7,7 +7,7 @@ function volume()
                     origin = Point { x = 0, y = 0 },
                     size = Size { width = SCREEN.Width, height = SCREEN.Height / 2 },
                 },
-                modifiers = Modifiers { upper = true },
+                modifiers = Modifiers { font_size = 27 },
             },
             Text {
                 text = AUDIO.Name,
@@ -48,15 +48,15 @@ function spotify()
                     origin = Point { x = 0, y = SCREEN.Height - 16 },
                     size = Size { width = 50, height = 12 },
                 },
-                modifiers = Modifiers { upper = true },
+                modifiers = Modifiers { font_size = 16 },
             },
             Text {
                 text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month + 1], CLOCK.MonthDay),
                 position = Rectangle {
-                    origin = Point { x = SCREEN.Width - 45, y = SCREEN.Height - 16 },
-                    size = Size { width = 45, height = 12 },
+                    origin = Point { x = SCREEN.Width - 50, y = SCREEN.Height - 16 },
+                    size = Size { width = 50, height = 12 },
                 },
-                modifiers = Modifiers { upper = true },
+                modifiers = Modifiers { font_size = 16 },
             },
             Bar {
                 value = CLOCK.Seconds * 100.0 / 59,
@@ -80,7 +80,7 @@ function clock()
                     origin = Point { x = 10, y = 1 },
                     size = Size { width = 54, height = 35 },
                 },
-                modifiers = Modifiers { upper = true },
+                modifiers = Modifiers { font_size = 47 },
             },
             Text {
                 text = string.format("%02d", CLOCK.Minutes),
@@ -88,15 +88,15 @@ function clock()
                     origin = Point { x = 64, y = 0 },
                     size = Size { width = 54, height = 26 },
                 },
-                modifiers = Modifiers { upper = true },
+                modifiers = Modifiers { font_size = 36 },
             },
             Text {
                 text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month + 1], CLOCK.MonthDay),
                 position = Rectangle {
-                    origin = Point { x = 65, y = 27 },
+                    origin = Point { x = 66, y = 27 },
                     size = Size { width = 54, height = 10 },
                 },
-                modifiers = Modifiers { upper = true },
+                modifiers = Modifiers { font_size = 14 },
             },
             Bar {
                 value = CLOCK.Seconds * 100.0 / 59,
@@ -118,7 +118,7 @@ function weather()
                 position = Rectangle {
                     origin = Point { x = 0, y = 0 },
                     size = Size { width = SCREEN.Width, height = 16 },
-                    modifiers = Modifiers { upper = true },
+                    modifiers = Modifiers { font_size = 22 },
                 },
             },
             Text {
@@ -127,15 +127,15 @@ function weather()
                     origin = Point { x = 0, y = SCREEN.Height - 16 },
                     size = Size { width = 50, height = 12 },
                 },
-                modifiers = Modifiers { upper = true },
+                modifiers = Modifiers { font_size = 16 },
             },
             Text {
                 text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month + 1], CLOCK.MonthDay),
                 position = Rectangle {
-                    origin = Point { x = SCREEN.Width - 45, y = SCREEN.Height - 16 },
-                    size = Size { width = 45, height = 12 },
+                    origin = Point { x = SCREEN.Width - 50, y = SCREEN.Height - 16 },
+                    size = Size { width = 50, height = 12 },
                 },
-                modifiers = Modifiers { upper = true },
+                modifiers = Modifiers { font_size = 16 },
             },
             Bar {
                 value = CLOCK.Seconds * 100.0 / 59,

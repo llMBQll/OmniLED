@@ -9,7 +9,7 @@ const NAME: &str = "WEATHER";
 fn main() {
     let options = Options::parse();
 
-    let api = Api::new(options.address, NAME.to_owned());
+    let api = Api::new(&options.address, NAME);
 
     let (coordinates, name) = match options.selector {
         Selector::In(name) => (get_coordinates_from_name(&name), name.city),

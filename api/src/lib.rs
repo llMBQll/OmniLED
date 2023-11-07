@@ -9,11 +9,11 @@ pub struct Api {
 }
 
 impl Api {
-    pub fn new(address: String, application_name: String) -> Self {
+    pub fn new(address: &str, application_name: &str) -> Self {
         Self {
             agent: Agent::new(),
-            address: address.clone(),
-            name: application_name,
+            address: address.to_string(),
+            name: application_name.to_string(),
         }
     }
 
@@ -21,7 +21,7 @@ impl Api {
         self.update_with_name(data, &self.name)
     }
 
-    pub fn update_with_name<T: Serialize>(&self, data: &T, name: &String) {
+    pub fn update_with_name<T: Serialize>(&self, data: &T, name: &str) {
         let update_data = UpdateData { name, fields: data };
 
         match self.call("/update", &update_data) {
@@ -29,11 +29,15 @@ impl Api {
             Err(err) => match err {
                 Error::Status(status, response) => {
                     let response = response.into_json().unwrap_or(Reply {
-                        error: Some(String::from("unknown error")),
+                        error: Some(format!("[{}] Unknown error", self.name)),
                     });
-                    println!("[{status}] {}", serde_json::to_string(&response).unwrap());
+                    println!(
+                        "[{}] [{status}] {}",
+                        self.name,
+                        serde_json::to_string(&response).unwrap()
+                    );
                 }
-                Error::Transport(transport) => println!("{transport}"),
+                Error::Transport(transport) => println!("[{}] {transport}", self.name),
             },
         }
     }
@@ -56,6 +60,6 @@ struct Reply {
 
 #[derive(Serialize)]
 struct UpdateData<'a, 'b, T: Serialize> {
-    name: &'a String,
+    name: &'a str,
     fields: &'b T,
 }

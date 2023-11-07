@@ -16,8 +16,7 @@ static API: OnceLock<Api> = OnceLock::new();
 async fn main() {
     let options = Options::parse();
 
-    API.set(Api::new(options.address, String::from(NAME)))
-        .unwrap();
+    API.set(Api::new(&options.address, NAME)).unwrap();
 
     let mut map: HashMap<String, String> = HashMap::from_iter(options.map.into_iter());
     let mode = options.mode;

@@ -33,9 +33,9 @@ pub struct Modifiers {
     pub flip_horizontal: bool,
     pub flip_vertical: bool,
     pub strict: bool,
-    pub upper: bool,
     pub vertical: bool,
     pub scrolling: bool,
+    pub font_size: Option<usize>,
 }
 
 impl UserData for Modifiers {}

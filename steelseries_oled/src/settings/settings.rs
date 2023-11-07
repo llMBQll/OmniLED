@@ -6,12 +6,16 @@ use std::time::Duration;
 
 use crate::common::common::exec_file;
 use crate::create_table;
+use crate::renderer::font_selector::FontSelector;
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Settings {
     #[serde(default = "Settings::applications_file")]
     pub applications_file: String,
+
+    #[serde(default = "Settings::font")]
+    pub font: FontSelector,
 
     #[serde(default = "Settings::scripts_file")]
     pub scripts_file: String,
@@ -72,6 +76,10 @@ impl Settings {
         String::from("applications.lua")
     }
 
+    fn font() -> FontSelector {
+        FontSelector::Default
+    }
+
     fn scripts_file() -> String {
         String::from("scripts.lua")
     }
@@ -109,6 +117,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             applications_file: Settings::applications_file(),
+            font: Settings::font(),
             scripts_file: Settings::scripts_file(),
             scrolling_text_ticks_at_edge: Settings::scrolling_text_ticks_at_edge(),
             scrolling_text_ticks_per_move: Settings::scrolling_text_ticks_per_move(),

@@ -3,17 +3,17 @@ use chrono::prelude::*;
 use serde::Serialize;
 use std::{env, thread, time};
 
-#[allow(non_snake_case)]
 #[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 struct Names {
-    DayNames: Vec<&'static str>,
-    MonthNames: Vec<&'static str>,
+    day_names: Vec<&'static str>,
+    month_names: Vec<&'static str>,
 }
 
 impl Names {
     pub fn new() -> Self {
         Self {
-            DayNames: vec![
+            day_names: vec![
                 "Monday",
                 "Tuesday",
                 "Wednesday",
@@ -22,7 +22,7 @@ impl Names {
                 "Saturday",
                 "Sunday",
             ],
-            MonthNames: vec![
+            month_names: vec![
                 "January",
                 "February",
                 "March",
@@ -40,52 +40,51 @@ impl Names {
     }
 }
 
-#[allow(non_snake_case)]
 #[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 struct Time {
-    Hours: u32,
-    Minutes: u32,
-    Seconds: u32,
-    MonthDay: u32,
-    WeekDay: u32,
-    Month: u32,
-    Year: i32,
+    hours: u32,
+    minutes: u32,
+    seconds: u32,
+    month_day: u32,
+    week_day: u32,
+    month: u32,
+    year: i32,
 }
 
 const NAME: &str = "CLOCK";
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let args: Vec<String> = env::args().collect();
     let address = args[1].as_str();
-    let api = Api::new(String::from(address), String::from(NAME));
+    let api = Api::new(address, NAME);
 
     // Send initial data that will not be updated
     api.update(&Names::new());
 
     let mut time = Time {
-        Hours: 0,
-        Minutes: 0,
-        Seconds: 0,
-        MonthDay: 0,
-        WeekDay: 0,
-        Month: 0,
-        Year: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        month_day: 0,
+        week_day: 0,
+        month: 0,
+        year: 0,
     };
 
     loop {
         let local = Local::now();
-        if local.second() == time.Seconds {
+        if local.second() == time.seconds {
             thread::sleep(time::Duration::from_millis(10));
             continue;
         }
-        time.Seconds = local.second();
-        time.Minutes = local.minute();
-        time.Hours = local.hour();
-        time.MonthDay = local.day();
-        time.WeekDay = local.weekday().num_days_from_monday();
-        time.Month = local.month0();
-        time.Year = local.year();
+        time.seconds = local.second();
+        time.minutes = local.minute();
+        time.hours = local.hour();
+        time.month_day = local.day();
+        time.week_day = local.weekday().num_days_from_monday();
+        time.month = local.month0();
+        time.year = local.year();
         api.update(&time);
         thread::sleep(time::Duration::from_millis(500));
     }

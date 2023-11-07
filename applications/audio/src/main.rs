@@ -9,13 +9,11 @@ const NAME: &str = "AUDIO";
 
 static API: OnceLock<Api> = OnceLock::new();
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let args: Vec<String> = env::args().collect();
     let address = args[1].as_str();
 
-    API.set(Api::new(String::from(address), String::from(NAME)))
-        .unwrap();
+    API.set(Api::new(address, NAME)).unwrap();
 
     let _audio = Audio::new(|muted, volume, name| {
         API.get()

@@ -7,8 +7,8 @@ use windows::Win32::Media::Audio::Endpoints::{
 use windows::Win32::Media::Audio::{
     eConsole, eRender, IMMDevice, IMMDeviceEnumerator, MMDeviceEnumerator,
 };
+use windows::Win32::System::Com::StructuredStorage::PropVariantToStringAlloc;
 use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER, STGM_READ};
-use windows::Win32::UI::Shell::PropertiesSystem::PropVariantToStringAlloc;
 
 use crate::audio::windows::audio_endpoint_volume_callback::AudioEndpointVolumeCallback;
 use crate::audio::windows::com_guard::ComGuard;

@@ -18,7 +18,7 @@ impl Buffer {
         }
     }
 
-    pub fn set(&mut self, y: usize, x: usize, area: &Rectangle, modifiers: &Modifiers) {
+    pub fn set(&mut self, y: isize, x: isize, area: &Rectangle, modifiers: &Modifiers) {
         let (row, col) = match self.translate(y, x, area, modifiers) {
             Some(pos) => pos,
             None => {
@@ -40,24 +40,24 @@ impl Buffer {
 
     fn translate(
         &self,
-        y: usize,
-        x: usize,
+        y: isize,
+        x: isize,
         area: &Rectangle,
         modifiers: &Modifiers,
     ) -> Option<(usize, usize)> {
         let (y, x) = match modifiers.flip_vertical {
-            true => (area.size.height - y, x),
+            true => (area.size.height as isize - y, x),
             false => (y, x),
         };
 
         let (y, x) = match modifiers.flip_horizontal {
-            true => (y, area.size.width - x),
+            true => (y, area.size.width as isize - x),
             false => (y, x),
         };
 
-        let (y, x) = (y + area.origin.y, x + area.origin.x);
-        match y < self.height && x < self.width {
-            true => Some((y, x)),
+        let (y, x) = (y + area.origin.y as isize, x + area.origin.x as isize);
+        match y >= 0 && y < self.height as isize && x >= 0 && x < self.width as isize {
+            true => Some((y as usize, x as usize)),
             false => None,
         }
     }

@@ -24,8 +24,10 @@ impl Renderer {
     }
 
     pub fn new() -> Self {
+        let font_selector = Settings::get().font.clone();
+
         Self {
-            font_manager: FontManager::new(),
+            font_manager: FontManager::new(font_selector),
             scrolling_text_data: ScrollingTextData::new(),
             scrolling_text_control: ScrollingTextControl::new(),
         }
@@ -67,18 +69,10 @@ impl Renderer {
             ),
         };
 
-        for row in 0..height {
-            for col in 0..width {
+        for row in 0..height as isize {
+            for col in 0..width as isize {
                 buffer.set(row, col, &rect, &modifiers);
             }
-        }
-    }
-
-    fn get_text_height(height: usize, upper: bool) -> usize {
-        if upper {
-            height * 40 / 29
-        } else {
-            height
         }
     }
 
@@ -90,9 +84,7 @@ impl Renderer {
         modifiers: Modifiers,
         offsets: &mut IntoIter<usize>,
     ) {
-        const RENDER_THRESHOLD: u8 = 50;
-
-        let mut cursor_x = 0 as i32;
+        let mut cursor_x = 0;
         let cursor_y = rect.size.height as i32;
 
         let offset = offsets.next().unwrap();
@@ -101,34 +93,32 @@ impl Renderer {
             _ = characters.next();
         }
 
-        let character_height = Self::get_text_height(rect.size.height, modifiers.upper);
+        let character_height = modifiers.font_size.unwrap_or(rect.size.height);
         for character in characters {
-            let character = self
-                .font_manager
-                .get_character(character as usize, character_height);
+            let character = self.font_manager.get_character(character, character_height);
             let bitmap = &character.bitmap;
             let metrics = &character.metrics;
 
             for row in 0..bitmap.rows {
                 for col in 0..bitmap.cols {
-                    let offset_y = (metrics.horiBearingY >> 6) as i32;
-                    let y = cursor_y + row as i32 - offset_y;
-                    let x = cursor_x + col as i32 + (metrics.horiBearingX >> 6) as i32;
+                    let y = cursor_y + row as i32 - metrics.offset_y;
+                    let x = cursor_x + col as i32 + metrics.offset_x;
 
                     if y < 0
                         || x < 0
-                        || x >= rect.size.width as i32
+                        || (modifiers.strict && x >= rect.size.width as i32)
                         || (modifiers.strict && y >= rect.size.height as i32)
                     {
                         continue;
                     }
-                    if bitmap[(row, col)] > RENDER_THRESHOLD {
-                        buffer.set(y as usize, x as usize, &rect, &modifiers);
+
+                    if bitmap.get(row, col) {
+                        buffer.set(y as isize, x as isize, &rect, &modifiers);
                     }
                 }
             }
 
-            cursor_x += (metrics.horiAdvance >> 6) as i32;
+            cursor_x += metrics.advance;
             if cursor_x > rect.size.width as i32 {
                 break;
             }
@@ -167,10 +157,13 @@ impl Renderer {
             return 0;
         }
 
-        let height = Self::get_text_height(text.position.size.height, text.modifiers.upper);
+        let height = text
+            .modifiers
+            .font_size
+            .unwrap_or(text.position.size.height);
         let width = text.position.size.width;
-        let character = font_manager.get_character('a' as usize, height);
-        let char_width = (character.metrics.horiAdvance >> 6) as usize;
+        let character = font_manager.get_character('a', height);
+        let char_width = character.metrics.advance as usize;
         let max_characters = width / max(char_width, 1);
         let len = text.text.chars().count();
         let tick = ctx.read(&text.text);
