@@ -1,14 +1,17 @@
 use device_query::{DeviceQuery, DeviceState, Keycode};
-use std::time::Duration;
+use std::{
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
 
 use crate::events::event_queue::{Event, EventQueue};
 
-pub async fn process_events() {
+pub fn process_events(running: &AtomicBool) {
     let device_state = DeviceState::new();
     let event_queue = EventQueue::instance();
     let mut previous_state: Vec<Keycode> = Vec::new();
 
-    loop {
+    while running.load(Ordering::Relaxed) {
         let keys = device_state.get_keys();
         {
             let mut guard = event_queue.lock().unwrap();
@@ -31,7 +34,7 @@ pub async fn process_events() {
         }
         previous_state = keys;
 
-        tokio::time::sleep(Duration::from_millis(10)).await;
+        std::thread::sleep(Duration::from_millis(10));
     }
 }
 

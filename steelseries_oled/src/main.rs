@@ -52,7 +52,7 @@ async fn main() {
 
     let _apps = AppLoader::load(&lua);
 
-    tokio::task::spawn(process_events());
+    let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
 
     let interval = Settings::get().update_interval;
     let event_loop = EventLoop::new();
@@ -106,4 +106,6 @@ async fn main() {
                 .unwrap();
         })
         .await;
+
+    keyboard_handle.join().unwrap();
 }
