@@ -122,9 +122,9 @@ pub struct Metrics {
 impl From<freetype::GlyphMetrics> for Metrics {
     fn from(metrics: freetype::GlyphMetrics) -> Self {
         Self {
-            offset_y: metrics.horiBearingY >> 6,
-            offset_x: metrics.horiBearingX >> 6,
-            advance: metrics.horiAdvance >> 6,
+            offset_y: (metrics.horiBearingY >> 6) as i32,
+            offset_x: (metrics.horiBearingX >> 6) as i32,
+            advance: (metrics.horiAdvance >> 6) as i32,
         }
     }
 }

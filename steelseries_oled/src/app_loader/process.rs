@@ -1,7 +1,6 @@
 use log::error;
 use mlua::UserData;
 use serde::{Deserialize, Serialize};
-use std::os::windows::process::CommandExt;
 use std::process::{Child, Command, Stdio};
 
 pub struct Process {
@@ -25,12 +24,16 @@ impl Process {
 
     #[cfg(target_os = "windows")]
     fn extra_configuration(command: &mut Command) {
+        use std::os::windows::process::CommandExt;
+
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         command.creation_flags(CREATE_NO_WINDOW);
     }
 
     #[cfg(target_os = "linux")]
-    fn extra_configuration(_command: &mut Command) {}
+    fn extra_configuration(_command: &mut Command) {
+        // No need to explicitly disable console window
+    }
 }
 
 impl Drop for Process {

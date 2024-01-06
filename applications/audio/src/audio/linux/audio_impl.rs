@@ -27,15 +27,15 @@ impl AudioImpl {
             Context::new_with_proplist(&main_loop, "AudioContext", &proplist).unwrap(),
         ));
 
-        main_loop.start().unwrap();
-
-        /*********************************************************|
-        | Connect to the server and wait for it ot be initialized |
-        |*********************************************************/
         ctx.borrow_mut()
             .connect(None, FlagSet::NOFLAGS, None)
             .unwrap();
 
+        main_loop.start().unwrap();
+
+        /*****************************************|
+        | Wait for pulseaudio library to be ready |
+        |*****************************************/
         loop {
             match ctx.borrow_mut().get_state() {
                 pulse::context::State::Ready => {
