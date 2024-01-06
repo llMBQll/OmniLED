@@ -1,4 +1,3 @@
-use crate::events::event_queue::EventQueue;
 use log::error;
 use mlua::{Lua, LuaSerdeExt};
 use serde::{Deserialize, Serialize};
@@ -6,7 +5,9 @@ use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use warp::Filter;
 
+use crate::constants::constants::Constants;
 use crate::events;
+use crate::events::event_queue::EventQueue;
 use crate::settings::settings::Settings;
 
 pub struct Server {}
@@ -67,7 +68,11 @@ impl Server {
         lua.globals()
             .set("SERVER", lua.to_value(&data).unwrap())
             .unwrap();
-        std::fs::write("server.json", serde_json::to_string_pretty(&data).unwrap()).unwrap();
+        std::fs::write(
+            Constants::root_dir().join("server.json"),
+            serde_json::to_string_pretty(&data).unwrap(),
+        )
+        .unwrap();
     }
 }
 

@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use log::error;
 use mlua::{chunk, Lua, Table, TableExt};
 use std::sync::atomic::AtomicBool;
