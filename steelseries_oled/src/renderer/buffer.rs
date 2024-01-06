@@ -5,16 +5,20 @@ use crate::renderer::bit::Bit;
 pub struct Buffer {
     height: usize,
     width: usize,
+    padded_width: usize,
     buffer: Vec<u8>,
 }
 
 impl Buffer {
     pub fn new(size: Size) -> Self {
-        assert_eq!(size.width % 8, 0);
+        let oversize = size.width % 8;
+        let padding = if oversize == 0 { 0 } else { 8 - oversize };
+        let padded_width = size.width + padding;
         Self {
-            width: size.width,
             height: size.height,
-            buffer: vec![0; size.height * size.width / 8],
+            width: size.width,
+            padded_width,
+            buffer: vec![0; size.height * padded_width / 8],
         }
     }
 
@@ -34,7 +38,7 @@ impl Buffer {
     }
 
     fn bit_at(&mut self, y: usize, x: usize) -> Bit {
-        let index = (y * self.width + x) / 8;
+        let index = (y * self.padded_width + x) / 8;
         Bit::new(&mut self.buffer[index], 7 - x % 8)
     }
 
