@@ -12,15 +12,15 @@ impl TrayIcon {
     pub fn new(running: &'static AtomicBool) -> Self {
         let mut tray = TrayItem::new("Steelseries OLED", Self::load_icon()).unwrap();
 
-        tray.add_menu_item("Quit", || running.store(false, Ordering::Relaxed))
-            .unwrap();
-
         tray.add_menu_item("Settings", || {
             if let Err(err) = opener::reveal(Constants::root_dir().join("settings.lua")) {
                 error!("Failed to reveal config directory: {}", err);
             }
         })
         .unwrap();
+
+        tray.add_menu_item("Quit", || running.store(false, Ordering::Relaxed))
+            .unwrap();
 
         Self { _tray: tray }
     }

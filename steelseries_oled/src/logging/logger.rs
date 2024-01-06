@@ -1,3 +1,4 @@
+use crate::constants::constants::Constants;
 use log::{debug, error, info, trace, warn, LevelFilter};
 use log4rs::{
     append::file::FileAppender,
@@ -18,7 +19,7 @@ impl Logger {
             .encoder(Box::new(PatternEncoder::new(
                 "{t} [{d(%Y-%m-%d %H:%M:%S:%3f)}][{l}] {m}\n",
             )))
-            .build("logging.log")
+            .build(Constants::root_dir().join("logging.log"))
             .unwrap();
 
         let config = Config::builder()
