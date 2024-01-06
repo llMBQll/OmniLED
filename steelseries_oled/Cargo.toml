@@ -8,6 +8,7 @@ default-run = "steelseries_oled"
 
 [dependencies]
 device_query = "1.1"
+dirs-next = "2.0"
 font-kit = "0.11"
 freetype-rs = "*"
 image = "0.24"
@@ -16,6 +17,7 @@ log = "0.4"
 log4rs = "1.2"
 mlua = { version = "0.9", features = ["async", "lua54", "vendored", "macros", "serialize", "unstable"] }
 num-traits = "0.2"
+opener = {  version = "0.6", features = ["reveal"] }
 rusb = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

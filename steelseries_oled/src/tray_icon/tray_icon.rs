@@ -1,5 +1,8 @@
+use log::error;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tray_item::{IconSource, TrayItem};
+
+use crate::constants::constants::Constants;
 
 pub struct TrayIcon {
     _tray: TrayItem,
@@ -12,6 +15,13 @@ impl TrayIcon {
         tray.add_menu_item("Quit", || running.store(false, Ordering::Relaxed))
             .unwrap();
 
+        tray.add_menu_item("Settings", || {
+            if let Err(err) = opener::reveal(Constants::root_dir().join("settings.lua")) {
+                error!("Failed to reveal config directory: {}", err);
+            }
+        })
+        .unwrap();
+
         Self { _tray: tray }
     }
 
@@ -22,21 +32,18 @@ impl TrayIcon {
 
     #[cfg(target_os = "linux")]
     fn load_icon() -> IconSource {
-        let path = std::path::Path::new("steelseries_oled/assets/icons/white.png");
+        const IMAGE: &[u8] = include_bytes!("../../assets/icons/white.png");
 
-        let (data, width, height) = {
-            let image = image::open(&path)
-                .expect("Failed to open icon path")
-                .into_rgba8();
-            let (width, height) = image.dimensions();
-            let data = image.into_raw();
-            (data, width as i32, height as i32)
-        };
+        let image = image::load_from_memory(&IMAGE)
+            .expect("Failed to load icon data")
+            .into_rgba8();
+        let (width, height) = image.dimensions();
+        let data = image.into_raw();
 
         IconSource::Data {
             data,
-            width,
-            height,
+            width: width as i32,
+            height: height as i32,
         }
     }
 }

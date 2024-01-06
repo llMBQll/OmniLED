@@ -6,6 +6,7 @@ members = [
     "applications/clock",
     "applications/media",
     "applications/weather",
+    "setup",
 ]
 
 resolver = "2"
