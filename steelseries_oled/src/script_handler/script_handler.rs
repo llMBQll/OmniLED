@@ -3,6 +3,7 @@ use mlua::{
     chunk, AnyUserData, AnyUserDataExt, Function, Lua, OwnedTable, Table, TableExt, UserData, Value,
 };
 
+use crate::settings::settings::get_full_path;
 use crate::{
     common::{common::exec_file, scoped_value::ScopedValue},
     create_table,
@@ -21,7 +22,7 @@ impl ScriptHandler {
         let environment = Self::make_sandbox(lua).into_owned();
         exec_file(
             lua,
-            &Settings::get().scripts_file,
+            &get_full_path(&Settings::get().scripts_file),
             environment.clone().to_ref(),
         );
 

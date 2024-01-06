@@ -8,7 +8,7 @@ use crate::create_table;
 use crate::screen::screen::Screen;
 use crate::screen::steelseries_engine::steelseries_engine_device::SteelseriesEngineDevice;
 use crate::screen::usb_device::usb_device::USBDevice;
-use crate::settings::settings::Settings;
+use crate::settings::settings::{get_full_path, Settings};
 
 pub struct Screens {
     screens: HashMap<String, ScreenWrapper>,
@@ -44,7 +44,11 @@ impl Screens {
             table = { insert = table.insert, maxn = table.maxn, remove = table.remove, sort = table.sort }
         });
 
-        exec_file(lua, &Settings::get().supported_screens_file, env);
+        exec_file(
+            lua,
+            &get_full_path(&Settings::get().supported_screens_file),
+            env,
+        );
     }
 
     fn make_loader<T: Screen + 'static>(lua: &Lua) -> Function {

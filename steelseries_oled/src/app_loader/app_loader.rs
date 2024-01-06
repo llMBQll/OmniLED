@@ -2,6 +2,7 @@ use log::{error, warn};
 use mlua::{chunk, Lua, LuaSerdeExt, MetaMethod, UserData, Value};
 
 use crate::common::scoped_value::ScopedValue;
+use crate::settings::settings::get_full_path;
 use crate::{
     app_loader::process::Process, common::common::exec_file, create_table,
     settings::settings::Settings,
@@ -39,7 +40,7 @@ impl AppLoader {
             string = { byte = string.byte, char = string.char, dump = string.dump, find = string.find, format = string.format, gmatch = string.gmatch, gsub = string.gsub, len = string.len, lower = string.lower, match = string.match, pack = string.pack, packsize = string.packsize, rep = string.rep, reverse = string.reverse, sub = string.sub, unpack = string.unpack, upper = string.upper },
             table = { concat = table.concat, insert = table.insert, move = table.move, pack = table.pack, remove = table.remove, sort = table.sort, unpack = table.unpack },
         });
-        exec_file(lua, &Settings::get().applications_file, env);
+        exec_file(lua, &get_full_path(&Settings::get().applications_file), env);
 
         let len: usize = lua.load(chunk! { #APP_LOADER }).eval().unwrap();
         if len == 0 {

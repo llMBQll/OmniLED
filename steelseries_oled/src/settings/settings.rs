@@ -1,10 +1,12 @@
 use mlua::{chunk, Lua, LuaSerdeExt, Value};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DurationMilliSeconds};
+use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Duration;
 
 use crate::common::common::exec_file;
+use crate::constants::constants::Constants;
 use crate::create_table;
 use crate::renderer::font_selector::FontSelector;
 
@@ -47,7 +49,7 @@ static SETTINGS: OnceLock<Settings> = OnceLock::new();
 
 impl Settings {
     pub fn load(lua: &Lua) {
-        let filename = Self::settings_file();
+        let filename = get_full_path(&Self::settings_file());
         let load_settings = lua
             .create_function(move |lua, settings: Value| {
                 let settings: Settings = lua.from_value(settings)?;
@@ -127,5 +129,17 @@ impl Default for Settings {
             supported_screens_file: Settings::supported_screens_file(),
             update_interval: Settings::update_interval(),
         }
+    }
+}
+
+pub fn get_full_path(path: &String) -> String {
+    let path_buf = PathBuf::from(path);
+    match path_buf.is_absolute() {
+        true => path.clone(),
+        false => Constants::root_dir()
+            .join(path)
+            .to_str()
+            .unwrap()
+            .to_string(),
     }
 }

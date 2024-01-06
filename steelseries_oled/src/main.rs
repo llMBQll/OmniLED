@@ -45,11 +45,8 @@ async fn main() {
     Server::load(&lua);
     let _screens = Screens::load(&lua);
     Renderer::load(&lua);
-
     let _sandbox = ScriptHandler::load(&lua);
-
     let _tray = TrayIcon::new(&RUNNING);
-
     let _apps = AppLoader::load(&lua);
 
     let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
