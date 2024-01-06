@@ -42,6 +42,7 @@ impl ScriptHandler {
             ScrollingText = OPERATIONS.ScrollingText,
             Modifiers = OPERATIONS.Modifiers,
             EVENTS = EVENTS,
+            KEY_COMBINATION_HANDLER = KEY_COMBINATION_HANDLER,
             PLATFORM = PLATFORM,
             ipairs = ipairs,
             next = next,

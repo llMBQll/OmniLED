@@ -4,6 +4,7 @@ use mlua::{
 };
 
 use crate::common::scoped_value::ScopedValue;
+use crate::events::key_combination_handler::KeyCombinationHandler;
 
 pub struct Events {
     filter: Option<OwnedFunction>,
@@ -12,12 +13,16 @@ pub struct Events {
 
 impl Events {
     pub fn load(lua: &Lua) -> ScopedValue {
-        let events = Events {
-            filter: None,
-            listeners: Vec::new(),
-        };
+        KeyCombinationHandler::load(lua);
 
-        ScopedValue::new(lua, "EVENTS", events)
+        ScopedValue::new(
+            lua,
+            "EVENTS",
+            Events {
+                filter: None,
+                listeners: Vec::new(),
+            },
+        )
     }
 }
 
@@ -45,6 +50,13 @@ impl UserData for Events {
 
             Ok(())
         });
+
+        methods.add_method(
+            "make_prefixed",
+            |_lua, _this, (prefix, event): (String, String)| {
+                return Ok(format!("{}({})", prefix, event));
+            },
+        );
 
         methods.add_meta_method(
             MetaMethod::Call,
