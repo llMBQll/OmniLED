@@ -1,6 +1,7 @@
 use log::error;
 use mlua::UserData;
 use serde::{Deserialize, Serialize};
+use std::os::windows::process::CommandExt;
 use std::process::{Child, Command, Stdio};
 
 pub struct Process {
@@ -9,15 +10,27 @@ pub struct Process {
 
 impl Process {
     pub fn new(config: &Config) -> std::io::Result<Process> {
-        let process = Command::new(&config.path)
+        let mut command = Command::new(&config.path);
+        let mut command = command
             .args(&config.args)
             .stdin(Stdio::null())
             .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()?;
+            .stderr(Stdio::inherit());
+        Self::extra_configuration(&mut command);
 
-        Ok(Self { process })
+        Ok(Self {
+            process: command.spawn()?,
+        })
     }
+
+    #[cfg(target_os = "windows")]
+    fn extra_configuration(command: &mut Command) {
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    #[cfg(target_os = "linux")]
+    fn extra_configuration(_command: &mut Command) {}
 }
 
 impl Drop for Process {

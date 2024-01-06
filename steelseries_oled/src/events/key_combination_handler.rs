@@ -24,7 +24,7 @@ impl UserData for KeyCombinationHandler {
             |_lua, this, (prefix, mut combination): (String, Vec<String>)| {
                 combination.sort();
                 combination.dedup();
-                let state = combination.iter().map(|_| false).collect();
+                let state = vec![false; combination.len()];
                 this.combinations.push((prefix, combination, state));
 
                 Ok(())
