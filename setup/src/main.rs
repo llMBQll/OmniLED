@@ -1,8 +1,6 @@
 use std::env;
 use std::path::PathBuf;
 use std::process::Command;
-use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
-use winreg::RegKey;
 
 fn main() {
     let root = get_root();
@@ -98,6 +96,9 @@ fn read_user_input() -> String {
 
 #[cfg(target_os = "windows")]
 fn setup_autostart() {
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
+    use winreg::RegKey;
+
     println!("Do you want 'Steelseries OLED' to launch automatically when you log in [Y/N]?");
     let response = read_user_input();
     let autostart = response.to_ascii_lowercase() == "y";
@@ -137,7 +138,8 @@ fn start() {
         return;
     }
 
-    let path = get_root().join("steelseries_oled.exe");
+    let path = get_root()
+        .join(PathBuf::from("steelseries_oled").with_extension(env::consts::EXE_EXTENSION));
     println!("Running 'Steelseries OLED'");
     Command::new(path).spawn().unwrap();
 }
