@@ -1,13 +1,13 @@
 use prost::bytes::Bytes;
 use prost::Message;
-use serde::{Deserialize, Serialize};
+use std::io::Read;
 use ureq::{Agent, Error, Response};
 
 pub mod types {
     include!(concat!(env!("OUT_DIR"), "/types.rs"));
 }
 
-use types::field::Field::{FArray, FBool, FBytes, FFloat, FImage, FInteger, FString, FTable};
+use types::field::Field::{FArray, FBool, FBytes, FFloat, FImage, FInteger, FString};
 use types::{Array, Event, EventReply, Field, Image, Table};
 
 #[derive(Debug)]
@@ -40,8 +40,10 @@ impl Api {
             Ok(_) => {}
             Err(err) => match err {
                 Error::Status(status, response) => {
-                    let response: Bytes = response.into();
-                    let reply = EventReply::decode(response).unwrap_or(EventReply { error: None });
+                    let mut bytes = Vec::new();
+                    response.into_reader().read_to_end(&mut bytes).unwrap();
+                    let bytes = Bytes::from(bytes);
+                    let reply = EventReply::decode(bytes).unwrap_or(EventReply { error: None });
                     println!(
                         "[{}] [{status}] {}",
                         self.name,
@@ -59,57 +61,51 @@ impl Api {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct Reply {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<String>,
-}
-
-#[derive(Serialize)]
-struct UpdateData<'a, 'b, T: Serialize> {
-    name: &'a str,
-    fields: &'b T,
-}
-
-impl Into<Field> for bool {
-    fn into(self) -> Field {
-        Field {
-            field: Some(FBool(self)),
+macro_rules! cast_and_into_field {
+    ($from:ty, $to:ty, $variant:expr) => {
+        impl Into<Field> for $from {
+            fn into(self) -> Field {
+                Field {
+                    field: Some($variant(self as $to)),
+                }
+            }
         }
-    }
+    };
 }
 
-impl Into<Field> for u32 {
-    fn into(self) -> Field {
-        Field {
-            field: Some(FInteger(self as i64)),
+macro_rules! into_field {
+    ($from:ty, $variant:expr) => {
+        impl Into<Field> for $from {
+            fn into(self) -> Field {
+                Field {
+                    field: Some($variant(self)),
+                }
+            }
         }
-    }
+    };
 }
 
-impl Into<Field> for i32 {
-    fn into(self) -> Field {
-        Field {
-            field: Some(FInteger(self as i64)),
-        }
-    }
-}
+// Boolean values
+into_field!(bool, FBool);
 
-impl Into<Field> for i64 {
-    fn into(self) -> Field {
-        Field {
-            field: Some(FInteger(self)),
-        }
-    }
-}
+// Integer values
+cast_and_into_field!(i8, i64, FInteger);
+cast_and_into_field!(i16, i64, FInteger);
+cast_and_into_field!(i32, i64, FInteger);
+into_field!(i64, FInteger);
+cast_and_into_field!(i128, i64, FInteger);
+cast_and_into_field!(u8, i64, FInteger);
+cast_and_into_field!(u16, i64, FInteger);
+cast_and_into_field!(u32, i64, FInteger);
+cast_and_into_field!(u64, i64, FInteger);
+cast_and_into_field!(u128, i64, FInteger);
 
-impl Into<Field> for f64 {
-    fn into(self) -> Field {
-        Field {
-            field: Some(FFloat(self)),
-        }
-    }
-}
+// Floating point values
+cast_and_into_field!(f32, f64, FFloat);
+into_field!(f64, FFloat);
+
+// String values
+into_field!(String, FString);
 
 impl Into<Field> for &str {
     fn into(self) -> Field {
@@ -119,42 +115,11 @@ impl Into<Field> for &str {
     }
 }
 
-impl Into<Field> for String {
-    fn into(self) -> Field {
-        Field {
-            field: Some(FString(self)),
-        }
-    }
-}
+// Array values
+into_field!(Array, FArray);
 
-impl Into<Field> for Array {
-    fn into(self) -> Field {
-        Field {
-            field: Some(FArray(self)),
-        }
-    }
-}
+// Byte values
+into_field!(Vec<u8>, FBytes);
 
-impl Into<Field> for Table {
-    fn into(self) -> Field {
-        Field {
-            field: Some(FTable(self)),
-        }
-    }
-}
-
-impl Into<Field> for Vec<u8> {
-    fn into(self) -> Field {
-        Field {
-            field: Some(FBytes(self)),
-        }
-    }
-}
-
-impl Into<Field> for Image {
-    fn into(self) -> Field {
-        Field {
-            field: Some(FImage(self)),
-        }
-    }
-}
+// Image values
+into_field!(Image, FImage);
