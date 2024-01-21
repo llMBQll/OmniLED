@@ -68,6 +68,7 @@ fn copy(src_root: &str, dst_root: &PathBuf, name: &str, override_file: bool) {
     if dst.exists() {
         if override_file {
             println!("Copying {:?} to {:?} [Override!]", src, dst);
+            std::fs::copy(src, dst).expect("Failed to copy files");
         } else {
             println!(
                 "Copying {:?} to {:?} skipped, file already exists",
