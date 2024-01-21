@@ -1,3 +1,4 @@
+use api::types::Table;
 use api::Api;
 use audio::Audio;
 use serde::Serialize;
@@ -18,7 +19,7 @@ fn main() {
     let _audio = Audio::new(|muted, volume, name| {
         API.get()
             .unwrap()
-            .update(&AudioData::new(muted, volume, name));
+            .update(AudioData::new(muted, volume, name).into());
     });
 
     thread::sleep(time::Duration::MAX);
@@ -40,5 +41,21 @@ impl AudioData {
             volume,
             name,
         }
+    }
+}
+
+impl Into<Table> for AudioData {
+    fn into(self) -> Table {
+        let mut table = Table::default();
+
+        table
+            .items
+            .insert("IsMuted".to_string(), self.is_muted.into());
+        table.items.insert("Volume".to_string(), self.volume.into());
+        if let Some(name) = self.name {
+            table.items.insert("Name".to_string(), name.into());
+        }
+
+        table
     }
 }

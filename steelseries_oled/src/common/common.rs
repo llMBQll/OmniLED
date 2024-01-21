@@ -1,3 +1,5 @@
+use api::types::field::Field as FieldEntry;
+use api::types::Field;
 use log::error;
 use mlua::{Lua, Table, TableExt, Value};
 
@@ -21,35 +23,40 @@ pub fn exec_file(lua: &Lua, name: &str, env: Table) {
     }
 }
 
-pub fn json_to_lua_value(lua: &Lua, json_value: serde_json::Value) -> mlua::Result<Value> {
-    match json_value {
-        serde_json::Value::Null => Ok(mlua::Nil),
-        serde_json::Value::Bool(bool) => Ok(Value::Boolean(bool)),
-        serde_json::Value::Number(number) => {
-            if let Some(integer) = number.as_i64() {
-                return Ok(Value::Integer(integer));
-            }
-            Ok(Value::Number(number.as_f64().unwrap()))
-        }
-        serde_json::Value::String(string) => {
-            let string = lua.create_string(&string)?;
+pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
+    match field.field {
+        None => Ok(mlua::Nil),
+        Some(FieldEntry::FBool(bool)) => Ok(Value::Boolean(bool)),
+        Some(FieldEntry::FInteger(integer)) => Ok(Value::Integer(integer)),
+        Some(FieldEntry::FFloat(float)) => Ok(Value::Number(float)),
+        Some(FieldEntry::FString(string)) => {
+            let string = lua.create_string(string)?;
             Ok(Value::String(string))
         }
-        serde_json::Value::Array(array) => {
-            let size = array.len();
+        Some(FieldEntry::FArray(array)) => {
+            let size = array.items.len();
             let table = lua.create_table_with_capacity(size, 0)?;
-            for value in array {
-                table.push(json_to_lua_value(lua, value)?)?;
+            for value in array.items {
+                table.push(proto_to_lua_value(lua, value)?)?;
             }
             Ok(Value::Table(table))
         }
-        serde_json::Value::Object(map) => {
-            let size = map.len();
+        Some(FieldEntry::FTable(map)) => {
+            let size = map.items.len();
             let table = lua.create_table_with_capacity(0, size)?;
-            for (key, value) in map {
-                table.set(key.clone(), json_to_lua_value(lua, value)?)?;
+            for (key, value) in map.items {
+                table.set(key, proto_to_lua_value(lua, value)?)?;
             }
             Ok(Value::Table(table))
+        }
+        Some(FieldEntry::FBytes(_)) => {
+            todo!("Implement Bytes object conversion")
+            // let non_utf_string = unsafe { String::from_utf8_unchecked(bytes.clone()) };
+            // let string = lua.create_string(non_utf_string)?;
+            // Ok(Value::String(string))
+        }
+        Some(FieldEntry::FImage(_)) => {
+            todo!("Implement Image object conversion")
         }
     }
 }
