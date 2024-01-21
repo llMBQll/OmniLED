@@ -1,10 +1,8 @@
+use api::types::{Array, Field, Table};
 use api::Api;
 use chrono::prelude::*;
-use serde::Serialize;
 use std::{env, thread, time};
 
-#[derive(Serialize)]
-#[serde(rename_all = "PascalCase")]
 struct Names {
     day_names: Vec<&'static str>,
     month_names: Vec<&'static str>,
@@ -40,8 +38,27 @@ impl Names {
     }
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "PascalCase")]
+impl Into<Table> for Names {
+    fn into(self) -> Table {
+        let transform_vec = |vec: Vec<&str>| -> Field {
+            let array = Array {
+                items: vec.iter().map(|entry| (*entry).into()).collect(),
+            };
+
+            array.into()
+        };
+
+        let mut table = Table::default();
+        table
+            .items
+            .insert("DayNames".to_owned(), transform_vec(self.day_names));
+        table
+            .items
+            .insert("MonthNames".to_owned(), transform_vec(self.month_names));
+        table
+    }
+}
+
 struct Time {
     hours: u32,
     minutes: u32,
@@ -52,6 +69,28 @@ struct Time {
     year: i32,
 }
 
+impl Into<Table> for &Time {
+    fn into(self) -> Table {
+        let mut table = Table::default();
+        table.items.insert("Hours".to_owned(), self.hours.into());
+        table
+            .items
+            .insert("Minutes".to_owned(), self.minutes.into());
+        table
+            .items
+            .insert("Seconds".to_owned(), self.seconds.into());
+        table
+            .items
+            .insert("MonthDay".to_owned(), self.month_day.into());
+        table
+            .items
+            .insert("WeekDay".to_owned(), self.week_day.into());
+        table.items.insert("Month".to_owned(), self.month.into());
+        table.items.insert("Year".to_owned(), self.year.into());
+        table
+    }
+}
+
 const NAME: &str = "CLOCK";
 
 fn main() {
@@ -60,7 +99,7 @@ fn main() {
     let api = Api::new(address, NAME);
 
     // Send initial data that will not be updated
-    api.update(&Names::new());
+    api.update(Names::new().into());
 
     let mut time = Time {
         hours: 0,
@@ -85,7 +124,7 @@ fn main() {
         time.week_day = local.weekday().num_days_from_monday();
         time.month = local.month0();
         time.year = local.year();
-        api.update(&time);
+        api.update((&time).into());
         thread::sleep(time::Duration::from_millis(500));
     }
 }

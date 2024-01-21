@@ -1,11 +1,11 @@
-#![windows_subsystem = "windows"]
+// #![windows_subsystem = "windows"]
 
 use log::error;
 use mlua::{chunk, Lua, Table, TableExt};
 use std::sync::atomic::AtomicBool;
 
 use crate::app_loader::app_loader::AppLoader;
-use crate::common::common::json_to_lua_value;
+use crate::common::common::proto_to_lua_value;
 use crate::constants::constants::Constants;
 use crate::events::event_loop::EventLoop;
 use crate::events::event_queue::{Event, EventQueue};
@@ -66,7 +66,7 @@ async fn main() {
                         let (application, values) = event;
 
                         for (name, value) in values {
-                            let value = match json_to_lua_value(&lua, value) {
+                            let value = match proto_to_lua_value(&lua, value) {
                                 Ok(value) => value,
                                 Err(err) => {
                                     error!("Failed to convert json value: {}", err);

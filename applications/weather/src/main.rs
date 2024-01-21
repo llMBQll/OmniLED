@@ -1,3 +1,4 @@
+use api::types::Table;
 use api::Api;
 use chrono::Timelike;
 use clap::Parser;
@@ -20,7 +21,7 @@ fn main() {
 
     loop {
         let weather = get_weather(&agent, &coordinates, &name);
-        api.update(&weather);
+        api.update(weather.into());
 
         thread::sleep(time::Duration::from_secs(15 * 60));
     }
@@ -107,6 +108,41 @@ struct Data {
     update_hour: u32,
     update_minute: u32,
     city: String,
+}
+
+impl Into<Table> for Data {
+    fn into(self) -> Table {
+        let mut table = Table::default();
+
+        table
+            .items
+            .insert("Latitude".to_string(), self.latitude.into());
+        table
+            .items
+            .insert("Longitude".to_string(), self.longitude.into());
+        table
+            .items
+            .insert("Temperature".to_string(), self.temperature.into());
+        table
+            .items
+            .insert("WindSpeed".to_string(), self.wind_speed.into());
+        table
+            .items
+            .insert("WindDirection".to_string(), self.wind_direction.into());
+        table
+            .items
+            .insert("WeatherCode".to_string(), self.weather_code.into());
+        table.items.insert("IsDay".to_string(), self.is_day.into());
+        table
+            .items
+            .insert("UpdateHour".to_string(), self.update_hour.into());
+        table
+            .items
+            .insert("UpdateMinute".to_string(), self.update_minute.into());
+        table.items.insert("City".to_string(), self.city.into());
+
+        table
+    }
 }
 
 #[derive(serde::Deserialize)]

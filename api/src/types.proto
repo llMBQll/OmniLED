@@ -1,0 +1,39 @@
+syntax = 'proto3';
+
+package types;
+
+message Event {
+  string name = 1;
+  Table fields = 2;
+}
+
+message EventReply {
+  optional string error = 1;
+}
+
+message Field {
+  oneof field {
+    bool f_bool = 1;
+    int64 f_integer = 2;
+    double f_float = 3;
+    string f_string = 4;
+    Array f_array = 5;
+    Table f_table = 6;
+    bytes f_bytes = 7;
+    Image f_image = 8;
+  }
+}
+
+message Array {
+  repeated Field items = 1;
+}
+
+message Table {
+  map<string, Field> items = 1;
+}
+
+message Image {
+  int64 width = 1;
+  int64 height = 2;
+  bytes data = 3;
+}

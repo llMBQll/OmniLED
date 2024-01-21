@@ -23,7 +23,7 @@ async fn main() {
     let media = Media::new(Arc::new(Mutex::new(
         move |name: &String, session_data: &SessionData, current: bool| {
             if current && (mode == Focused || mode == Both) {
-                API.get().unwrap().update(session_data)
+                API.get().unwrap().update(session_data.into())
             }
 
             if mode == Individual || mode == Both {
@@ -31,7 +31,9 @@ async fn main() {
                     .entry(name.clone())
                     .or_insert_with(|| transform_name(name));
 
-                API.get().unwrap().update_with_name(session_data, name);
+                API.get()
+                    .unwrap()
+                    .update_with_name(name, session_data.into());
             }
         },
     )));
@@ -65,7 +67,7 @@ struct Options {
     #[clap(short, long)]
     address: String,
 
-    #[clap(long, value_parser=parse_pair)]
+    #[clap(long, value_parser = parse_pair)]
     map: Vec<(String, String)>,
 
     #[clap(short, long, value_parser = clap::value_parser!(Mode), default_value = "both", ignore_case = true)]

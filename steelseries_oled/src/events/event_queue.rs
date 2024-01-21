@@ -1,3 +1,4 @@
+use api::types::Field;
 use lazy_static::lazy_static;
 use mlua::{Lua, UserData};
 use std::collections::HashMap;
@@ -5,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::keyboard::keyboard::KeyboardEvent;
 
-type ApplicationEvent = (String, HashMap<String, serde_json::Value>);
+type ApplicationEvent = (String, HashMap<String, Field>);
 
 pub enum Event {
     Application(ApplicationEvent),

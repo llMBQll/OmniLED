@@ -1,8 +1,11 @@
+use api::types::{Event, EventReply};
 use log::error;
 use mlua::{Lua, LuaSerdeExt};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use prost::bytes::Bytes;
+use prost::Message;
 use std::time::{SystemTime, UNIX_EPOCH};
+use warp::http::StatusCode;
+use warp::reply::WithStatus;
 use warp::Filter;
 
 use crate::constants::constants::Constants;
@@ -15,21 +18,26 @@ pub struct Server {}
 impl Server {
     pub fn load(lua: &Lua) {
         let event_queue = EventQueue::instance();
-        let update =
-            warp::path!("update")
-                .and(warp::body::json())
-                .map(move |update_data: UpdateData| {
-                    event_queue
-                        .lock()
-                        .unwrap()
-                        .push(events::event_queue::Event::Application((
-                            update_data.name,
-                            update_data.fields,
-                        )));
+        let update = warp::path!("update")
+            .and(warp::body::bytes())
+            .map(move |bytes: Bytes| {
+                let event = match Event::decode(&*bytes) {
+                    Ok(event) => event,
+                    Err(err) => {
+                        return Self::reply(Some(err.to_string()), StatusCode::BAD_REQUEST);
+                    }
+                };
 
-                    let reply = warp::reply::json(&UpdateReply { error: None });
-                    warp::reply::with_status(reply, warp::http::StatusCode::OK)
-                });
+                event_queue
+                    .lock()
+                    .unwrap()
+                    .push(events::event_queue::Event::Application((
+                        event.name,
+                        event.fields.unwrap().items,
+                    )));
+
+                Self::reply(None, StatusCode::OK)
+            });
 
         // Try to bind to a set port, if allowed try binding to next available port until it succeeds
         let mut port: u16 = Settings::get().server_port;
@@ -74,16 +82,10 @@ impl Server {
         )
         .unwrap();
     }
-}
 
-#[derive(Deserialize)]
-struct UpdateData {
-    name: String,
-    fields: HashMap<String, serde_json::Value>,
-}
-
-#[derive(Serialize)]
-struct UpdateReply {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<String>,
+    fn reply(error: Option<String>, status_code: StatusCode) -> WithStatus<Vec<u8>> {
+        let reply = EventReply { error };
+        let bytes = reply.encode_to_vec();
+        warp::reply::with_status(bytes, status_code)
+    }
 }
