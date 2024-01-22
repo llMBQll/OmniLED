@@ -95,8 +95,6 @@ fn get_weather(agent: &Agent, coordinates: &Coordinates, city: &String) -> Data 
     }
 }
 
-#[derive(serde::Serialize, Debug)]
-#[serde(rename_all = "PascalCase")]
 struct Data {
     latitude: f64,
     longitude: f64,
