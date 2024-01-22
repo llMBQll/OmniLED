@@ -1,7 +1,6 @@
 use api::types::Table;
 use api::Api;
 use audio::Audio;
-use serde::Serialize;
 use std::{env, sync::OnceLock, thread, time};
 
 mod audio;
@@ -25,12 +24,9 @@ fn main() {
     thread::sleep(time::Duration::MAX);
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "PascalCase")]
 struct AudioData {
     is_muted: bool,
     volume: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
 }
 
