@@ -55,10 +55,10 @@ impl MediaImpl {
                                 match playback_status {
                                     mpris::PlaybackStatus::Playing => {
                                         let metadata = player.get_metadata().unwrap();
-                                        let artist = metadata.artists().unwrap()[0];
-                                        let title = metadata.title().unwrap();
-                                        let progress = player.get_position().unwrap();
-                                        let duration = metadata.length().unwrap();
+                                        let artist = metadata.artists().unwrap_or(vec![""])[0];
+                                        let title = metadata.title().unwrap_or_default();
+                                        let progress = player.get_position().unwrap_or_default();
+                                        let duration = metadata.length().unwrap_or_default();
 
                                         let data = SessionData {
                                             artist: artist.to_string(),
