@@ -146,7 +146,7 @@ impl Serialize for Weight {
             if weight.0 == font_kit::properties::Weight::THIN.0 {
                 "Thin"
             } else if weight.0 == font_kit::properties::Weight::EXTRA_LIGHT.0 {
-                "Extra_light"
+                "ExtraLight"
             } else if weight.0 == font_kit::properties::Weight::LIGHT.0 {
                 "Light"
             } else if weight.0 == font_kit::properties::Weight::NORMAL.0 {
@@ -154,11 +154,11 @@ impl Serialize for Weight {
             } else if weight.0 == font_kit::properties::Weight::MEDIUM.0 {
                 "Medium"
             } else if weight.0 == font_kit::properties::Weight::SEMIBOLD.0 {
-                "Semi_bold"
+                "SemiBold"
             } else if weight.0 == font_kit::properties::Weight::BOLD.0 {
                 "Bold"
             } else if weight.0 == font_kit::properties::Weight::EXTRA_BOLD.0 {
-                "Extra_bold"
+                "ExtraBold"
             } else if weight.0 == font_kit::properties::Weight::BLACK.0 {
                 "Black"
             } else {
