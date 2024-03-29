@@ -14,9 +14,9 @@ pub struct AudioImpl {
 
 impl AudioImpl {
     pub fn new(volume_callback: fn(bool, i32, Option<String>)) -> Self {
-        /********************************|
-        | Create and start the main loop |
-        |********************************/
+        /**********************|
+        | Create the main loop |
+        |**********************/
         let mut proplist = Proplist::new().unwrap();
         proplist
             .set_str(properties::APPLICATION_NAME, "Audio")
@@ -27,15 +27,15 @@ impl AudioImpl {
             Context::new_with_proplist(&main_loop, "AudioContext", &proplist).unwrap(),
         ));
 
+        /*********************************************************|
+        | Connect to the server and wait for it ot be initialized |
+        |*********************************************************/
         ctx.borrow_mut()
             .connect(None, FlagSet::NOFLAGS, None)
             .unwrap();
 
         main_loop.start().unwrap();
 
-        /*****************************************|
-        | Wait for pulseaudio library to be ready |
-        |*****************************************/
         loop {
             match ctx.borrow_mut().get_state() {
                 pulse::context::State::Ready => {

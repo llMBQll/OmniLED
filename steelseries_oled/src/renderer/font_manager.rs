@@ -114,44 +114,44 @@ pub struct Character {
 
 #[derive(Debug)]
 pub struct Metrics {
-    pub offset_y: i32,
-    pub offset_x: i32,
-    pub advance: i32,
+    pub offset_y: isize,
+    pub offset_x: isize,
+    pub advance: isize,
 }
 
 impl From<freetype::GlyphMetrics> for Metrics {
     fn from(metrics: freetype::GlyphMetrics) -> Self {
         Self {
-            offset_y: (metrics.horiBearingY >> 6) as i32,
-            offset_x: (metrics.horiBearingX >> 6) as i32,
-            advance: (metrics.horiAdvance >> 6) as i32,
+            offset_y: (metrics.horiBearingY >> 6) as isize,
+            offset_x: (metrics.horiBearingX >> 6) as isize,
+            advance: (metrics.horiAdvance >> 6) as isize,
         }
     }
 }
 
 #[derive(Debug)]
 pub struct BoundingBox {
-    pub x_min: i32,
-    pub x_max: i32,
-    pub y_min: i32,
-    pub y_max: i32,
+    pub x_min: isize,
+    pub x_max: isize,
+    pub y_min: isize,
+    pub y_max: isize,
 }
 
 impl From<freetype::BBox> for BoundingBox {
     fn from(bbox: freetype::BBox) -> Self {
         Self {
-            x_min: bbox.xMin as i32,
-            x_max: bbox.xMax as i32,
-            y_min: bbox.yMin as i32,
-            y_max: bbox.yMax as i32,
+            x_min: bbox.xMin as isize,
+            x_max: bbox.xMax as isize,
+            y_min: bbox.yMin as isize,
+            y_max: bbox.yMax as isize,
         }
     }
 }
 
 #[derive(Debug)]
 pub struct Bitmap {
-    pub top: i32,
-    pub left: i32,
+    pub top: isize,
+    pub left: isize,
     pub rows: usize,
     pub cols: usize,
     stride: usize,
@@ -171,8 +171,8 @@ impl From<freetype::BitmapGlyph> for Bitmap {
     fn from(bitmap_glyph: freetype::BitmapGlyph) -> Self {
         let bitmap = bitmap_glyph.bitmap();
         Self {
-            top: bitmap_glyph.top(),
-            left: bitmap_glyph.left(),
+            top: bitmap_glyph.top() as isize,
+            left: bitmap_glyph.left() as isize,
             rows: bitmap.rows() as usize,
             cols: bitmap.width() as usize,
             stride: bitmap.pitch() as usize,

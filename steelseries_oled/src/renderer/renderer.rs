@@ -85,7 +85,7 @@ impl Renderer {
         offsets: &mut IntoIter<usize>,
     ) {
         let mut cursor_x = 0;
-        let cursor_y = rect.size.height as i32;
+        let cursor_y = rect.size.height as isize;
 
         let offset = offsets.next().unwrap();
         let mut characters = text.chars();
@@ -99,27 +99,27 @@ impl Renderer {
             let bitmap = &character.bitmap;
             let metrics = &character.metrics;
 
-            for row in 0..bitmap.rows {
-                for col in 0..bitmap.cols {
-                    let y = cursor_y + row as i32 - metrics.offset_y;
-                    let x = cursor_x + col as i32 + metrics.offset_x;
+            for row in 0..bitmap.rows as isize {
+                for col in 0..bitmap.cols as isize {
+                    let y = cursor_y + row - metrics.offset_y;
+                    let x = cursor_x + col + metrics.offset_x;
 
                     if y < 0
                         || x < 0
-                        || (modifiers.strict && x >= rect.size.width as i32)
-                        || (modifiers.strict && y >= rect.size.height as i32)
+                        || (modifiers.strict && x >= rect.size.width as isize)
+                        || (modifiers.strict && y >= rect.size.height as isize)
                     {
                         continue;
                     }
 
-                    if bitmap.get(row, col) {
-                        buffer.set(y as isize, x as isize, &rect, &modifiers);
+                    if bitmap.get(row as usize, col as usize) {
+                        buffer.set(y, x, &rect, &modifiers);
                     }
                 }
             }
 
             cursor_x += metrics.advance;
-            if cursor_x > rect.size.width as i32 {
+            if cursor_x > rect.size.width as isize {
                 break;
             }
         }
