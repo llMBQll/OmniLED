@@ -23,7 +23,7 @@ impl PluginRequestHandler {
 
 impl RequestHandler for PluginRequestHandler {
     fn update(&mut self, event: Event) -> Result<(), (String, StatusCode)> {
-        if is_alpha_uppercase(&event.name) {
+        if !is_alpha_uppercase(&event.name) {
             return Err((
                 String::from("Event name is not alpha uppercase"),
                 StatusCode::BAD_REQUEST,
