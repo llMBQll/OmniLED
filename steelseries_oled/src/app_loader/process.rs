@@ -32,7 +32,7 @@ impl Process {
 
     #[cfg(target_os = "linux")]
     fn extra_configuration(_command: &mut Command) {
-        // No need to explicitly disable console window
+        // No extra configuration required
     }
 }
 

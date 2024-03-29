@@ -1,6 +1,6 @@
-use api::types::Table;
-use api::Api;
 use audio::Audio;
+use oled_api::types::Table;
+use oled_api::Api;
 use std::{env, sync::OnceLock, thread, time};
 
 mod audio;

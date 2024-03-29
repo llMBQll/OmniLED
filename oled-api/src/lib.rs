@@ -1,14 +1,14 @@
 use prost::bytes::Bytes;
 use prost::Message;
 use std::io::Read;
-use ureq::{Agent, Error, Response};
+use ureq::{Agent, Error};
 
 pub mod types {
     include!(concat!(env!("OUT_DIR"), "/types.rs"));
 }
 
 use types::field::Field::{FArray, FBool, FBytes, FFloat, FImage, FInteger, FString};
-use types::{Array, Event, EventReply, Field, Image, Table};
+use types::{Array, Event, EventReply, Field, Image, LogLevel, LogMessage, Table};
 
 #[derive(Debug)]
 pub struct Api {
@@ -19,11 +19,14 @@ pub struct Api {
 
 impl Api {
     pub fn new(address: &str, application_name: &str) -> Self {
-        Self {
+        let api = Self {
             agent: Agent::new(),
             address: address.to_string(),
             name: application_name.to_string(),
-        }
+        };
+        println!("{} connected", api.name);
+        api.log("Connected", LogLevel::Debug);
+        api
     }
 
     pub fn update(&self, fields: Table) {
@@ -35,8 +38,23 @@ impl Api {
             name: name.to_string(),
             fields: Some(fields),
         };
-        let update_data = event.encode_to_vec();
-        match self.call("/update", &update_data) {
+        let bytes = event.encode_to_vec();
+        self.call("/update", &bytes);
+    }
+
+    pub fn log(&self, message: &str, level: LogLevel) {
+        let log_message = LogMessage {
+            name: self.name.clone(),
+            message: message.to_owned(),
+            severity: level.into(),
+        };
+        let bytes = log_message.encode_to_vec();
+        self.call("/log", &bytes);
+    }
+
+    fn call(&self, endpoint: &str, bytes: &Vec<u8>) {
+        let url = format!("http://{}{}", self.address, endpoint);
+        match self.agent.post(&url).send_bytes(bytes) {
             Ok(_) => {}
             Err(err) => match err {
                 Error::Status(status, response) => {
@@ -53,11 +71,6 @@ impl Api {
                 Error::Transport(transport) => println!("[{}] {transport}", self.name),
             },
         }
-    }
-
-    fn call(&self, endpoint: &str, bytes: &Vec<u8>) -> Result<Response, Error> {
-        let url = format!("http://{}{}", self.address, endpoint);
-        self.agent.post(&url).send_bytes(bytes)
     }
 }
 

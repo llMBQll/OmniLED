@@ -1,6 +1,9 @@
-use mlua::{chunk, Function, LightUserData, Lua, UserData, UserDataMethods, Value};
+use log::error;
+use mlua::{chunk, Function, Lua, OwnedTable, Table, UserData, UserDataMethods, Value};
+use std::cell::RefCell;
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::ffi::c_void;
+use std::rc::Rc;
 
 use crate::common::common::exec_file;
 use crate::common::scoped_value::ScopedValue;
@@ -11,31 +14,37 @@ use crate::screen::usb_device::usb_device::USBDevice;
 use crate::settings::settings::{get_full_path, Settings};
 
 pub struct Screens {
-    screens: HashMap<String, ScreenWrapper>,
+    screens: HashMap<String, ScreenEntry>,
+    loaders: HashMap<String, fn(&Lua, Value) -> Box<dyn Screen>>,
 }
 
 impl Screens {
     pub fn load(lua: &Lua) -> ScopedValue {
-        lua.globals()
-            .set("SCREEN_INITIALIZERS", lua.create_table().unwrap())
-            .unwrap();
-
-        let screens = ScopedValue::new(
-            lua,
-            "SCREENS",
-            Screens {
-                screens: HashMap::new(),
-            },
-        );
-
+        let screens = ScopedValue::new(lua, "SCREENS", Self::new());
         Self::load_screens(lua);
-
         screens
     }
 
-    pub fn load_screens(lua: &Lua) {
-        let load_steelseries_engine_device = Self::make_loader::<SteelseriesEngineDevice>(lua);
-        let load_usb_device = Self::make_loader::<USBDevice>(lua);
+    fn new() -> Self {
+        let mut loaders: HashMap<String, fn(&Lua, Value) -> Box<dyn Screen>> = HashMap::new();
+
+        loaders.insert("steelseries_engine_device".to_string(), |lua, settings| {
+            Box::new(SteelseriesEngineDevice::init(lua, settings).unwrap())
+        });
+
+        loaders.insert("usb_device".to_string(), |lua, settings| {
+            Box::new(USBDevice::init(lua, settings).unwrap())
+        });
+
+        Self {
+            screens: HashMap::new(),
+            loaders,
+        }
+    }
+
+    fn load_screens(lua: &Lua) {
+        let load_steelseries_engine_device = Self::make_loader(lua, "steelseries_engine_device");
+        let load_usb_device = Self::make_loader(lua, "usb_device");
 
         let env = create_table!(lua, {
             steelseries_engine_device = $load_steelseries_engine_device,
@@ -51,83 +60,127 @@ impl Screens {
         );
     }
 
-    fn make_loader<T: Screen + 'static>(lua: &Lua) -> Function {
-        let loader = |lua: &Lua, settings: Value| -> mlua::Result<()> {
-            let initializer = |lua: &Lua, settings: Value| -> mlua::Result<LightUserData> {
-                // TODO error handling
-                let screen = T::init(lua, settings).unwrap();
-                let screen = Box::new(ScreenWrapper::new(screen));
-                let ptr = Box::into_raw(screen);
-                let data = LightUserData(ptr as *mut c_void);
-                Ok(data)
-            };
-            let initializer = lua.create_function(initializer).unwrap();
+    fn make_loader<'a>(lua: &'a Lua, kind: &'static str) -> Function<'a> {
+        lua.create_function(move |lua, settings: Table| {
+            let name: String = settings.get("name")?;
 
             lua.load(chunk! {
-                local settings = $settings;
-                SCREEN_INITIALIZERS[settings.name] = function() return $initializer(settings) end
+                SCREENS:add_configuration($name, $kind, $settings)
             })
             .exec()
             .unwrap();
 
             Ok(())
-        };
-
-        lua.create_function(loader).unwrap()
-    }
-
-    fn from_user_data(user_data: LightUserData) -> &'static mut dyn Screen {
-        let wrapped = unsafe { &mut *(user_data.0 as *mut ScreenWrapper) };
-        wrapped.inner.as_mut()
+        })
+        .unwrap()
     }
 }
 
 impl UserData for Screens {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut("load_screen", |lua, this, key: String| {
-            // TODO add error handling
-            let screen_name = key.clone();
-            let screen = this.screens.entry(key).or_insert_with(|| {
-                let user_data: LightUserData = lua
-                    .load(chunk! {
-                        SCREEN_INITIALIZERS[$screen_name]()
-                    })
-                    .eval()
-                    .unwrap();
-                let screen = unsafe { Box::from_raw(user_data.0 as _) };
-                *screen
-            });
-            Ok(LightUserData(screen as *mut _ as *mut c_void))
-        });
-
-        methods.add_method(
-            "update",
-            |lua, _, (wrapped, data): (LightUserData, Vec<u8>)| {
-                let screen = Self::from_user_data(wrapped);
-                screen.update(lua, data).unwrap(); // TODO map and log error
+        methods.add_method_mut(
+            "add_configuration",
+            |_lua, manager, (name, kind, settings): (String, String, Table)| {
+                match manager.screens.entry(name) {
+                    Entry::Occupied(entry) => {
+                        let message = format!(
+                            "Screen configuration for '{}' is already registered",
+                            entry.key()
+                        );
+                        error!("{}", message);
+                        return Err(mlua::Error::runtime(message));
+                    }
+                    Entry::Vacant(entry) => {
+                        let loader = manager.loaders[&kind];
+                        entry.insert(ScreenEntry::Initializer(Initializer {
+                            settings: settings.into_owned(),
+                            constructor: loader,
+                        }));
+                    }
+                }
 
                 Ok(())
             },
         );
 
-        methods.add_method("size", |lua, _, wrapped: LightUserData| {
-            let screen = Self::from_user_data(wrapped);
-            match screen.size(lua) {
-                Ok(size) => Ok(Some(size)),
-                Err(_) => Ok(None), // TODO log error
-            }
+        methods.add_method_mut("load", |lua, manager, name: String| {
+            let entry = manager.screens.entry(name);
+            let entry = match entry {
+                Entry::Occupied(entry) => entry,
+                Entry::Vacant(entry) => {
+                    let message = format!("Screen {} not found", entry.key());
+                    error!("{}", message);
+                    return Err(mlua::Error::runtime(message));
+                }
+            };
+            let name = entry.key().clone();
+            let entry = entry.remove();
+            let screen = match entry {
+                ScreenEntry::Initializer(initializer) => {
+                    let value = Value::Table(initializer.settings.to_ref());
+                    let screen = (initializer.constructor)(lua, value);
+                    LuaScreenWrapper::new(screen)
+                }
+                ScreenEntry::Screen(screen) => screen,
+            };
+            manager
+                .screens
+                .insert(name, ScreenEntry::Screen(screen.clone()));
+            Ok(screen)
         });
     }
 }
 
-struct ScreenWrapper {
-    pub inner: Box<dyn Screen>,
+enum ScreenEntry {
+    Initializer(Initializer),
+    Screen(LuaScreenWrapper),
 }
 
-impl ScreenWrapper {
-    pub fn new<T: Screen + 'static>(screen: T) -> Self {
+struct Initializer {
+    settings: OwnedTable,
+    constructor: fn(&Lua, Value) -> Box<dyn Screen>,
+}
+
+#[derive(Clone)]
+struct LuaScreenWrapper {
+    pub inner: Rc<RefCell<Box<dyn Screen>>>,
+}
+
+impl LuaScreenWrapper {
+    pub fn new(screen: Box<dyn Screen>) -> Self {
         Self {
-            inner: Box::new(screen),
+            inner: Rc::new(RefCell::new(screen)),
         }
+    }
+}
+
+impl UserData for LuaScreenWrapper {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method_mut("update", |lua, screen, data: Vec<u8>| {
+            screen
+                .inner
+                .borrow_mut()
+                .update(lua, data)
+                .expect("Update failed");
+            Ok(())
+        });
+
+        methods.add_method("size", |lua, screen, _: ()| {
+            let size = screen
+                .inner
+                .borrow_mut()
+                .size(lua)
+                .expect("Get size failed");
+            Ok(size)
+        });
+
+        methods.add_method("name", |lua, screen, _: ()| {
+            let name = screen
+                .inner
+                .borrow_mut()
+                .name(lua)
+                .expect("Get name failed");
+            Ok(name)
+        });
     }
 }

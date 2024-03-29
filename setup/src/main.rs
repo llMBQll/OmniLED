@@ -1,38 +1,57 @@
+use clap::Parser;
 use std::env;
 use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
+    let options = Options::parse();
+    let source = match (options.debug, options.release) {
+        (Some(true), _) => "target/debug/",
+        _ => "target/release/",
+    };
+
     let root = get_root();
-    let applications_root = root.join("applications");
+    let applications_root = root.join("oled-applications");
     create_dir(&root);
     create_dir(&applications_root);
 
     copy("", &root, "screens.lua", false);
+
+    let settings_source_root = if options.dev {
+        "setup/defaults"
+    } else {
+        "defaults"
+    };
     for file in vec!["applications.lua", "scripts.lua", "settings.lua"] {
-        copy("example/", &root, file, false);
+        copy(&settings_source_root, &root, file, false);
     }
 
     for app in vec!["audio", "clock", "media", "weather"] {
-        copy(
-            "target/release/",
-            &applications_root,
-            &get_bin_path(app),
-            true,
-        );
+        copy(source, &applications_root, &get_bin_path(app), true);
     }
-    copy(
-        "target/release/",
-        &root,
-        &get_bin_path("steelseries_oled"),
-        true,
-    );
+    copy(source, &root, &get_bin_path("steelseries_oled"), true);
 
     setup_autostart();
     start();
 
     println!("Setup finished, press Enter to exit");
     _ = read_user_input();
+}
+
+#[derive(clap::Parser, Debug)]
+#[command(author, version, about)]
+struct Options {
+    /// Install debug binaries
+    #[clap(long, group = "type", action = clap::ArgAction::SetTrue)]
+    debug: Option<bool>,
+
+    /// Install release binaries, this is the default behavior
+    #[clap(long, group = "type", action = clap::ArgAction::SetTrue)]
+    release: Option<bool>,
+
+    /// Run in dev environment
+    #[clap(short, long, group = "type")]
+    dev: bool,
 }
 
 fn get_app_name() -> &'static str {
@@ -65,6 +84,12 @@ fn get_bin_path(name: &str) -> String {
 fn copy(src_root: &str, dst_root: &PathBuf, name: &str, override_file: bool) {
     let src = PathBuf::from(src_root).join(name);
     let dst = PathBuf::from(dst_root).join(name);
+
+    if !src.exists() {
+        eprintln!("Source {:?} doesn't exist", src);
+        std::process::exit(1);
+    }
+
     if dst.exists() {
         if override_file {
             println!("Copying {:?} to {:?} [Override!]", src, dst);
@@ -129,7 +154,7 @@ fn setup_autostart() {
 
 #[cfg(target_os = "linux")]
 fn setup_autostart() {
-    println!("Autostart setup is not (yet?) available on Linux");
+    println!("Autostart setup is not yet available on Linux");
 }
 
 fn start() {

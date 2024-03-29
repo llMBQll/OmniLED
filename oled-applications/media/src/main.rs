@@ -1,5 +1,6 @@
-use api::Api;
 use clap::Parser;
+use oled_api::types::LogLevel;
+use oled_api::Api;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 
@@ -19,6 +20,10 @@ async fn main() {
     API.set(Api::new(&options.address, NAME)).unwrap();
 
     let mut map: HashMap<String, String> = HashMap::from_iter(options.map.into_iter());
+    for (from, to) in &map {
+        log_mapping(&from, &to);
+    }
+
     let mode = options.mode;
     let media = Media::new(Arc::new(Mutex::new(
         move |name: &String, session_data: &SessionData, current: bool| {
@@ -56,9 +61,15 @@ fn transform_name(name: &String) -> String {
         new_name.insert(0, '_')
     }
 
-    println!("Mapped {} to {}", name, new_name);
+    log_mapping(&name, &new_name);
 
     new_name
+}
+
+fn log_mapping(old: &str, new: &str) {
+    API.get()
+        .unwrap()
+        .log(&format!("Mapped '{}' to '{}'", old, new), LogLevel::Info);
 }
 
 #[derive(clap::Parser, Debug)]
@@ -85,10 +96,17 @@ fn parse_pair(
     s: &str,
 ) -> Result<(String, String), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let pos = s
-        .find('=')
+        .rfind('=')
         .ok_or_else(|| format!("invalid KEY=VALUE: no `=` found in `{s}`"))?;
 
-    //TODO validate value to be uppercase alphanumeric string
+    let key = &s[..pos];
+    let value = &s[pos + 1..];
 
-    Ok((s[..pos].to_owned(), s[pos + 1..].to_owned()))
+    for c in key.chars() {
+        if c < 'A' || c > 'Z' {
+            return Err("Key is not alpha uppercase".into());
+        }
+    }
+
+    Ok((key.to_string(), value.to_string()))
 }

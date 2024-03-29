@@ -11,14 +11,14 @@ EVENT_HANDLER.DEFAULT_UPDATE_TIME = 1000
 EVENT_HANDLER.listeners = {}
 
 EVENTS:add_listener(
-    function(event, _data)
-        local listeners = EVENT_HANDLER.listeners[event]
-        if listeners ~= nil then
-            for _, listener in ipairs(listeners) do
-                listener()
+        function(event, _data)
+            local listeners = EVENT_HANDLER.listeners[event]
+            if listeners ~= nil then
+                for _, listener in ipairs(listeners) do
+                    listener()
+                end
             end
         end
-    end
 )
 
 -- TODO pass data from incoming requests directly to lua
@@ -39,7 +39,7 @@ function EVENT_HANDLER:register_user_script(script, sensitivity_list, screens)
         local function wrapper()
             for _, screen in ipairs(screens) do
                 local env = SCRIPT_HANDLER.env
-                local size = SCREENS:size(screen)
+                local size = screen:size()
                 env["SCREEN"] = size
 
                 local result = script()
@@ -49,7 +49,7 @@ function EVENT_HANDLER:register_user_script(script, sensitivity_list, screens)
                 if result then
                     self.time_remaining = result.duration or self.DEFAULT_DURATION
                     local end_auto_repeat, image = renderer:render(priority, size, result.data)
-                    SCREENS:update(screen, image)
+                    screen:update(image)
 
                     local repeat_to_fit = result.repeat_to_fit or false
                     local repeat_once = result.repeat_once or false

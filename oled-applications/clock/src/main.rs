@@ -1,6 +1,6 @@
-use api::types::{Array, Field, Table};
-use api::Api;
 use chrono::prelude::*;
+use oled_api::types::{Array, Field, Table};
+use oled_api::Api;
 use std::{env, thread, time};
 
 struct Names {

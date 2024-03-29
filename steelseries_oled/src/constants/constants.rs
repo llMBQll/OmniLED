@@ -11,7 +11,7 @@ pub struct Constants;
 
 impl Constants {
     pub fn load(lua: &Lua) {
-        let applications_dir = Self::root_dir().join("applications");
+        let applications_dir = Self::root_dir().join("oled-applications");
         let applications_dir = applications_dir.to_str().unwrap();
 
         lua.load(chunk! {

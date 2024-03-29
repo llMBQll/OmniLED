@@ -1,6 +1,7 @@
 use log::{error, warn};
 use mlua::{chunk, Lua, LuaSerdeExt, MetaMethod, UserData, Value};
 
+use crate::app_loader::process::Config;
 use crate::common::scoped_value::ScopedValue;
 use crate::settings::settings::get_full_path;
 use crate::{
@@ -49,6 +50,21 @@ impl AppLoader {
 
         app_loader
     }
+
+    fn start_process(&mut self, app_config: Config) {
+        match Process::new(&app_config) {
+            Ok(process) => {
+                self.processes.push(process);
+            }
+            Err(err) => {
+                error!(
+                    "Failed to run {}: '{}'",
+                    serde_json::to_string(&app_config).unwrap(),
+                    err
+                );
+            }
+        }
+    }
 }
 
 impl UserData for AppLoader {
@@ -62,18 +78,8 @@ impl UserData for AppLoader {
                 }
             };
 
-            match Process::new(&app_config) {
-                Ok(process) => {
-                    this.processes.push(process);
-                }
-                Err(err) => {
-                    error!(
-                        "Failed to run {}: '{}'",
-                        serde_json::to_string(&app_config).unwrap(),
-                        err
-                    );
-                }
-            }
+            this.start_process(app_config);
+
             Ok(())
         });
 
