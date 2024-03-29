@@ -1,7 +1,7 @@
 #![windows_subsystem = "windows"]
 
 use log::error;
-use mlua::{chunk, Lua, Table, TableExt};
+use mlua::{AnyUserData, AnyUserDataExt, Lua, Table, TableExt};
 use std::sync::atomic::AtomicBool;
 
 use crate::app_loader::app_loader::AppLoader;
@@ -10,6 +10,7 @@ use crate::constants::constants::Constants;
 use crate::events::event_loop::EventLoop;
 use crate::events::event_queue::{Event, EventQueue};
 use crate::events::events::Events;
+use crate::events::shortcuts::Shortcuts;
 use crate::keyboard::keyboard::{process_events, KeyboardEventEventType};
 use crate::logging::logger::Logger;
 use crate::renderer::renderer::Renderer;
@@ -39,6 +40,7 @@ async fn main() {
     let lua = Lua::new();
 
     let _logger = Logger::new(&lua);
+    let _shortcuts = Shortcuts::load(&lua);
     let _events = Events::load(&lua);
     Constants::load(&lua);
     Settings::load(&lua);
@@ -57,6 +59,7 @@ async fn main() {
     event_loop
         .run(interval, &RUNNING, |events| {
             let event_handler: Table = lua.globals().get("EVENT_HANDLER").unwrap();
+            let shortcuts: AnyUserData = lua.globals().get("SHORTCUTS").unwrap();
             let interval = interval.as_millis() as u64;
 
             for event in events {
@@ -89,11 +92,9 @@ async fn main() {
                             KeyboardEventEventType::Release => "Released",
                         };
 
-                        lua.load(chunk! {
-                            EVENTS($event_name, $event_type)
-                        })
-                        .exec()
-                        .unwrap();
+                        shortcuts
+                            .call_method::<_, ()>("process_key", (event_name, event_type))
+                            .unwrap();
                     }
                 }
             }

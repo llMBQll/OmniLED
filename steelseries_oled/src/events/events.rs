@@ -4,7 +4,6 @@ use mlua::{
 };
 
 use crate::common::scoped_value::ScopedValue;
-use crate::events::key_combination_handler::KeyCombinationHandler;
 
 pub struct Events {
     filter: Option<OwnedFunction>,
@@ -13,8 +12,6 @@ pub struct Events {
 
 impl Events {
     pub fn load(lua: &Lua) -> ScopedValue {
-        KeyCombinationHandler::load(lua);
-
         ScopedValue::new(
             lua,
             "EVENTS",
