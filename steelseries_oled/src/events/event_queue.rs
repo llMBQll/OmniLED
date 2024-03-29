@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use mlua::{Lua, UserData};
+use mlua::Lua;
 use oled_api::types::Field;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -42,5 +42,3 @@ impl EventQueue {
         events
     }
 }
-
-impl UserData for EventQueue {}
