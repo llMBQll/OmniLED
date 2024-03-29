@@ -156,19 +156,14 @@ register(clock, { '1(CLOCK.Seconds)' }, { 'Steelseries Apex 7 TKL' })
 register(weather, { '2(CLOCK.Seconds)' }, { 'Steelseries Apex 7 TKL' })
 
 local current = '1'
-
-EVENTS:set_filter(function (event, data)
-    local res = KEY_COMBINATION_HANDLER:handle_key(event, data)
-    if res == 'Toggle' then
-        if current == '1' then
-            current = '2'
-        else
-            current = '1'
-        end
-        EVENTS:reset_state()
+SHORTCUTS:register({ 'KEY(RAlt)', 'KEY(Slash)' }, function()
+    if current == '1' then
+        current = '2'
+    else
+        current = '1'
     end
-
-    return EVENTS:make_prefixed(current, event)
 end)
 
-KEY_COMBINATION_HANDLER:register_combination('Toggle', {'KEY(RAlt)', 'KEY(Slash)'})
+EVENTS:set_filter(function(event, data)
+    return EVENTS:make_prefixed(current, event)
+end)
