@@ -102,7 +102,7 @@ fn parse_pair(
     let key = &s[..pos];
     let value = &s[pos + 1..];
 
-    for c in key.chars() {
+    for c in value.chars() {
         if c < 'A' || c > 'Z' {
             return Err("Key is not alpha uppercase".into());
         }
