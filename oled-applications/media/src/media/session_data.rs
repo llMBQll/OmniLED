@@ -1,4 +1,4 @@
-use api::types::Table;
+use oled_api::types::Table;
 use std::time::Duration;
 
 pub struct SessionData {

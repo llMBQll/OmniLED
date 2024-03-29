@@ -37,3 +37,17 @@ message Image {
   int64 height = 2;
   bytes data = 3;
 }
+
+message LogMessage {
+  string name = 1;
+  string message = 2;
+  LogLevel severity = 3;
+}
+
+enum LogLevel {
+  Error = 0;
+  Warn = 1;
+  Info = 2;
+  Debug = 3;
+  Trace = 4;
+}

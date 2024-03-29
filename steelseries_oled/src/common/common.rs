@@ -1,7 +1,7 @@
-use api::types::field::Field as FieldEntry;
-use api::types::Field;
 use log::error;
 use mlua::{Lua, Table, TableExt, Value};
+use oled_api::types::field::Field as FieldEntry;
+use oled_api::types::Field;
 
 #[macro_export]
 macro_rules! create_table {

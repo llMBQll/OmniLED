@@ -1,0 +1,12 @@
+[package]
+name = "oled-server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+oled-api = { path = "../oled-api" }
+prost = "0.12"
+warp = "0.3"

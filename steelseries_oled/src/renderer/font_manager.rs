@@ -3,7 +3,7 @@ use font_kit::properties::Properties;
 use font_kit::source::SystemSource;
 use freetype::face::LoadFlag;
 use freetype::{ffi, RenderMode};
-use log::{error, info};
+use log::{debug, error};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -85,7 +85,7 @@ impl FontManager {
                 Self::load_default_font()
             }
         };
-        info!(
+        debug!(
             "Loaded font: {:?}, {:?}",
             font.full_name(),
             font.properties()

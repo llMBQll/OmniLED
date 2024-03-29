@@ -15,7 +15,6 @@ use crate::logging::logger::Logger;
 use crate::renderer::renderer::Renderer;
 use crate::screen::screens::Screens;
 use crate::script_handler::script_handler::ScriptHandler;
-use crate::server::server::Server;
 use crate::settings::settings::Settings;
 use crate::tray_icon::tray_icon::TrayIcon;
 
@@ -44,7 +43,7 @@ async fn main() {
     Constants::load(&lua);
     Settings::load(&lua);
     EventQueue::load(&lua);
-    Server::load(&lua);
+    server::server::load(&lua);
     let _screens = Screens::load(&lua);
     Renderer::load(&lua);
     let _sandbox = ScriptHandler::load(&lua);

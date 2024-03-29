@@ -6,10 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-api = { path = "../../api" }
+oled-api = { path = "../../oled-api" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.51", features = ["implement", "Win32_Devices_FunctionDiscovery", "Win32_Foundation", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_UI_Shell_PropertiesSystem"] }
+windows = { version = "0.54", features = ["implement", "Win32_Devices_FunctionDiscovery", "Win32_Foundation", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_UI_Shell_PropertiesSystem"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 pulse = { version = "2.0", package = "libpulse-binding" }

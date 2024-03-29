@@ -67,10 +67,10 @@ impl ScriptHandler {
         let screens_object: AnyUserData = lua.globals().get("SCREENS").unwrap();
         let mut found_screens = Vec::new();
         for name in screens {
-            let screen: Value = screens_object.call_method("load_screen", name.clone())?;
+            let screen: Value = screens_object.call_method("load", name.clone())?;
             match screen {
                 Value::Nil => warn!("Could not load screen {}", name),
-                Value::LightUserData(screen) => found_screens.push(screen),
+                Value::UserData(screen) => found_screens.push(screen),
                 _ => error!("Unexpected error when loading screen"),
             };
         }

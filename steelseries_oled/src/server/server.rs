@@ -1,91 +1,86 @@
-use api::types::{Event, EventReply};
-use log::error;
+use log::{log, Level};
 use mlua::{Lua, LuaSerdeExt};
-use prost::bytes::Bytes;
-use prost::Message;
-use std::time::{SystemTime, UNIX_EPOCH};
-use warp::http::StatusCode;
-use warp::reply::WithStatus;
-use warp::Filter;
+use oled_api::types::Event;
+use oled_server::{RequestHandler, Server, StatusCode};
+use std::sync::{Arc, Mutex};
 
 use crate::constants::constants::Constants;
 use crate::events;
 use crate::events::event_queue::EventQueue;
 use crate::settings::settings::Settings;
 
-pub struct Server {}
+struct PluginRequestHandler {
+    event_queue: Arc<Mutex<EventQueue>>,
+}
 
-impl Server {
-    pub fn load(lua: &Lua) {
-        let event_queue = EventQueue::instance();
-        let update = warp::path!("update")
-            .and(warp::body::bytes())
-            .map(move |bytes: Bytes| {
-                let event = match Event::decode(&*bytes) {
-                    Ok(event) => event,
-                    Err(err) => {
-                        return Self::reply(Some(err.to_string()), StatusCode::BAD_REQUEST);
-                    }
-                };
+impl PluginRequestHandler {
+    pub fn new() -> Self {
+        Self {
+            event_queue: EventQueue::instance(),
+        }
+    }
+}
 
-                event_queue
-                    .lock()
-                    .unwrap()
-                    .push(events::event_queue::Event::Application((
-                        event.name,
-                        event.fields.unwrap().items,
-                    )));
+impl RequestHandler for PluginRequestHandler {
+    fn update(&mut self, event: Event) -> Result<(), (String, StatusCode)> {
+        if is_alpha_uppercase(&event.name) {
+            return Err((
+                String::from("Event name is not alpha uppercase"),
+                StatusCode::BAD_REQUEST,
+            ));
+        }
 
-                Self::reply(None, StatusCode::OK)
-            });
-
-        // Try to bind to a set port, if allowed try binding to next available port until it succeeds
-        let mut port: u16 = Settings::get().server_port;
-        let strict: bool = Settings::get().server_port_strict;
-        let (address, server) = loop {
-            match warp::serve(update.clone()).try_bind_ephemeral(([127, 0, 0, 1], port)) {
-                Ok((address, server)) => {
-                    break (address.to_string(), server);
-                }
-                Err(err) => {
-                    if strict {
-                        error!("Failed to open a server on port {}: {}", port, err);
-                        panic!("Failed to start a server");
-                    }
-
-                    port += 1;
-                }
-            };
-        };
-        tokio::task::spawn(server); // TODO return server and start in main function
-
-        // Make server address accessible from the Lua environment and also
-        // from the filesystem for use in external applications
-        const LOCALHOST: &str = "127.0.0.1";
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
+        self.event_queue
+            .lock()
             .unwrap()
-            .as_millis() as u64;
-        let data = serde_json::json!({
-            "address": address,
-            "ip": LOCALHOST,
-            "port": port,
-            "timestamp": timestamp
-        });
+            .push(events::event_queue::Event::Application((
+                event.name,
+                event.fields.unwrap().items,
+            )));
 
-        lua.globals()
-            .set("SERVER", lua.to_value(&data).unwrap())
-            .unwrap();
-        std::fs::write(
-            Constants::root_dir().join("server.json"),
-            serde_json::to_string_pretty(&data).unwrap(),
-        )
+        Ok(())
+    }
+
+    fn log(&mut self, level: Level, name: &str, message: &str) -> Result<(), (String, StatusCode)> {
+        let target = format!("plugin::{}", name);
+        log!(target: &target, level, "{}", message);
+
+        Ok(())
+    }
+}
+
+fn is_alpha_uppercase(name: &str) -> bool {
+    for c in name.chars() {
+        if c < 'A' || c > 'Z' {
+            return false;
+        }
+    }
+    true
+}
+
+pub fn load(lua: &Lua) {
+    let implementation = PluginRequestHandler::new();
+    let port: u16 = Settings::get().server_port;
+    let strict: bool = Settings::get().server_port_strict;
+
+    let server = Server::bind(implementation, port, strict);
+
+    let info = serde_json::json!({
+        "address": server.address,
+        "ip": server.ip,
+        "port": server.port,
+        "timestamp": server.timestamp,
+    });
+
+    tokio::task::spawn(server.run());
+
+    lua.globals()
+        .set("SERVER", lua.to_value(&info).unwrap())
         .unwrap();
-    }
 
-    fn reply(error: Option<String>, status_code: StatusCode) -> WithStatus<Vec<u8>> {
-        let reply = EventReply { error };
-        let bytes = reply.encode_to_vec();
-        warp::reply::with_status(bytes, status_code)
-    }
+    std::fs::write(
+        Constants::root_dir().join("server.json"),
+        serde_json::to_string_pretty(&info).unwrap(),
+    )
+    .unwrap();
 }

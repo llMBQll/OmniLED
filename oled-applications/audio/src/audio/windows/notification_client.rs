@@ -1,6 +1,7 @@
 use windows::core::{implement, Result, PCWSTR};
 use windows::Win32::Media::Audio::{
     eMultimedia, eRender, EDataFlow, ERole, IMMNotificationClient, IMMNotificationClient_Impl,
+    DEVICE_STATE,
 };
 use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
 
@@ -22,7 +23,7 @@ impl<T: Fn(&PCWSTR)> NotificationClient<T> {
 
 #[allow(non_snake_case)]
 impl<T: Fn(&PCWSTR)> IMMNotificationClient_Impl for NotificationClient<T> {
-    fn OnDeviceStateChanged(&self, _device_id: &PCWSTR, _new_state: u32) -> Result<()> {
+    fn OnDeviceStateChanged(&self, _device_id: &PCWSTR, _new_state: DEVICE_STATE) -> Result<()> {
         Ok(())
     }
 

@@ -1,4 +1,3 @@
-use crate::constants::constants::Constants;
 use log::{debug, error, info, trace, warn, LevelFilter};
 use log4rs::{
     append::file::FileAppender,
@@ -7,6 +6,8 @@ use log4rs::{
     init_config, Config, Handle,
 };
 use mlua::{Lua, UserData, UserDataMethods};
+
+use crate::constants::constants::Constants;
 
 #[derive(Clone, Debug)]
 pub struct Logger {
@@ -32,7 +33,7 @@ impl Logger {
             .build(
                 Root::builder()
                     .appender("logfile")
-                    .build(LevelFilter::Debug),
+                    .build(Self::level_filter()),
             )
             .unwrap();
 
@@ -41,7 +42,22 @@ impl Logger {
 
         lua.globals().set("LOG", logger.clone()).unwrap();
 
+        std::panic::set_hook(Box::new(|panic_info| {
+            error!("{panic_info}");
+            println!("{panic_info}");
+        }));
+
         logger
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn level_filter() -> LevelFilter {
+        LevelFilter::Info
+    }
+
+    #[cfg(debug_assertions)]
+    fn level_filter() -> LevelFilter {
+        LevelFilter::Debug
     }
 }
 

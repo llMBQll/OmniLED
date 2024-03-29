@@ -2,10 +2,11 @@
 
 members = [
     "steelseries_oled",
-    "applications/audio",
-    "applications/clock",
-    "applications/media",
-    "applications/weather",
+    "oled-applications/audio",
+    "oled-applications/clock",
+    "oled-applications/media",
+    "oled-applications/weather",
+    "debug-runner",
     "setup",
 ]
 

@@ -1,7 +1,7 @@
-use api::types::Table;
-use api::Api;
 use chrono::Timelike;
 use clap::Parser;
+use oled_api::types::Table;
+use oled_api::Api;
 use std::{collections::HashMap, thread, time};
 use ureq::Agent;
 
