@@ -63,23 +63,23 @@ impl Logger {
 
 impl UserData for Logger {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_function("debug", |_, message: String| {
+        methods.add_method("debug", |_, _, message: String| {
             debug!("{}", message);
             Ok(())
         });
-        methods.add_function("error", |_, message: String| {
+        methods.add_method("error", |_, _, message: String| {
             error!("{}", message);
             Ok(())
         });
-        methods.add_function("info", |_, message: String| {
+        methods.add_method("info", |_, _, message: String| {
             info!("{}", message);
             Ok(())
         });
-        methods.add_function("trace", |_, message: String| {
+        methods.add_method("trace", |_, _, message: String| {
             trace!("{}", message);
             Ok(())
         });
-        methods.add_function("warn", |_, message: String| {
+        methods.add_method("warn", |_, _, message: String| {
             warn!("{}", message);
             Ok(())
         });

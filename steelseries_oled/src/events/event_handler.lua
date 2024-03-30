@@ -26,7 +26,7 @@ EVENTS:add_listener(
 
 function EVENT_HANDLER:register_user_script(script, sensitivity_list, screens)
     if self.user_scripts[script] ~= nil then
-        LOG.warn('Script ' .. script .. ' was already registered! Skipping...')
+        LOG:warn('Script ' .. script .. ' was already registered! Skipping...')
         return
     end
     self.user_scripts[script] = true
