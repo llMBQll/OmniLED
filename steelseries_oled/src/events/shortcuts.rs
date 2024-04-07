@@ -1,4 +1,7 @@
-use mlua::{Function, Lua, LuaSerdeExt, OwnedFunction, UserData, UserDataMethods, Value};
+use mlua::{
+    AnyUserData, AnyUserDataExt, Function, Lua, LuaSerdeExt, OwnedFunction, UserData,
+    UserDataFields, UserDataMethods, Value,
+};
 
 use crate::common::scoped_value::ScopedValue;
 
@@ -18,11 +21,21 @@ impl Shortcuts {
     }
 }
 
+mod flags {
+    pub const NO_FLAGS: u8 = 0b00000000;
+    pub const RESET_STATE: u8 = 0b00000001;
+}
+
 impl UserData for Shortcuts {
+    fn add_fields<'lua, F: UserDataFields<'lua, Self>>(fields: &mut F) {
+        fields.add_field("NO_FLAGS", flags::NO_FLAGS);
+        fields.add_field("RESET_STATE", flags::RESET_STATE);
+    }
+
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
-            |_lua, this, (mut keys, on_match): (Vec<String>, Function)| {
+            |_lua, this, (mut keys, on_match, flags): (Vec<String>, Function, Option<u8>)| {
                 keys.sort();
                 keys.dedup();
                 let keys = keys
@@ -36,6 +49,7 @@ impl UserData for Shortcuts {
                 this.shortcuts.push(ShortcutEntry {
                     keys,
                     on_match: on_match.into_owned(),
+                    flags: flags.unwrap_or(flags::NO_FLAGS),
                 });
 
                 Ok(())
@@ -60,16 +74,22 @@ impl UserData for Shortcuts {
                     if all_pressed {
                         shortcut.on_match.call::<(), ()>(()).unwrap();
                     }
+
+                    if (shortcut.flags & flags::RESET_STATE) != 0 {
+                        let event_handler: AnyUserData = lua.globals().get("SCRIPT_HANDLER")?;
+                        event_handler.call_method::<_, ()>("reset", ())?;
+                    }
                 }
                 Ok(())
             },
-        )
+        );
     }
 }
 
 struct ShortcutEntry {
     keys: Vec<KeyState>,
     on_match: OwnedFunction,
+    flags: u8,
 }
 
 struct KeyState {
