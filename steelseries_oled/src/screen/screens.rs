@@ -1,5 +1,5 @@
 use log::error;
-use mlua::{chunk, Function, Lua, OwnedTable, Table, UserData, UserDataMethods, Value};
+use mlua::{chunk, FromLua, Function, Lua, OwnedTable, Table, UserData, UserDataMethods, Value};
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -148,8 +148,8 @@ struct Initializer {
     constructor: fn(&Lua, Value) -> Box<dyn Screen>,
 }
 
-#[derive(Clone)]
-struct LuaScreenWrapper {
+#[derive(Clone, FromLua)]
+pub struct LuaScreenWrapper {
     pub inner: Rc<RefCell<Box<dyn Screen>>>,
 }
 
@@ -158,6 +158,10 @@ impl LuaScreenWrapper {
         Self {
             inner: Rc::new(RefCell::new(screen)),
         }
+    }
+
+    pub fn get(&self) -> Rc<RefCell<Box<dyn Screen>>> {
+        self.inner.clone()
     }
 }
 

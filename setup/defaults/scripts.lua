@@ -1,4 +1,4 @@
-function volume()
+local function volume()
     return {
         data = {
             Text {
@@ -24,7 +24,7 @@ function volume()
 end
 
 local SPOTIFY_DURATION = PLATFORM.Os == 'windows' and 5000 or 1000
-function spotify()
+local function spotify()
     return {
         data = {
             Bar {
@@ -71,7 +71,7 @@ function spotify()
     }
 end
 
-function clock()
+local function clock()
     return {
         data = {
             Text {
@@ -110,7 +110,7 @@ function clock()
     }
 end
 
-function weather()
+local function weather()
     return {
         data = {
             Text {
@@ -150,20 +150,49 @@ function weather()
     }
 end
 
-register(volume, { '1(AUDIO.IsMuted)', '1(AUDIO.Name)', '1(AUDIO.Volume)' }, { 'Steelseries Apex 7 TKL' })
-register(spotify, { '1(SPOTIFY.Artist)', '1(SPOTIFY.Progress)', '1(SPOTIFY.Title)' }, { 'Steelseries Apex 7 TKL' })
-register(clock, { '1(CLOCK.Seconds)' }, { 'Steelseries Apex 7 TKL' })
-register(weather, { '2(CLOCK.Seconds)' }, { 'Steelseries Apex 7 TKL' })
+local current_screen = 1
+local max_screens = 2
+SHORTCUTS:register(
+        { 'KEY(RAlt)', 'KEY(Slash)' },
+        function()
+            if current_screen == max_screens then
+                current_screen = 1
+            else
+                current_screen = current_screen + 1
+            end
+            LOG:debug('Current screen: ' .. current_screen)
+        end,
+        SHORTCUTS.RESET_STATE
+)
 
-local current = '1'
-SHORTCUTS:register({ 'KEY(RAlt)', 'KEY(Slash)' }, function()
-    if current == '1' then
-        current = '2'
-    else
-        current = '1'
+function current_screen_is(screen)
+    return function()
+        return current_screen == screen
     end
-end)
+end
 
-EVENTS:set_filter(function(event, data)
-    return EVENTS:make_prefixed(current, event)
-end)
+local volume_script = {
+    action = volume,
+    predicate = current_screen_is(1),
+    run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
+}
+
+local spotify_script = {
+    action = spotify,
+    predicate = current_screen_is(1),
+    run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
+}
+
+local clock_script = {
+    action = clock,
+    predicate = current_screen_is(1),
+    run_on = { 'CLOCK.Seconds' },
+}
+
+local weather_script = {
+    action = weather,
+    predicate = current_screen_is(2),
+    run_on = { 'CLOCK.Seconds' },
+}
+
+register('Steelseries Apex 7 TKL', { volume_script, spotify_script, clock_script, weather_script })

@@ -1,4 +1,3 @@
-use mlua::{Lua, UserData, UserDataMethods};
 use std::cmp::max;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -17,12 +16,6 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn load(lua: &Lua) {
-        lua.globals()
-            .set("RENDERER_FACTORY", RendererFactory)
-            .unwrap();
-    }
-
     pub fn new() -> Self {
         let font_selector = Settings::get().font.clone();
 
@@ -33,7 +26,12 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, ctx: i64, size: Size, operations: Vec<Operation>) -> (bool, Vec<u8>) {
+    pub fn render(
+        &mut self,
+        ctx: ContextKey,
+        size: Size,
+        operations: Vec<Operation>,
+    ) -> (bool, Vec<u8>) {
         let mut buffer = Buffer::new(size);
         let (end_auto_repeat, text_offsets) = self.precalculate_text(ctx, &operations);
         let mut text_offsets = text_offsets.into_iter();
@@ -125,7 +123,11 @@ impl Renderer {
         }
     }
 
-    fn precalculate_text(&mut self, ctx: i64, operations: &Vec<Operation>) -> (bool, Vec<usize>) {
+    fn precalculate_text(
+        &mut self,
+        ctx: ContextKey,
+        operations: &Vec<Operation>,
+    ) -> (bool, Vec<usize>) {
         let mut ctx = self.scrolling_text_data.get_context(ctx);
 
         let offsets: Vec<usize> = operations
@@ -189,17 +191,6 @@ impl Renderer {
     }
 }
 
-impl UserData for Renderer {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut(
-            "render",
-            |_, this, (ctx, size, operations): (i64, Size, Vec<Operation>)| {
-                Ok(this.render(ctx, size, operations))
-            },
-        )
-    }
-}
-
 unsafe impl Send for Renderer {}
 
 struct ScrollingTextControl {
@@ -217,7 +208,7 @@ impl ScrollingTextControl {
 }
 
 struct ScrollingTextData {
-    contexts: HashMap<i64, HashMap<String, usize>>,
+    contexts: HashMap<ContextKey, HashMap<String, usize>>,
 }
 
 impl ScrollingTextData {
@@ -227,7 +218,7 @@ impl ScrollingTextData {
         }
     }
 
-    pub fn get_context(&mut self, ctx: i64) -> Context {
+    pub fn get_context(&mut self, ctx: ContextKey) -> Context {
         let map = self.contexts.entry(ctx).or_insert(HashMap::new());
         Context::new(map)
     }
@@ -309,13 +300,8 @@ impl<'a> Drop for Context<'a> {
     }
 }
 
-struct RendererFactory;
-
-impl UserData for RendererFactory {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method("create", |_, _, _: ()| {
-            let renderer = Renderer::new();
-            Ok(renderer)
-        });
-    }
+#[derive(Eq, Hash, PartialEq)]
+pub struct ContextKey {
+    pub script: usize,
+    pub screen: usize,
 }

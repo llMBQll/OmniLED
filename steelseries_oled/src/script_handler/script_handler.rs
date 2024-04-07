@@ -1,8 +1,12 @@
-use log::{error, warn};
 use mlua::{
-    chunk, AnyUserData, AnyUserDataExt, Function, Lua, OwnedTable, Table, TableExt, UserData, Value,
+    chunk, AnyUserData, AnyUserDataExt, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table,
+    UserData, UserDataFields, UserDataMethods, Value,
 };
+use std::time::Duration;
 
+use crate::model::operation::Operation;
+use crate::renderer::renderer::{ContextKey, Renderer};
+use crate::screen::screens::LuaScreenWrapper;
 use crate::settings::settings::get_full_path;
 use crate::{
     common::{common::exec_file, scoped_value::ScopedValue},
@@ -13,27 +17,214 @@ use crate::{
 
 pub struct ScriptHandler {
     environment: OwnedTable,
+    renderer: Renderer,
+    screens: Vec<ScreenContext>,
 }
+
+struct ScreenContext {
+    screen: LuaScreenWrapper,
+    scripts: Vec<UserScript>,
+    marked_for_update: Vec<bool>,
+    time_remaining: Duration,
+    last_priority: usize,
+    repeat_modifier: Option<Modifier>,
+    index: usize,
+}
+
+const DEFAULT_UPDATE_TIME: Duration = Duration::from_millis(1000);
 
 impl ScriptHandler {
     pub fn load(lua: &Lua) -> ScopedValue {
         load_operations(lua);
 
-        let environment = Self::make_sandbox(lua).into_owned();
+        let environment = Self::make_sandbox(lua);
+
+        let value = ScopedValue::new(
+            lua,
+            "SCRIPT_HANDLER",
+            ScriptHandler {
+                renderer: Renderer::new(),
+                environment: environment.clone().into_owned(),
+                screens: vec![],
+            },
+        );
+
         exec_file(
             lua,
             &get_full_path(&Settings::get().scripts_file),
-            environment.clone().to_ref(),
+            environment,
         );
 
-        ScopedValue::new(lua, "SCRIPT_HANDLER", ScriptHandler { environment })
+        value
+    }
+
+    fn register(
+        &mut self,
+        lua: &Lua,
+        screen_name: String,
+        user_scripts: Vec<UserScript>,
+    ) -> mlua::Result<()> {
+        let screens_object: AnyUserData = lua.globals().get("SCREENS").unwrap();
+        let screen: LuaScreenWrapper = screens_object.call_method("load", screen_name)?;
+
+        let screen_count = self.screens.len();
+        let script_count = user_scripts.len();
+
+        let context = ScreenContext {
+            screen,
+            scripts: user_scripts,
+            marked_for_update: vec![false; script_count],
+            time_remaining: Default::default(),
+            last_priority: 0,
+            repeat_modifier: None,
+            index: screen_count,
+        };
+        self.screens.push(context);
+
+        Ok(())
+    }
+
+    fn on_event(&mut self, event: String, _data: Value) -> mlua::Result<()> {
+        for screen in &mut self.screens {
+            for (index, script) in screen.scripts.iter().enumerate() {
+                if script.run_on.contains(&event) {
+                    screen.marked_for_update[index] = true;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn set_value(
+        &mut self,
+        lua: &Lua,
+        application_name: String,
+        event: String,
+        data: Value,
+    ) -> mlua::Result<()> {
+        if !self
+            .environment
+            .to_ref()
+            .contains_key(application_name.clone())
+            .unwrap()
+        {
+            self.environment
+                .to_ref()
+                .set(application_name.clone(), lua.create_table().unwrap())
+                .unwrap();
+        }
+
+        let key = format!("{}.{}", application_name, event);
+
+        let entry: Table = self.environment.to_ref().get(application_name).unwrap();
+        entry.set(event, data.clone()).unwrap();
+        drop(entry);
+
+        self.on_event(key, data)?;
+
+        Ok(())
+    }
+
+    fn update(&mut self, lua: &Lua, time_passed: Duration) -> mlua::Result<()> {
+        let env = self.environment.to_ref();
+        for screen in &mut self.screens {
+            Self::update_impl(lua, screen, &mut self.renderer, &env, time_passed.clone())?;
+        }
+        Ok(())
+    }
+
+    fn update_impl(
+        lua: &Lua,
+        ctx: &mut ScreenContext,
+        renderer: &mut Renderer,
+        env: &Table,
+        time_passed: Duration,
+    ) -> mlua::Result<()> {
+        ctx.time_remaining = ctx.time_remaining.saturating_sub(time_passed);
+
+        let mut marked_for_update = vec![false; ctx.marked_for_update.len()];
+        std::mem::swap(&mut ctx.marked_for_update, &mut marked_for_update);
+
+        let mut to_update = None;
+        let mut update_modifier = None;
+        for (priority, marked_for_update) in marked_for_update.into_iter().enumerate() {
+            if !ctx.time_remaining.is_zero() && ctx.last_priority < priority {
+                if let Some(Modifier::RepeatToFit) = ctx.repeat_modifier {
+                    to_update = Some(ctx.last_priority);
+                    update_modifier = Some(Modifier::RepeatToFit);
+                }
+                break;
+            }
+
+            let repeat_once = if let Some(Modifier::RepeatOnce) = ctx.repeat_modifier {
+                true
+            } else {
+                false
+            };
+            if ctx.last_priority == priority && repeat_once {
+                to_update = Some(ctx.last_priority);
+                update_modifier = Some(Modifier::RepeatOnce);
+                break;
+            }
+
+            if marked_for_update && ctx.scripts[priority].predicate.call::<_, bool>(()).unwrap() {
+                to_update = Some(priority);
+                update_modifier = None;
+                break;
+            }
+        }
+
+        let to_update = match to_update {
+            Some(to_update) => to_update,
+            None => return Ok(()),
+        };
+
+        let size = ctx.screen.get().borrow_mut().size(lua).unwrap(); // TODO handle errors
+        env.set("SCREEN", size)?;
+
+        let output: ScriptOutput = ctx.scripts[to_update].action.call(())?;
+        let (end_auto_repeat, image) = renderer.render(
+            ContextKey {
+                script: to_update,
+                screen: ctx.index,
+            },
+            size,
+            output.operations,
+        );
+
+        ctx.screen.get().borrow_mut().update(lua, image).unwrap(); // TODO handle errors
+
+        ctx.repeat_modifier = match (output.repeat_modifier, end_auto_repeat) {
+            (Some(Modifier::RepeatToFit), _) => Some(Modifier::RepeatToFit),
+            (Some(Modifier::RepeatOnce), false) => Some(Modifier::RepeatOnce),
+            (_, _) => None,
+        };
+        ctx.time_remaining = match update_modifier {
+            Some(Modifier::RepeatToFit) => ctx.time_remaining,
+            _ => output.duration,
+        };
+        ctx.last_priority = to_update;
+
+        Ok(())
+    }
+
+    fn reset(&mut self) -> mlua::Result<()> {
+        for screen in &mut self.screens {
+            screen.marked_for_update = screen.marked_for_update.iter().map(|_| false).collect();
+            screen.time_remaining = Duration::ZERO;
+            screen.last_priority = 0;
+            screen.repeat_modifier = None;
+        }
+
+        Ok(())
     }
 
     fn make_sandbox(lua: &Lua) -> Table {
-        let register_fn = lua.create_function(Self::register).unwrap();
-
         create_table!(lua, {
-            register = $register_fn,
+            register = function(screen, user_scripts)
+                SCRIPT_HANDLER:register(screen, user_scripts)
+            end,
             Point = OPERATIONS.Point,
             Size = OPERATIONS.Size,
             Rectangle = OPERATIONS.Rectangle,
@@ -60,34 +251,113 @@ impl ScriptHandler {
             table = { concat = table.concat, insert = table.insert, move = table.move, pack = table.pack, remove = table.remove, sort = table.sort, unpack = table.unpack },
         })
     }
-
-    fn register(
-        lua: &Lua,
-        (func, sensitivity_list, screens): (Function, Vec<String>, Vec<String>),
-    ) -> mlua::Result<()> {
-        let screens_object: AnyUserData = lua.globals().get("SCREENS").unwrap();
-        let mut found_screens = Vec::new();
-        for name in screens {
-            let screen: Value = screens_object.call_method("load", name.clone())?;
-            match screen {
-                Value::Nil => warn!("Could not load screen {}", name),
-                Value::UserData(screen) => found_screens.push(screen),
-                _ => error!("Unexpected error when loading screen"),
-            };
-        }
-
-        let event_handler: Table = lua.globals().get("EVENT_HANDLER").unwrap();
-        event_handler.call_method::<_, ()>(
-            "register_user_script",
-            (func, sensitivity_list, found_screens),
-        )?;
-
-        Ok(())
-    }
 }
 
 impl UserData for ScriptHandler {
-    fn add_fields<'lua, F: mlua::UserDataFields<'lua, Self>>(fields: &mut F) {
-        fields.add_field_method_get("env", |_, this| Ok(this.environment.clone()))
+    fn add_fields<'lua, F: UserDataFields<'lua, Self>>(fields: &mut F) {
+        fields.add_field_method_get("env", |_, this| Ok(this.environment.clone()));
+    }
+
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method_mut(
+            "register",
+            |lua, handler, (screen, user_scripts): (String, Vec<UserScript>)| {
+                handler.register(lua, screen, user_scripts)
+            },
+        );
+
+        methods.add_method_mut(
+            "on_event",
+            |_lua, handler, (event, data): (String, Value)| handler.on_event(event, data),
+        );
+
+        methods.add_method_mut("update", |lua, handler, time_passed: u64| {
+            handler.update(lua, Duration::from_millis(time_passed))
+        });
+
+        methods.add_method_mut(
+            "set_value",
+            |lua, handler, (application_name, event, data): (String, String, Value)| {
+                handler.set_value(lua, application_name, event, data)
+            },
+        );
+
+        methods.add_method_mut("reset", |_lua, handler, _: ()| handler.reset());
+    }
+}
+
+struct UserScript {
+    action: OwnedFunction,
+    predicate: OwnedFunction,
+    run_on: Vec<String>,
+}
+
+impl<'lua> FromLua<'lua> for UserScript {
+    fn from_lua(value: Value<'lua>, lua: &'lua Lua) -> mlua::Result<Self> {
+        match value {
+            Value::Table(table) => {
+                let action: Function = table.get("action")?;
+                let predicate: Function = table
+                    .get("predicate")
+                    .unwrap_or(lua.create_function(|_, _: ()| Ok(true)).unwrap());
+                let run_on = table.get("run_on")?;
+
+                Ok(UserScript {
+                    action: action.into_owned(),
+                    predicate: predicate.into_owned(),
+                    run_on,
+                })
+            }
+            _ => Err(mlua::Error::runtime(
+                "User script argument shall be a table",
+            )),
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Modifier {
+    RepeatOnce,
+    RepeatToFit,
+}
+
+struct ScriptOutput {
+    operations: Vec<Operation>,
+    duration: Duration,
+    repeat_modifier: Option<Modifier>,
+}
+
+impl<'lua> FromLua<'lua> for ScriptOutput {
+    fn from_lua(value: Value<'lua>, _lua: &'lua Lua) -> mlua::Result<Self> {
+        match value {
+            Value::Table(table) => {
+                let data = table.get("data")?;
+
+                let duration = table
+                    .get("duration")
+                    .and_then(|duration| Ok(Duration::from_millis(duration)))
+                    .unwrap_or(DEFAULT_UPDATE_TIME);
+
+                let repeat_once = table.get("repeat_once").unwrap_or(false);
+                let repeat_to_fit = table.get("repeat_to_fit").unwrap_or(false);
+                let modifier = match (repeat_once, repeat_to_fit) {
+                    (false, false) => None,
+                    (true, false) => Some(Modifier::RepeatOnce),
+                    (false, true) => Some(Modifier::RepeatToFit),
+                    (true, true) => {
+                        return Err(mlua::Error::runtime(
+                            "repeat_once and repeat_to_fit can't both be set to true",
+                        ))
+                    }
+                };
+
+                Ok(ScriptOutput {
+                    operations: data,
+                    duration,
+                    repeat_modifier: modifier,
+                })
+            }
+            _ => Err(mlua::Error::runtime("Script output shall be a table")),
+        }
     }
 }

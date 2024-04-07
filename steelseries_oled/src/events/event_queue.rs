@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use mlua::Lua;
 use oled_api::types::Field;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -18,11 +17,6 @@ pub struct EventQueue {
 }
 
 impl EventQueue {
-    pub fn load(lua: &Lua) {
-        const EVENT_HANDLER_SRC: &str = include_str!("event_handler.lua");
-        lua.load(EVENT_HANDLER_SRC).exec().unwrap();
-    }
-
     pub fn instance() -> Arc<Mutex<EventQueue>> {
         lazy_static! {
             static ref UPDATE_HANDLER: Arc<Mutex<EventQueue>> =
