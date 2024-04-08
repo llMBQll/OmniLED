@@ -1,19 +1,16 @@
 use mlua::{
     chunk, AnyUserData, AnyUserDataExt, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table,
-    UserData, UserDataFields, UserDataMethods, Value,
+    UserData, UserDataMethods, Value,
 };
 use std::time::Duration;
 
+use crate::common::{common::exec_file, scoped_value::ScopedValue};
+use crate::create_table;
 use crate::model::operation::Operation;
 use crate::renderer::renderer::{ContextKey, Renderer};
 use crate::screen::screens::LuaScreenWrapper;
-use crate::settings::settings::get_full_path;
-use crate::{
-    common::{common::exec_file, scoped_value::ScopedValue},
-    create_table,
-    script_handler::operations::load_operations,
-    settings::settings::Settings,
-};
+use crate::script_handler::operations::load_operations;
+use crate::settings::settings::{get_full_path, Settings};
 
 pub struct ScriptHandler {
     environment: OwnedTable,
@@ -84,10 +81,27 @@ impl ScriptHandler {
         Ok(())
     }
 
-    fn on_event(&mut self, event: String, _data: Value) -> mlua::Result<()> {
+    fn set_value(
+        &mut self,
+        lua: &Lua,
+        application_name: String,
+        event: String,
+        data: Value,
+    ) -> mlua::Result<()> {
+        let env = self.environment.to_ref();
+
+        if !env.contains_key(application_name.clone()).unwrap() {
+            env.set(application_name.clone(), lua.create_table().unwrap())
+                .unwrap();
+        }
+
+        let entry: Table = env.get(application_name.clone()).unwrap();
+        entry.set(event.clone(), data.clone()).unwrap();
+
+        let key = format!("{}.{}", application_name, event);
         for screen in &mut self.screens {
             for (index, script) in screen.scripts.iter().enumerate() {
-                if script.run_on.contains(&event) {
+                if script.run_on.contains(&key) {
                     screen.marked_for_update[index] = true;
                 }
             }
@@ -96,40 +110,10 @@ impl ScriptHandler {
         Ok(())
     }
 
-    fn set_value(
-        &mut self,
-        lua: &Lua,
-        application_name: String,
-        event: String,
-        data: Value,
-    ) -> mlua::Result<()> {
-        if !self
-            .environment
-            .to_ref()
-            .contains_key(application_name.clone())
-            .unwrap()
-        {
-            self.environment
-                .to_ref()
-                .set(application_name.clone(), lua.create_table().unwrap())
-                .unwrap();
-        }
-
-        let key = format!("{}.{}", application_name, event);
-
-        let entry: Table = self.environment.to_ref().get(application_name).unwrap();
-        entry.set(event, data.clone()).unwrap();
-        drop(entry);
-
-        self.on_event(key, data)?;
-
-        Ok(())
-    }
-
     fn update(&mut self, lua: &Lua, time_passed: Duration) -> mlua::Result<()> {
         let env = self.environment.to_ref();
         for screen in &mut self.screens {
-            Self::update_impl(lua, screen, &mut self.renderer, &env, time_passed.clone())?;
+            Self::update_impl(lua, screen, &mut self.renderer, &env, time_passed)?;
         }
         Ok(())
     }
@@ -157,18 +141,17 @@ impl ScriptHandler {
                 break;
             }
 
-            let repeat_once = if let Some(Modifier::RepeatOnce) = ctx.repeat_modifier {
-                true
-            } else {
-                false
-            };
-            if ctx.last_priority == priority && repeat_once {
+            if ctx.last_priority == priority && ctx.repeat_modifier == Some(Modifier::RepeatOnce) {
                 to_update = Some(ctx.last_priority);
                 update_modifier = Some(Modifier::RepeatOnce);
                 break;
             }
 
-            if marked_for_update && ctx.scripts[priority].predicate.call::<_, bool>(()).unwrap() {
+            let predicate = match &ctx.scripts[priority].predicate {
+                Some(predicate) => predicate.call::<_, bool>(()).unwrap(),
+                None => true,
+            };
+            if marked_for_update && predicate {
                 to_update = Some(priority);
                 update_modifier = None;
                 break;
@@ -211,7 +194,7 @@ impl ScriptHandler {
 
     fn reset(&mut self) -> mlua::Result<()> {
         for screen in &mut self.screens {
-            screen.marked_for_update = screen.marked_for_update.iter().map(|_| false).collect();
+            screen.marked_for_update = vec![false; screen.marked_for_update.len()];
             screen.time_remaining = Duration::ZERO;
             screen.last_priority = 0;
             screen.repeat_modifier = None;
@@ -254,21 +237,12 @@ impl ScriptHandler {
 }
 
 impl UserData for ScriptHandler {
-    fn add_fields<'lua, F: UserDataFields<'lua, Self>>(fields: &mut F) {
-        fields.add_field_method_get("env", |_, this| Ok(this.environment.clone()));
-    }
-
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
             |lua, handler, (screen, user_scripts): (String, Vec<UserScript>)| {
                 handler.register(lua, screen, user_scripts)
             },
-        );
-
-        methods.add_method_mut(
-            "on_event",
-            |_lua, handler, (event, data): (String, Value)| handler.on_event(event, data),
         );
 
         methods.add_method_mut("update", |lua, handler, time_passed: u64| {
@@ -288,23 +262,21 @@ impl UserData for ScriptHandler {
 
 struct UserScript {
     action: OwnedFunction,
-    predicate: OwnedFunction,
+    predicate: Option<OwnedFunction>,
     run_on: Vec<String>,
 }
 
 impl<'lua> FromLua<'lua> for UserScript {
-    fn from_lua(value: Value<'lua>, lua: &'lua Lua) -> mlua::Result<Self> {
+    fn from_lua(value: Value<'lua>, _lua: &'lua Lua) -> mlua::Result<Self> {
         match value {
             Value::Table(table) => {
                 let action: Function = table.get("action")?;
-                let predicate: Function = table
-                    .get("predicate")
-                    .unwrap_or(lua.create_function(|_, _: ()| Ok(true)).unwrap());
+                let predicate: Option<Function> = table.get("predicate")?;
                 let run_on = table.get("run_on")?;
 
                 Ok(UserScript {
                     action: action.into_owned(),
-                    predicate: predicate.into_owned(),
+                    predicate: predicate.and_then(|p| Some(p.into_owned())),
                     run_on,
                 })
             }
@@ -315,7 +287,7 @@ impl<'lua> FromLua<'lua> for UserScript {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Modifier {
     RepeatOnce,
     RepeatToFit,
