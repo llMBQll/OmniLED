@@ -165,33 +165,4 @@ impl LuaScreenWrapper {
     }
 }
 
-impl UserData for LuaScreenWrapper {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut("update", |lua, screen, data: Vec<u8>| {
-            screen
-                .inner
-                .borrow_mut()
-                .update(lua, data)
-                .expect("Update failed");
-            Ok(())
-        });
-
-        methods.add_method("size", |lua, screen, _: ()| {
-            let size = screen
-                .inner
-                .borrow_mut()
-                .size(lua)
-                .expect("Get size failed");
-            Ok(size)
-        });
-
-        methods.add_method("name", |lua, screen, _: ()| {
-            let name = screen
-                .inner
-                .borrow_mut()
-                .name(lua)
-                .expect("Get name failed");
-            Ok(name)
-        });
-    }
-}
+impl UserData for LuaScreenWrapper {}
