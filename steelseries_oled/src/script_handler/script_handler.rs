@@ -1,7 +1,8 @@
 use mlua::{
-    chunk, AnyUserData, AnyUserDataExt, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table,
-    UserData, UserDataMethods, Value,
+    chunk, AnyUserData, AnyUserDataExt, ErrorContext, FromLua, Function, Lua, LuaSerdeExt,
+    OwnedFunction, OwnedTable, Table, UserData, UserDataMethods, Value,
 };
+use oled_derive::FromLuaTable;
 use std::time::Duration;
 
 use crate::common::{common::exec_file, scoped_value::ScopedValue};
@@ -24,7 +25,7 @@ struct ScreenContext {
     marked_for_update: Vec<bool>,
     time_remaining: Duration,
     last_priority: usize,
-    repeat_modifier: Option<Modifier>,
+    repeats: Option<Repeat>,
     index: usize,
 }
 
@@ -73,7 +74,7 @@ impl ScriptHandler {
             marked_for_update: vec![false; script_count],
             time_remaining: Default::default(),
             last_priority: 0,
-            repeat_modifier: None,
+            repeats: None,
             index: screen_count,
         };
         self.screens.push(context);
@@ -134,16 +135,16 @@ impl ScriptHandler {
         let mut update_modifier = None;
         for (priority, marked_for_update) in marked_for_update.into_iter().enumerate() {
             if !ctx.time_remaining.is_zero() && ctx.last_priority < priority {
-                if let Some(Modifier::RepeatToFit) = ctx.repeat_modifier {
+                if let Some(Repeat::ToFit) = ctx.repeats {
                     to_update = Some(ctx.last_priority);
-                    update_modifier = Some(Modifier::RepeatToFit);
+                    update_modifier = Some(Repeat::ToFit);
                 }
                 break;
             }
 
-            if ctx.last_priority == priority && ctx.repeat_modifier == Some(Modifier::RepeatOnce) {
+            if ctx.last_priority == priority && ctx.repeats == Some(Repeat::Once) {
                 to_update = Some(ctx.last_priority);
-                update_modifier = Some(Modifier::RepeatOnce);
+                update_modifier = Some(Repeat::Once);
                 break;
             }
 
@@ -173,18 +174,18 @@ impl ScriptHandler {
                 screen: ctx.index,
             },
             size,
-            output.operations,
+            output.data,
         );
 
         ctx.screen.get().borrow_mut().update(lua, image).unwrap(); // TODO handle errors
 
-        ctx.repeat_modifier = match (output.repeat_modifier, end_auto_repeat) {
-            (Some(Modifier::RepeatToFit), _) => Some(Modifier::RepeatToFit),
-            (Some(Modifier::RepeatOnce), false) => Some(Modifier::RepeatOnce),
+        ctx.repeats = match (output.repeats, end_auto_repeat) {
+            (Some(Repeat::ToFit), _) => Some(Repeat::ToFit),
+            (Some(Repeat::Once), false) => Some(Repeat::Once),
             (_, _) => None,
         };
         ctx.time_remaining = match update_modifier {
-            Some(Modifier::RepeatToFit) => ctx.time_remaining,
+            Some(Repeat::ToFit) => ctx.time_remaining,
             _ => output.duration,
         };
         ctx.last_priority = to_update;
@@ -197,7 +198,7 @@ impl ScriptHandler {
             screen.marked_for_update = vec![false; screen.marked_for_update.len()];
             screen.time_remaining = Duration::ZERO;
             screen.last_priority = 0;
-            screen.repeat_modifier = None;
+            screen.repeats = None;
         }
 
         Ok(())
@@ -260,76 +261,57 @@ impl UserData for ScriptHandler {
     }
 }
 
+#[derive(FromLuaTable, Clone)]
 struct UserScript {
+    #[mlua(transform(Self::transform_function))]
     action: OwnedFunction,
+
+    #[mlua(transform(Self::transform_function_option))]
     predicate: Option<OwnedFunction>,
+
     run_on: Vec<String>,
 }
 
-impl<'lua> FromLua<'lua> for UserScript {
-    fn from_lua(value: Value<'lua>, _lua: &'lua Lua) -> mlua::Result<Self> {
-        match value {
-            Value::Table(table) => {
-                let action: Function = table.get("action")?;
-                let predicate: Option<Function> = table.get("predicate")?;
-                let run_on = table.get("run_on")?;
+impl UserScript {
+    fn transform_function(function: Function, _lua: &Lua) -> mlua::Result<OwnedFunction> {
+        Ok(function.into_owned())
+    }
 
-                Ok(UserScript {
-                    action: action.into_owned(),
-                    predicate: predicate.and_then(|p| Some(p.into_owned())),
-                    run_on,
-                })
-            }
-            _ => Err(mlua::Error::runtime(
-                "User script argument shall be a table",
-            )),
-        }
+    fn transform_function_option(
+        function: Option<Function>,
+        _lua: &Lua,
+    ) -> mlua::Result<Option<OwnedFunction>> {
+        Ok(function.and_then(|p| Some(p.into_owned())))
     }
 }
 
-#[derive(Debug, PartialEq)]
-enum Modifier {
-    RepeatOnce,
-    RepeatToFit,
+#[derive(Debug, PartialEq, Copy, Clone, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum Repeat {
+    Once,
+    ToFit,
 }
 
+#[derive(FromLuaTable, Clone)]
 struct ScriptOutput {
-    operations: Vec<Operation>,
+    data: Vec<Operation>,
+
+    #[mlua(transform(Self::transform_duration))]
     duration: Duration,
-    repeat_modifier: Option<Modifier>,
+
+    #[mlua(transform(Self::transform_repeats))]
+    repeats: Option<Repeat>,
 }
 
-impl<'lua> FromLua<'lua> for ScriptOutput {
-    fn from_lua(value: Value<'lua>, _lua: &'lua Lua) -> mlua::Result<Self> {
-        match value {
-            Value::Table(table) => {
-                let data = table.get("data")?;
+impl ScriptOutput {
+    fn transform_duration(duration: Option<u64>, _lua: &Lua) -> mlua::Result<Duration> {
+        let duration = duration
+            .and_then(|duration| Some(Duration::from_millis(duration)))
+            .unwrap_or(DEFAULT_UPDATE_TIME);
+        Ok(duration)
+    }
 
-                let duration = table
-                    .get("duration")
-                    .and_then(|duration| Ok(Duration::from_millis(duration)))
-                    .unwrap_or(DEFAULT_UPDATE_TIME);
-
-                let repeat_once = table.get("repeat_once").unwrap_or(false);
-                let repeat_to_fit = table.get("repeat_to_fit").unwrap_or(false);
-                let modifier = match (repeat_once, repeat_to_fit) {
-                    (false, false) => None,
-                    (true, false) => Some(Modifier::RepeatOnce),
-                    (false, true) => Some(Modifier::RepeatToFit),
-                    (true, true) => {
-                        return Err(mlua::Error::runtime(
-                            "repeat_once and repeat_to_fit can't both be set to true",
-                        ))
-                    }
-                };
-
-                Ok(ScriptOutput {
-                    operations: data,
-                    duration,
-                    repeat_modifier: modifier,
-                })
-            }
-            _ => Err(mlua::Error::runtime("Script output shall be a table")),
-        }
+    fn transform_repeats(repeats: Value, lua: &Lua) -> mlua::Result<Option<Repeat>> {
+        lua.from_value(repeats)
     }
 }

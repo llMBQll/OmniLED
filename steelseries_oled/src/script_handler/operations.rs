@@ -1,93 +1,54 @@
-use mlua::{Lua, Table};
+use const_format::{map_ascii_case, Case};
+use mlua::Lua;
 
 use crate::model::operation::Bar;
 use crate::model::operation::{Modifiers, Operation, Text};
 use crate::model::rectangle::{Point, Rectangle, Size};
 
+macro_rules! register_function {
+    ($lua:ident, $table:ident, $func_name:ident) => {
+        $table
+            .set(
+                map_ascii_case!(Case::Pascal, stringify!($func_name)),
+                $lua.create_function($func_name).unwrap(),
+            )
+            .unwrap();
+    };
+}
+
 pub fn load_operations(lua: &Lua) {
     let operations = lua.create_table().unwrap();
 
-    operations
-        .set("Point", lua.create_function(point).unwrap())
-        .unwrap();
-    operations
-        .set("Size", lua.create_function(size).unwrap())
-        .unwrap();
-    operations
-        .set("Rectangle", lua.create_function(rectangle).unwrap())
-        .unwrap();
-    operations
-        .set("Bar", lua.create_function(bar).unwrap())
-        .unwrap();
-    operations
-        .set("Text", lua.create_function(text).unwrap())
-        .unwrap();
-    operations
-        .set("Modifiers", lua.create_function(modifiers).unwrap())
-        .unwrap();
+    register_function!(lua, operations, point);
+    register_function!(lua, operations, size);
+    register_function!(lua, operations, rectangle);
+    register_function!(lua, operations, bar);
+    register_function!(lua, operations, text);
+    register_function!(lua, operations, modifiers);
 
     lua.globals().set("OPERATIONS", operations).unwrap();
 }
 
-fn point(_: &Lua, args: Table) -> mlua::Result<Point> {
-    let x = args.get("x")?;
-    let y = args.get("y")?;
-
-    Ok(Point { x, y })
+fn point(_: &Lua, obj: Point) -> mlua::Result<Point> {
+    Ok(obj)
 }
 
-fn size(_: &Lua, args: Table) -> mlua::Result<Size> {
-    let width = args.get("width")?;
-    let height = args.get("height")?;
-
-    Ok(Size { width, height })
+fn size(_: &Lua, obj: Size) -> mlua::Result<Size> {
+    Ok(obj)
 }
 
-fn rectangle(_: &Lua, args: Table) -> mlua::Result<Rectangle> {
-    let origin = args.get("origin")?;
-    let size = args.get("size")?;
-
-    Ok(Rectangle { origin, size })
+fn rectangle(_: &Lua, obj: Rectangle) -> mlua::Result<Rectangle> {
+    Ok(obj)
 }
 
-fn bar(_: &Lua, args: Table) -> mlua::Result<Operation> {
-    let value = args.get("value")?;
-    let position = args.get("position")?;
-    let modifiers = args.get("modifiers").unwrap_or(Modifiers::default());
-
-    Ok(Operation::Bar(Bar {
-        value,
-        position,
-        modifiers,
-    }))
+fn bar(_: &Lua, obj: Bar) -> mlua::Result<Operation> {
+    Ok(Operation::Bar(obj))
 }
 
-fn text(_: &Lua, args: Table) -> mlua::Result<Operation> {
-    let text = args.get("text")?;
-    let position = args.get("position")?;
-    let modifiers = args.get("modifiers").unwrap_or(Modifiers::default());
-
-    Ok(Operation::Text(Text {
-        text,
-        position,
-        modifiers,
-    }))
+fn text(_: &Lua, obj: Text) -> mlua::Result<Operation> {
+    Ok(Operation::Text(obj))
 }
 
-fn modifiers(_: &Lua, args: Table) -> mlua::Result<Modifiers> {
-    let flip_horizontal = args.get("flip_horizontal").unwrap_or(false);
-    let flip_vertical = args.get("flip_vertical").unwrap_or(false);
-    let strict = args.get("strict").unwrap_or(false);
-    let vertical = args.get("vertical").unwrap_or(false);
-    let scrolling = args.get("scrolling").unwrap_or(false);
-    let font_size = args.get("font_size").unwrap_or(None);
-
-    Ok(Modifiers {
-        flip_horizontal,
-        flip_vertical,
-        strict,
-        vertical,
-        scrolling,
-        font_size,
-    })
+fn modifiers(_: &Lua, obj: Modifiers) -> mlua::Result<Modifiers> {
+    Ok(obj)
 }
