@@ -1,7 +1,8 @@
-use mlua::{FromLua, UserData, UserDataFields};
+use mlua::{ErrorContext, FromLua, UserData, UserDataFields};
+use oled_derive::FromLuaTable;
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy, Deserialize, FromLua)]
+#[derive(Debug, Clone, Copy, Deserialize, FromLuaTable)]
 pub struct Point {
     pub x: usize,
     pub y: usize,
@@ -9,7 +10,7 @@ pub struct Point {
 
 impl UserData for Point {}
 
-#[derive(Debug, Clone, Copy, Deserialize, FromLua)]
+#[derive(Debug, Clone, Copy, Deserialize, FromLuaTable)]
 pub struct Size {
     pub width: usize,
     pub height: usize,
@@ -23,7 +24,7 @@ impl UserData for Size {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, FromLua)]
+#[derive(Debug, Clone, Copy, Deserialize, FromLuaTable)]
 pub struct Rectangle {
     pub origin: Point,
     pub size: Size,

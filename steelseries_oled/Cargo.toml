@@ -7,6 +7,7 @@ default-run = "steelseries_oled"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+const_format = "0.2"
 device_query = "2.0"
 dirs-next = "2.0"
 font-kit = "0.13"
@@ -24,6 +25,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_with = "3.1"
 oled-api = { path = "../oled-api" }
+oled-derive = { path = "../oled-derive" }
 oled-server = { path = "../oled-server" }
 tokio = { version = "1", features = ["full"] }
 ureq = { version = "2.4", features = ["json"] }

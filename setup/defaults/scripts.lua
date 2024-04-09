@@ -19,7 +19,7 @@ local function volume()
             },
         },
         duration = 2000,
-        repeat_once = true,
+        repeats = 'once',
     }
 end
 
@@ -67,7 +67,7 @@ local function spotify()
             },
         },
         duration = SPOTIFY_DURATION,
-        repeat_to_fit = true,
+        repeats = 'to_fit',
     }
 end
 
@@ -146,7 +146,7 @@ local function weather()
             },
         },
         duration = 1000,
-        repeat_once = true,
+        repeats = 'once',
     }
 end
 
