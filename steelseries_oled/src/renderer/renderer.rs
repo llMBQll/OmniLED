@@ -3,10 +3,10 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::vec::IntoIter;
 
-use crate::model::operation::{Modifiers, Operation, Text};
-use crate::model::rectangle::{Rectangle, Size};
 use crate::renderer::buffer::Buffer;
 use crate::renderer::font_manager::FontManager;
+use crate::script_handler::script_data_types::{Modifiers, Operation, Text};
+use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
 
 pub struct Renderer {

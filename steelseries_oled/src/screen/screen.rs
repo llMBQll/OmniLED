@@ -1,6 +1,6 @@
 use mlua::{Lua, Value};
 
-pub use crate::model::rectangle::Size;
+pub use crate::script_handler::script_data_types::Size;
 
 pub type Result<T> = std::result::Result<T, Error>;
 

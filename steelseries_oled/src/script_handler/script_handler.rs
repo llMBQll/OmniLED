@@ -7,10 +7,9 @@ use std::time::Duration;
 
 use crate::common::{common::exec_file, scoped_value::ScopedValue};
 use crate::create_table;
-use crate::model::operation::Operation;
 use crate::renderer::renderer::{ContextKey, Renderer};
 use crate::screen::screens::LuaScreenWrapper;
-use crate::script_handler::operations::load_operations;
+use crate::script_handler::script_data_types::{load_script_data_types, Operation};
 use crate::settings::settings::{get_full_path, Settings};
 
 pub struct ScriptHandler {
@@ -33,7 +32,7 @@ const DEFAULT_UPDATE_TIME: Duration = Duration::from_millis(1000);
 
 impl ScriptHandler {
     pub fn load(lua: &Lua) -> ScopedValue {
-        load_operations(lua);
+        load_script_data_types(lua);
 
         let environment = Self::make_sandbox(lua);
 

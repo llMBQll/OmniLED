@@ -23,7 +23,6 @@ mod constants;
 mod events;
 mod keyboard;
 mod logging;
-mod model;
 mod renderer;
 mod screen;
 mod script_handler;

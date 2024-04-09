@@ -1,6 +1,6 @@
-use crate::model::operation::Modifiers;
-use crate::model::rectangle::{Rectangle, Size};
 use crate::renderer::bit::Bit;
+use crate::script_handler::script_data_types::Modifiers;
+use crate::script_handler::script_data_types::{Rectangle, Size};
 
 pub struct Buffer {
     height: usize,
