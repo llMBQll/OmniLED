@@ -150,6 +150,46 @@ local function weather()
     }
 end
 
+TEST_IMAGE = OledImage {
+    size = Size {
+        width = 16,
+        height = 16,
+    },
+    bytes = {
+        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+    },
+}
+
+local function test()
+    return {
+        data = {
+            Image {
+                image = TEST_IMAGE,
+                position = Rectangle {
+                    origin = Point { x = 0, y = 0 },
+                    size = Size { width = SCREEN.Width, height = SCREEN.Height },
+                },
+            }
+        },
+        duration = 100000,
+    }
+end
+
 local current_screen = 1
 local max_screens = 2
 SHORTCUTS:register(
@@ -195,4 +235,12 @@ local weather_script = {
     run_on = { 'CLOCK.Seconds' },
 }
 
-register('Steelseries Apex 7 TKL', { volume_script, spotify_script, clock_script, weather_script })
+local test_script = {
+    action = test,
+    predicate = function()
+        return true
+    end,
+    run_on = { 'CLOCK.Seconds' },
+}
+
+register('Steelseries Apex 7 TKL', { test_script, volume_script, spotify_script, clock_script, weather_script })

@@ -213,6 +213,8 @@ impl ScriptHandler {
             Rectangle = OPERATIONS.Rectangle,
             Bar = OPERATIONS.Bar,
             Text = OPERATIONS.Text,
+            OledImage = OPERATIONS.OledImage,
+            Image = OPERATIONS.Image,
             ScrollingText = OPERATIONS.ScrollingText,
             Modifiers = OPERATIONS.Modifiers,
             EVENTS = EVENTS,
