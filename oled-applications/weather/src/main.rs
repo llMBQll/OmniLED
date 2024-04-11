@@ -1,6 +1,6 @@
 use chrono::Timelike;
 use clap::Parser;
-use oled_api::types::Table;
+use oled_api::types::{Image, Table};
 use oled_api::Api;
 use std::{collections::HashMap, thread, time};
 use ureq::Agent;
@@ -11,6 +11,7 @@ fn main() {
     let options = Options::parse();
 
     let api = Api::new(&options.address, NAME);
+    load_and_send_images(&api);
 
     let (coordinates, name) = match options.selector {
         Selector::In(name) => (get_coordinates_from_name(&name), name.city),
@@ -25,6 +26,27 @@ fn main() {
 
         thread::sleep(time::Duration::from_secs(15 * 60));
     }
+}
+
+fn load_and_send_images(api: &Api) {
+    // TODO load the rest of images and attribute the creator
+    // images downloaded from https://www.flaticon.com/packs/weather-160
+
+    const CLOUD: &[u8] = include_bytes!("../assets/cloud.png");
+
+    let mut cloud = image::load_from_memory_with_format(CLOUD, image::ImageFormat::Png).unwrap();
+    cloud.invert();
+    let grayscale = cloud.into_luma8();
+
+    let image = Image {
+        width: grayscale.width() as i64,
+        height: grayscale.height() as i64,
+        data: grayscale.into_raw(),
+    };
+
+    let mut table = Table::default();
+    table.items.insert("Cloudy".into(), image.into());
+    api.update(table);
 }
 
 fn get_coordinates_from_name(name: &Name) -> Coordinates {

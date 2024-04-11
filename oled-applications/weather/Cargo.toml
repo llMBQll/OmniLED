@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 chrono = { version = "0.4" }
 clap = { version = "4.4", features = ["derive"] }
+image = "0.25"
 oled-api = { path = "../../oled-api" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

@@ -150,41 +150,59 @@ local function weather()
     }
 end
 
-TEST_IMAGE = OledImage {
-    size = Size {
-        width = 16,
-        height = 16,
-    },
-    bytes = {
-        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
-        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
-        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
-        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
-        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
-        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
-        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
-        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
-        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
-        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
-        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
-        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
-        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
-        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
-        1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
-        0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
-    },
-}
-
 local function test()
+    local temp
+    if WEATHER.Temperature ~= nil then
+        temp = string.format("%.1f°C", WEATHER.Temperature)
+    else
+        temp = "N/A°C"
+    end
+
+    local image
+    if WEATHER.Cloudy ~= nil then
+        image = WEATHER.Cloudy
+    else
+        image = OledImage {
+            size = {
+                width = 1,
+                height = 1,
+            },
+            bytes = { 0 },
+        }
+    end
+
     return {
         data = {
             Image {
-                image = TEST_IMAGE,
-                position = Rectangle {
-                    origin = Point { x = 0, y = 0 },
-                    size = Size { width = SCREEN.Width, height = SCREEN.Height },
+                image = image,
+                position = {
+                    origin = { x = 0, y = 0 },
+                    size = { width = SCREEN.Height, height = SCREEN.Height },
                 },
-            }
+            },
+            Text {
+                text = temp,
+                position = Rectangle {
+                    origin = Point { x = SCREEN.Height + 4, y = 0 },
+                    size = Size { width = SCREEN.Height * 2, height = SCREEN.Height / 2 },
+                },
+                modifiers = Modifiers { font_size = 22 },
+            },
+            Text {
+                text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),
+                position = Rectangle {
+                    origin = Point { x = SCREEN.Height + 4, y = SCREEN.Height / 2 - 2 },
+                    size = Size { width = SCREEN.Height * 2, height = SCREEN.Height / 2 - 2 },
+                },
+                modifiers = Modifiers { font_size = 16 },
+            },
+            Bar {
+                value = CLOCK.Seconds * 100.0 / 59,
+                position = Rectangle {
+                    origin = Point { x = 0, y = SCREEN.Height - 2 },
+                    size = Size { width = SCREEN.Width, height = 2 },
+                },
+            },
         },
         duration = 100000,
     }

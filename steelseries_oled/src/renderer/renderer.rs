@@ -86,8 +86,7 @@ impl Renderer {
 
         for row in 0..rect.size.height as isize {
             for col in 0..rect.size.width as isize {
-                // Use nearest neighbour interpolation for now, this means losing a lot of detail
-                // in some edge cases
+                // Use nearest neighbour interpolation for now as it's the quickest to implement
                 // TODO allow specifying scaling algorithm as modifier
                 // TODO potentially cache scaled images
 
