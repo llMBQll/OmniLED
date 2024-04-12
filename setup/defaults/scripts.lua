@@ -3,19 +3,19 @@ local function volume()
         data = {
             Text {
                 text = AUDIO.IsMuted and 'Muted' or AUDIO.Volume,
-                position = Rectangle {
-                    origin = Point { x = 0, y = 0 },
-                    size = Size { width = SCREEN.Width, height = SCREEN.Height / 2 },
+                position = {
+                    origin = { x = 0, y = 0 },
+                    size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
                 },
-                modifiers = Modifiers { font_size = 27 },
+                modifiers = { font_size = 27 },
             },
             Text {
                 text = AUDIO.Name,
-                position = Rectangle {
-                    origin = Point { x = 0, y = SCREEN.Height / 2 },
-                    size = Size { width = SCREEN.Width, height = SCREEN.Height / 2 - 4 },
+                position = {
+                    origin = { x = 0, y = SCREEN.Height / 2 },
+                    size = { width = SCREEN.Width, height = SCREEN.Height / 2 - 4 },
                 },
-                modifiers = Modifiers { scrolling = true },
+                modifiers = { scrolling = true },
             },
         },
         duration = 2000,
@@ -29,40 +29,40 @@ local function spotify()
         data = {
             Bar {
                 value = SPOTIFY.Progress * 100.0 / SPOTIFY.Duration,
-                position = Rectangle {
-                    origin = Point { x = 0, y = 0 },
-                    size = Size { width = SCREEN.Width, height = 2 },
+                position = {
+                    origin = { x = 0, y = 0 },
+                    size = { width = SCREEN.Width, height = 2 },
                 },
             },
             Text {
                 text = string.format("%s - %s", SPOTIFY.Artist, SPOTIFY.Title),
-                position = Rectangle {
-                    origin = Point { x = 0, y = 1 },
-                    size = Size { width = SCREEN.Width, height = 16 },
+                position = {
+                    origin = { x = 0, y = 1 },
+                    size = { width = SCREEN.Width, height = 16 },
                 },
-                modifiers = Modifiers { scrolling = true },
+                modifiers = { scrolling = true },
             },
             Text {
                 text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),
-                position = Rectangle {
-                    origin = Point { x = 0, y = SCREEN.Height - 16 },
-                    size = Size { width = 50, height = 12 },
+                position = {
+                    origin = { x = 0, y = SCREEN.Height - 16 },
+                    size = { width = 50, height = 12 },
                 },
-                modifiers = Modifiers { font_size = 16 },
+                modifiers = { font_size = 16 },
             },
             Text {
                 text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month + 1], CLOCK.MonthDay),
-                position = Rectangle {
-                    origin = Point { x = SCREEN.Width - 50, y = SCREEN.Height - 16 },
-                    size = Size { width = 50, height = 12 },
+                position = {
+                    origin = { x = SCREEN.Width - 50, y = SCREEN.Height - 16 },
+                    size = { width = 50, height = 12 },
                 },
-                modifiers = Modifiers { font_size = 16 },
+                modifiers = { font_size = 16 },
             },
             Bar {
                 value = CLOCK.Seconds * 100.0 / 59,
-                position = Rectangle {
-                    origin = Point { x = 0, y = SCREEN.Height - 2 },
-                    size = Size { width = SCREEN.Width, height = 2 },
+                position = {
+                    origin = { x = 0, y = SCREEN.Height - 2 },
+                    size = { width = SCREEN.Width, height = 2 },
                 },
             },
         },
@@ -76,33 +76,33 @@ local function clock()
         data = {
             Text {
                 text = string.format("%02d", CLOCK.Hours),
-                position = Rectangle {
-                    origin = Point { x = 10, y = 1 },
-                    size = Size { width = 54, height = 35 },
+                position = {
+                    origin = { x = 10, y = 1 },
+                    size = { width = 54, height = 35 },
                 },
-                modifiers = Modifiers { font_size = 47 },
+                modifiers = { font_size = 47 },
             },
             Text {
                 text = string.format("%02d", CLOCK.Minutes),
-                position = Rectangle {
-                    origin = Point { x = 64, y = 0 },
-                    size = Size { width = 54, height = 26 },
+                position = {
+                    origin = { x = 64, y = 0 },
+                    size = { width = 54, height = 26 },
                 },
-                modifiers = Modifiers { font_size = 36 },
+                modifiers = { font_size = 36 },
             },
             Text {
                 text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month + 1], CLOCK.MonthDay),
-                position = Rectangle {
-                    origin = Point { x = 66, y = 27 },
-                    size = Size { width = 54, height = 10 },
+                position = {
+                    origin = { x = 66, y = 27 },
+                    size = { width = 54, height = 10 },
                 },
-                modifiers = Modifiers { font_size = 14 },
+                modifiers = { font_size = 14 },
             },
             Bar {
                 value = CLOCK.Seconds * 100.0 / 59,
-                position = Rectangle {
-                    origin = Point { x = 0, y = SCREEN.Height - 2 },
-                    size = Size { width = SCREEN.Width, height = 2 },
+                position = {
+                    origin = { x = 0, y = SCREEN.Height - 2 },
+                    size = { width = SCREEN.Width, height = 2 },
                 },
             }
         },
@@ -115,33 +115,33 @@ local function weather()
         data = {
             Text {
                 text = string.format("%.1f°C %.1fkm/h", WEATHER.Temperature, WEATHER.WindSpeed),
-                position = Rectangle {
-                    origin = Point { x = 0, y = 0 },
-                    size = Size { width = SCREEN.Width, height = 16 },
+                position = {
+                    origin = { x = 0, y = 0 },
+                    size = { width = SCREEN.Width, height = 16 },
                 },
-                modifiers = Modifiers { font_size = 22, scrolling = true },
+                modifiers = { font_size = 22, scrolling = true },
             },
             Text {
                 text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),
-                position = Rectangle {
-                    origin = Point { x = 0, y = SCREEN.Height - 16 },
-                    size = Size { width = 50, height = 12 },
+                position = {
+                    origin = { x = 0, y = SCREEN.Height - 16 },
+                    size = { width = 50, height = 12 },
                 },
-                modifiers = Modifiers { font_size = 16 },
+                modifiers = { font_size = 16 },
             },
             Text {
                 text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month + 1], CLOCK.MonthDay),
-                position = Rectangle {
-                    origin = Point { x = SCREEN.Width - 50, y = SCREEN.Height - 16 },
-                    size = Size { width = 50, height = 12 },
+                position = {
+                    origin = { x = SCREEN.Width - 50, y = SCREEN.Height - 16 },
+                    size = { width = 50, height = 12 },
                 },
-                modifiers = Modifiers { font_size = 16 },
+                modifiers = { font_size = 16 },
             },
             Bar {
                 value = CLOCK.Seconds * 100.0 / 59,
-                position = Rectangle {
-                    origin = Point { x = 0, y = SCREEN.Height - 2 },
-                    size = Size { width = SCREEN.Width, height = 2 },
+                position = {
+                    origin = { x = 0, y = SCREEN.Height - 2 },
+                    size = { width = SCREEN.Width, height = 2 },
                 },
             },
         },
@@ -182,25 +182,25 @@ local function test()
             },
             Text {
                 text = temp,
-                position = Rectangle {
-                    origin = Point { x = SCREEN.Height + 4, y = 0 },
-                    size = Size { width = SCREEN.Height * 2, height = SCREEN.Height / 2 },
+                position = {
+                    origin = { x = SCREEN.Height + 4, y = 0 },
+                    size = { width = SCREEN.Height * 2, height = SCREEN.Height / 2 },
                 },
-                modifiers = Modifiers { font_size = 22 },
+                modifiers = { font_size = 22 },
             },
             Text {
                 text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),
-                position = Rectangle {
-                    origin = Point { x = SCREEN.Height + 4, y = SCREEN.Height / 2 - 2 },
-                    size = Size { width = SCREEN.Height * 2, height = SCREEN.Height / 2 - 2 },
+                position = {
+                    origin = { x = SCREEN.Height + 4, y = SCREEN.Height / 2 - 2 },
+                    size = { width = SCREEN.Height * 2, height = SCREEN.Height / 2 - 2 },
                 },
-                modifiers = Modifiers { font_size = 16 },
+                modifiers = { font_size = 16 },
             },
             Bar {
                 value = CLOCK.Seconds * 100.0 / 59,
-                position = Rectangle {
-                    origin = Point { x = 0, y = SCREEN.Height - 2 },
-                    size = Size { width = SCREEN.Width, height = 2 },
+                position = {
+                    origin = { x = 0, y = SCREEN.Height - 2 },
+                    size = { width = SCREEN.Width, height = 2 },
                 },
             },
         },
@@ -261,4 +261,4 @@ local test_script = {
     run_on = { 'CLOCK.Seconds' },
 }
 
-register('Steelseries Apex 7 TKL', { test_script, volume_script, spotify_script, clock_script, weather_script })
+register('Steelseries Apex 7 TKL', { volume_script, spotify_script, clock_script, weather_script })

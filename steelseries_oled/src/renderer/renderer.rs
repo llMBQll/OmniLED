@@ -221,8 +221,6 @@ impl Renderer {
     }
 }
 
-unsafe impl Send for Renderer {}
-
 struct ScrollingTextControl {
     ticks_at_edge: usize,
     ticks_per_move: usize,
