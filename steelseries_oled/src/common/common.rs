@@ -3,6 +3,8 @@ use mlua::{Lua, Table, TableExt, Value};
 use oled_api::types::field::Field as FieldEntry;
 use oled_api::types::Field;
 
+use crate::script_handler::script_data_types::{OledImage, Size};
+
 #[macro_export]
 macro_rules! create_table {
     ($lua:ident, $values:tt) => {
@@ -55,8 +57,16 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
             // let string = lua.create_string(non_utf_string)?;
             // Ok(Value::String(string))
         }
-        Some(FieldEntry::FImage(_)) => {
-            todo!("Implement Image object conversion")
+        Some(FieldEntry::FImage(image)) => {
+            let oled_image = OledImage {
+                size: Size {
+                    width: image.width as usize,
+                    height: image.height as usize,
+                },
+                bytes: image.data,
+            };
+            let user_data = lua.create_any_userdata(oled_image)?;
+            Ok(Value::UserData(user_data))
         }
     }
 }

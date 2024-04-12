@@ -5,7 +5,7 @@ use std::vec::IntoIter;
 
 use crate::renderer::buffer::Buffer;
 use crate::renderer::font_manager::FontManager;
-use crate::script_handler::script_data_types::{Modifiers, Operation, Text};
+use crate::script_handler::script_data_types::{Modifiers, OledImage, Operation, Text};
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
 
@@ -39,7 +39,10 @@ impl Renderer {
         for operation in operations {
             match operation {
                 Operation::Bar(bar) => {
-                    self.render_bar(&mut buffer, bar.position, bar.value, bar.modifiers)
+                    Self::render_bar(&mut buffer, bar.position, bar.value, bar.modifiers)
+                }
+                Operation::Image(image) => {
+                    Self::render_image(&mut buffer, image.position, image.image, image.modifiers)
                 }
                 Operation::Text(text) => self.render_text(
                     &mut buffer,
@@ -54,8 +57,7 @@ impl Renderer {
         (end_auto_repeat, buffer.into())
     }
 
-    fn render_bar(&self, buffer: &mut Buffer, rect: Rectangle, value: f32, modifiers: Modifiers) {
-        // TODO: consider making it a static function
+    fn render_bar(buffer: &mut Buffer, rect: Rectangle, value: f32, modifiers: Modifiers) {
         let (height, width) = match modifiers.vertical {
             true => (
                 (rect.size.height as f32 * value / 100.0) as usize,
@@ -70,6 +72,34 @@ impl Renderer {
         for row in 0..height as isize {
             for col in 0..width as isize {
                 buffer.set(row, col, &rect, &modifiers);
+            }
+        }
+    }
+
+    fn render_image(buffer: &mut Buffer, rect: Rectangle, image: OledImage, modifiers: Modifiers) {
+        if rect.size.width == 0 || rect.size.height == 0 {
+            return;
+        }
+
+        let factor_row = image.size.height as f64 / rect.size.height as f64;
+        let factor_col = image.size.width as f64 / rect.size.width as f64;
+
+        for row in 0..rect.size.height as isize {
+            for col in 0..rect.size.width as isize {
+                // Use nearest neighbour interpolation for now as it's the quickest to implement
+                // TODO allow specifying scaling algorithm as modifier
+                // TODO potentially cache scaled images
+
+                let image_row = (row as f64 * factor_row).round() as usize;
+                let image_row = image_row.clamp(0, image.size.height - 1);
+
+                let image_col = (col as f64 * factor_col).round() as usize;
+                let image_col = image_col.clamp(0, image.size.width - 1);
+
+                let index = image_row * image.size.width + image_col;
+                if image.bytes[index] != 0 {
+                    buffer.set(row, col, &rect, &modifiers);
+                }
             }
         }
     }

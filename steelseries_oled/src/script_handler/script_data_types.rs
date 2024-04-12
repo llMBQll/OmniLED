@@ -33,9 +33,18 @@ pub struct Rectangle {
 
 impl UserData for Rectangle {}
 
+#[derive(Debug, Clone, FromLuaTable)]
+pub struct OledImage {
+    pub size: Size,
+    pub bytes: Vec<u8>,
+}
+
+impl UserData for OledImage {}
+
 #[derive(Clone, Debug, FromLua)]
 pub enum Operation {
     Bar(Bar),
+    Image(Image),
     Text(Text),
 }
 
@@ -51,6 +60,17 @@ pub struct Bar {
 }
 
 impl UserData for Bar {}
+
+#[derive(Clone, Debug, FromLuaTable)]
+pub struct Image {
+    pub image: OledImage,
+    pub position: Rectangle,
+
+    #[mlua(default)]
+    pub modifiers: Modifiers,
+}
+
+impl UserData for Image {}
 
 #[derive(Clone, Debug, FromLuaTable)]
 pub struct Text {
@@ -102,7 +122,9 @@ pub fn load_script_data_types(lua: &Lua) {
     register_function!(lua, operations, point);
     register_function!(lua, operations, size);
     register_function!(lua, operations, rectangle);
+    register_function!(lua, operations, oled_image);
     register_function!(lua, operations, bar);
+    register_function!(lua, operations, image);
     register_function!(lua, operations, text);
     register_function!(lua, operations, modifiers);
 
@@ -121,8 +143,16 @@ fn rectangle(_: &Lua, obj: Rectangle) -> mlua::Result<Rectangle> {
     Ok(obj)
 }
 
+fn oled_image(_: &Lua, obj: OledImage) -> mlua::Result<OledImage> {
+    Ok(obj)
+}
+
 fn bar(_: &Lua, obj: Bar) -> mlua::Result<Operation> {
     Ok(Operation::Bar(obj))
+}
+
+fn image(_: &Lua, obj: Image) -> mlua::Result<Operation> {
+    Ok(Operation::Image(obj))
 }
 
 fn text(_: &Lua, obj: Text) -> mlua::Result<Operation> {
