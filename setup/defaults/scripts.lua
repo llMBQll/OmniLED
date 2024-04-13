@@ -111,82 +111,29 @@ local function clock()
 end
 
 local function weather()
-    return {
-        data = {
-            Text {
-                text = string.format("%.1f°C %.1fkm/h", WEATHER.Temperature, WEATHER.WindSpeed),
-                position = {
-                    origin = { x = 0, y = 0 },
-                    size = { width = SCREEN.Width, height = 16 },
-                },
-                modifiers = { font_size = 22, scrolling = true },
-            },
-            Text {
-                text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),
-                position = {
-                    origin = { x = 0, y = SCREEN.Height - 16 },
-                    size = { width = 50, height = 12 },
-                },
-                modifiers = { font_size = 16 },
-            },
-            Text {
-                text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month + 1], CLOCK.MonthDay),
-                position = {
-                    origin = { x = SCREEN.Width - 50, y = SCREEN.Height - 16 },
-                    size = { width = 50, height = 12 },
-                },
-                modifiers = { font_size = 16 },
-            },
-            Bar {
-                value = CLOCK.Seconds * 100.0 / 59,
-                position = {
-                    origin = { x = 0, y = SCREEN.Height - 2 },
-                    size = { width = SCREEN.Width, height = 2 },
-                },
-            },
-        },
-        duration = 1000,
-        repeats = 'once',
-    }
-end
-
-local function test()
-    local temp
-    if WEATHER.Temperature ~= nil then
-        temp = string.format("%.1f°C", WEATHER.Temperature)
+    local text
+    if CLOCK.Seconds % 20 < 10 then
+        text = string.format("%.1f°C", WEATHER.Temperature)
     else
-        temp = "N/A°C"
-    end
-
-    local image
-    if WEATHER.Cloudy ~= nil then
-        image = WEATHER.Cloudy
-    else
-        image = OledImage {
-            size = {
-                width = 1,
-                height = 1,
-            },
-            bytes = { 0 },
-        }
+        text = string.format("%.1fkm/h", WEATHER.WindSpeed)
     end
 
     return {
         data = {
             Image {
-                image = image,
+                image = WEATHER[WEATHER.ImageKey],
                 position = {
                     origin = { x = 0, y = 0 },
                     size = { width = SCREEN.Height, height = SCREEN.Height },
                 },
             },
             Text {
-                text = temp,
+                text = text,
                 position = {
                     origin = { x = SCREEN.Height + 4, y = 0 },
                     size = { width = SCREEN.Height * 2, height = SCREEN.Height / 2 },
                 },
-                modifiers = { font_size = 22 },
+                modifiers = { font_size = 16 },
             },
             Text {
                 text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),
@@ -204,7 +151,7 @@ local function test()
                 },
             },
         },
-        duration = 100000,
+        duration = 1000,
     }
 end
 
@@ -250,14 +197,6 @@ local clock_script = {
 local weather_script = {
     action = weather,
     predicate = current_screen_is(2),
-    run_on = { 'CLOCK.Seconds' },
-}
-
-local test_script = {
-    action = test,
-    predicate = function()
-        return true
-    end,
     run_on = { 'CLOCK.Seconds' },
 }
 
