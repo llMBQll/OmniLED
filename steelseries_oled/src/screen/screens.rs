@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use crate::common::common::exec_file;
 use crate::common::scoped_value::ScopedValue;
-use crate::create_table;
+use crate::create_table_with_defaults;
 use crate::screen::debug_output::debug_output::DebugOutput;
 use crate::screen::screen::Screen;
 use crate::screen::steelseries_engine::steelseries_engine_device::SteelseriesEngineDevice;
@@ -52,12 +52,11 @@ impl Screens {
         let load_usb_device = Self::make_loader(lua, "usb_device");
         let load_debug_output = Self::make_loader(lua, "debug_output");
 
-        let env = create_table!(lua, {
+        let env = create_table_with_defaults!(lua, {
             steelseries_engine_device = $load_steelseries_engine_device,
             usb_device = $load_usb_device,
             debug_output = $load_debug_output,
             PLATFORM = PLATFORM,
-            table = { insert = table.insert, maxn = table.maxn, remove = table.remove, sort = table.sort }
         });
 
         exec_file(

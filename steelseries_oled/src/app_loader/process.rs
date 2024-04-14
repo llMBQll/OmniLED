@@ -1,6 +1,6 @@
 use log::error;
-use mlua::UserData;
-use serde::{Deserialize, Serialize};
+use mlua::{ErrorContext, FromLua, UserData};
+use oled_derive::FromLuaTable;
 use std::process::{Child, Command, Stdio};
 
 pub struct Process {
@@ -47,10 +47,10 @@ impl Drop for Process {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, FromLuaTable)]
 pub struct Config {
     path: String,
-    #[serde(default)]
+    #[mlua(default)]
     args: Vec<String>,
 }
 

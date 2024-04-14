@@ -1,5 +1,5 @@
 use const_format::{map_ascii_case, Case};
-use mlua::{ErrorContext, FromLua, Lua, UserData, UserDataFields};
+use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields};
 use oled_derive::FromLuaTable;
 use serde::Deserialize;
 
@@ -116,19 +116,15 @@ macro_rules! register_function {
     };
 }
 
-pub fn load_script_data_types(lua: &Lua) {
-    let operations = lua.create_table().unwrap();
-
-    register_function!(lua, operations, point);
-    register_function!(lua, operations, size);
-    register_function!(lua, operations, rectangle);
-    register_function!(lua, operations, oled_image);
-    register_function!(lua, operations, bar);
-    register_function!(lua, operations, image);
-    register_function!(lua, operations, text);
-    register_function!(lua, operations, modifiers);
-
-    lua.globals().set("OPERATIONS", operations).unwrap();
+pub fn load_script_data_types(lua: &Lua, env: &Table) {
+    register_function!(lua, env, point);
+    register_function!(lua, env, size);
+    register_function!(lua, env, rectangle);
+    register_function!(lua, env, oled_image);
+    register_function!(lua, env, bar);
+    register_function!(lua, env, image);
+    register_function!(lua, env, text);
+    register_function!(lua, env, modifiers);
 }
 
 fn point(_: &Lua, obj: Point) -> mlua::Result<Point> {
