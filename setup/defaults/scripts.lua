@@ -51,7 +51,7 @@ local function spotify()
                 modifiers = { font_size = 16 },
             },
             Text {
-                text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month + 1], CLOCK.MonthDay),
+                text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month], CLOCK.MonthDay),
                 position = {
                     origin = { x = SCREEN.Width - 50, y = SCREEN.Height - 16 },
                     size = { width = 50, height = 12 },
@@ -91,7 +91,7 @@ local function clock()
                 modifiers = { font_size = 36 },
             },
             Text {
-                text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month + 1], CLOCK.MonthDay),
+                text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month], CLOCK.MonthDay),
                 position = {
                     origin = { x = 66, y = 27 },
                     size = { width = 54, height = 10 },
@@ -111,11 +111,14 @@ local function clock()
 end
 
 local function weather()
-    local text
+    local value
+    local unit
     if CLOCK.Seconds % 20 < 10 then
-        text = string.format("%.1f°C", WEATHER.Temperature)
+        value = string.format("% 3d", math.round(WEATHER.Temperature))
+        unit = '°C'
     else
-        text = string.format("%.1fkm/h", WEATHER.WindSpeed)
+        value = string.format("% 3d", math.round(WEATHER.WindSpeed))
+        unit = 'km/h'
     end
 
     return {
@@ -128,20 +131,27 @@ local function weather()
                 },
             },
             Text {
-                text = text,
+                text = value,
                 position = {
                     origin = { x = SCREEN.Height + 4, y = 0 },
-                    size = { width = SCREEN.Height * 2, height = SCREEN.Height / 2 },
+                    size = { width = SCREEN.Height * 2, height = 25 },
                 },
-                modifiers = { font_size = 16 },
+                modifiers = { font_size = 30 },
             },
             Text {
-                text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),
+                text = unit,
+                position = {
+                    origin = { x = 98, y = 0 },
+                    size = { width = 30, height = 11 },
+                },
+            },
+            Text {
+                text = string.format("%.3s %02d:%02d", CLOCK.DayNames[CLOCK.WeekDay], CLOCK.Hours, CLOCK.Minutes),
                 position = {
                     origin = { x = SCREEN.Height + 4, y = SCREEN.Height / 2 - 2 },
                     size = { width = SCREEN.Height * 2, height = SCREEN.Height / 2 - 2 },
                 },
-                modifiers = { font_size = 16 },
+                modifiers = { font_size = 14 },
             },
             Bar {
                 value = CLOCK.Seconds * 100.0 / 59,

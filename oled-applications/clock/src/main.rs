@@ -121,8 +121,8 @@ fn main() {
         time.minutes = local.minute();
         time.hours = local.hour();
         time.month_day = local.day();
-        time.week_day = local.weekday().num_days_from_monday();
-        time.month = local.month0();
+        time.week_day = local.weekday().number_from_monday();
+        time.month = local.month();
         time.year = local.year();
         api.update((&time).into());
         thread::sleep(time::Duration::from_millis(500));
