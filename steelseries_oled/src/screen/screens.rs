@@ -63,7 +63,8 @@ impl Screens {
             lua,
             &get_full_path(&Settings::get().supported_screens_file),
             env,
-        );
+        )
+        .unwrap();
     }
 
     fn make_loader<'a>(lua: &'a Lua, kind: &'static str) -> Function<'a> {

@@ -1,9 +1,8 @@
 use const_format::{map_ascii_case, Case};
 use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields};
 use oled_derive::FromLuaTable;
-use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy, Deserialize, FromLuaTable)]
+#[derive(Debug, Clone, Copy, FromLuaTable)]
 pub struct Point {
     pub x: usize,
     pub y: usize,
@@ -11,7 +10,7 @@ pub struct Point {
 
 impl UserData for Point {}
 
-#[derive(Debug, Clone, Copy, Deserialize, FromLuaTable)]
+#[derive(Debug, Clone, Copy, FromLuaTable)]
 pub struct Size {
     pub width: usize,
     pub height: usize,
@@ -25,7 +24,7 @@ impl UserData for Size {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, FromLuaTable)]
+#[derive(Debug, Clone, Copy, FromLuaTable)]
 pub struct Rectangle {
     pub origin: Point,
     pub size: Size,

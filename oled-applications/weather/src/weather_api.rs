@@ -25,7 +25,6 @@ pub fn get_weather(agent: &Agent, coordinates: &Coordinates, city: &String) -> W
 
     let is_day = result.current_weather.is_day != 0;
     let weather = result.current_weather.weather_code;
-    let desc = format!("{:?}", weather);
 
     WeatherData {
         latitude: result.latitude,
@@ -34,7 +33,7 @@ pub fn get_weather(agent: &Agent, coordinates: &Coordinates, city: &String) -> W
         wind_speed: result.current_weather.wind_speed,
         wind_direction: result.current_weather.wind_direction,
         image_key: get_image_key(weather, is_day),
-        weather_description: desc,
+        weather_description: weather.to_desc(),
         is_day,
         update_hour: time.hour(),
         update_minute: time.minute(),
@@ -68,7 +67,7 @@ struct CurrentWeatherResult {
     time: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 enum Weather {
     ClearSky,
     MainlyClear,
@@ -98,6 +97,23 @@ enum Weather {
     Thunderstorm,
     ThunderstormWithSlightHail,
     ThunderstormWithHeavyHail,
+}
+
+impl Weather {
+    fn to_desc(&self) -> String {
+        let string = format!("{:?}", self);
+        let mut desc = String::new();
+        let mut was_upper = true;
+        for c in string.chars() {
+            let is_upper = c.is_ascii_uppercase();
+            if is_upper && was_upper {
+                desc.push(' ');
+            }
+            desc.push(c);
+            was_upper = is_upper;
+        }
+        desc
+    }
 }
 
 fn map_from_weather_code<'de, D>(deserializer: D) -> Result<Weather, D::Error>

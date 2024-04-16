@@ -102,11 +102,30 @@ fn parse_pair(
     let key = &s[..pos];
     let value = &s[pos + 1..];
 
-    for c in value.chars() {
-        if c < 'A' || c > 'Z' {
-            return Err("Key is not alpha uppercase".into());
-        }
+    if !is_valid_event_name(value) {
+        return Err("Key is not a valid event name".into());
     }
 
     Ok((key.to_string(), value.to_string()))
+}
+
+pub fn is_valid_event_name(name: &str) -> bool {
+    if name.len() == 0 {
+        return false;
+    }
+
+    let mut chars = name.chars();
+
+    let first = chars.next().unwrap();
+    if first != '_' && (first < 'A' || first > 'Z') {
+        return false;
+    }
+
+    for c in chars {
+        if c != '_' && (c < 'A' || c > 'Z') && (c < '0' || c > '9') {
+            return false;
+        }
+    }
+
+    true
 }

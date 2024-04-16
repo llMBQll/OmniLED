@@ -3,8 +3,6 @@ use mlua::{Lua, OwnedFunction, Value};
 use rusb::{DeviceHandle, GlobalContext};
 use std::time::Duration;
 
-use crate::screen::screen::Error::InitFailed;
-use crate::screen::screen::Result;
 use crate::screen::screen::{Screen, Settings, Size};
 use crate::screen::usb_device::usb_device_settings::{USBDeviceSettings, USBSettings};
 
@@ -17,7 +15,7 @@ pub struct USBDevice {
 }
 
 impl Screen for USBDevice {
-    fn init(lua: &Lua, settings: Value) -> Result<Self> {
+    fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
         let settings = USBDeviceSettings::new(lua, settings)?;
 
         let vendor_id = settings.usb_settings.vendor_id;
@@ -31,7 +29,7 @@ impl Screen for USBDevice {
         let device = match device {
             Some(device) => device,
             None => {
-                return Err(InitFailed(format!(
+                return Err(mlua::Error::runtime(format!(
                     "Failed to match vendor_id {:#06x} and product_id {:#06x}",
                     vendor_id, product_id
                 )))
@@ -40,7 +38,7 @@ impl Screen for USBDevice {
 
         let mut handle = match device.open() {
             Ok(handle) => handle,
-            Err(err) => return Err(InitFailed(format!("{err}"))),
+            Err(err) => return Err(mlua::Error::runtime(format!("{err}"))),
         };
 
         let interface = settings.usb_settings.interface;
@@ -62,11 +60,11 @@ impl Screen for USBDevice {
         })
     }
 
-    fn size(&mut self, _: &Lua) -> Result<Size> {
+    fn size(&mut self, _: &Lua) -> mlua::Result<Size> {
         Ok(self.size)
     }
 
-    fn update(&mut self, _: &Lua, pixels: Vec<u8>) -> Result<()> {
+    fn update(&mut self, _: &Lua, pixels: Vec<u8>) -> mlua::Result<()> {
         let pixels: Vec<u8> = self.transform.call(pixels).unwrap();
 
         self.handle
@@ -83,7 +81,7 @@ impl Screen for USBDevice {
         Ok(())
     }
 
-    fn name(&mut self, _: &Lua) -> Result<String> {
+    fn name(&mut self, _: &Lua) -> mlua::Result<String> {
         Ok(self.name.clone())
     }
 }

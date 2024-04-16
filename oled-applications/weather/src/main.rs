@@ -30,8 +30,6 @@ fn main() {
 }
 
 fn load_and_send_images(api: &Api) {
-    // TODO Attribute the creator, images downloaded from https://www.flaticon.com/packs/weather-160
-
     let images = weather_api::load_images();
 
     let mut table = Table::default();
@@ -52,7 +50,7 @@ fn get_coordinates_from_name(name: &Name) -> Coordinates {
         .unwrap();
     let results: Results = res.into_json().unwrap();
 
-    let mut results = results.into_iter().filter_map(|data| {
+    let mut results = results.results.into_iter().filter_map(|data| {
         let admin_matches = name.administrative.is_none()
             || name.administrative == data.admin1
             || name.administrative == data.admin2
@@ -214,14 +212,4 @@ struct GeocodingData {
 #[derive(serde::Deserialize, Debug)]
 struct Results {
     pub results: Vec<GeocodingData>,
-}
-
-impl IntoIterator for Results {
-    type Item = GeocodingData;
-
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.results.into_iter()
-    }
 }

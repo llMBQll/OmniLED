@@ -1,4 +1,4 @@
-use mlua::{chunk, Lua};
+use mlua::{chunk, Lua, Table};
 use std::path::PathBuf;
 use std::{
     env::consts::{
@@ -7,6 +7,8 @@ use std::{
     path::MAIN_SEPARATOR_STR,
 };
 
+use crate::create_table;
+
 pub struct Constants;
 
 impl Constants {
@@ -14,22 +16,19 @@ impl Constants {
         let applications_dir = Self::root_dir().join("oled-applications");
         let applications_dir = applications_dir.to_str().unwrap();
 
-        lua.load(chunk! {
-            PLATFORM = {
-                ApplicationsDir = $applications_dir,
-                Arch = $ARCH,
-                DllExtension = $DLL_EXTENSION,
-                DllPrefix = $DLL_PREFIX,
-                DllSuffix = $DLL_SUFFIX,
-                ExeExtension = $EXE_EXTENSION,
-                ExeSuffix = $EXE_SUFFIX,
-                Family = $FAMILY,
-                PathSeparator = $MAIN_SEPARATOR_STR,
-                Os = $OS,
-            }
-        })
-        .exec()
-        .unwrap();
+        let platform = create_table!(lua, {
+            ApplicationsDir = $applications_dir,
+            Arch = $ARCH,
+            DllExtension = $DLL_EXTENSION,
+            DllPrefix = $DLL_PREFIX,
+            DllSuffix = $DLL_SUFFIX,
+            ExeExtension = $EXE_EXTENSION,
+            ExeSuffix = $EXE_SUFFIX,
+            Family = $FAMILY,
+            PathSeparator = $MAIN_SEPARATOR_STR,
+            Os = $OS,
+        });
+        lua.globals().set("PLATFORM", platform).unwrap();
     }
 
     pub fn root_dir() -> PathBuf {

@@ -28,7 +28,8 @@ impl AppLoader {
             SERVER = SERVER,
             PLATFORM = PLATFORM,
         });
-        exec_file(lua, &get_full_path(&Settings::get().applications_file), env);
+
+        exec_file(lua, &get_full_path(&Settings::get().applications_file), env).unwrap();
 
         let len: usize = lua.load(chunk! { #APP_LOADER }).eval().unwrap();
         if len == 0 {

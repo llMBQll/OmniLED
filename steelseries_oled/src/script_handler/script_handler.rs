@@ -48,7 +48,8 @@ impl ScriptHandler {
             lua,
             &get_full_path(&Settings::get().scripts_file),
             environment,
-        );
+        )
+        .unwrap();
 
         value
     }
@@ -146,7 +147,7 @@ impl ScriptHandler {
             }
 
             let predicate = match &ctx.scripts[priority].predicate {
-                Some(predicate) => predicate.call::<_, bool>(()).unwrap(),
+                Some(predicate) => predicate.call::<_, bool>(())?,
                 None => true,
             };
             if marked_for_update && predicate {
@@ -161,7 +162,7 @@ impl ScriptHandler {
             None => return Ok(()),
         };
 
-        let size = ctx.screen.get().borrow_mut().size(lua).unwrap(); // TODO handle errors
+        let size = ctx.screen.get().borrow_mut().size(lua)?;
         env.set("SCREEN", size)?;
 
         let output: ScriptOutput = ctx.scripts[to_update].action.call(())?;
@@ -174,7 +175,7 @@ impl ScriptHandler {
             output.data,
         );
 
-        ctx.screen.get().borrow_mut().update(lua, image).unwrap(); // TODO handle errors
+        ctx.screen.get().borrow_mut().update(lua, image)?;
 
         ctx.repeats = match (output.repeats, end_auto_repeat) {
             (Some(Repeat::ToFit), _) => Some(Repeat::ToFit),

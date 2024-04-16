@@ -14,6 +14,7 @@ use crate::keyboard::keyboard::{process_events, KeyboardEventEventType};
 use crate::logging::logger::Logger;
 use crate::screen::screens::Screens;
 use crate::script_handler::script_handler::ScriptHandler;
+use crate::server::server::PluginServer;
 use crate::settings::settings::Settings;
 use crate::tray_icon::tray_icon::TrayIcon;
 
@@ -36,11 +37,11 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 async fn main() {
     let lua = Lua::new();
 
-    let _logger = Logger::new(&lua);
+    Logger::load(&lua);
     let _shortcuts = Shortcuts::load(&lua);
     Constants::load(&lua);
     Settings::load(&lua);
-    server::server::load(&lua);
+    PluginServer::load(&lua);
     let _screens = Screens::load(&lua);
     let _sandbox = ScriptHandler::load(&lua);
     let _tray = TrayIcon::new(&RUNNING);
