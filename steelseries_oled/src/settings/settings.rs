@@ -1,3 +1,4 @@
+use log::error;
 use mlua::{chunk, Lua, LuaSerdeExt, Value};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DurationMilliSeconds};
@@ -59,7 +60,9 @@ impl Settings {
             .unwrap();
 
         let env = create_table!(lua, {Settings = $load_settings});
-        exec_file(lua, &filename, env);
+        if let Err(err) = exec_file(lua, &filename, env) {
+            error!("Couldn't load settings, falling back to default {}", err);
+        }
     }
 
     pub fn get() -> &'static Self {

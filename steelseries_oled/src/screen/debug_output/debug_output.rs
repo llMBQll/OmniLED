@@ -1,7 +1,7 @@
 use mlua::{Lua, Value};
 
 use crate::screen::debug_output::debug_output_settings::DebugOutputSettings;
-use crate::screen::screen::{Result, Screen, Settings, Size};
+use crate::screen::screen::{Screen, Settings, Size};
 
 pub struct DebugOutput {
     name: String,
@@ -9,8 +9,8 @@ pub struct DebugOutput {
 }
 
 impl Screen for DebugOutput {
-    fn init(lua: &Lua, settings: Value) -> Result<Self> {
-        let settings = DebugOutputSettings::new(lua, settings).unwrap();
+    fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
+        let settings = DebugOutputSettings::new(lua, settings)?;
 
         Ok(Self {
             name: settings.name,
@@ -18,11 +18,11 @@ impl Screen for DebugOutput {
         })
     }
 
-    fn size(&mut self, _lua: &Lua) -> Result<Size> {
+    fn size(&mut self, _lua: &Lua) -> mlua::Result<Size> {
         Ok(self.size)
     }
 
-    fn update(&mut self, _lua: &Lua, pixels: Vec<u8>) -> Result<()> {
+    fn update(&mut self, _lua: &Lua, pixels: Vec<u8>) -> mlua::Result<()> {
         for _ in 0..self.size.width {
             print!("-");
         }
@@ -44,7 +44,7 @@ impl Screen for DebugOutput {
         Ok(())
     }
 
-    fn name(&mut self, _lua: &Lua) -> Result<String> {
+    fn name(&mut self, _lua: &Lua) -> mlua::Result<String> {
         Ok(self.name.clone())
     }
 }

@@ -9,13 +9,12 @@ use mlua::{Lua, UserData, UserDataMethods};
 
 use crate::constants::constants::Constants;
 
-#[derive(Clone, Debug)]
 pub struct Logger {
     _handle: Handle,
 }
 
 impl Logger {
-    pub fn new(lua: &Lua) -> Logger {
+    pub fn load(lua: &Lua) {
         let logfile = FileAppender::builder()
             .encoder(Box::new(PatternEncoder::new(
                 "{t} [{d(%Y-%m-%d %H:%M:%S:%3f)}][{l}] {m}\n",
@@ -40,14 +39,12 @@ impl Logger {
         let handle = init_config(config).unwrap();
         let logger = Logger { _handle: handle };
 
-        lua.globals().set("LOG", logger.clone()).unwrap();
+        lua.globals().set("LOG", logger).unwrap();
 
         std::panic::set_hook(Box::new(|panic_info| {
             error!("{panic_info}");
             println!("{panic_info}");
         }));
-
-        logger
     }
 
     #[cfg(not(debug_assertions))]

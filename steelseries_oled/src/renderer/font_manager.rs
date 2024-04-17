@@ -2,9 +2,10 @@ use font_kit::font::Font;
 use font_kit::properties::Properties;
 use font_kit::source::SystemSource;
 use freetype::face::LoadFlag;
-use freetype::{ffi, RenderMode};
+use freetype::RenderMode;
 use log::{debug, error};
 use std::collections::HashMap;
+use std::error::Error;
 use std::sync::Arc;
 
 use crate::renderer::bit::Bit;
@@ -46,13 +47,12 @@ impl FontManager {
 
             Character {
                 metrics: metrics.into(),
-                bounding_box: glyph.get_cbox(ffi::FT_GLYPH_BBOX_UNSCALED).into(),
                 bitmap: glyph.to_bitmap(RenderMode::Mono, None).unwrap().into(),
             }
         })
     }
 
-    fn select_font(selector: FontSelector) -> Result<(Font, u32), Box<dyn std::error::Error>> {
+    fn select_font(selector: FontSelector) -> Result<(Font, u32), Box<dyn Error>> {
         match selector.clone() {
             FontSelector::Default => Ok(Self::load_default_font()),
             FontSelector::Filesystem(selector) => {
@@ -108,7 +108,6 @@ impl FontManager {
 
 pub struct Character {
     pub metrics: Metrics,
-    pub bounding_box: BoundingBox,
     pub bitmap: Bitmap,
 }
 
@@ -130,28 +129,7 @@ impl From<freetype::GlyphMetrics> for Metrics {
 }
 
 #[derive(Debug)]
-pub struct BoundingBox {
-    pub x_min: isize,
-    pub x_max: isize,
-    pub y_min: isize,
-    pub y_max: isize,
-}
-
-impl From<freetype::BBox> for BoundingBox {
-    fn from(bbox: freetype::BBox) -> Self {
-        Self {
-            x_min: bbox.xMin as isize,
-            x_max: bbox.xMax as isize,
-            y_min: bbox.yMin as isize,
-            y_max: bbox.yMax as isize,
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct Bitmap {
-    pub top: isize,
-    pub left: isize,
     pub rows: usize,
     pub cols: usize,
     stride: usize,
@@ -171,8 +149,6 @@ impl From<freetype::BitmapGlyph> for Bitmap {
     fn from(bitmap_glyph: freetype::BitmapGlyph) -> Self {
         let bitmap = bitmap_glyph.bitmap();
         Self {
-            top: bitmap_glyph.top() as isize,
-            left: bitmap_glyph.left() as isize,
             rows: bitmap.rows() as usize,
             cols: bitmap.width() as usize,
             stride: bitmap.pitch() as usize,

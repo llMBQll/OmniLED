@@ -1,17 +1,16 @@
-use mlua::{Lua, LuaSerdeExt, Value};
-use serde::Deserialize;
+use mlua::{ErrorContext, FromLua, Lua, Value};
+use oled_derive::FromLuaTable;
 
-use crate::screen::screen::{Error, Result, Settings, Size};
+use crate::screen::screen::{Settings, Size};
 
-#[derive(Deserialize, Debug)]
+#[derive(FromLuaTable, Clone)]
 pub struct DebugOutputSettings {
     pub name: String,
     pub size: Size,
 }
 
 impl Settings for DebugOutputSettings {
-    fn new(lua: &Lua, value: Value) -> Result<Self> {
-        lua.from_value(value)
-            .map_err(|err| Error::InitFailed(err.to_string()))
+    fn new(lua: &Lua, value: Value) -> mlua::Result<Self> {
+        Self::from_lua(value, lua)
     }
 }
