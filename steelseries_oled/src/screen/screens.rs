@@ -8,6 +8,7 @@ use crate::common::scoped_value::ScopedValue;
 use crate::create_table_with_defaults;
 use crate::screen::debug_output::debug_output::DebugOutput;
 use crate::screen::screen::Screen;
+use crate::screen::simulator::simulator::Simulator;
 use crate::screen::steelseries_engine::steelseries_engine_device::SteelseriesEngineDevice;
 use crate::screen::usb_device::usb_device::USBDevice;
 use crate::settings::settings::{get_full_path, Settings};
@@ -39,6 +40,10 @@ impl Screens {
             Box::new(DebugOutput::init(lua, settings).unwrap())
         });
 
+        loaders.insert("simulator".to_string(), |lua, settings| {
+            Box::new(Simulator::init(lua, settings).unwrap())
+        });
+
         Self {
             screens: HashMap::new(),
             loaders,
@@ -49,11 +54,13 @@ impl Screens {
         let load_steelseries_engine_device = Self::make_loader(lua, "steelseries_engine_device");
         let load_usb_device = Self::make_loader(lua, "usb_device");
         let load_debug_output = Self::make_loader(lua, "debug_output");
+        let load_simulator = Self::make_loader(lua, "simulator");
 
         let env = create_table_with_defaults!(lua, {
             steelseries_engine_device = $load_steelseries_engine_device,
             usb_device = $load_usb_device,
             debug_output = $load_debug_output,
+            simulator = $load_simulator,
             PLATFORM = PLATFORM,
         });
 
