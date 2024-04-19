@@ -1,4 +1,4 @@
-use mlua::{chunk, Lua, Table};
+use mlua::{chunk, Lua};
 use std::path::PathBuf;
 use std::{
     env::consts::{

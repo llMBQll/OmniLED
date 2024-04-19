@@ -8,7 +8,7 @@ use std::time::Duration;
 use crate::common::{common::exec_file, scoped_value::ScopedValue};
 use crate::create_table_with_defaults;
 use crate::renderer::renderer::{ContextKey, Renderer};
-use crate::screen::screens::LuaScreenWrapper;
+use crate::screen::screen::Screen;
 use crate::script_handler::script_data_types::{load_script_data_types, Operation};
 use crate::settings::settings::{get_full_path, Settings};
 
@@ -19,7 +19,7 @@ pub struct ScriptHandler {
 }
 
 struct ScreenContext {
-    screen: LuaScreenWrapper,
+    screen: Box<dyn Screen>,
     scripts: Vec<UserScript>,
     marked_for_update: Vec<bool>,
     time_remaining: Duration,
@@ -61,7 +61,7 @@ impl ScriptHandler {
         user_scripts: Vec<UserScript>,
     ) -> mlua::Result<()> {
         let screens_object: AnyUserData = lua.globals().get("SCREENS").unwrap();
-        let screen: LuaScreenWrapper = screens_object.call_method("load", screen_name)?;
+        let screen = screens_object.call_method("load", screen_name)?;
 
         let screen_count = self.screens.len();
         let script_count = user_scripts.len();
@@ -162,7 +162,7 @@ impl ScriptHandler {
             None => return Ok(()),
         };
 
-        let size = ctx.screen.get().borrow_mut().size(lua)?;
+        let size = ctx.screen.size(lua)?;
         env.set("SCREEN", size)?;
 
         let output: ScriptOutput = ctx.scripts[to_update].action.call(())?;
@@ -175,7 +175,7 @@ impl ScriptHandler {
             output.data,
         );
 
-        ctx.screen.get().borrow_mut().update(lua, image)?;
+        ctx.screen.update(lua, image)?;
 
         ctx.repeats = match (output.repeats, end_auto_repeat) {
             (Some(Repeat::ToFit), _) => Some(Repeat::ToFit),

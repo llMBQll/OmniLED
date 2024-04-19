@@ -1,9 +1,7 @@
 use log::error;
-use mlua::{chunk, FromLua, Function, Lua, OwnedTable, Table, UserData, UserDataMethods, Value};
-use std::cell::RefCell;
+use mlua::{chunk, Function, Lua, OwnedTable, Table, UserData, UserDataMethods, Value};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use crate::common::common::exec_file;
 use crate::common::scoped_value::ScopedValue;
@@ -115,9 +113,10 @@ impl UserData for Screens {
             let entry = match entry {
                 Entry::Occupied(entry) => entry,
                 Entry::Vacant(entry) => {
-                    let message = format!("Screen {} not found", entry.key());
-                    error!("{}", message);
-                    return Err(mlua::Error::runtime(message));
+                    return Err(mlua::Error::runtime(format!(
+                        "Screen {} not found",
+                        entry.key()
+                    )));
                 }
             };
             let name = entry.key().clone();
@@ -126,13 +125,16 @@ impl UserData for Screens {
                 ScreenEntry::Initializer(initializer) => {
                     let value = Value::Table(initializer.settings.to_ref());
                     let screen = (initializer.constructor)(lua, value);
-                    LuaScreenWrapper::new(screen)
+                    screen
                 }
-                ScreenEntry::Screen(screen) => screen,
+                ScreenEntry::Loaded => {
+                    return Err(mlua::Error::runtime(format!(
+                        "Screen {} was already loaded",
+                        name
+                    )));
+                }
             };
-            manager
-                .screens
-                .insert(name, ScreenEntry::Screen(screen.clone()));
+            manager.screens.insert(name, ScreenEntry::Loaded);
             Ok(screen)
         });
     }
@@ -140,29 +142,10 @@ impl UserData for Screens {
 
 enum ScreenEntry {
     Initializer(Initializer),
-    Screen(LuaScreenWrapper),
+    Loaded,
 }
 
 struct Initializer {
     settings: OwnedTable,
     constructor: fn(&Lua, Value) -> Box<dyn Screen>,
 }
-
-#[derive(Clone, FromLua)]
-pub struct LuaScreenWrapper {
-    pub inner: Rc<RefCell<Box<dyn Screen>>>,
-}
-
-impl LuaScreenWrapper {
-    pub fn new(screen: Box<dyn Screen>) -> Self {
-        Self {
-            inner: Rc::new(RefCell::new(screen)),
-        }
-    }
-
-    pub fn get(&self) -> Rc<RefCell<Box<dyn Screen>>> {
-        self.inner.clone()
-    }
-}
-
-impl UserData for LuaScreenWrapper {}
