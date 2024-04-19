@@ -30,11 +30,11 @@ oled-derive = { path = "../oled-derive" }
 oled-server = { path = "../oled-server" }
 tokio = { version = "1", features = ["full"] }
 ureq = { version = "2.4", features = ["json"] }
-tray-item = "0.9"
+tray-item = "0.10"
 
 # Enable tray icon support on linux
 [target.'cfg(target_os = "linux")'.dependencies.tray-item]
-version = "0.9"
+version = "0.10"
 features = ["ksni"]
 
 # Compile tray icon assets for windows
