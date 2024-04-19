@@ -1,6 +1,6 @@
 use mlua::{
-    chunk, AnyUserData, AnyUserDataExt, ErrorContext, FromLua, Function, Lua, LuaSerdeExt,
-    OwnedFunction, OwnedTable, Table, UserData, UserDataMethods, Value,
+    chunk, AnyUserData, ErrorContext, FromLua, Function, Lua, LuaSerdeExt, OwnedFunction,
+    OwnedTable, Table, UserData, UserDataMethods, Value,
 };
 use oled_derive::FromLuaTable;
 use std::time::Duration;
@@ -9,6 +9,7 @@ use crate::common::{common::exec_file, scoped_value::ScopedValue};
 use crate::create_table_with_defaults;
 use crate::renderer::renderer::{ContextKey, Renderer};
 use crate::screen::screen::Screen;
+use crate::screen::screens::Screens;
 use crate::script_handler::script_data_types::{load_script_data_types, Operation};
 use crate::settings::settings::{get_full_path, Settings};
 
@@ -60,8 +61,9 @@ impl ScriptHandler {
         screen_name: String,
         user_scripts: Vec<UserScript>,
     ) -> mlua::Result<()> {
-        let screens_object: AnyUserData = lua.globals().get("SCREENS").unwrap();
-        let screen = screens_object.call_method("load", screen_name)?;
+        let screens: AnyUserData = lua.globals().get("SCREENS").unwrap();
+        let mut screens = screens.borrow_mut::<Screens>().unwrap();
+        let screen = screens.load_screen(lua, screen_name)?;
 
         let screen_count = self.screens.len();
         let script_count = user_scripts.len();

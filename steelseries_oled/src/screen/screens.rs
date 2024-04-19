@@ -25,6 +25,36 @@ impl Screens {
         screens
     }
 
+    pub fn load_screen(&mut self, lua: &Lua, name: String) -> mlua::Result<Box<dyn Screen>> {
+        let entry = self.screens.entry(name);
+        let entry = match entry {
+            Entry::Occupied(entry) => entry,
+            Entry::Vacant(entry) => {
+                return Err(mlua::Error::runtime(format!(
+                    "Screen {} not found",
+                    entry.key()
+                )));
+            }
+        };
+        let name = entry.key().clone();
+        let entry = entry.remove();
+        let screen = match entry {
+            ScreenEntry::Initializer(initializer) => {
+                let value = Value::Table(initializer.settings.to_ref());
+                let screen = (initializer.constructor)(lua, value);
+                screen
+            }
+            ScreenEntry::Loaded => {
+                return Err(mlua::Error::runtime(format!(
+                    "Screen {} was already loaded",
+                    name
+                )));
+            }
+        };
+        self.screens.insert(name, ScreenEntry::Loaded);
+        Ok(screen)
+    }
+
     fn new() -> Self {
         let mut loaders: HashMap<String, fn(&Lua, Value) -> Box<dyn Screen>> = HashMap::new();
 
@@ -114,36 +144,6 @@ impl UserData for Screens {
                 Ok(())
             },
         );
-
-        methods.add_method_mut("load", |lua, manager, name: String| {
-            let entry = manager.screens.entry(name);
-            let entry = match entry {
-                Entry::Occupied(entry) => entry,
-                Entry::Vacant(entry) => {
-                    return Err(mlua::Error::runtime(format!(
-                        "Screen {} not found",
-                        entry.key()
-                    )));
-                }
-            };
-            let name = entry.key().clone();
-            let entry = entry.remove();
-            let screen = match entry {
-                ScreenEntry::Initializer(initializer) => {
-                    let value = Value::Table(initializer.settings.to_ref());
-                    let screen = (initializer.constructor)(lua, value);
-                    screen
-                }
-                ScreenEntry::Loaded => {
-                    return Err(mlua::Error::runtime(format!(
-                        "Screen {} was already loaded",
-                        name
-                    )));
-                }
-            };
-            manager.screens.insert(name, ScreenEntry::Loaded);
-            Ok(screen)
-        });
     }
 }
 

@@ -1,4 +1,4 @@
-use mlua::{FromLua, Lua, UserData, Value};
+use mlua::{Lua, Value};
 
 pub use crate::script_handler::script_data_types::Size;
 
@@ -20,19 +20,4 @@ pub trait Settings {
     fn new(lua: &Lua, value: Value) -> mlua::Result<Self>
     where
         Self: Sized;
-}
-
-impl UserData for Box<dyn Screen> {}
-
-impl<'lua> FromLua<'lua> for Box<dyn Screen> {
-    fn from_lua(value: Value<'lua>, _lua: &'lua Lua) -> mlua::Result<Self> {
-        match value {
-            Value::UserData(user_data) => user_data.take(),
-            other => Err(mlua::Error::FromLuaConversionError {
-                from: other.type_name(),
-                to: "Screen",
-                message: None,
-            }),
-        }
-    }
 }
