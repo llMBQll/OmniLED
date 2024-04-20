@@ -1,3 +1,4 @@
+use convert_case::{Case, Casing};
 use log::error;
 use mlua::{chunk, Function, Lua, OwnedTable, Table, UserData, UserDataMethods, Value};
 use std::collections::hash_map::Entry;
@@ -13,15 +14,18 @@ use crate::screen::steelseries_engine::steelseries_engine_device::SteelseriesEng
 use crate::screen::usb_device::usb_device::USBDevice;
 use crate::settings::settings::{get_full_path, Settings};
 
+type Constructor = fn(&Lua, Value) -> Box<dyn Screen>;
+
 pub struct Screens {
     screens: HashMap<String, ScreenEntry>,
-    loaders: HashMap<String, fn(&Lua, Value) -> Box<dyn Screen>>,
+    constructors: HashMap<String, Constructor>,
 }
 
 impl Screens {
     pub fn load(lua: &Lua) -> ScopedValue {
-        let screens = ScopedValue::new(lua, "SCREENS", Self::new());
-        Self::load_screens(lua);
+        let (constructors, env) = Self::create_loaders(lua);
+        let screens = ScopedValue::new(lua, "SCREENS", Self::new(constructors));
+        Self::load_screens(lua, env);
         screens
     }
 
@@ -55,45 +59,14 @@ impl Screens {
         Ok(screen)
     }
 
-    fn new() -> Self {
-        let mut loaders: HashMap<String, fn(&Lua, Value) -> Box<dyn Screen>> = HashMap::new();
-
-        loaders.insert("steelseries_engine_device".to_string(), |lua, settings| {
-            Box::new(SteelseriesEngineDevice::init(lua, settings).unwrap())
-        });
-
-        loaders.insert("usb_device".to_string(), |lua, settings| {
-            Box::new(USBDevice::init(lua, settings).unwrap())
-        });
-
-        loaders.insert("debug_output".to_string(), |lua, settings| {
-            Box::new(DebugOutput::init(lua, settings).unwrap())
-        });
-
-        loaders.insert("simulator".to_string(), |lua, settings| {
-            Box::new(Simulator::init(lua, settings).unwrap())
-        });
-
+    fn new(constructors: HashMap<String, Constructor>) -> Self {
         Self {
             screens: HashMap::new(),
-            loaders,
+            constructors,
         }
     }
 
-    fn load_screens(lua: &Lua) {
-        let load_steelseries_engine_device = Self::make_loader(lua, "steelseries_engine_device");
-        let load_usb_device = Self::make_loader(lua, "usb_device");
-        let load_debug_output = Self::make_loader(lua, "debug_output");
-        let load_simulator = Self::make_loader(lua, "simulator");
-
-        let env = create_table_with_defaults!(lua, {
-            steelseries_engine_device = $load_steelseries_engine_device,
-            usb_device = $load_usb_device,
-            debug_output = $load_debug_output,
-            simulator = $load_simulator,
-            PLATFORM = PLATFORM,
-        });
-
+    fn load_screens(lua: &Lua, env: Table) {
         exec_file(
             lua,
             &get_full_path(&Settings::get().supported_screens_file),
@@ -102,19 +75,50 @@ impl Screens {
         .unwrap();
     }
 
-    fn make_loader<'a>(lua: &'a Lua, kind: &'static str) -> Function<'a> {
-        lua.create_function(move |lua, settings: Table| {
-            let name: String = settings.get("name")?;
+    fn create_loaders(lua: &Lua) -> (HashMap<String, Constructor>, Table) {
+        let mut constructors = HashMap::new();
+        let env = create_table_with_defaults!(lua, {
+            PLATFORM = PLATFORM,
+        });
 
-            lua.load(chunk! {
-                SCREENS:add_configuration($name, $kind, $settings)
+        let loaders = [
+            Self::create_loader::<SteelseriesEngineDevice>(lua),
+            Self::create_loader::<USBDevice>(lua),
+            Self::create_loader::<DebugOutput>(lua),
+            Self::create_loader::<Simulator>(lua),
+        ];
+        for (name, constructor, loader) in loaders {
+            constructors.insert(name.clone(), constructor);
+            env.set(name, loader).unwrap();
+        }
+
+        (constructors, env)
+    }
+
+    fn create_loader<T: Screen + 'static>(lua: &Lua) -> (String, Constructor, Function) {
+        let type_name = std::any::type_name::<T>();
+        let type_name = type_name.split("::").last().unwrap();
+        let type_name = type_name.to_case(Case::Snake);
+
+        let constructor: fn(&Lua, Value) -> Box<dyn Screen> =
+            |lua, settings| Box::new(T::init(lua, settings).unwrap());
+
+        let name = type_name.clone();
+        let loader = lua
+            .create_function(move |lua, settings: Table| {
+                let screen_name: String = settings.get("name")?;
+                let name = name.clone();
+                lua.load(chunk! {
+                    SCREENS:add_configuration($screen_name, $name, $settings)
+                })
+                .exec()
+                .unwrap();
+
+                Ok(())
             })
-            .exec()
             .unwrap();
 
-            Ok(())
-        })
-        .unwrap()
+        (type_name, constructor, loader)
     }
 }
 
@@ -133,7 +137,7 @@ impl UserData for Screens {
                         return Err(mlua::Error::runtime(message));
                     }
                     Entry::Vacant(entry) => {
-                        let loader = manager.loaders[&kind];
+                        let loader = manager.constructors[&kind];
                         entry.insert(ScreenEntry::Initializer(Initializer {
                             settings: settings.into_owned(),
                             constructor: loader,

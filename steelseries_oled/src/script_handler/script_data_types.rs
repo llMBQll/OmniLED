@@ -1,4 +1,4 @@
-use const_format::{map_ascii_case, Case};
+use convert_case::{Case, Casing};
 use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields};
 use oled_derive::FromLuaTable;
 
@@ -108,7 +108,7 @@ macro_rules! register_function {
     ($lua:ident, $table:ident, $func_name:ident) => {
         $table
             .set(
-                map_ascii_case!(Case::Pascal, stringify!($func_name)),
+                stringify!($func_name).to_case(Case::Pascal),
                 $lua.create_function($func_name).unwrap(),
             )
             .unwrap();
