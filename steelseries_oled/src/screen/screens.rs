@@ -120,6 +120,33 @@ impl Screens {
 
         (type_name, constructor, loader)
     }
+
+    fn add_configuration(
+        &mut self,
+        name: String,
+        kind: String,
+        settings: Table,
+    ) -> mlua::Result<()> {
+        match self.screens.entry(name) {
+            Entry::Occupied(entry) => {
+                let message = format!(
+                    "Screen configuration for '{}' is already registered",
+                    entry.key()
+                );
+                error!("{}", message);
+                return Err(mlua::Error::runtime(message));
+            }
+            Entry::Vacant(entry) => {
+                let loader = self.constructors[&kind];
+                entry.insert(ScreenEntry::Initializer(Initializer {
+                    settings: settings.into_owned(),
+                    constructor: loader,
+                }));
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl UserData for Screens {
@@ -127,25 +154,7 @@ impl UserData for Screens {
         methods.add_method_mut(
             "add_configuration",
             |_lua, manager, (name, kind, settings): (String, String, Table)| {
-                match manager.screens.entry(name) {
-                    Entry::Occupied(entry) => {
-                        let message = format!(
-                            "Screen configuration for '{}' is already registered",
-                            entry.key()
-                        );
-                        error!("{}", message);
-                        return Err(mlua::Error::runtime(message));
-                    }
-                    Entry::Vacant(entry) => {
-                        let loader = manager.constructors[&kind];
-                        entry.insert(ScreenEntry::Initializer(Initializer {
-                            settings: settings.into_owned(),
-                            constructor: loader,
-                        }));
-                    }
-                }
-
-                Ok(())
+                manager.add_configuration(name, kind, settings)
             },
         );
     }

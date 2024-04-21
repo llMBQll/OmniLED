@@ -1,9 +1,7 @@
-use mlua::{
-    AnyUserData, AnyUserDataExt, Function, Lua, LuaSerdeExt, OwnedFunction, UserData,
-    UserDataFields, UserDataMethods, Value,
-};
+use mlua::{AnyUserData, Function, Lua, OwnedFunction, UserData, UserDataFields, UserDataMethods};
 
 use crate::common::scoped_value::ScopedValue;
+use crate::script_handler::script_handler::ScriptHandler;
 
 pub struct Shortcuts {
     shortcuts: Vec<ShortcutEntry>,
@@ -18,6 +16,49 @@ impl Shortcuts {
                 shortcuts: Vec::new(),
             },
         )
+    }
+
+    pub fn process_key(&mut self, lua: &Lua, key_name: &str, action: &str) -> mlua::Result<()> {
+        for shortcut in self.shortcuts.iter_mut() {
+            let position = match shortcut.keys.iter_mut().position(|x| x.key == key_name) {
+                Some(position) => position,
+                None => continue,
+            };
+
+            // calculate all_pressed BEFORE updating the state
+            let all_pressed = shortcut.keys.iter().all(|x| x.pressed);
+
+            shortcut.keys[position].pressed = action == "Pressed";
+
+            if all_pressed {
+                shortcut.on_match.call::<(), ()>(()).unwrap();
+            }
+
+            if (shortcut.flags & flags::RESET_STATE) != 0 {
+                let script_handler: AnyUserData = lua.globals().get("SCRIPT_HANDLER")?;
+                let mut script_handler = script_handler.borrow_mut::<ScriptHandler>().unwrap();
+                script_handler.reset();
+            }
+        }
+        Ok(())
+    }
+
+    fn register(&mut self, mut keys: Vec<String>, on_match: Function, flags: Option<u8>) {
+        keys.sort();
+        keys.dedup();
+        let keys = keys
+            .into_iter()
+            .map(|key| KeyState {
+                key,
+                pressed: false,
+            })
+            .collect();
+
+        self.shortcuts.push(ShortcutEntry {
+            keys,
+            on_match: on_match.into_owned(),
+            flags: flags.unwrap_or(flags::NO_FLAGS),
+        });
     }
 }
 
@@ -35,51 +76,8 @@ impl UserData for Shortcuts {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
-            |_lua, this, (mut keys, on_match, flags): (Vec<String>, Function, Option<u8>)| {
-                keys.sort();
-                keys.dedup();
-                let keys = keys
-                    .into_iter()
-                    .map(|key| KeyState {
-                        key,
-                        pressed: false,
-                    })
-                    .collect();
-
-                this.shortcuts.push(ShortcutEntry {
-                    keys,
-                    on_match: on_match.into_owned(),
-                    flags: flags.unwrap_or(flags::NO_FLAGS),
-                });
-
-                Ok(())
-            },
-        );
-
-        methods.add_method_mut(
-            "process_key",
-            |lua, this, (event, event_data): (String, Value)| {
-                for shortcut in this.shortcuts.iter_mut() {
-                    let position = match shortcut.keys.iter_mut().position(|x| x.key == event) {
-                        Some(position) => position,
-                        None => continue,
-                    };
-
-                    // calculate all_pressed BEFORE updating the state
-                    let all_pressed = shortcut.keys.iter().all(|x| x.pressed);
-
-                    let data: String = lua.from_value(event_data.clone()).unwrap();
-                    shortcut.keys[position].pressed = data == "Pressed";
-
-                    if all_pressed {
-                        shortcut.on_match.call::<(), ()>(()).unwrap();
-                    }
-
-                    if (shortcut.flags & flags::RESET_STATE) != 0 {
-                        let event_handler: AnyUserData = lua.globals().get("SCRIPT_HANDLER")?;
-                        event_handler.call_method::<_, ()>("reset", ())?;
-                    }
-                }
+            |_lua, this, (keys, on_match, flags): (Vec<String>, Function, Option<u8>)| {
+                this.register(keys, on_match, flags);
                 Ok(())
             },
         );

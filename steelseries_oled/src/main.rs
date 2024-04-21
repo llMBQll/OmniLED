@@ -1,7 +1,7 @@
 #![windows_subsystem = "windows"]
 
 use log::error;
-use mlua::{AnyUserData, AnyUserDataExt, Lua};
+use mlua::{AnyUserData, Lua};
 use std::sync::atomic::AtomicBool;
 
 use crate::app_loader::app_loader::AppLoader;
@@ -53,9 +53,9 @@ async fn main() {
     let event_loop = EventLoop::new();
     event_loop
         .run(interval, &RUNNING, |events| {
-            let event_handler: AnyUserData = lua.globals().get("SCRIPT_HANDLER").unwrap();
+            let script_handler: AnyUserData = lua.globals().get("SCRIPT_HANDLER").unwrap();
             let shortcuts: AnyUserData = lua.globals().get("SHORTCUTS").unwrap();
-            let interval = interval.as_millis() as u64;
+            let mut shortcuts = shortcuts.borrow_mut::<Shortcuts>().unwrap();
 
             for event in events {
                 match event {
@@ -71,33 +71,27 @@ async fn main() {
                                 }
                             };
 
-                            // TODO error handling
-                            event_handler
-                                .call_method::<_, ()>(
-                                    "set_value",
-                                    (application.clone(), name, value),
-                                )
+                            let mut script_handler =
+                                script_handler.borrow_mut::<ScriptHandler>().unwrap();
+                            script_handler
+                                .set_value(&lua, application.clone(), name, value)
                                 .unwrap();
                         }
                     }
                     Event::Keyboard(event) => {
-                        let event_name = format!("KEY({})", event.key);
-                        let event_type = match event.event_type {
+                        let key_name = format!("KEY({})", event.key);
+                        let action = match event.event_type {
                             KeyboardEventEventType::Press => "Pressed",
                             KeyboardEventEventType::Release => "Released",
                         };
 
-                        shortcuts
-                            .call_method::<_, ()>("process_key", (event_name, event_type))
-                            .unwrap();
+                        shortcuts.process_key(&lua, &key_name, action).unwrap();
                     }
                 }
             }
 
-            // TODO error handling
-            event_handler
-                .call_method::<_, ()>("update", interval)
-                .unwrap();
+            let mut script_handler = script_handler.borrow_mut::<ScriptHandler>().unwrap();
+            script_handler.update(&lua, interval).unwrap();
         })
         .await;
 

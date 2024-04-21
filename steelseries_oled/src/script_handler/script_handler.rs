@@ -55,34 +55,7 @@ impl ScriptHandler {
         value
     }
 
-    fn register(
-        &mut self,
-        lua: &Lua,
-        screen_name: String,
-        user_scripts: Vec<UserScript>,
-    ) -> mlua::Result<()> {
-        let screens: AnyUserData = lua.globals().get("SCREENS").unwrap();
-        let mut screens = screens.borrow_mut::<Screens>().unwrap();
-        let screen = screens.load_screen(lua, screen_name)?;
-
-        let screen_count = self.screens.len();
-        let script_count = user_scripts.len();
-
-        let context = ScreenContext {
-            screen,
-            scripts: user_scripts,
-            marked_for_update: vec![false; script_count],
-            time_remaining: Default::default(),
-            last_priority: 0,
-            repeats: None,
-            index: screen_count,
-        };
-        self.screens.push(context);
-
-        Ok(())
-    }
-
-    fn set_value(
+    pub fn set_value(
         &mut self,
         lua: &Lua,
         application_name: String,
@@ -111,11 +84,47 @@ impl ScriptHandler {
         Ok(())
     }
 
-    fn update(&mut self, lua: &Lua, time_passed: Duration) -> mlua::Result<()> {
+    pub fn update(&mut self, lua: &Lua, time_passed: Duration) -> mlua::Result<()> {
         let env = self.environment.to_ref();
         for screen in &mut self.screens {
             Self::update_impl(lua, screen, &mut self.renderer, &env, time_passed)?;
         }
+        Ok(())
+    }
+
+    pub fn reset(&mut self) {
+        for screen in &mut self.screens {
+            screen.marked_for_update = vec![false; screen.marked_for_update.len()];
+            screen.time_remaining = Duration::ZERO;
+            screen.last_priority = 0;
+            screen.repeats = None;
+        }
+    }
+
+    fn register(
+        &mut self,
+        lua: &Lua,
+        screen_name: String,
+        user_scripts: Vec<UserScript>,
+    ) -> mlua::Result<()> {
+        let screens: AnyUserData = lua.globals().get("SCREENS").unwrap();
+        let mut screens = screens.borrow_mut::<Screens>().unwrap();
+        let screen = screens.load_screen(lua, screen_name)?;
+
+        let screen_count = self.screens.len();
+        let script_count = user_scripts.len();
+
+        let context = ScreenContext {
+            screen,
+            scripts: user_scripts,
+            marked_for_update: vec![false; script_count],
+            time_remaining: Default::default(),
+            last_priority: 0,
+            repeats: None,
+            index: screen_count,
+        };
+        self.screens.push(context);
+
         Ok(())
     }
 
@@ -193,17 +202,6 @@ impl ScriptHandler {
         Ok(())
     }
 
-    fn reset(&mut self) -> mlua::Result<()> {
-        for screen in &mut self.screens {
-            screen.marked_for_update = vec![false; screen.marked_for_update.len()];
-            screen.time_remaining = Duration::ZERO;
-            screen.last_priority = 0;
-            screen.repeats = None;
-        }
-
-        Ok(())
-    }
-
     fn make_sandbox(lua: &Lua) -> Table {
         let env = create_table_with_defaults!(lua, {
             register = function(screen, user_scripts)
@@ -228,19 +226,6 @@ impl UserData for ScriptHandler {
                 handler.register(lua, screen, user_scripts)
             },
         );
-
-        methods.add_method_mut("update", |lua, handler, time_passed: u64| {
-            handler.update(lua, Duration::from_millis(time_passed))
-        });
-
-        methods.add_method_mut(
-            "set_value",
-            |lua, handler, (application_name, event, data): (String, String, Value)| {
-                handler.set_value(lua, application_name, event, data)
-            },
-        );
-
-        methods.add_method_mut("reset", |_lua, handler, _: ()| handler.reset());
     }
 }
 
