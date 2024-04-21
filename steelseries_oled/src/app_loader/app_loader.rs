@@ -3,7 +3,7 @@ use mlua::{chunk, Lua, MetaMethod, UserData};
 
 use crate::app_loader::process::Config;
 use crate::common::scoped_value::ScopedValue;
-use crate::common::user_data::UserDataIdentifier;
+use crate::common::user_data::{UserDataIdentifier, UserDataRef};
 use crate::settings::settings::get_full_path;
 use crate::{
     app_loader::process::Process, common::common::exec_file, create_table_with_defaults,
@@ -30,7 +30,8 @@ impl AppLoader {
             PLATFORM = PLATFORM,
         });
 
-        exec_file(lua, &get_full_path(&Settings::get().applications_file), env).unwrap();
+        let settings = UserDataRef::<Settings>::load(lua);
+        exec_file(lua, &get_full_path(&settings.get().applications_file), env).unwrap();
 
         let len: usize = lua.load(chunk! { #APP_LOADER }).eval().unwrap();
         if len == 0 {

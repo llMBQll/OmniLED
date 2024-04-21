@@ -1,8 +1,10 @@
+use mlua::Lua;
 use std::cmp::max;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::vec::IntoIter;
 
+use crate::common::user_data::UserDataRef;
 use crate::renderer::buffer::Buffer;
 use crate::renderer::font_manager::FontManager;
 use crate::script_handler::script_data_types::{Modifiers, OledImage, Operation, Text};
@@ -16,13 +18,14 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new() -> Self {
-        let font_selector = Settings::get().font.clone();
+    pub fn new(lua: &Lua) -> Self {
+        let settings = UserDataRef::<Settings>::load(lua);
+        let font_selector = settings.get().font.clone();
 
         Self {
             font_manager: FontManager::new(font_selector),
             scrolling_text_data: ScrollingTextData::new(),
-            scrolling_text_control: ScrollingTextControl::new(),
+            scrolling_text_control: ScrollingTextControl::new(lua),
         }
     }
 
@@ -227,11 +230,13 @@ struct ScrollingTextControl {
 }
 
 impl ScrollingTextControl {
-    pub fn new() -> Self {
-        Self {
-            ticks_at_edge: Settings::get().scrolling_text_ticks_at_edge,
-            ticks_per_move: Settings::get().scrolling_text_ticks_per_move,
-        }
+    pub fn new(lua: &Lua) -> Self {
+        let settings = UserDataRef::<Settings>::load(lua);
+        let text_control = Self {
+            ticks_at_edge: settings.get().scrolling_text_ticks_at_edge,
+            ticks_per_move: settings.get().scrolling_text_ticks_per_move,
+        };
+        text_control
     }
 }
 

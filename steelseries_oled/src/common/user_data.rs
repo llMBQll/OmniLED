@@ -1,5 +1,5 @@
 use mlua::{AnyUserData, Lua, UserData};
-use std::cell::RefMut;
+use std::cell::{Ref, RefMut};
 use std::marker::PhantomData;
 
 pub trait UserDataIdentifier {
@@ -19,6 +19,10 @@ impl<'a, T: UserDataIdentifier + UserData + 'static> UserDataRef<'a, T> {
             user_data,
             phantom_data: PhantomData,
         }
+    }
+
+    pub fn get(&self) -> Ref<T> {
+        self.user_data.borrow::<T>().unwrap()
     }
 
     pub fn get_mut(&mut self) -> RefMut<T> {

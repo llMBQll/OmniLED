@@ -40,15 +40,16 @@ impl ScriptHandler {
             lua,
             Self::identifier(),
             ScriptHandler {
-                renderer: Renderer::new(),
+                renderer: Renderer::new(lua),
                 environment: environment.clone().into_owned(),
                 screens: vec![],
             },
         );
 
+        let settings = UserDataRef::<Settings>::load(lua);
         exec_file(
             lua,
-            &get_full_path(&Settings::get().scripts_file),
+            &get_full_path(&settings.get().scripts_file),
             environment,
         )
         .unwrap();

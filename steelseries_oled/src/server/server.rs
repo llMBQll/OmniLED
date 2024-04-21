@@ -4,6 +4,7 @@ use oled_api::types::Event;
 use oled_server::{RequestHandler, Server, StatusCode};
 use std::sync::{Arc, Mutex};
 
+use crate::common::user_data::UserDataRef;
 use crate::constants::constants::Constants;
 use crate::events;
 use crate::events::event_queue::EventQueue;
@@ -14,8 +15,9 @@ pub struct PluginServer {}
 impl PluginServer {
     pub fn load(lua: &Lua) {
         let implementation = PluginRequestHandler::new();
-        let port: u16 = Settings::get().server_port;
-        let strict: bool = Settings::get().server_port_strict;
+        let settings = UserDataRef::<Settings>::load(lua);
+        let port: u16 = settings.get().server_port;
+        let strict: bool = settings.get().server_port_strict;
 
         let server = Server::bind(implementation, port, strict);
 

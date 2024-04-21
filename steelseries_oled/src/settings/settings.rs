@@ -1,9 +1,8 @@
 use log::error;
-use mlua::{chunk, Lua, LuaSerdeExt, Value};
+use mlua::{chunk, Lua, LuaSerdeExt, UserData, Value};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DurationMilliSeconds};
 use std::path::PathBuf;
-use std::sync::OnceLock;
 use std::time::Duration;
 
 use crate::common::common::exec_file;
@@ -47,15 +46,13 @@ pub struct Settings {
     pub update_interval: Duration,
 }
 
-static SETTINGS: OnceLock<Settings> = OnceLock::new();
-
 impl Settings {
     pub fn load(lua: &Lua) {
         let filename = get_full_path(&Self::settings_file());
         let load_settings = lua
             .create_function(move |lua, settings: Value| {
                 let settings: Settings = lua.from_value(settings)?;
-                Self::set(lua, settings);
+                lua.globals().set(Settings::identifier(), settings).unwrap();
                 Ok(())
             })
             .unwrap();
@@ -64,18 +61,6 @@ impl Settings {
         if let Err(err) = exec_file(lua, &filename, env) {
             error!("Couldn't load settings, falling back to default {}", err);
         }
-    }
-
-    pub fn get() -> &'static Self {
-        SETTINGS.get().unwrap()
-    }
-
-    fn set(lua: &Lua, settings: Settings) {
-        lua.globals()
-            .set(Self::identifier(), lua.to_value(&settings).unwrap())
-            .unwrap();
-
-        SETTINGS.get_or_init(move || settings);
     }
 
     fn applications_file() -> String {
@@ -135,6 +120,8 @@ impl Default for Settings {
         }
     }
 }
+
+impl UserData for Settings {}
 
 impl UserDataIdentifier for Settings {
     fn identifier() -> &'static str {

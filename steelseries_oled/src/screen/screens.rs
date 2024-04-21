@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use crate::common::common::exec_file;
 use crate::common::scoped_value::ScopedValue;
-use crate::common::user_data::UserDataIdentifier;
+use crate::common::user_data::{UserDataIdentifier, UserDataRef};
 use crate::create_table_with_defaults;
 use crate::screen::debug_output::debug_output::DebugOutput;
 use crate::screen::screen::Screen;
@@ -68,9 +68,10 @@ impl Screens {
     }
 
     fn load_screens(lua: &Lua, env: Table) {
+        let settings = UserDataRef::<Settings>::load(lua);
         exec_file(
             lua,
-            &get_full_path(&Settings::get().supported_screens_file),
+            &get_full_path(&settings.get().supported_screens_file),
             env,
         )
         .unwrap();

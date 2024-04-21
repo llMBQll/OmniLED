@@ -50,7 +50,8 @@ async fn main() {
 
     let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
 
-    let interval = Settings::get().update_interval;
+    let settings = UserDataRef::<Settings>::load(&lua);
+    let interval = settings.get().update_interval;
     let event_loop = EventLoop::new();
     event_loop
         .run(interval, &RUNNING, |events| {
