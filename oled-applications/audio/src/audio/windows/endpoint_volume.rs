@@ -57,8 +57,6 @@ impl EndpointVolume {
     }
 }
 
-unsafe impl Send for EndpointVolume {}
-
 impl Drop for EndpointVolume {
     fn drop(&mut self) {
         unsafe {
