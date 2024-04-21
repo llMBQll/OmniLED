@@ -66,7 +66,7 @@ async fn main() {
                             let value = match proto_to_lua_value(&lua, value) {
                                 Ok(value) => value,
                                 Err(err) => {
-                                    error!("Failed to convert json value: {}", err);
+                                    error!("Failed to convert protobuf value: {}", err);
                                     continue;
                                 }
                             };
