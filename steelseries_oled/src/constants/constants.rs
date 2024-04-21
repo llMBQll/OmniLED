@@ -13,7 +13,7 @@ pub struct Constants;
 
 impl Constants {
     pub fn load(lua: &Lua) {
-        let applications_dir = Self::root_dir().join("oled-applications");
+        let applications_dir = Self::applications_dir();
         let applications_dir = applications_dir.to_str().unwrap();
 
         let platform = create_table!(lua, {
@@ -31,9 +31,30 @@ impl Constants {
         lua.globals().set("PLATFORM", platform).unwrap();
     }
 
+    #[cfg(debug_assertions)]
+    pub fn root_dir() -> PathBuf {
+        let root_dir = PathBuf::from(".");
+        root_dir
+    }
+
+    #[cfg(not(debug_assertions))]
     pub fn root_dir() -> PathBuf {
         let root_dir = dirs_next::config_dir().expect("Couldn't get default config directory");
         let root_dir = root_dir.join("SteelseriesOLED");
         root_dir
+    }
+
+    pub fn config_dir() -> PathBuf {
+        Self::root_dir().join("config")
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn applications_dir() -> PathBuf {
+        Self::root_dir().join("target").join("debug")
+    }
+
+    #[cfg(not(debug_assertions))]
+    pub fn applications_dir() -> PathBuf {
+        Self::root_dir().join("applications")
     }
 }

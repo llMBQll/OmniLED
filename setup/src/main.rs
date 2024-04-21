@@ -11,19 +11,20 @@ fn main() {
     };
 
     let root = get_root();
-    let applications_root = root.join("oled-applications");
+    let config_root = root.join("config");
+    let applications_root = root.join("applications");
     create_dir(&root);
+    create_dir(&config_root);
     create_dir(&applications_root);
 
-    copy("", &root, "screens.lua", false);
-
-    let settings_source_root = if options.dev {
-        "setup/defaults"
-    } else {
-        "defaults"
-    };
-    for file in vec!["applications.lua", "scripts.lua", "settings.lua"] {
-        copy(&settings_source_root, &root, file, false);
+    let settings_source_root = if options.dev { "config" } else { "defaults" };
+    for file in vec![
+        "applications.lua",
+        "screens.lua",
+        "scripts.lua",
+        "settings.lua",
+    ] {
+        copy(&settings_source_root, &config_root, file, false);
     }
 
     for app in vec!["audio", "clock", "media", "weather"] {

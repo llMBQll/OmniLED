@@ -1,4 +1,4 @@
-use log::{error, Level};
+use log::Level;
 use oled_api::types::{Event, EventReply, LogLevel, LogMessage};
 use prost::bytes::Bytes;
 use prost::Message;
@@ -85,8 +85,7 @@ impl Server {
                 }
                 Err(err) => {
                     if strict {
-                        error!("Failed to open a server on port {}: {}", port, err);
-                        panic!("Failed to start a server");
+                        panic!("Failed to open a server on port {}: {}", port, err);
                     }
 
                     port += 1;

@@ -1,24 +1,28 @@
-use log::error;
+use log::{debug, error, info};
 use mlua::{chunk, Lua, LuaSerdeExt, UserData, Value};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_with::{serde_as, DurationMilliSeconds};
 use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::common::common::exec_file;
-use crate::common::user_data::UserDataIdentifier;
+use crate::common::user_data::{UserDataIdentifier, UserDataRef};
 use crate::constants::constants::Constants;
 use crate::create_table;
+use crate::logging::logger::{LevelFilter, Logger};
 use crate::renderer::font_selector::FontSelector;
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Settings {
     #[serde(default = "Settings::applications_file")]
     pub applications_file: String,
 
     #[serde(default = "Settings::font")]
     pub font: FontSelector,
+
+    #[serde(default = "Settings::log_level")]
+    pub log_level: LevelFilter,
 
     #[serde(default = "Settings::scripts_file")]
     pub scripts_file: String,
@@ -59,8 +63,21 @@ impl Settings {
 
         let env = create_table!(lua, {Settings = $load_settings});
         if let Err(err) = exec_file(lua, &filename, env) {
-            error!("Couldn't load settings, falling back to default {}", err);
+            error!("Error loading settings: {}. Falling back to default", err);
+            lua.globals()
+                .set(Settings::identifier(), Settings::default())
+                .unwrap();
         }
+
+        let settings = UserDataRef::<Settings>::load(lua);
+        let logger = UserDataRef::<Logger>::load(lua);
+        logger.get().set_level_filter(settings.get().log_level);
+
+        debug!("Loaded settings {:?}", settings.get());
+        info!(
+            "{}",
+            serde_json::to_string_pretty(&FontSelector::Default).unwrap()
+        );
     }
 
     fn applications_file() -> String {
@@ -69,6 +86,10 @@ impl Settings {
 
     fn font() -> FontSelector {
         FontSelector::Default
+    }
+
+    fn log_level() -> LevelFilter {
+        LevelFilter(log::LevelFilter::Info)
     }
 
     fn scripts_file() -> String {
@@ -109,6 +130,7 @@ impl Default for Settings {
         Self {
             applications_file: Settings::applications_file(),
             font: Settings::font(),
+            log_level: Settings::log_level(),
             scripts_file: Settings::scripts_file(),
             scrolling_text_ticks_at_edge: Settings::scrolling_text_ticks_at_edge(),
             scrolling_text_ticks_per_move: Settings::scrolling_text_ticks_per_move(),
@@ -133,7 +155,7 @@ pub fn get_full_path(path: &String) -> String {
     let path_buf = PathBuf::from(path);
     match path_buf.is_absolute() {
         true => path.clone(),
-        false => Constants::root_dir()
+        false => Constants::config_dir()
             .join(path)
             .to_str()
             .unwrap()

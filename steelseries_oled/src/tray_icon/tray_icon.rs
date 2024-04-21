@@ -13,7 +13,7 @@ impl TrayIcon {
         let mut tray = TrayItem::new("Steelseries OLED", Self::load_icon()).unwrap();
 
         tray.add_menu_item("Settings", || {
-            if let Err(err) = opener::reveal(Constants::root_dir().join("settings.lua")) {
+            if let Err(err) = opener::reveal(Constants::config_dir().join("settings.lua")) {
                 error!("Failed to reveal config directory: {}", err);
             }
         })
