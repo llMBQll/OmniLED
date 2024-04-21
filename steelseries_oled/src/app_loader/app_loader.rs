@@ -1,5 +1,5 @@
 use log::{error, warn};
-use mlua::{chunk, Lua, MetaMethod, UserData};
+use mlua::{chunk, Lua, UserData};
 
 use crate::app_loader::process::Config;
 use crate::common::scoped_value::ScopedValue;
@@ -33,8 +33,8 @@ impl AppLoader {
         let settings = UserDataRef::<Settings>::load(lua);
         exec_file(lua, &get_full_path(&settings.get().applications_file), env).unwrap();
 
-        let len: usize = lua.load(chunk! { #APP_LOADER }).eval().unwrap();
-        if len == 0 {
+        let app_loader_ref = UserDataRef::<AppLoader>::load(lua);
+        if app_loader_ref.get().processes.len() == 0 {
             warn!("App loader didn't load any applications");
         }
 
@@ -60,8 +60,6 @@ impl UserData for AppLoader {
 
             Ok(())
         });
-
-        methods.add_meta_method(MetaMethod::Len, |_, this, ()| Ok(this.processes.len()))
     }
 }
 
