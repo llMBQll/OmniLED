@@ -6,6 +6,7 @@ use std::collections::HashMap;
 
 use crate::common::common::exec_file;
 use crate::common::scoped_value::ScopedValue;
+use crate::common::user_data::UserDataIdentifier;
 use crate::create_table_with_defaults;
 use crate::screen::debug_output::debug_output::DebugOutput;
 use crate::screen::screen::Screen;
@@ -24,7 +25,7 @@ pub struct Screens {
 impl Screens {
     pub fn load(lua: &Lua) -> ScopedValue {
         let (constructors, env) = Self::create_loaders(lua);
-        let screens = ScopedValue::new(lua, "SCREENS", Self::new(constructors));
+        let screens = ScopedValue::new(lua, Self::identifier(), Self::new(constructors));
         Self::load_screens(lua, env);
         screens
     }
@@ -157,6 +158,12 @@ impl UserData for Screens {
                 manager.add_configuration(name, kind, settings)
             },
         );
+    }
+}
+
+impl UserDataIdentifier for Screens {
+    fn identifier() -> &'static str {
+        "SCREENS"
     }
 }
 

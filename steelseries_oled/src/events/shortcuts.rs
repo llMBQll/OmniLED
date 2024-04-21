@@ -1,6 +1,7 @@
-use mlua::{AnyUserData, Function, Lua, OwnedFunction, UserData, UserDataFields, UserDataMethods};
+use mlua::{Function, Lua, OwnedFunction, UserData, UserDataFields, UserDataMethods};
 
 use crate::common::scoped_value::ScopedValue;
+use crate::common::user_data::{UserDataIdentifier, UserDataRef};
 use crate::script_handler::script_handler::ScriptHandler;
 
 pub struct Shortcuts {
@@ -11,7 +12,7 @@ impl Shortcuts {
     pub fn load(lua: &Lua) -> ScopedValue {
         ScopedValue::new(
             lua,
-            "SHORTCUTS",
+            Self::identifier(),
             Self {
                 shortcuts: Vec::new(),
             },
@@ -35,9 +36,8 @@ impl Shortcuts {
             }
 
             if (shortcut.flags & flags::RESET_STATE) != 0 {
-                let script_handler: AnyUserData = lua.globals().get("SCRIPT_HANDLER")?;
-                let mut script_handler = script_handler.borrow_mut::<ScriptHandler>().unwrap();
-                script_handler.reset();
+                let mut script_handler = UserDataRef::<ScriptHandler>::load(lua);
+                script_handler.get_mut().reset();
             }
         }
         Ok(())
@@ -81,6 +81,12 @@ impl UserData for Shortcuts {
                 Ok(())
             },
         );
+    }
+}
+
+impl UserDataIdentifier for Shortcuts {
+    fn identifier() -> &'static str {
+        "SHORTCUTS"
     }
 }
 

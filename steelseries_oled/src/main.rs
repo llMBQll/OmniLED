@@ -1,11 +1,12 @@
 #![windows_subsystem = "windows"]
 
 use log::error;
-use mlua::{AnyUserData, Lua};
+use mlua::Lua;
 use std::sync::atomic::AtomicBool;
 
 use crate::app_loader::app_loader::AppLoader;
 use crate::common::common::proto_to_lua_value;
+use crate::common::user_data::UserDataRef;
 use crate::constants::constants::Constants;
 use crate::events::event_loop::EventLoop;
 use crate::events::event_queue::Event;
@@ -53,9 +54,8 @@ async fn main() {
     let event_loop = EventLoop::new();
     event_loop
         .run(interval, &RUNNING, |events| {
-            let script_handler: AnyUserData = lua.globals().get("SCRIPT_HANDLER").unwrap();
-            let shortcuts: AnyUserData = lua.globals().get("SHORTCUTS").unwrap();
-            let mut shortcuts = shortcuts.borrow_mut::<Shortcuts>().unwrap();
+            let mut shortcuts = UserDataRef::<Shortcuts>::load(&lua);
+            let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
 
             for event in events {
                 match event {
@@ -71,9 +71,8 @@ async fn main() {
                                 }
                             };
 
-                            let mut script_handler =
-                                script_handler.borrow_mut::<ScriptHandler>().unwrap();
                             script_handler
+                                .get_mut()
                                 .set_value(&lua, application.clone(), name, value)
                                 .unwrap();
                         }
@@ -85,13 +84,15 @@ async fn main() {
                             KeyboardEventEventType::Release => "Released",
                         };
 
-                        shortcuts.process_key(&lua, &key_name, action).unwrap();
+                        shortcuts
+                            .get_mut()
+                            .process_key(&lua, &key_name, action)
+                            .unwrap();
                     }
                 }
             }
 
-            let mut script_handler = script_handler.borrow_mut::<ScriptHandler>().unwrap();
-            script_handler.update(&lua, interval).unwrap();
+            script_handler.get_mut().update(&lua, interval).unwrap();
         })
         .await;
 

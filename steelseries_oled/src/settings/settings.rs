@@ -7,6 +7,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use crate::common::common::exec_file;
+use crate::common::user_data::UserDataIdentifier;
 use crate::constants::constants::Constants;
 use crate::create_table;
 use crate::renderer::font_selector::FontSelector;
@@ -71,7 +72,7 @@ impl Settings {
 
     fn set(lua: &Lua, settings: Settings) {
         lua.globals()
-            .set("SETTINGS", lua.to_value(&settings).unwrap())
+            .set(Self::identifier(), lua.to_value(&settings).unwrap())
             .unwrap();
 
         SETTINGS.get_or_init(move || settings);
@@ -132,6 +133,12 @@ impl Default for Settings {
             supported_screens_file: Settings::supported_screens_file(),
             update_interval: Settings::update_interval(),
         }
+    }
+}
+
+impl UserDataIdentifier for Settings {
+    fn identifier() -> &'static str {
+        "SETTINGS"
     }
 }
 

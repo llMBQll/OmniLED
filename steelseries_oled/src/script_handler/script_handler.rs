@@ -1,10 +1,11 @@
 use mlua::{
-    chunk, AnyUserData, ErrorContext, FromLua, Function, Lua, LuaSerdeExt, OwnedFunction,
-    OwnedTable, Table, UserData, UserDataMethods, Value,
+    chunk, ErrorContext, FromLua, Function, Lua, LuaSerdeExt, OwnedFunction, OwnedTable, Table,
+    UserData, UserDataMethods, Value,
 };
 use oled_derive::FromLuaTable;
 use std::time::Duration;
 
+use crate::common::user_data::{UserDataIdentifier, UserDataRef};
 use crate::common::{common::exec_file, scoped_value::ScopedValue};
 use crate::create_table_with_defaults;
 use crate::renderer::renderer::{ContextKey, Renderer};
@@ -37,7 +38,7 @@ impl ScriptHandler {
 
         let value = ScopedValue::new(
             lua,
-            "SCRIPT_HANDLER",
+            Self::identifier(),
             ScriptHandler {
                 renderer: Renderer::new(),
                 environment: environment.clone().into_owned(),
@@ -107,9 +108,8 @@ impl ScriptHandler {
         screen_name: String,
         user_scripts: Vec<UserScript>,
     ) -> mlua::Result<()> {
-        let screens: AnyUserData = lua.globals().get("SCREENS").unwrap();
-        let mut screens = screens.borrow_mut::<Screens>().unwrap();
-        let screen = screens.load_screen(lua, screen_name)?;
+        let mut screens = UserDataRef::<Screens>::load(lua);
+        let screen = screens.get_mut().load_screen(lua, screen_name)?;
 
         let screen_count = self.screens.len();
         let script_count = user_scripts.len();
@@ -226,6 +226,12 @@ impl UserData for ScriptHandler {
                 handler.register(lua, screen, user_scripts)
             },
         );
+    }
+}
+
+impl UserDataIdentifier for ScriptHandler {
+    fn identifier() -> &'static str {
+        "SCRIPT_HANDLER"
     }
 }
 

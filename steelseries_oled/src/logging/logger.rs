@@ -7,6 +7,7 @@ use log4rs::{
 };
 use mlua::{Lua, UserData, UserDataMethods};
 
+use crate::common::user_data::UserDataIdentifier;
 use crate::constants::constants::Constants;
 
 pub struct Logger {
@@ -39,7 +40,7 @@ impl Logger {
         let handle = init_config(config).unwrap();
         let logger = Logger { _handle: handle };
 
-        lua.globals().set("LOG", logger).unwrap();
+        lua.globals().set(Self::identifier(), logger).unwrap();
 
         std::panic::set_hook(Box::new(|panic_info| {
             error!("{panic_info}");
@@ -80,5 +81,11 @@ impl UserData for Logger {
             warn!("{}", message);
             Ok(())
         });
+    }
+}
+
+impl UserDataIdentifier for Logger {
+    fn identifier() -> &'static str {
+        "LOG"
     }
 }

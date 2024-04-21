@@ -3,6 +3,7 @@ use mlua::{chunk, Lua, MetaMethod, UserData};
 
 use crate::app_loader::process::Config;
 use crate::common::scoped_value::ScopedValue;
+use crate::common::user_data::UserDataIdentifier;
 use crate::settings::settings::get_full_path;
 use crate::{
     app_loader::process::Process, common::common::exec_file, create_table_with_defaults,
@@ -17,7 +18,7 @@ impl AppLoader {
     pub fn load(lua: &Lua) -> ScopedValue {
         let app_loader = ScopedValue::new(
             lua,
-            "APP_LOADER",
+            Self::identifier(),
             Self {
                 processes: Vec::new(),
             },
@@ -60,5 +61,11 @@ impl UserData for AppLoader {
         });
 
         methods.add_meta_method(MetaMethod::Len, |_, this, ()| Ok(this.processes.len()))
+    }
+}
+
+impl UserDataIdentifier for AppLoader {
+    fn identifier() -> &'static str {
+        "APP_LOADER"
     }
 }
