@@ -61,16 +61,16 @@ unsafe impl Send for EndpointVolume {}
 
 impl Drop for EndpointVolume {
     fn drop(&mut self) {
-        // This is a temporary solution while I investigate why dropping the IAudioEndpointVolume
-        // object hangs the program execution
-
-        let mut endpoint_volume = EmptyAudioEndpointVolume::new();
-        std::mem::swap(&mut self.endpoint_volume, &mut endpoint_volume);
         unsafe {
             self.endpoint_volume
                 .UnregisterControlChangeNotify(&self.endpoint_volume_callback)
                 .unwrap();
         }
+
+        // This is a temporary solution while I investigate why dropping the IAudioEndpointVolume
+        // object hangs the program execution
+        let mut endpoint_volume = EmptyAudioEndpointVolume::new();
+        std::mem::swap(&mut self.endpoint_volume, &mut endpoint_volume);
         std::mem::forget(endpoint_volume);
     }
 }
