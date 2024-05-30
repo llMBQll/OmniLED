@@ -72,9 +72,9 @@ impl Renderer {
             ),
         };
 
-        for row in 0..height as isize {
-            for col in 0..width as isize {
-                buffer.set(row, col, &rect, &modifiers);
+        for y in 0..height as isize {
+            for x in 0..width as isize {
+                buffer.set(x, y, &rect, &modifiers);
             }
         }
     }
@@ -84,24 +84,24 @@ impl Renderer {
             return;
         }
 
-        let factor_row = image.size.height as f64 / rect.size.height as f64;
-        let factor_col = image.size.width as f64 / rect.size.width as f64;
+        let x_factor = image.size.width as f64 / rect.size.width as f64;
+        let y_factor = image.size.height as f64 / rect.size.height as f64;
 
-        for row in 0..rect.size.height as isize {
-            for col in 0..rect.size.width as isize {
+        for y in 0..rect.size.height as isize {
+            for x in 0..rect.size.width as isize {
                 // Use nearest neighbour interpolation for now as it's the quickest to implement
                 // TODO allow specifying scaling algorithm as modifier
                 // TODO potentially cache scaled images
 
-                let image_row = (row as f64 * factor_row).round() as usize;
-                let image_row = image_row.clamp(0, image.size.height - 1);
+                let image_x = (x as f64 * x_factor).round() as usize;
+                let image_x = image_x.clamp(0, image.size.width - 1);
 
-                let image_col = (col as f64 * factor_col).round() as usize;
-                let image_col = image_col.clamp(0, image.size.width - 1);
+                let image_y = (y as f64 * y_factor).round() as usize;
+                let image_y = image_y.clamp(0, image.size.height - 1);
 
-                let index = image_row * image.size.width + image_col;
+                let index = image_y * image.size.width + image_x;
                 if image.bytes[index] != 0 {
-                    buffer.set(row, col, &rect, &modifiers);
+                    buffer.set(x, y, &rect, &modifiers);
                 }
             }
         }
@@ -130,21 +130,21 @@ impl Renderer {
             let bitmap = &character.bitmap;
             let metrics = &character.metrics;
 
-            for row in 0..bitmap.rows as isize {
-                for col in 0..bitmap.cols as isize {
-                    let y = cursor_y + row - metrics.offset_y;
-                    let x = cursor_x + col + metrics.offset_x;
+            for bitmap_y in 0..bitmap.rows as isize {
+                for bitmap_x in 0..bitmap.cols as isize {
+                    let x = cursor_x + bitmap_x + metrics.offset_x;
+                    let y = cursor_y + bitmap_y - metrics.offset_y;
 
-                    if y < 0
-                        || x < 0
+                    if x < 0
+                        || y < 0
                         || (modifiers.strict && x >= rect.size.width as isize)
                         || (modifiers.strict && y >= rect.size.height as isize)
                     {
                         continue;
                     }
 
-                    if bitmap.get(row as usize, col as usize) {
-                        buffer.set(y, x, &rect, &modifiers);
+                    if bitmap.get(bitmap_x as usize, bitmap_y as usize) {
+                        buffer.set(x, y, &rect, &modifiers);
                     }
                 }
             }

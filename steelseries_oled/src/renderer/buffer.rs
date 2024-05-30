@@ -3,8 +3,8 @@ use crate::script_handler::script_data_types::Modifiers;
 use crate::script_handler::script_data_types::{Rectangle, Size};
 
 pub struct Buffer {
-    height: usize,
     width: usize,
+    height: usize,
     padded_width: usize,
     buffer: Vec<u8>,
 }
@@ -15,53 +15,53 @@ impl Buffer {
         let padding = if oversize == 0 { 0 } else { 8 - oversize };
         let padded_width = size.width + padding;
         Self {
-            height: size.height,
             width: size.width,
+            height: size.height,
             padded_width,
             buffer: vec![0; size.height * padded_width / 8],
         }
     }
 
-    pub fn set(&mut self, y: isize, x: isize, area: &Rectangle, modifiers: &Modifiers) {
-        let (row, col) = match self.translate(y, x, area, modifiers) {
+    pub fn set(&mut self, x: isize, y: isize, area: &Rectangle, modifiers: &Modifiers) {
+        let (x, y) = match self.translate(x, y, area, modifiers) {
             Some(pos) => pos,
             None => {
                 return;
             }
         };
 
-        let mut bit = self.bit_at(row, col);
+        let mut bit = self.bit_at(x, y);
         match modifiers.strict || !bit.get() {
             true => bit.set(),
             false => bit.reset(),
         };
     }
 
-    fn bit_at(&mut self, y: usize, x: usize) -> Bit {
+    fn bit_at(&mut self, x: usize, y: usize) -> Bit {
         let index = (y * self.padded_width + x) / 8;
         Bit::new(&mut self.buffer[index], 7 - x % 8)
     }
 
     fn translate(
         &self,
-        y: isize,
         x: isize,
+        y: isize,
         area: &Rectangle,
         modifiers: &Modifiers,
     ) -> Option<(usize, usize)> {
-        let (y, x) = match modifiers.flip_vertical {
-            true => (area.size.height as isize - y, x),
-            false => (y, x),
+        let (x, y) = match modifiers.flip_vertical {
+            true => (x, area.size.height as isize - y),
+            false => (x, y),
         };
 
-        let (y, x) = match modifiers.flip_horizontal {
-            true => (y, area.size.width as isize - x),
-            false => (y, x),
+        let (x, y) = match modifiers.flip_horizontal {
+            true => (area.size.width as isize - x, y),
+            false => (x, y),
         };
 
-        let (y, x) = (y + area.origin.y as isize, x + area.origin.x as isize);
-        match y >= 0 && y < self.height as isize && x >= 0 && x < self.width as isize {
-            true => Some((y as usize, x as usize)),
+        let (x, y) = (x + area.origin.x as isize, y + area.origin.y as isize);
+        match x >= 0 && x < self.width as isize && y >= 0 && y < self.height as isize {
+            true => Some((x as usize, y as usize)),
             false => None,
         }
     }

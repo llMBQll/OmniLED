@@ -137,10 +137,10 @@ pub struct Bitmap {
 }
 
 impl Bitmap {
-    pub fn get(&self, row: usize, col: usize) -> bool {
-        let row_begin = row * self.stride;
-        let mut byte = self.buffer[row_begin + col / 8];
-        let bit = Bit::new(&mut byte, 7 - col % 8);
+    pub fn get(&self, x: usize, y: usize) -> bool {
+        let row_begin = y * self.stride;
+        let mut byte = self.buffer[row_begin + x / 8];
+        let bit = Bit::new(&mut byte, 7 - x % 8);
         bit.get()
     }
 }
