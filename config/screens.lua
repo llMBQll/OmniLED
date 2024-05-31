@@ -14,9 +14,19 @@ usb_device {
         value = '0x0300',
         index = '0x01',
     },
-    transform = function (data)
-        table.insert(data, 1, 0x61)
-        table.insert(data, 0x00)
-        return data
-    end
+    transform = function(buffer)
+        local bytes = buffer:bytes()
+        table.insert(bytes, 1, 0x61)
+        table.insert(bytes, 0x00)
+        return bytes
+    end,
+    memory_representation = 'BitPerPixel',
+}
+
+simulator {
+    name = 'Simulator',
+    screen_size = {
+        width = 128,
+        height = 40,
+    },
 }

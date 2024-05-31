@@ -7,7 +7,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use ureq::{Agent, Error};
 
-pub fn update(data: &Vec<u8>) {
+pub fn update(data: &[u8]) {
     API.lock().unwrap().update(data);
 }
 
@@ -37,7 +37,7 @@ impl Api {
         api
     }
 
-    pub fn update(&mut self, data: &Vec<u8>) {
+    pub fn update(&mut self, data: &[u8]) {
         let update = serde_json::json!({
             "game": GAME,
             "event": "UPDATE",

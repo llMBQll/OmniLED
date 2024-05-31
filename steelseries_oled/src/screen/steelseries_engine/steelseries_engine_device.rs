@@ -1,6 +1,7 @@
+use crate::renderer::buffer::Buffer;
 use mlua::{Lua, Value};
 
-use crate::screen::screen::{Screen, Settings, Size};
+use crate::screen::screen::{MemoryRepresentation, Screen, Settings, Size};
 use crate::screen::steelseries_engine::api;
 use crate::screen::steelseries_engine::steelseries_engine_device_settings::SteelseriesEngineDeviceSettings;
 
@@ -23,12 +24,16 @@ impl Screen for SteelseriesEngineDevice {
         Ok(self.size)
     }
 
-    fn update(&mut self, _: &Lua, pixels: Vec<u8>) -> mlua::Result<()> {
-        api::update(&pixels);
+    fn update(&mut self, _: &Lua, buffer: Buffer) -> mlua::Result<()> {
+        api::update(buffer.bytes());
         Ok(())
     }
 
     fn name(&mut self, _: &Lua) -> mlua::Result<String> {
         Ok(self.name.clone())
+    }
+
+    fn memory_representation(&mut self, _lua: &Lua) -> mlua::Result<MemoryRepresentation> {
+        Ok(MemoryRepresentation::BitPerPixel)
     }
 }

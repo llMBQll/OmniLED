@@ -1,5 +1,5 @@
 use convert_case::{Case, Casing};
-use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields};
+use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields, Value};
 use oled_derive::FromLuaTable;
 
 #[derive(Debug, Clone, Copy, FromLuaTable)]
@@ -103,6 +103,34 @@ pub struct Modifiers {
 }
 
 impl UserData for Modifiers {}
+
+#[derive(Clone, Copy)]
+pub enum MemoryRepresentation {
+    BitPerPixel,
+    BytePerPixel,
+}
+
+impl<'lua> FromLua<'lua> for MemoryRepresentation {
+    fn from_lua(value: Value<'lua>, _lua: &'lua Lua) -> mlua::Result<Self> {
+        match value {
+            Value::String(string) => {
+                let string = string.to_string_lossy();
+                match string.to_string().as_str() {
+                    "BitPerPixel" => Ok(MemoryRepresentation::BitPerPixel),
+                    "BytePerPixel" => Ok(MemoryRepresentation::BytePerPixel),
+                    value => Err(mlua::Error::runtime(format!(
+                        "Valid memory representations are ['BitPerPixel', 'BytePerPixel'], got '{}'",
+                        value
+                    ))),
+                }
+            }
+            other => Err(mlua::Error::runtime(format!(
+                "Expected a string, got '{}'",
+                other.type_name()
+            ))),
+        }
+    }
+}
 
 macro_rules! register_function {
     ($lua:ident, $table:ident, $func_name:ident) => {

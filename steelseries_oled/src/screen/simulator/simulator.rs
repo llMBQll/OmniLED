@@ -7,7 +7,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use crate::screen::screen::{Screen, Size};
+use crate::screen::screen::{Buffer, MemoryRepresentation, Screen, Size};
 
 pub struct Simulator {
     size: Size,
@@ -86,19 +86,15 @@ impl Screen for Simulator {
         Ok(self.size)
     }
 
-    fn update(&mut self, _lua: &Lua, pixels: Vec<u8>) -> mlua::Result<()> {
-        let width = self.size.width;
-        let height = self.size.height;
-        let len = width * height;
-        let mut expanded = vec![0; len];
-        for index in 0..len {
-            // FIXME this calculation assumes no padding bits!
-            let byte = index / 8;
-            let bit = index % 8;
-            let value = (pixels[byte] >> (7 - bit)) & 0b00000001;
-
-            expanded[index] = value as u32 * 0xFFFFFF;
-        }
+    fn update(&mut self, _lua: &Lua, buffer: Buffer) -> mlua::Result<()> {
+        let expanded = buffer
+            .bytes()
+            .iter()
+            .map(|value| match value {
+                0 => 0x000000,
+                _ => 0xFFFFFF,
+            })
+            .collect();
 
         *self.buffer.lock().unwrap() = expanded;
         self.should_update.store(true, Ordering::Relaxed);
@@ -108,6 +104,10 @@ impl Screen for Simulator {
 
     fn name(&mut self, _lua: &Lua) -> mlua::Result<String> {
         Ok(self.name.clone())
+    }
+
+    fn memory_representation(&mut self, _lua: &Lua) -> mlua::Result<MemoryRepresentation> {
+        Ok(MemoryRepresentation::BytePerPixel)
     }
 }
 

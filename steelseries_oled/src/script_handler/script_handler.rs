@@ -175,6 +175,7 @@ impl ScriptHandler {
         };
 
         let size = ctx.screen.size(lua)?;
+        let memory_representation = ctx.screen.memory_representation(lua)?;
         env.set("SCREEN", size)?;
 
         let output: ScriptOutput = ctx.scripts[to_update].action.call(())?;
@@ -185,6 +186,7 @@ impl ScriptHandler {
             },
             size,
             output.data,
+            memory_representation,
         );
 
         ctx.screen.update(lua, image)?;

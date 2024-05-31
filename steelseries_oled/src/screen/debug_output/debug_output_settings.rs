@@ -6,7 +6,7 @@ use crate::screen::screen::{Settings, Size};
 #[derive(FromLuaTable, Clone)]
 pub struct DebugOutputSettings {
     pub name: String,
-    pub size: Size,
+    pub screen_size: Size,
 }
 
 impl Settings for DebugOutputSettings {

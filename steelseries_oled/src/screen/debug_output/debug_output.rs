@@ -1,11 +1,11 @@
 use mlua::{Lua, Value};
 
 use crate::screen::debug_output::debug_output_settings::DebugOutputSettings;
-use crate::screen::screen::{Screen, Settings, Size};
+use crate::screen::screen::{Buffer, MemoryRepresentation, Screen, Settings, Size};
 
 pub struct DebugOutput {
     name: String,
-    size: Size,
+    screen_size: Size,
 }
 
 impl Screen for DebugOutput {
@@ -14,28 +14,26 @@ impl Screen for DebugOutput {
 
         Ok(Self {
             name: settings.name,
-            size: settings.size,
+            screen_size: settings.screen_size,
         })
     }
 
     fn size(&mut self, _lua: &Lua) -> mlua::Result<Size> {
-        Ok(self.size)
+        Ok(self.screen_size)
     }
 
-    fn update(&mut self, _lua: &Lua, pixels: Vec<u8>) -> mlua::Result<()> {
-        for _ in 0..self.size.width {
+    fn update(&mut self, _lua: &Lua, buffer: Buffer) -> mlua::Result<()> {
+        for _ in 0..self.screen_size.width {
             print!("-");
         }
         println!();
 
-        for chunk in pixels.chunks(self.size.width / 8) {
-            for byte in chunk {
-                for i in 0..8 {
-                    if (byte >> (7 - i) & 0b00000001) == 1 {
-                        print!("0");
-                    } else {
-                        print!(" ");
-                    }
+        for row in buffer.rows() {
+            for pixel in row {
+                if *pixel == 0 {
+                    print!(" ");
+                } else {
+                    print!("0");
                 }
             }
             println!();
@@ -46,5 +44,9 @@ impl Screen for DebugOutput {
 
     fn name(&mut self, _lua: &Lua) -> mlua::Result<String> {
         Ok(self.name.clone())
+    }
+
+    fn memory_representation(&mut self, _lua: &Lua) -> mlua::Result<MemoryRepresentation> {
+        Ok(MemoryRepresentation::BytePerPixel)
     }
 }

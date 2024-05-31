@@ -1,17 +1,34 @@
+use crate::renderer::buffer::Buffer;
 use log::{debug, warn};
 use mlua::{Lua, OwnedFunction, Value};
 use rusb::{DeviceHandle, GlobalContext};
 use std::time::Duration;
 
-use crate::screen::screen::{Screen, Settings, Size};
+use crate::screen::screen::{MemoryRepresentation, Screen, Settings, Size};
 use crate::screen::usb_device::usb_device_settings::{USBDeviceSettings, USBSettings};
 
 pub struct USBDevice {
     name: String,
     size: Size,
     settings: USBSettings,
-    transform: OwnedFunction,
+    transform: Option<OwnedFunction>,
     handle: DeviceHandle<GlobalContext>,
+    representation: MemoryRepresentation,
+}
+
+impl USBDevice {
+    fn write_bytes(&self, bytes: &[u8]) {
+        self.handle
+            .write_control(
+                self.settings.request_type,
+                self.settings.request,
+                self.settings.value,
+                self.settings.index,
+                bytes,
+                Duration::from_millis(10),
+            )
+            .unwrap();
+    }
 }
 
 impl Screen for USBDevice {
@@ -57,6 +74,7 @@ impl Screen for USBDevice {
             settings: settings.usb_settings.clone(),
             transform: settings.transform,
             handle,
+            representation: settings.memory_representation,
         })
     }
 
@@ -64,25 +82,24 @@ impl Screen for USBDevice {
         Ok(self.size)
     }
 
-    fn update(&mut self, _: &Lua, pixels: Vec<u8>) -> mlua::Result<()> {
-        let pixels: Vec<u8> = self.transform.call(pixels).unwrap();
-
-        self.handle
-            .write_control(
-                self.settings.request_type,
-                self.settings.request,
-                self.settings.value,
-                self.settings.index,
-                pixels.as_slice(),
-                Duration::from_secs(1),
-            )
-            .unwrap();
+    fn update(&mut self, _: &Lua, buffer: Buffer) -> mlua::Result<()> {
+        match &self.transform {
+            Some(transform) => {
+                let bytes: Vec<u8> = transform.call(buffer)?;
+                self.write_bytes(bytes.as_slice())
+            }
+            None => self.write_bytes(buffer.bytes()),
+        };
 
         Ok(())
     }
 
     fn name(&mut self, _: &Lua) -> mlua::Result<String> {
         Ok(self.name.clone())
+    }
+
+    fn memory_representation(&mut self, _lua: &Lua) -> mlua::Result<MemoryRepresentation> {
+        Ok(self.representation)
     }
 }
 
