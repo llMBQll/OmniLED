@@ -5,15 +5,13 @@ use std::collections::HashMap;
 use std::vec::IntoIter;
 
 use crate::common::user_data::UserDataRef;
-use crate::renderer::buffer::{BitBuffer, Buffer, DynamicBuffer};
+use crate::renderer::buffer::{BitBuffer, Buffer, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
 use crate::script_handler::script_data_types::{
     MemoryRepresentation, Modifiers, OledImage, Operation, Text,
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
-
-use super::buffer::ByteBuffer;
 
 pub struct Renderer {
     font_manager: FontManager,
@@ -40,11 +38,10 @@ impl Renderer {
         operations: Vec<Operation>,
         memory_representation: MemoryRepresentation,
     ) -> (bool, Buffer) {
-        let buffer_impl = match memory_representation {
-            MemoryRepresentation::BitPerPixel => DynamicBuffer::BitBuffer(BitBuffer::new(size)),
-            MemoryRepresentation::BytePerPixel => DynamicBuffer::ByteBuffer(ByteBuffer::new(size)),
+        let mut buffer = match memory_representation {
+            MemoryRepresentation::BitPerPixel => Buffer::new(BitBuffer::new(size)),
+            MemoryRepresentation::BytePerPixel => Buffer::new(ByteBuffer::new(size)),
         };
-        let mut buffer = Buffer::new(buffer_impl);
         let (end_auto_repeat, text_offsets) = self.precalculate_text(ctx, &operations);
         let mut text_offsets = text_offsets.into_iter();
 

@@ -5,12 +5,14 @@ use crate::script_handler::script_data_types::Modifiers;
 use crate::script_handler::script_data_types::{Rectangle, Size};
 
 pub struct Buffer {
-    buffer: DynamicBuffer,
+    buffer: Box<dyn BufferTrait>,
 }
 
 impl Buffer {
-    pub fn new(buffer: DynamicBuffer) -> Self {
-        Self { buffer }
+    pub fn new<T: BufferTrait + 'static>(buffer: T) -> Self {
+        Self {
+            buffer: Box::new(buffer),
+        }
     }
 
     pub fn set(&mut self, x: isize, y: isize, area: &Rectangle, modifiers: &Modifiers) {
@@ -88,62 +90,6 @@ pub trait BufferTrait {
     fn get(&mut self, x: usize, y: usize) -> Option<bool>;
     fn set(&mut self, x: usize, y: usize);
     fn reset(&mut self, x: usize, y: usize);
-}
-
-pub enum DynamicBuffer {
-    ByteBuffer(ByteBuffer),
-    BitBuffer(BitBuffer),
-}
-
-impl BufferTrait for DynamicBuffer {
-    fn width(&self) -> usize {
-        match self {
-            DynamicBuffer::ByteBuffer(buffer) => buffer.width(),
-            DynamicBuffer::BitBuffer(buffer) => buffer.width(),
-        }
-    }
-
-    fn height(&self) -> usize {
-        match self {
-            DynamicBuffer::ByteBuffer(buffer) => buffer.height(),
-            DynamicBuffer::BitBuffer(buffer) => buffer.height(),
-        }
-    }
-
-    fn bytes(&self) -> &Vec<u8> {
-        match self {
-            DynamicBuffer::ByteBuffer(buffer) => buffer.bytes(),
-            DynamicBuffer::BitBuffer(buffer) => buffer.bytes(),
-        }
-    }
-
-    fn row_stride(&self) -> usize {
-        match self {
-            DynamicBuffer::ByteBuffer(buffer) => buffer.row_stride(),
-            DynamicBuffer::BitBuffer(buffer) => buffer.row_stride(),
-        }
-    }
-
-    fn get(&mut self, x: usize, y: usize) -> Option<bool> {
-        match self {
-            DynamicBuffer::ByteBuffer(buffer) => buffer.get(x, y),
-            DynamicBuffer::BitBuffer(buffer) => buffer.get(x, y),
-        }
-    }
-
-    fn set(&mut self, x: usize, y: usize) {
-        match self {
-            DynamicBuffer::ByteBuffer(buffer) => buffer.set(x, y),
-            DynamicBuffer::BitBuffer(buffer) => buffer.set(x, y),
-        }
-    }
-
-    fn reset(&mut self, x: usize, y: usize) {
-        match self {
-            DynamicBuffer::ByteBuffer(buffer) => buffer.reset(x, y),
-            DynamicBuffer::BitBuffer(buffer) => buffer.reset(x, y),
-        }
-    }
 }
 
 pub struct ByteBuffer {
