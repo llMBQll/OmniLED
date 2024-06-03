@@ -1,6 +1,7 @@
 use minifb::{Window, WindowOptions};
 use mlua::{ErrorContext, FromLua, Lua, Value};
 use oled_derive::FromLuaTable;
+use std::cmp::max;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -57,7 +58,10 @@ impl Screen for Simulator {
 
                 // update as often as incoming buffers
                 // TODO load this value from lua environment, or from simulator specific settings
-                window.limit_update_rate(Some(Duration::from_millis(50)));
+                let second = Duration::from_secs(1).as_millis() as usize;
+                let update_interval = Duration::from_millis(50).as_millis() as usize;
+                let target_fps = max(1, second / update_interval);
+                window.set_target_fps(target_fps);
 
                 while window.is_open() && running.load(Ordering::Relaxed) {
                     let update = should_update.swap(false, Ordering::Relaxed);

@@ -17,7 +17,7 @@ lazy_static = "1.4"
 log = "0.4"
 log4rs = "1.2"
 mlua = { version = "0.9", features = ["async", "lua54", "vendored", "macros", "serialize", "unstable"] }
-minifb = "0.25"
+minifb = "0.27"
 num-traits = "0.2"
 prost = "0.12"
 opener = { version = "0.7", features = ["reveal"] }
