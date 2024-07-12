@@ -1,9 +1,9 @@
 use mlua::{ErrorContext, FromLua, Lua, Value};
-use oled_derive::FromLuaTable;
+use oled_derive::FromLuaValue;
 
 use crate::screen::screen::{Settings, Size};
 
-#[derive(FromLuaTable, Clone)]
+#[derive(FromLuaValue, Clone)]
 pub struct DebugOutputSettings {
     pub name: String,
     pub screen_size: Size,

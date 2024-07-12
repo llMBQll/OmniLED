@@ -1,8 +1,8 @@
 use mlua::{
-    chunk, ErrorContext, FromLua, Function, Lua, LuaSerdeExt, OwnedFunction, OwnedTable, Table,
-    UserData, UserDataMethods, Value,
+    chunk, ErrorContext, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table, UserData,
+    UserDataMethods, Value,
 };
-use oled_derive::FromLuaTable;
+use oled_derive::FromLuaValue;
 use std::time::Duration;
 
 use crate::common::user_data::{UserDataIdentifier, UserDataRef};
@@ -238,7 +238,7 @@ impl UserDataIdentifier for ScriptHandler {
     }
 }
 
-#[derive(FromLuaTable, Clone)]
+#[derive(FromLuaValue, Clone)]
 struct UserScript {
     #[mlua(transform(Self::transform_function))]
     action: OwnedFunction,
@@ -262,21 +262,19 @@ impl UserScript {
     }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(FromLuaValue, Debug, PartialEq, Copy, Clone)]
 enum Repeat {
     Once,
     ToFit,
 }
 
-#[derive(FromLuaTable, Clone)]
+#[derive(FromLuaValue, Clone)]
 struct ScriptOutput {
     data: Vec<Operation>,
 
     #[mlua(transform(Self::transform_duration))]
     duration: Duration,
 
-    #[mlua(transform(Self::transform_repeats))]
     repeats: Option<Repeat>,
 }
 
@@ -286,9 +284,5 @@ impl ScriptOutput {
             .and_then(|duration| Some(Duration::from_millis(duration)))
             .unwrap_or(DEFAULT_UPDATE_TIME);
         Ok(duration)
-    }
-
-    fn transform_repeats(repeats: Value, lua: &Lua) -> mlua::Result<Option<Repeat>> {
-        lua.from_value(repeats)
     }
 }

@@ -19,8 +19,7 @@ message Field {
     string f_string = 4;
     Array f_array = 5;
     Table f_table = 6;
-    bytes f_bytes = 7;
-    Image f_image = 8;
+    Image f_image = 7;
   }
 }
 

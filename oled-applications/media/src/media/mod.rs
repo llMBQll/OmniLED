@@ -16,7 +16,7 @@ type MediaImpl = linux::media_impl::MediaImpl;
 
 pub mod session_data;
 
-pub type Callback = dyn FnMut(&String, &SessionData, bool) + Send;
+pub type Callback = dyn FnMut(&String, SessionData, bool) + Send;
 
 pub struct Media {
     inner: MediaImpl,

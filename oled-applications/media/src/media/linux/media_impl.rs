@@ -69,7 +69,7 @@ impl MediaImpl {
                                         };
 
                                         let name = name.to_string();
-                                        callback.lock().unwrap()(&name, &data, false);
+                                        callback.lock().unwrap()(&name, data, false);
                                     }
                                     _ => {}
                                 }

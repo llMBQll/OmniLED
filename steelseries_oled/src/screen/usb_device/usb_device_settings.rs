@@ -1,10 +1,10 @@
 use mlua::{ErrorContext, FromLua, Function, Lua, OwnedFunction, UserData, Value};
 use num_traits::Unsigned;
-use oled_derive::FromLuaTable;
+use oled_derive::FromLuaValue;
 
 use crate::screen::screen::{MemoryRepresentation, Settings, Size};
 
-#[derive(FromLuaTable, Clone)]
+#[derive(FromLuaValue, Clone)]
 pub struct USBDeviceSettings {
     pub name: String,
     pub screen_size: Size,
@@ -31,7 +31,7 @@ impl Settings for USBDeviceSettings {
 
 impl UserData for USBDeviceSettings {}
 
-#[derive(FromLuaTable, Clone)]
+#[derive(FromLuaValue, Clone)]
 pub struct USBSettings {
     #[mlua(transform(from_hex))]
     pub vendor_id: u16,
@@ -39,6 +39,8 @@ pub struct USBSettings {
     pub product_id: u16,
     #[mlua(transform(from_hex))]
     pub interface: u8,
+    #[mlua(transform(from_hex))]
+    pub interface_setting: u8,
     #[mlua(transform(from_hex))]
     pub endpoint: u8,
     #[mlua(transform(from_hex))]

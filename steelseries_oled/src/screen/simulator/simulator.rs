@@ -1,6 +1,6 @@
 use minifb::{Window, WindowOptions};
 use mlua::{ErrorContext, FromLua, Lua, Value};
-use oled_derive::FromLuaTable;
+use oled_derive::FromLuaValue;
 use std::cmp::max;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -19,7 +19,7 @@ pub struct Simulator {
     window_thread_handle: Option<JoinHandle<()>>,
 }
 
-#[derive(Clone, FromLuaTable)]
+#[derive(Clone, FromLuaValue)]
 struct SimulatorSettings {
     screen_size: Size,
     name: String,

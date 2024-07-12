@@ -1,8 +1,9 @@
 use chrono::prelude::*;
-use oled_api::types::{Array, Field, Table};
 use oled_api::Api;
+use oled_derive::IntoProto;
 use std::{env, thread, time};
 
+#[derive(IntoProto)]
 struct Names {
     day_names: Vec<&'static str>,
     month_names: Vec<&'static str>,
@@ -38,27 +39,7 @@ impl Names {
     }
 }
 
-impl Into<Table> for Names {
-    fn into(self) -> Table {
-        let transform_vec = |vec: Vec<&str>| -> Field {
-            let array = Array {
-                items: vec.iter().map(|entry| (*entry).into()).collect(),
-            };
-
-            array.into()
-        };
-
-        let mut table = Table::default();
-        table
-            .items
-            .insert("DayNames".to_owned(), transform_vec(self.day_names));
-        table
-            .items
-            .insert("MonthNames".to_owned(), transform_vec(self.month_names));
-        table
-    }
-}
-
+#[derive(Clone, IntoProto)]
 struct Time {
     hours: u32,
     minutes: u32,
@@ -67,28 +48,6 @@ struct Time {
     week_day: u32,
     month: u32,
     year: i32,
-}
-
-impl Into<Table> for &Time {
-    fn into(self) -> Table {
-        let mut table = Table::default();
-        table.items.insert("Hours".to_owned(), self.hours.into());
-        table
-            .items
-            .insert("Minutes".to_owned(), self.minutes.into());
-        table
-            .items
-            .insert("Seconds".to_owned(), self.seconds.into());
-        table
-            .items
-            .insert("MonthDay".to_owned(), self.month_day.into());
-        table
-            .items
-            .insert("WeekDay".to_owned(), self.week_day.into());
-        table.items.insert("Month".to_owned(), self.month.into());
-        table.items.insert("Year".to_owned(), self.year.into());
-        table
-    }
 }
 
 const NAME: &str = "CLOCK";
@@ -124,7 +83,7 @@ fn main() {
         time.week_day = local.weekday().number_from_monday();
         time.month = local.month();
         time.year = local.year();
-        api.update((&time).into());
+        api.update(time.clone().into());
         thread::sleep(time::Duration::from_millis(500));
     }
 }

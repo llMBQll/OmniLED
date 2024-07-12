@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 chrono = { version = "0.4", features = ["clock"] }
 oled-api = { path = "../../oled-api" }
+oled-derive = { path = "../../oled-derive", features = ["into-proto"] }

@@ -1,6 +1,6 @@
 use audio::Audio;
-use oled_api::types::Table;
 use oled_api::Api;
+use oled_derive::IntoProto;
 use std::{env, sync::OnceLock, thread, time};
 
 mod audio;
@@ -24,6 +24,7 @@ fn main() {
     thread::sleep(time::Duration::MAX);
 }
 
+#[derive(IntoProto)]
 struct AudioData {
     is_muted: bool,
     volume: i32,
@@ -37,21 +38,5 @@ impl AudioData {
             volume,
             name,
         }
-    }
-}
-
-impl Into<Table> for AudioData {
-    fn into(self) -> Table {
-        let mut table = Table::default();
-
-        table
-            .items
-            .insert("IsMuted".to_string(), self.is_muted.into());
-        table.items.insert("Volume".to_string(), self.volume.into());
-        if let Some(name) = self.name {
-            table.items.insert("Name".to_string(), name.into());
-        }
-
-        table
     }
 }

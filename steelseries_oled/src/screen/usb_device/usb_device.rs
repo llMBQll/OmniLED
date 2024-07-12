@@ -59,6 +59,7 @@ impl Screen for USBDevice {
         };
 
         let interface = settings.usb_settings.interface;
+        let interface_setting = settings.usb_settings.interface_setting;
 
         match handle.kernel_driver_active(interface) {
             Ok(true) => handle.detach_kernel_driver(interface).unwrap(),
@@ -66,7 +67,9 @@ impl Screen for USBDevice {
         };
 
         handle.claim_interface(interface).unwrap();
-        handle.set_alternate_setting(interface, 0).unwrap();
+        handle
+            .set_alternate_setting(interface, interface_setting)
+            .unwrap();
 
         Ok(Self {
             name: settings.name,

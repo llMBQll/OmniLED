@@ -89,14 +89,6 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
             }
             Ok(Value::Table(table))
         }
-        Some(FieldEntry::FBytes(bytes)) => {
-            let size = bytes.len();
-            let table = lua.create_table_with_capacity(size, 0)?;
-            for byte in bytes {
-                table.push(byte)?;
-            }
-            Ok(Value::Table(table))
-        }
         Some(FieldEntry::FImage(image)) => {
             let oled_image = OledImage {
                 size: Size {

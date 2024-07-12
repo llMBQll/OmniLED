@@ -90,7 +90,7 @@ impl MediaImpl {
                         if entry.playing {
                             callback.lock().unwrap()(
                                 &name,
-                                entry,
+                                entry.clone(),
                                 Self::is_current(&name, &current_session),
                             );
                         }
@@ -117,7 +117,7 @@ impl MediaImpl {
                         if entry.playing {
                             callback.lock().unwrap()(
                                 &name,
-                                entry,
+                                entry.clone(),
                                 Self::is_current(&name, &current_session),
                             );
                         }
@@ -144,7 +144,7 @@ impl MediaImpl {
                         if entry.playing {
                             callback.lock().unwrap()(
                                 &name,
-                                entry,
+                                entry.clone(),
                                 Self::is_current(&name, &current_session),
                             );
                         }

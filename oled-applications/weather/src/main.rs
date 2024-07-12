@@ -1,6 +1,7 @@
 use clap::Parser;
 use oled_api::types::Table;
 use oled_api::Api;
+use oled_derive::IntoProto;
 use std::{collections::HashMap, thread, time};
 use ureq::Agent;
 
@@ -76,6 +77,7 @@ fn get_coordinates_from_name(name: &Name) -> Coordinates {
         .expect("Couldn't find coordinates for the given query")
 }
 
+#[derive(IntoProto)]
 struct WeatherData {
     latitude: f64,
     longitude: f64,
@@ -88,45 +90,6 @@ struct WeatherData {
     update_hour: u32,
     update_minute: u32,
     city: String,
-}
-
-impl Into<Table> for WeatherData {
-    fn into(self) -> Table {
-        let mut table = Table::default();
-
-        table
-            .items
-            .insert("Latitude".to_string(), self.latitude.into());
-        table
-            .items
-            .insert("Longitude".to_string(), self.longitude.into());
-        table
-            .items
-            .insert("Temperature".to_string(), self.temperature.into());
-        table
-            .items
-            .insert("WindSpeed".to_string(), self.wind_speed.into());
-        table
-            .items
-            .insert("WindDirection".to_string(), self.wind_direction.into());
-        table
-            .items
-            .insert("ImageKey".to_string(), self.image_key.into());
-        table.items.insert(
-            "WeatherDescription".to_string(),
-            self.weather_description.into(),
-        );
-        table.items.insert("IsDay".to_string(), self.is_day.into());
-        table
-            .items
-            .insert("UpdateHour".to_string(), self.update_hour.into());
-        table
-            .items
-            .insert("UpdateMinute".to_string(), self.update_minute.into());
-        table.items.insert("City".to_string(), self.city.into());
-
-        table
-    }
 }
 
 #[derive(clap::Args)]

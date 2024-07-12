@@ -7,7 +7,7 @@ pub mod types {
     include!(concat!(env!("OUT_DIR"), "/types.rs"));
 }
 
-use types::field::Field::{FArray, FBool, FBytes, FFloat, FImage, FInteger, FString};
+use types::field::Field::{FArray, FBool, FFloat, FImage, FInteger, FString};
 use types::{Array, Event, EventReply, Field, Image, LogLevel, LogMessage, Table};
 
 #[derive(Debug)]
@@ -131,8 +131,15 @@ impl Into<Field> for &str {
 // Array values
 into_field!(Array, FArray);
 
-// Byte values
-into_field!(Vec<u8>, FBytes);
+impl<T: Into<Field>> Into<Field> for Vec<T> {
+    fn into(self) -> Field {
+        let array = Array {
+            items: self.into_iter().map(|entry| entry.into()).collect(),
+        };
+
+        array.into()
+    }
+}
 
 // Image values
 into_field!(Image, FImage);

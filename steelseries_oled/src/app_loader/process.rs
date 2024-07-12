@@ -1,6 +1,6 @@
 use log::error;
 use mlua::{ErrorContext, FromLua, UserData};
-use oled_derive::FromLuaTable;
+use oled_derive::FromLuaValue;
 use std::process::{Child, Command, Stdio};
 
 pub struct Process {
@@ -47,7 +47,7 @@ impl Drop for Process {
     }
 }
 
-#[derive(Debug, Clone, FromLuaTable)]
+#[derive(Debug, Clone, FromLuaValue)]
 pub struct Config {
     path: String,
     #[mlua(default)]

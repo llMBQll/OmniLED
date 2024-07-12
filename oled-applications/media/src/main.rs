@@ -26,9 +26,9 @@ async fn main() {
 
     let mode = options.mode;
     let media = Media::new(Arc::new(Mutex::new(
-        move |name: &String, session_data: &SessionData, current: bool| {
+        move |name: &String, session_data: SessionData, current: bool| {
             if current && (mode == Focused || mode == Both) {
-                API.get().unwrap().update(session_data.into())
+                API.get().unwrap().update(session_data.clone().into())
             }
 
             if mode == Individual || mode == Both {
