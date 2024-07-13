@@ -65,7 +65,13 @@ struct RequestPrinter;
 #[tonic::async_trait]
 impl oled_api::plugin_server::Plugin for RequestPrinter {
     async fn event(&self, request: Request<EventData>) -> Result<Response<EventResponse>, Status> {
-        println!("{:?}", request.get_ref());
+        let event = request.get_ref();
+
+        if !Plugin::is_valid_identifier(&event.name) {
+            return Err(Status::new(Code::InvalidArgument, "Invalid event name"));
+        }
+
+        println!("{:?}", event);
 
         Ok(Response::new(EventResponse {}))
     }
