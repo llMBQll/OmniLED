@@ -1,4 +1,6 @@
 use std::sync::{Arc, Mutex};
+use tokio::runtime::Handle;
+use tokio::sync::mpsc::Sender;
 use windows::Win32::Media::Audio::{
     IMMDeviceEnumerator, IMMNotificationClient, MMDeviceEnumerator,
 };
@@ -6,6 +8,7 @@ use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER};
 
 use crate::audio::windows::endpoint_volume::EndpointVolume;
 use crate::audio::windows::notification_client::NotificationClient;
+use crate::AudioData;
 
 pub struct AudioImpl {
     _endpoint_volume: Arc<Mutex<EndpointVolume>>,
@@ -14,13 +17,13 @@ pub struct AudioImpl {
 }
 
 impl AudioImpl {
-    pub fn new(volume_callback: fn(bool, i32, Option<String>)) -> Self {
-        let endpoint_volume = Arc::new(Mutex::new(EndpointVolume::new(volume_callback.clone())));
+    pub fn new(tx: Sender<AudioData>, handle: Handle) -> Self {
+        let endpoint_volume = Arc::new(Mutex::new(EndpointVolume::new(tx.clone(), handle.clone())));
 
         let notification_client = NotificationClient::new({
             let endpoint_volume = Arc::clone(&endpoint_volume);
             move |_device_id| {
-                *endpoint_volume.lock().unwrap() = EndpointVolume::new(volume_callback.clone());
+                *endpoint_volume.lock().unwrap() = EndpointVolume::new(tx.clone(), handle.clone());
             }
         });
 

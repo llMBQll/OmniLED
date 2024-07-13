@@ -13,11 +13,10 @@ pub trait Screen {
 
     fn update(&mut self, lua: &Lua, buffer: Buffer) -> mlua::Result<()>;
 
+    #[allow(unused)]
     fn name(&mut self, lua: &Lua) -> mlua::Result<String>;
 
     fn memory_representation(&mut self, lua: &Lua) -> mlua::Result<MemoryRepresentation>;
-
-    // fn partial_update(&mut self, lua: &Lua, pixels: &Vec<u8>) -> Result<()>;
 }
 
 pub trait Settings {

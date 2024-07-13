@@ -1,27 +1,32 @@
 use audio::Audio;
-use oled_api::Api;
+use oled_api::Plugin;
 use oled_derive::IntoProto;
-use std::{env, sync::OnceLock, thread, time};
+use std::env;
+use std::error::Error;
+use tokio::runtime::Handle;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 mod audio;
 
 const NAME: &str = "AUDIO";
 
-static API: OnceLock<Api> = OnceLock::new();
-
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
     let address = args[1].as_str();
+    let mut plugin = Plugin::new(NAME, address).await?;
 
-    API.set(Api::new(address, NAME)).unwrap();
+    let (tx, mut rx): (Sender<AudioData>, Receiver<AudioData>) = mpsc::channel(256);
 
-    let _audio = Audio::new(|muted, volume, name| {
-        API.get()
-            .unwrap()
-            .update(AudioData::new(muted, volume, name).into());
-    });
+    let handle = Handle::current();
+    let _audio = Audio::new(tx, handle);
 
-    thread::sleep(time::Duration::MAX);
+    while let Some(data) = rx.recv().await {
+        plugin.update(data.into()).await.unwrap();
+    }
+
+    Ok(())
 }
 
 #[derive(IntoProto)]

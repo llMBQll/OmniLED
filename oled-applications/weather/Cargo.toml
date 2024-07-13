@@ -13,4 +13,5 @@ oled-api = { path = "../../oled-api" }
 oled-derive = { path = "../../oled-derive", features = ["into-proto"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ureq = { version = "2.4", features = ["json"] }

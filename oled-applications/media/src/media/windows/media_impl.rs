@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use tokio::runtime::Handle;
+use tokio::sync::mpsc::Sender;
 use windows::Foundation::TimeSpan;
 use windows::Media::Control::{
     GlobalSystemMediaTransportControlsSession,
@@ -9,7 +11,7 @@ use windows::Media::Control::{
 
 use crate::media::session_data::SessionData;
 use crate::media::windows::global_system_media::GlobalSystemMedia;
-use crate::media::Callback;
+use crate::Message;
 
 pub struct MediaImpl {
     system_media: GlobalSystemMedia,
@@ -18,14 +20,14 @@ pub struct MediaImpl {
 }
 
 impl MediaImpl {
-    pub fn new(callback: Arc<Mutex<Callback>>) -> Self {
+    pub fn new(tx: Sender<Message>, handle: Handle) -> Self {
         let mut media = Self {
             system_media: GlobalSystemMedia::new(),
             sessions: Arc::new(Mutex::new(HashMap::new())),
             current_session: Arc::new(Mutex::new(None)),
         };
 
-        media.setup(callback);
+        media.setup(tx, handle);
 
         media
     }
@@ -34,7 +36,9 @@ impl MediaImpl {
         tokio::time::sleep(Duration::MAX).await;
     }
 
-    fn setup(&mut self, callback: Arc<Mutex<Callback>>) {
+    fn setup(&mut self, tx: Sender<Message>, handle: Handle) {
+        let tx = Arc::new(tx);
+
         self.system_media.register_on_session_added({
             let sessions = Arc::clone(&self.sessions);
             move |(_, session)| {
@@ -78,7 +82,8 @@ impl MediaImpl {
         self.system_media.register_on_playback_info_changed({
             let sessions = Arc::clone(&self.sessions);
             let current_session = Arc::clone(&self.current_session);
-            let callback = Arc::clone(&callback);
+            let tx = Arc::clone(&tx);
+            let handle = handle.clone();
             move |(_, session)| {
                 let name = Self::get_name(&session);
 
@@ -87,13 +92,13 @@ impl MediaImpl {
                     Some(entry) => {
                         entry.playing = Self::get_status(&session);
 
-                        if entry.playing {
-                            callback.lock().unwrap()(
-                                &name,
-                                entry.clone(),
-                                Self::is_current(&name, &current_session),
-                            );
-                        }
+                        Self::send_data(
+                            tx.clone(),
+                            handle.clone(),
+                            name,
+                            entry.clone(),
+                            &current_session,
+                        );
                     }
                     None => {}
                 }
@@ -103,7 +108,8 @@ impl MediaImpl {
         self.system_media.register_on_media_properties_changed({
             let sessions = Arc::clone(&self.sessions);
             let current_session = Arc::clone(&self.current_session);
-            let callback = Arc::clone(&callback);
+            let tx = Arc::clone(&tx);
+            let handle = handle.clone();
             move |(_, session)| {
                 let name = Self::get_name(&session);
 
@@ -114,13 +120,13 @@ impl MediaImpl {
                         entry.artist = artist;
                         entry.title = title;
 
-                        if entry.playing {
-                            callback.lock().unwrap()(
-                                &name,
-                                entry.clone(),
-                                Self::is_current(&name, &current_session),
-                            );
-                        }
+                        Self::send_data(
+                            tx.clone(),
+                            handle.clone(),
+                            name,
+                            entry.clone(),
+                            &current_session,
+                        );
                     }
                     None => {}
                 }
@@ -130,7 +136,7 @@ impl MediaImpl {
         self.system_media.register_on_timeline_properties_changed({
             let sessions = Arc::clone(&self.sessions);
             let current_session = Arc::clone(&self.current_session);
-            let callback = Arc::clone(&callback);
+            let tx = Arc::clone(&tx);
             move |(_, session)| {
                 let name = Self::get_name(&session);
 
@@ -141,13 +147,13 @@ impl MediaImpl {
                         entry.progress = progress;
                         entry.duration = duration;
 
-                        if entry.playing {
-                            callback.lock().unwrap()(
-                                &name,
-                                entry.clone(),
-                                Self::is_current(&name, &current_session),
-                            );
-                        }
+                        Self::send_data(
+                            tx.clone(),
+                            handle.clone(),
+                            name,
+                            entry.clone(),
+                            &current_session,
+                        );
                     }
                     None => {}
                 }
@@ -194,6 +200,23 @@ impl MediaImpl {
         match current.lock().unwrap().as_ref() {
             Some(current_name) => *name == *current_name,
             None => false,
+        }
+    }
+
+    fn send_data(
+        tx: Arc<Sender<Message>>,
+        handle: Handle,
+        name: String,
+        data: SessionData,
+        current: &Arc<Mutex<Option<String>>>,
+    ) {
+        let is_current = Self::is_current(&name, current);
+        if data.playing {
+            handle.spawn(async move {
+                tx.send(Message::Event(is_current, name, data))
+                    .await
+                    .unwrap();
+            });
         }
     }
 }

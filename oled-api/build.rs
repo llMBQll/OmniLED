@@ -1,3 +1,3 @@
-fn main() {
-    prost_build::compile_protos(&["src/types.proto"], &["src/"]).unwrap();
+fn main() -> Result<(), std::io::Error> {
+    tonic_build::compile_protos("plugin.proto")
 }

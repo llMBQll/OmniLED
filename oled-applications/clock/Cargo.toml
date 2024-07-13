@@ -9,3 +9,4 @@ edition = "2021"
 chrono = { version = "0.4", features = ["clock"] }
 oled-api = { path = "../../oled-api" }
 oled-derive = { path = "../../oled-derive", features = ["into-proto"] }
+tokio = { version = "1.38", features = ["full"] }

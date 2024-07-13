@@ -1,7 +1,7 @@
 use chrono::prelude::*;
-use oled_api::Api;
+use oled_api::Plugin;
 use oled_derive::IntoProto;
-use std::{env, thread, time};
+use std::{env, time};
 
 #[derive(IntoProto)]
 struct Names {
@@ -52,13 +52,14 @@ struct Time {
 
 const NAME: &str = "CLOCK";
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
-    let address = args[1].as_str();
-    let api = Api::new(address, NAME);
+    let address = &args[1];
+    let mut plugin = Plugin::new(NAME, address).await.unwrap();
 
     // Send initial data that will not be updated
-    api.update(Names::new().into());
+    plugin.update(Names::new().into()).await.unwrap();
 
     let mut time = Time {
         hours: 0,
@@ -73,7 +74,7 @@ fn main() {
     loop {
         let local = Local::now();
         if local.second() == time.seconds {
-            thread::sleep(time::Duration::from_millis(10));
+            tokio::time::sleep(time::Duration::from_millis(10)).await;
             continue;
         }
         time.seconds = local.second();
@@ -83,7 +84,7 @@ fn main() {
         time.week_day = local.weekday().number_from_monday();
         time.month = local.month();
         time.year = local.year();
-        api.update(time.clone().into());
-        thread::sleep(time::Duration::from_millis(500));
+        plugin.update(time.clone().into()).await.unwrap();
+        tokio::time::sleep(time::Duration::from_millis(500)).await;
     }
 }

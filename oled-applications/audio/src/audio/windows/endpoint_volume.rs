@@ -1,3 +1,5 @@
+use tokio::runtime::Handle;
+use tokio::sync::mpsc::Sender;
 use windows::core::{implement, GUID};
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Foundation::BOOL;
@@ -12,6 +14,7 @@ use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER, STGM_R
 
 use crate::audio::windows::audio_endpoint_volume_callback::AudioEndpointVolumeCallback;
 use crate::audio::windows::com_guard::ComGuard;
+use crate::AudioData;
 
 pub struct EndpointVolume {
     _com_guard: ComGuard,
@@ -20,9 +23,9 @@ pub struct EndpointVolume {
 }
 
 impl EndpointVolume {
-    pub fn new(volume_callback: fn(bool, i32, Option<String>)) -> Self {
+    pub fn new(tx: Sender<AudioData>, handle: Handle) -> Self {
         let com_guard = ComGuard::new();
-        let endpoint_volume_callback = AudioEndpointVolumeCallback::new(volume_callback);
+        let endpoint_volume_callback = AudioEndpointVolumeCallback::new(tx.clone(), handle.clone());
         let endpoint_volume = unsafe {
             let enumerator: IMMDeviceEnumerator =
                 CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_INPROC_SERVER).unwrap();
@@ -45,7 +48,12 @@ impl EndpointVolume {
             let name = PropVariantToStringAlloc(&prop).unwrap();
             let name = name.to_string().unwrap();
 
-            volume_callback(mute, volume, Some(name));
+            handle.spawn(async move {
+                tx.send(AudioData::new(mute, volume, Some(name)))
+                    .await
+                    .unwrap()
+            });
+
             endpoint_volume
         };
 

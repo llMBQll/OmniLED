@@ -1,15 +1,18 @@
 syntax = 'proto3';
 
-package types;
+package plugin;
 
-message Event {
+service Plugin {
+  rpc Event(EventData) returns (EventResponse);
+  rpc Log(LogMessage) returns (LogResponse);
+}
+
+message EventData {
   string name = 1;
   Table fields = 2;
 }
 
-message EventReply {
-  optional string error = 1;
-}
+message EventResponse {}
 
 message Field {
   oneof field {
@@ -42,6 +45,8 @@ message LogMessage {
   string message = 2;
   LogLevel severity = 3;
 }
+
+message LogResponse {}
 
 enum LogLevel {
   Error = 0;

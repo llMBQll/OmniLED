@@ -53,7 +53,8 @@ impl Screen for USBDevice {
             }
         };
 
-        let handle = match device.open() {
+        #[allow(unused_mut)]
+        let mut handle = match device.open() {
             Ok(handle) => handle,
             Err(err) => return Err(mlua::Error::runtime(format!("{err}"))),
         };

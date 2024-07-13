@@ -42,7 +42,7 @@ async fn main() {
     let _shortcuts = Shortcuts::load(&lua);
     Constants::load(&lua);
     Settings::load(&lua);
-    PluginServer::load(&lua);
+    PluginServer::load(&lua).await;
     let _screens = Screens::load(&lua);
     let _sandbox = ScriptHandler::load(&lua);
     let _tray = TrayIcon::new(&RUNNING);

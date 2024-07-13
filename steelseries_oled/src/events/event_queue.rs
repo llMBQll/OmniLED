@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use oled_api::types::Field;
+use oled_api::Field;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 

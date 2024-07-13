@@ -2,22 +2,23 @@ use mpris::PlayerFinder;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use tokio::runtime::Handle;
+use tokio::sync::mpsc::Sender;
 
 use crate::media::session_data::SessionData;
-use crate::media::Callback;
+use crate::Message;
 
 pub struct MediaImpl {
-    callback: Arc<Mutex<Callback>>,
+    tx: Sender<Message>,
 }
 
 impl MediaImpl {
-    pub fn new(callback: Arc<Mutex<Callback>>) -> Self {
-        Self { callback }
+    pub fn new(tx: Sender<Message>, _handle: Handle) -> Self {
+        Self { tx }
     }
 
     pub async fn run(&self) {
-        let callback = self.callback.clone();
+        let tx = self.tx.clone();
 
         let local = tokio::task::LocalSet::new();
         local
@@ -30,7 +31,7 @@ impl MediaImpl {
 
                     for player in players {
                         let active_players = Rc::clone(&active_players);
-                        let callback = Arc::clone(&callback);
+                        let tx = tx.clone();
                         tokio::task::spawn_local(async move {
                             let name = player.bus_name_player_name_part();
 
@@ -69,7 +70,7 @@ impl MediaImpl {
                                         };
 
                                         let name = name.to_string();
-                                        callback.lock().unwrap()(&name, data, false);
+                                        tx.send(Message::Event(false, name, data)).await.unwrap();
                                     }
                                     _ => {}
                                 }

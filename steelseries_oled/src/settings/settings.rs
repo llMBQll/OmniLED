@@ -36,9 +36,6 @@ pub struct Settings {
     #[serde(default = "Settings::server_port")]
     pub server_port: u16,
 
-    #[serde(default = "Settings::server_port_strict")]
-    pub server_port_strict: bool,
-
     #[serde(default = "Settings::settings_file")]
     pub settings_file: String,
 
@@ -108,10 +105,6 @@ impl Settings {
         6969
     }
 
-    fn server_port_strict() -> bool {
-        false
-    }
-
     fn settings_file() -> String {
         String::from("settings.lua")
     }
@@ -135,7 +128,6 @@ impl Default for Settings {
             scrolling_text_ticks_at_edge: Settings::scrolling_text_ticks_at_edge(),
             scrolling_text_ticks_per_move: Settings::scrolling_text_ticks_per_move(),
             server_port: Settings::server_port(),
-            server_port_strict: Settings::server_port_strict(),
             settings_file: Settings::settings_file(),
             supported_screens_file: Settings::supported_screens_file(),
             update_interval: Settings::update_interval(),

@@ -1,6 +1,6 @@
 use mlua::{Lua, Table, TableExt, Value};
-use oled_api::types::field::Field as FieldEntry;
-use oled_api::types::Field;
+use oled_api::field::Field as FieldEntry;
+use oled_api::Field;
 
 use crate::script_handler::script_data_types::{OledImage, Size};
 

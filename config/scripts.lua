@@ -19,7 +19,7 @@ local function volume()
             },
         },
         duration = 2000,
-        repeats = 'once',
+        repeats = 'Once',
     }
 end
 
@@ -67,7 +67,7 @@ local function spotify()
             },
         },
         duration = SPOTIFY_DURATION,
-        repeats = 'to_fit',
+        repeats = 'ToFit',
     }
 end
 

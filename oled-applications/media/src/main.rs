@@ -1,8 +1,9 @@
 use clap::Parser;
-use oled_api::types::LogLevel;
-use oled_api::Api;
+use oled_api::{LogLevel, Plugin};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, OnceLock};
+use tokio::runtime::Handle;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::media::session_data::SessionData;
 use crate::media::Media;
@@ -11,42 +12,65 @@ use crate::Mode::{Both, Focused, Individual};
 mod media;
 
 const NAME: &str = "MEDIA";
-static API: OnceLock<Api> = OnceLock::new();
 
 #[tokio::main]
 async fn main() {
     let options = Options::parse();
+    let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
 
-    API.set(Api::new(&options.address, NAME)).unwrap();
+    let (tx, mut rx): (Sender<Message>, Receiver<Message>) = mpsc::channel(256);
 
     let mut map: HashMap<String, String> = HashMap::from_iter(options.map.into_iter());
     for (from, to) in &map {
-        log_mapping(&from, &to);
+        log_mapping(&tx, &from, &to).await;
     }
-
     let mode = options.mode;
-    let media = Media::new(Arc::new(Mutex::new(
-        move |name: &String, session_data: SessionData, current: bool| {
-            if current && (mode == Focused || mode == Both) {
-                API.get().unwrap().update(session_data.clone().into())
-            }
 
-            if mode == Individual || mode == Both {
-                let name = map
-                    .entry(name.clone())
-                    .or_insert_with(|| transform_name(name));
+    let handle = Handle::current();
+    let media = Media::new(tx.clone(), handle);
 
-                API.get()
-                    .unwrap()
-                    .update_with_name(name, session_data.into());
+    let loop_handle = tokio::task::spawn(async move {
+        while let Some(message) = rx.recv().await {
+            match message {
+                Message::Event(current, name, session_data) => {
+                    if current && (mode == Focused || mode == Both) {
+                        plugin.update(session_data.clone().into()).await.unwrap();
+                    }
+
+                    if mode == Individual || mode == Both {
+                        let transformed = match map.get(&name) {
+                            Some(transformed) => transformed,
+                            None => {
+                                let transformed = transform_name(&tx, &name).await;
+                                map.entry(name).or_insert(transformed)
+                            }
+                        };
+
+                        plugin
+                            .update_with_name(transformed, session_data.into())
+                            .await
+                            .unwrap();
+                    }
+                }
+                Message::Log(message, level) => {
+                    plugin.log(&message, level).await.unwrap();
+                }
             }
-        },
-    )));
+        }
+    });
 
     media.run().await;
+
+    loop_handle.await.unwrap();
 }
 
-fn transform_name(name: &String) -> String {
+#[derive(Clone)]
+enum Message {
+    Event(bool, String, SessionData),
+    Log(String, LogLevel),
+}
+
+async fn transform_name(tx: &Sender<Message>, name: &String) -> String {
     let mut new_name = String::with_capacity(name.capacity());
 
     for character in name.chars() {
@@ -61,15 +85,18 @@ fn transform_name(name: &String) -> String {
         new_name.insert(0, '_')
     }
 
-    log_mapping(&name, &new_name);
+    log_mapping(tx, &name, &new_name).await;
 
     new_name
 }
 
-fn log_mapping(old: &str, new: &str) {
-    API.get()
-        .unwrap()
-        .log(&format!("Mapped '{}' to '{}'", old, new), LogLevel::Info);
+async fn log_mapping(tx: &Sender<Message>, old: &str, new: &str) {
+    tx.send(Message::Log(
+        format!("Mapped '{}' to '{}'", old, new),
+        LogLevel::Info,
+    ))
+    .await
+    .unwrap();
 }
 
 #[derive(clap::Parser, Debug)]
@@ -102,30 +129,9 @@ fn parse_pair(
     let key = &s[..pos];
     let value = &s[pos + 1..];
 
-    if !is_valid_event_name(value) {
+    if !Plugin::is_valid_identifier(value) {
         return Err("Key is not a valid event name".into());
     }
 
     Ok((key.to_string(), value.to_string()))
-}
-
-pub fn is_valid_event_name(name: &str) -> bool {
-    if name.len() == 0 {
-        return false;
-    }
-
-    let mut chars = name.chars();
-
-    let first = chars.next().unwrap();
-    if first != '_' && (first < 'A' || first > 'Z') {
-        return false;
-    }
-
-    for c in chars {
-        if c != '_' && (c < 'A' || c > 'Z') && (c < '0' || c > '9') {
-            return false;
-        }
-    }
-
-    true
 }

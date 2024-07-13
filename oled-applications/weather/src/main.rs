@@ -1,19 +1,18 @@
 use clap::Parser;
-use oled_api::types::Table;
-use oled_api::Api;
+use oled_api::{Plugin, Table};
 use oled_derive::IntoProto;
-use std::{collections::HashMap, thread, time};
+use std::{collections::HashMap, time};
 use ureq::Agent;
 
 mod weather_api;
 
 const NAME: &str = "WEATHER";
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let options = Options::parse();
-
-    let api = Api::new(&options.address, NAME);
-    load_and_send_images(&api);
+    let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
+    load_and_send_images(&mut plugin).await;
 
     let (coordinates, name) = match options.selector {
         Selector::In(name) => (get_coordinates_from_name(&name), name.city),
@@ -24,20 +23,20 @@ fn main() {
 
     loop {
         let weather = weather_api::get_weather(&agent, &coordinates, &name);
-        api.update(weather.into());
+        plugin.update(weather.into()).await.unwrap();
 
-        thread::sleep(time::Duration::from_secs(15 * 60));
+        tokio::time::sleep(time::Duration::from_secs(15 * 60)).await;
     }
 }
 
-fn load_and_send_images(api: &Api) {
+async fn load_and_send_images(plugin: &mut Plugin) {
     let images = weather_api::load_images();
 
     let mut table = Table::default();
     for (name, image) in images {
         table.items.insert(name.into(), image.into());
     }
-    api.update(table)
+    plugin.update(table).await.unwrap();
 }
 
 fn get_coordinates_from_name(name: &Name) -> Coordinates {
