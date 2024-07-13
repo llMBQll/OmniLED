@@ -41,10 +41,10 @@ pub struct GlobalSystemMedia {
 
 impl GlobalSystemMedia {
     pub fn new() -> Self {
-        let manager = smol::block_on(
-            GlobalSystemMediaTransportControlsSessionManager::RequestAsync().unwrap(),
-        )
-        .unwrap();
+        let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
+            .unwrap()
+            .get()
+            .unwrap();
 
         Self {
             manager,

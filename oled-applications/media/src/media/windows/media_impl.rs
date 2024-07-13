@@ -168,7 +168,7 @@ impl MediaImpl {
     }
 
     fn get_song(session: &GlobalSystemMediaTransportControlsSession) -> (String, String) {
-        let properties = smol::block_on(session.TryGetMediaPropertiesAsync().unwrap()).unwrap();
+        let properties = session.TryGetMediaPropertiesAsync().unwrap().get().unwrap();
         let artist = properties.Artist().unwrap().to_string_lossy();
         let title = properties.Title().unwrap().to_string_lossy();
 

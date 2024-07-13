@@ -9,11 +9,10 @@ edition = "2021"
 clap = { version = "4.4", features = ["derive"] }
 oled-api = { path = "../../oled-api" }
 oled-derive = { path = "../../oled-derive", features = ["into-proto"] }
-smol = "2.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [target.'cfg(target_os = "windows")'.dependencies.windows]
-version = "0.56"
+version = "0.58"
 features = [
     "Foundation",
     "Foundation_Collections",
