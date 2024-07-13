@@ -8,7 +8,9 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
+use crate::common::user_data::UserDataRef;
 use crate::screen::screen::{Buffer, MemoryRepresentation, Screen, Size};
+use crate::settings::settings::Settings;
 
 pub struct Simulator {
     size: Size,
@@ -35,6 +37,7 @@ impl Screen for Simulator {
         let buffer = Arc::new(Mutex::new(buffer));
         let running = Arc::new(AtomicBool::new(true));
         let should_update = Arc::new(AtomicBool::new(true));
+        let update_interval = UserDataRef::<Settings>::load(lua).get().update_interval;
 
         let handle = thread::spawn({
             let buffer = Arc::clone(&buffer);
@@ -56,10 +59,8 @@ impl Screen for Simulator {
                 )
                 .unwrap();
 
-                // update as often as incoming buffers
-                // TODO load this value from lua environment, or from simulator specific settings
                 let second = Duration::from_secs(1).as_millis() as usize;
-                let update_interval = Duration::from_millis(50).as_millis() as usize;
+                let update_interval = update_interval.as_millis() as usize;
                 let target_fps = max(1, second / update_interval);
                 window.set_target_fps(target_fps);
 
