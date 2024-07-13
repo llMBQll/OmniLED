@@ -94,7 +94,7 @@ impl EmptyAudioEndpointVolume {
 }
 
 #[allow(non_snake_case)]
-impl IAudioEndpointVolume_Impl for EmptyAudioEndpointVolume {
+impl IAudioEndpointVolume_Impl for EmptyAudioEndpointVolume_Impl {
     fn RegisterControlChangeNotify(
         &self,
         _: Option<&IAudioEndpointVolumeCallback>,

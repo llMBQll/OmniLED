@@ -23,9 +23,9 @@ impl AudioEndpointVolumeCallback {
 }
 
 #[allow(non_snake_case)]
-impl IAudioEndpointVolumeCallback_Impl for AudioEndpointVolumeCallback {
+impl IAudioEndpointVolumeCallback_Impl for AudioEndpointVolumeCallback_Impl {
     fn OnNotify(&self, pnotify: *mut AUDIO_VOLUME_NOTIFICATION_DATA) -> windows::core::Result<()> {
-        let data = unsafe { &*pnotify as &AUDIO_VOLUME_NOTIFICATION_DATA };
+        let data = unsafe { &*pnotify };
 
         let muted = data.bMuted.into();
         let volume = (data.fMasterVolume * 100.0).round() as i32;
