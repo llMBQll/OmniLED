@@ -1,7 +1,6 @@
 use clap::Parser;
 use oled_api::{LogLevel, Plugin};
 use std::collections::HashMap;
-use tokio::runtime::Handle;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
@@ -26,8 +25,7 @@ async fn main() {
     }
     let mode = options.mode;
 
-    let handle = Handle::current();
-    let media = Media::new(tx.clone(), handle);
+    let media = Media::new(tx.clone());
 
     let loop_handle = tokio::task::spawn(async move {
         while let Some(message) = rx.recv().await {

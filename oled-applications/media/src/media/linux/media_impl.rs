@@ -2,7 +2,6 @@ use mpris::PlayerFinder;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
-use tokio::runtime::Handle;
 use tokio::sync::mpsc::Sender;
 
 use crate::media::session_data::SessionData;
@@ -13,7 +12,7 @@ pub struct MediaImpl {
 }
 
 impl MediaImpl {
-    pub fn new(tx: Sender<Message>, _handle: Handle) -> Self {
+    pub fn new(tx: Sender<Message>) -> Self {
         Self { tx }
     }
 

@@ -1,5 +1,4 @@
 use crate::Message;
-use tokio::runtime::Handle;
 use tokio::sync::mpsc::Sender;
 
 #[cfg(target_os = "windows")]
@@ -21,9 +20,9 @@ pub struct Media {
 }
 
 impl Media {
-    pub fn new(tx: Sender<Message>, handle: Handle) -> Self {
+    pub fn new(tx: Sender<Message>) -> Self {
         Self {
-            inner: MediaImpl::new(tx, handle),
+            inner: MediaImpl::new(tx),
         }
     }
 

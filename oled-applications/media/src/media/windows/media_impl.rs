@@ -1,8 +1,7 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tokio::runtime::Handle;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 use windows::Foundation::TimeSpan;
 use windows::Media::Control::{
     GlobalSystemMediaTransportControlsSession,
@@ -10,157 +9,106 @@ use windows::Media::Control::{
 };
 
 use crate::media::session_data::SessionData;
-use crate::media::windows::global_system_media::GlobalSystemMedia;
+use crate::media::windows::global_system_media::{GlobalSystemMedia, MediaMessage};
 use crate::Message;
 
 pub struct MediaImpl {
-    system_media: GlobalSystemMedia,
-    sessions: Arc<Mutex<HashMap<String, SessionData>>>,
-    current_session: Arc<Mutex<Option<String>>>,
+    tx: Sender<Message>,
 }
 
 impl MediaImpl {
-    pub fn new(tx: Sender<Message>, handle: Handle) -> Self {
-        let mut media = Self {
-            system_media: GlobalSystemMedia::new(),
-            sessions: Arc::new(Mutex::new(HashMap::new())),
-            current_session: Arc::new(Mutex::new(None)),
-        };
-
-        media.setup(tx, handle);
-
-        media
+    pub fn new(tx: Sender<Message>) -> Self {
+        Self { tx }
     }
 
     pub async fn run(&self) {
-        tokio::time::sleep(Duration::MAX).await;
+        let (tx, rx): (Sender<MediaMessage>, Receiver<MediaMessage>) = mpsc::channel(256);
+
+        let audio_tx = self.tx.clone();
+        let loop_handle = tokio::task::spawn(async move {
+            Self::run_message_loop(audio_tx, rx).await;
+        });
+
+        GlobalSystemMedia::init(tx).await;
+
+        loop_handle.await.unwrap();
     }
 
-    fn setup(&mut self, tx: Sender<Message>, handle: Handle) {
-        let tx = Arc::new(tx);
+    async fn run_message_loop(tx: Sender<Message>, mut rx: Receiver<MediaMessage>) {
+        let mut sessions: HashMap<String, SessionData> = HashMap::new();
+        let mut current_session: Option<String> = None;
+        while let Some(message) = rx.recv().await {
+            match message {
+                MediaMessage::SessionAdded(session) => {
+                    let name = Self::get_name(&session);
+                    let (artist, title) = Self::get_song(&session);
+                    let (progress, duration) = Self::get_progress(&session);
+                    let playing = Self::is_playing(&session);
 
-        self.system_media.register_on_session_added({
-            let sessions = Arc::clone(&self.sessions);
-            move |(_, session)| {
-                let name = Self::get_name(&session);
-                let (artist, title) = Self::get_song(&session);
-                let (progress, duration) = Self::get_progress(&session);
-                let playing = Self::get_status(&session);
+                    sessions.insert(
+                        name,
+                        SessionData {
+                            artist,
+                            title,
+                            progress,
+                            duration,
+                            playing,
+                        },
+                    );
+                }
+                MediaMessage::SessionRemoved(session) => {
+                    let name = Self::get_name(&session);
 
-                sessions.lock().unwrap().insert(
-                    name,
-                    SessionData {
-                        artist,
-                        title,
-                        progress,
-                        duration,
-                        playing,
-                    },
-                );
-            }
-        });
+                    sessions.remove(&name);
+                }
+                MediaMessage::CurrentSessionChanged(session) => {
+                    current_session = match session {
+                        Some(session) => Some(Self::get_name(&session)),
+                        None => None,
+                    };
+                }
+                MediaMessage::PlaybackInfoChanged(session) => {
+                    let name = Self::get_name(&session);
 
-        self.system_media.register_on_session_removed({
-            let sessions = Arc::clone(&self.sessions);
-            move |(_, session)| {
-                let name = Self::get_name(&session);
+                    match sessions.get_mut(&name) {
+                        Some(entry) => {
+                            entry.playing = Self::is_playing(&session);
 
-                sessions.lock().unwrap().remove(&name);
-            }
-        });
-
-        self.system_media.register_on_current_session_changed({
-            let current_session = Arc::clone(&self.current_session);
-            move |(_, session)| {
-                *current_session.lock().unwrap() = match session {
-                    Some(session) => Some(Self::get_name(&session)),
-                    None => None,
-                };
-            }
-        });
-
-        self.system_media.register_on_playback_info_changed({
-            let sessions = Arc::clone(&self.sessions);
-            let current_session = Arc::clone(&self.current_session);
-            let tx = Arc::clone(&tx);
-            let handle = handle.clone();
-            move |(_, session)| {
-                let name = Self::get_name(&session);
-
-                let mut guard = sessions.lock().unwrap();
-                match guard.get_mut(&name) {
-                    Some(entry) => {
-                        entry.playing = Self::get_status(&session);
-
-                        Self::send_data(
-                            tx.clone(),
-                            handle.clone(),
-                            name,
-                            entry.clone(),
-                            &current_session,
-                        );
+                            Self::send_data(&tx, name, entry.clone(), &current_session).await;
+                        }
+                        None => {}
                     }
-                    None => {}
+                }
+                MediaMessage::MediaPropertiesChanged(session) => {
+                    let name = Self::get_name(&session);
+
+                    match sessions.get_mut(&name) {
+                        Some(entry) => {
+                            let (artist, title) = Self::get_song(&session);
+                            entry.artist = artist;
+                            entry.title = title;
+
+                            Self::send_data(&tx, name, entry.clone(), &current_session).await;
+                        }
+                        None => {}
+                    }
+                }
+                MediaMessage::TimelinePropertiesChanged(session) => {
+                    let name = Self::get_name(&session);
+
+                    match sessions.get_mut(&name) {
+                        Some(entry) => {
+                            let (progress, duration) = Self::get_progress(&session);
+                            entry.progress = progress;
+                            entry.duration = duration;
+
+                            Self::send_data(&tx, name, entry.clone(), &current_session).await;
+                        }
+                        None => {}
+                    }
                 }
             }
-        });
-
-        self.system_media.register_on_media_properties_changed({
-            let sessions = Arc::clone(&self.sessions);
-            let current_session = Arc::clone(&self.current_session);
-            let tx = Arc::clone(&tx);
-            let handle = handle.clone();
-            move |(_, session)| {
-                let name = Self::get_name(&session);
-
-                let mut guard = sessions.lock().unwrap();
-                match guard.get_mut(&name) {
-                    Some(entry) => {
-                        let (artist, title) = Self::get_song(&session);
-                        entry.artist = artist;
-                        entry.title = title;
-
-                        Self::send_data(
-                            tx.clone(),
-                            handle.clone(),
-                            name,
-                            entry.clone(),
-                            &current_session,
-                        );
-                    }
-                    None => {}
-                }
-            }
-        });
-
-        self.system_media.register_on_timeline_properties_changed({
-            let sessions = Arc::clone(&self.sessions);
-            let current_session = Arc::clone(&self.current_session);
-            let tx = Arc::clone(&tx);
-            move |(_, session)| {
-                let name = Self::get_name(&session);
-
-                let mut guard = sessions.lock().unwrap();
-                match guard.get_mut(&name) {
-                    Some(entry) => {
-                        let (progress, duration) = Self::get_progress(&session);
-                        entry.progress = progress;
-                        entry.duration = duration;
-
-                        Self::send_data(
-                            tx.clone(),
-                            handle.clone(),
-                            name,
-                            entry.clone(),
-                            &current_session,
-                        );
-                    }
-                    None => {}
-                }
-            }
-        });
-
-        self.system_media.start();
+        }
     }
 
     fn get_name(session: &GlobalSystemMediaTransportControlsSession) -> String {
@@ -188,7 +136,7 @@ impl MediaImpl {
         (progress, duration)
     }
 
-    fn get_status(session: &GlobalSystemMediaTransportControlsSession) -> bool {
+    fn is_playing(session: &GlobalSystemMediaTransportControlsSession) -> bool {
         let info = session.GetPlaybackInfo().unwrap();
         let playing = info.PlaybackStatus().unwrap()
             == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing;
@@ -196,27 +144,24 @@ impl MediaImpl {
         playing
     }
 
-    fn is_current(name: &String, current: &Arc<Mutex<Option<String>>>) -> bool {
-        match current.lock().unwrap().as_ref() {
+    fn is_current(name: &String, current: &Option<String>) -> bool {
+        match current {
             Some(current_name) => *name == *current_name,
             None => false,
         }
     }
 
-    fn send_data(
-        tx: Arc<Sender<Message>>,
-        handle: Handle,
+    async fn send_data(
+        tx: &Sender<Message>,
         name: String,
         data: SessionData,
-        current: &Arc<Mutex<Option<String>>>,
+        current: &Option<String>,
     ) {
         let is_current = Self::is_current(&name, current);
         if data.playing {
-            handle.spawn(async move {
-                tx.send(Message::Event(is_current, name, data))
-                    .await
-                    .unwrap();
-            });
+            tx.send(Message::Event(is_current, name, data))
+                .await
+                .unwrap();
         }
     }
 }
