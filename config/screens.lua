@@ -8,7 +8,6 @@ usb_device {
         vendor_id = '0x1038',
         product_id = '0x1618',
         interface = '0x01',
-        interface_setting = '0x00',
         endpoint = '0x00',
         request_type = '0x21',
         request = '0x09',
