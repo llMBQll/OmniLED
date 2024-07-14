@@ -50,7 +50,7 @@ async fn main() {
                             .unwrap();
                     }
                 }
-                Message::Log(message, level) => {
+                Message::Log(level, message) => {
                     plugin.log(&message, level).await.unwrap();
                 }
             }
@@ -65,7 +65,7 @@ async fn main() {
 #[derive(Clone)]
 enum Message {
     Event(bool, String, SessionData),
-    Log(String, LogLevel),
+    Log(LogLevel, String),
 }
 
 async fn transform_name(tx: &Sender<Message>, name: &String) -> String {
@@ -90,8 +90,8 @@ async fn transform_name(tx: &Sender<Message>, name: &String) -> String {
 
 async fn log_mapping(tx: &Sender<Message>, old: &str, new: &str) {
     tx.send(Message::Log(
-        format!("Mapped '{}' to '{}'", old, new),
         LogLevel::Info,
+        format!("Mapped '{}' to '{}'", old, new),
     ))
     .await
     .unwrap();
