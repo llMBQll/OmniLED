@@ -186,9 +186,14 @@ function current_screen_is(screen)
     end
 end
 
+local screen_predicate = current_screen_is(1)
+local count_predicate = PREDICATE.Once()
+
 local volume_script = {
     action = volume,
-    predicate = current_screen_is(1),
+    predicate = function()
+        return screen_predicate() and count_predicate()
+    end,
     run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
 }
 
@@ -211,3 +216,37 @@ local weather_script = {
 }
 
 register('Steelseries Apex 7 TKL', { volume_script, spotify_script, clock_script, weather_script })
+
+-- TODO wrap predicate in "is_screen(X)" if used in user friendly-ish registration method
+-- TODO provide PREDICATE.Always, PREDICATE.Never, PREDICATE.Once, PREDICATE.Times(x)
+
+--local screen_1 = {
+--    {
+--        action = volume,
+--        predicate = function()
+--            return true
+--        end,
+--        run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
+--    },
+--    {
+--        action = spotify,
+--        run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
+--    },
+--    {
+--        action = clock,
+--        run_on = { 'CLOCK.Seconds' },
+--    },
+--}
+--
+--local screen_2 = {
+--    {
+--        action = weather,
+--        run_on = { 'CLOCK.Seconds' },
+--    }
+--}
+--
+--DEVICES
+--        :find('Steelseries Apex 7 TKL')
+--        :push_screen(screen_1)
+--        :push_screen(screen_2)
+--        :switch_screen_on({ 'KEY(RAlt)', 'KEY(Slash)' })

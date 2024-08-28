@@ -218,6 +218,38 @@ impl ScriptHandler {
             LOG = LOG,
             PLATFORM = PLATFORM,
             SHORTCUTS = SHORTCUTS,
+            PREDICATE = {
+                Always = function()
+                    return function()
+                        return true
+                    end
+                end,
+                Never = function()
+                    return function()
+                        return true
+                    end
+                end,
+                Once = function()
+                    local count = 0
+                    return function()
+                        if (count >= 1) then
+                            return false
+                        end
+                        count = count + 1
+                        return true
+                    end
+                end,
+                Times = function(x)
+                    local count = 0
+                    return function()
+                        if (count >= x) then
+                            return false
+                        end
+                        count = count + 1
+                        return true
+                    end
+                end,
+            }
         });
         load_script_data_types(lua, &env);
 
