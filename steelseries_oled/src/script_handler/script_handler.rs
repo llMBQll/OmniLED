@@ -129,6 +129,14 @@ impl ScriptHandler {
         Ok(())
     }
 
+    fn test_predicate(function: &Option<OwnedFunction>) -> mlua::Result<bool> {
+        let predicate = match function {
+            Some(predicate) => predicate.call::<_, bool>(())?,
+            None => true,
+        };
+        Ok(predicate)
+    }
+
     fn update_impl(
         lua: &Lua,
         ctx: &mut ScreenContext,
@@ -158,11 +166,7 @@ impl ScriptHandler {
                 break;
             }
 
-            let predicate = match &ctx.scripts[priority].predicate {
-                Some(predicate) => predicate.call::<_, bool>(())?,
-                None => true,
-            };
-            if marked_for_update && predicate {
+            if marked_for_update && Self::test_predicate(&ctx.scripts[priority].predicate)? {
                 to_update = Some(priority);
                 update_modifier = None;
                 break;
