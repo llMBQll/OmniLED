@@ -1,14 +1,13 @@
 use log::{error, warn};
 use mlua::{chunk, Lua, UserData};
 
-use crate::app_loader::process::Config;
+use crate::app_loader::process::{Config, Process};
+use crate::common::common::exec_file;
 use crate::common::scoped_value::ScopedValue;
 use crate::common::user_data::{UserDataIdentifier, UserDataRef};
-use crate::settings::settings::get_full_path;
-use crate::{
-    app_loader::process::Process, common::common::exec_file, create_table_with_defaults,
-    settings::settings::Settings,
-};
+use crate::constants::constants::Constants;
+use crate::create_table_with_defaults;
+use crate::settings::settings::{get_full_path, Settings};
 
 pub struct AppLoader {
     processes: Vec<Process>,
@@ -24,8 +23,25 @@ impl AppLoader {
             },
         );
 
+        let load_app_fn = lua
+            .create_function(|lua, config: Config| {
+                let mut loader = UserDataRef::<AppLoader>::load(lua);
+                loader.get_mut().start_process(config);
+                Ok(())
+            })
+            .unwrap();
+
+        let get_default_path_fn = lua
+            .create_function(|_, app_name: String| {
+                let executable = format!("{}{}", app_name, std::env::consts::EXE_SUFFIX);
+                let path = Constants::applications_dir().join(executable);
+                Ok(path.to_string_lossy().to_string())
+            })
+            .unwrap();
+
         let env = create_table_with_defaults!(lua, {
-            load_app = function(config) APP_LOADER:start_process(config) end,
+            load_app = $load_app_fn,
+            get_default_path = $get_default_path_fn,
             SERVER = SERVER,
             PLATFORM = PLATFORM,
         });
@@ -53,15 +69,7 @@ impl AppLoader {
     }
 }
 
-impl UserData for AppLoader {
-    fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_method_mut("start_process", |_lua, this, app_config: Config| {
-            this.start_process(app_config);
-
-            Ok(())
-        });
-    }
-}
+impl UserData for AppLoader {}
 
 impl UserDataIdentifier for AppLoader {
     fn identifier() -> &'static str {
