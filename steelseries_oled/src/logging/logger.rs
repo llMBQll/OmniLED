@@ -1,16 +1,11 @@
+use crate::common::user_data::UserDataIdentifier;
+use crate::constants::constants::Constants;
 use log::{debug, error, info, trace, warn};
-use log4rs::{
-    append::file::FileAppender,
-    config::{Appender, Root},
-    encode::pattern::PatternEncoder,
-    Config, Handle,
-};
+use log4rs::Handle;
 use mlua::{Lua, UserData, UserDataMethods};
 use serde::de;
 use serde::de::Error;
-
-use crate::common::user_data::UserDataIdentifier;
-use crate::constants::constants::Constants;
+use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
 pub struct Logger {
@@ -19,42 +14,18 @@ pub struct Logger {
 
 impl Logger {
     pub fn load(lua: &Lua) {
-        let config = Self::create_config(log::LevelFilter::Info);
-        let handle = log4rs::init_config(config).unwrap();
+        let handle = oled_log::init(Self::get_path());
         let logger = Logger { handle };
 
         lua.globals().set(Logger::identifier(), logger).unwrap();
-
-        std::panic::set_hook(Box::new(|panic_info| {
-            error!("{panic_info}");
-            println!("{panic_info}");
-        }));
     }
 
     pub fn set_level_filter(&self, level_filter: LevelFilter) {
-        let config = Self::create_config(level_filter.0);
-        self.handle.set_config(config);
+        oled_log::change_log_level(&self.handle, Self::get_path(), level_filter.0);
     }
 
-    fn create_config(level_filter: log::LevelFilter) -> Config {
-        let logfile = FileAppender::builder()
-            .encoder(Box::new(PatternEncoder::new(
-                "{t} [{d(%Y-%m-%d %H:%M:%S:%3f)}][{l}] {m}\n",
-            )))
-            .build(Constants::root_dir().join("logging.log"))
-            .unwrap();
-
-        let config = Config::builder()
-            .appender(Appender::builder().build("logfile", Box::new(logfile)))
-            .logger(log4rs::config::Logger::builder().build("mio", log::LevelFilter::Error))
-            .logger(log4rs::config::Logger::builder().build("hyper", log::LevelFilter::Error))
-            .logger(log4rs::config::Logger::builder().build("tracing", log::LevelFilter::Error))
-            .logger(log4rs::config::Logger::builder().build("warp", log::LevelFilter::Error))
-            .logger(log4rs::config::Logger::builder().build("ureq", log::LevelFilter::Error))
-            .build(Root::builder().appender("logfile").build(level_filter))
-            .unwrap();
-
-        config
+    fn get_path() -> PathBuf {
+        Constants::data_dir().join("logging.log")
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::Message;
+use crate::Data;
 use tokio::sync::mpsc::Sender;
 
 #[cfg(target_os = "windows")]
@@ -20,7 +20,7 @@ pub struct Media {
 }
 
 impl Media {
-    pub fn new(tx: Sender<Message>) -> Self {
+    pub fn new(tx: Sender<Data>) -> Self {
         Self {
             inner: MediaImpl::new(tx),
         }

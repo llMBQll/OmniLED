@@ -9,20 +9,20 @@ use windows::Media::Control::{
 };
 
 use crate::media::session_data::SessionData;
-use crate::media::windows::global_system_media::{GlobalSystemMedia, MediaMessage};
-use crate::Message;
+use crate::media::windows::global_system_media::{GlobalSystemMedia, Message};
+use crate::Data;
 
 pub struct MediaImpl {
-    tx: Sender<Message>,
+    tx: Sender<Data>,
 }
 
 impl MediaImpl {
-    pub fn new(tx: Sender<Message>) -> Self {
+    pub fn new(tx: Sender<Data>) -> Self {
         Self { tx }
     }
 
     pub async fn run(&self) {
-        let (tx, rx): (Sender<MediaMessage>, Receiver<MediaMessage>) = mpsc::channel(256);
+        let (tx, rx): (Sender<Message>, Receiver<Message>) = mpsc::channel(256);
 
         let audio_tx = self.tx.clone();
         let loop_handle = tokio::task::spawn(async move {
@@ -34,12 +34,12 @@ impl MediaImpl {
         loop_handle.await.unwrap();
     }
 
-    async fn run_message_loop(tx: Sender<Message>, mut rx: Receiver<MediaMessage>) {
+    async fn run_message_loop(tx: Sender<Data>, mut rx: Receiver<Message>) {
         let mut sessions: HashMap<String, SessionData> = HashMap::new();
         let mut current_session: Option<String> = None;
         while let Some(message) = rx.recv().await {
             match message {
-                MediaMessage::SessionAdded(session) => {
+                Message::SessionAdded(session) => {
                     let name = Self::get_name(&session);
                     let (artist, title) = Self::get_song(&session);
                     let (progress, duration) = Self::get_progress(&session);
@@ -56,18 +56,18 @@ impl MediaImpl {
                         },
                     );
                 }
-                MediaMessage::SessionRemoved(session) => {
+                Message::SessionRemoved(session) => {
                     let name = Self::get_name(&session);
 
                     sessions.remove(&name);
                 }
-                MediaMessage::CurrentSessionChanged(session) => {
+                Message::CurrentSessionChanged(session) => {
                     current_session = match session {
                         Some(session) => Some(Self::get_name(&session)),
                         None => None,
                     };
                 }
-                MediaMessage::PlaybackInfoChanged(session) => {
+                Message::PlaybackInfoChanged(session) => {
                     let name = Self::get_name(&session);
 
                     match sessions.get_mut(&name) {
@@ -79,7 +79,7 @@ impl MediaImpl {
                         None => {}
                     }
                 }
-                MediaMessage::MediaPropertiesChanged(session) => {
+                Message::MediaPropertiesChanged(session) => {
                     let name = Self::get_name(&session);
 
                     match sessions.get_mut(&name) {
@@ -93,7 +93,7 @@ impl MediaImpl {
                         None => {}
                     }
                 }
-                MediaMessage::TimelinePropertiesChanged(session) => {
+                Message::TimelinePropertiesChanged(session) => {
                     let name = Self::get_name(&session);
 
                     match sessions.get_mut(&name) {
@@ -152,16 +152,14 @@ impl MediaImpl {
     }
 
     async fn send_data(
-        tx: &Sender<Message>,
+        tx: &Sender<Data>,
         name: String,
         data: SessionData,
         current: &Option<String>,
     ) {
         let is_current = Self::is_current(&name, current);
         if data.playing {
-            tx.send(Message::Event(is_current, name, data))
-                .await
-                .unwrap();
+            tx.send((is_current, name, data)).await.unwrap();
         }
     }
 }

@@ -17,6 +17,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let address = args[1].as_str();
     let mut plugin = Plugin::new(NAME, address).await?;
 
+    let path = plugin.get_data_dir().await.unwrap();
+    oled_log::init(path.join("logging.log"));
+
     let (tx, mut rx): (Sender<AudioData>, Receiver<AudioData>) = mpsc::channel(256);
 
     let handle = Handle::current();

@@ -27,6 +27,7 @@ serde_json = "1.0"
 serde_with = "3.1"
 oled-api = { path = "../oled-api" }
 oled-derive = { path = "../oled-derive", features = ["from-lua-value"] }
+oled-log = { path = "../oled-log" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ureq = { version = "2.4", features = ["json"] }
 tonic = "0.12.0"

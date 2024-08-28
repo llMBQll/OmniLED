@@ -1,6 +1,5 @@
-use log::log;
 use mlua::{Lua, LuaSerdeExt};
-use oled_api::{EventData, EventResponse, LogMessage, LogResponse, Plugin};
+use oled_api::{EventData, EventResponse, Plugin, RequestDirectoryData, RequestDirectoryResponse};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -88,17 +87,25 @@ impl oled_api::plugin_server::Plugin for PluginServer {
         Ok(Response::new(EventResponse {}))
     }
 
-    async fn log(&self, request: Request<LogMessage>) -> Result<Response<LogResponse>, Status> {
-        let log = request.get_ref();
+    async fn request_directory(
+        &self,
+        request: Request<RequestDirectoryData>,
+    ) -> Result<Response<RequestDirectoryResponse>, Status> {
+        let data = request.get_ref();
 
-        let level = match Plugin::log_level_from_integer(log.severity) {
-            Ok(level) => level,
-            Err(err) => return Err(Status::new(Code::InvalidArgument, err.to_string())),
-        };
-        let target = format!("plugin::{}", log.name);
+        if !Plugin::is_valid_identifier(&data.name) {
+            return Err(Status::new(Code::InvalidArgument, "Invalid event name"));
+        }
 
-        log!(target: &target, level, "{}", log.message);
+        let path = Constants::data_dir().join(data.name.to_ascii_lowercase());
+        if !path.exists() {
+            if let Err(err) = tokio::fs::create_dir_all(&path).await {
+                return Err(Status::new(Code::Internal, err.to_string()));
+            }
+        }
 
-        Ok(Response::new(LogResponse {}))
+        Ok(Response::new(RequestDirectoryResponse {
+            directory: path.to_string_lossy().to_string(),
+        }))
     }
 }

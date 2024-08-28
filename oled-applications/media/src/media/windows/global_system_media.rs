@@ -14,7 +14,7 @@ use windows::{
 type MediaEventData = GlobalSystemMediaTransportControlsSession;
 type MediaEventOptionalData = Option<GlobalSystemMediaTransportControlsSession>;
 
-pub enum MediaMessage {
+pub enum Message {
     SessionAdded(MediaEventData),
     SessionRemoved(MediaEventData),
     CurrentSessionChanged(MediaEventOptionalData),
@@ -26,7 +26,7 @@ pub enum MediaMessage {
 pub struct GlobalSystemMedia;
 
 impl GlobalSystemMedia {
-    pub async fn init(tx: Sender<MediaMessage>) {
+    pub async fn init(tx: Sender<Message>) {
         let handle = Handle::current();
         let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
             .unwrap()
@@ -41,7 +41,7 @@ impl GlobalSystemMedia {
         );
 
         for (_, session) in sessions.iter() {
-            tx.send(MediaMessage::SessionAdded(session.clone()))
+            tx.send(Message::SessionAdded(session.clone()))
                 .await
                 .unwrap();
 
@@ -53,7 +53,7 @@ impl GlobalSystemMedia {
     }
 
     fn register_global_handlers(
-        tx: Sender<MediaMessage>,
+        tx: Sender<Message>,
         handle: Handle,
         manager: &GlobalSystemMediaTransportControlsSessionManager,
         sessions: &Arc<Mutex<HashMap<String, GlobalSystemMediaTransportControlsSession>>>,
@@ -71,7 +71,7 @@ impl GlobalSystemMedia {
                     };
                     let tx = tx.clone();
                     handle.spawn(async move {
-                        tx.send(MediaMessage::CurrentSessionChanged(session.clone()))
+                        tx.send(Message::CurrentSessionChanged(session.clone()))
                             .await
                             .unwrap();
                     });
@@ -112,7 +112,7 @@ impl GlobalSystemMedia {
                             Some(session) => {
                                 let tx = tx.clone();
                                 handle.spawn(async move {
-                                    tx.send(MediaMessage::SessionRemoved(session.clone()))
+                                    tx.send(Message::SessionRemoved(session.clone()))
                                         .await
                                         .unwrap();
                                 });
@@ -133,7 +133,7 @@ impl GlobalSystemMedia {
                         handle.spawn({
                             let session = session.clone();
                             async move {
-                                tx.send(MediaMessage::SessionAdded(session)).await.unwrap();
+                                tx.send(Message::SessionAdded(session)).await.unwrap();
                             }
                         });
 
@@ -148,7 +148,7 @@ impl GlobalSystemMedia {
 
     fn register_session_handlers(
         session: &GlobalSystemMediaTransportControlsSession,
-        tx: &Sender<MediaMessage>,
+        tx: &Sender<Message>,
         handle: Handle,
     ) {
         session
@@ -161,7 +161,7 @@ impl GlobalSystemMedia {
                     let session = session.clone();
                     let tx = tx.clone();
                     handle.spawn(async move {
-                        tx.send(MediaMessage::PlaybackInfoChanged(session.clone()))
+                        tx.send(Message::PlaybackInfoChanged(session.clone()))
                             .await
                             .unwrap();
                     });
@@ -181,7 +181,7 @@ impl GlobalSystemMedia {
                     let session = session.clone();
                     let tx = tx.clone();
                     handle.spawn(async move {
-                        tx.send(MediaMessage::MediaPropertiesChanged(session.clone()))
+                        tx.send(Message::MediaPropertiesChanged(session.clone()))
                             .await
                             .unwrap();
                     });
@@ -200,7 +200,7 @@ impl GlobalSystemMedia {
                     let session = session.clone();
                     let tx = tx.clone();
                     handle.spawn(async move {
-                        tx.send(MediaMessage::TimelinePropertiesChanged(session.clone()))
+                        tx.send(Message::TimelinePropertiesChanged(session.clone()))
                             .await
                             .unwrap();
                     });

@@ -1,19 +1,18 @@
 use mpris::{DBusError, Player, PlayerFinder};
-use oled_api::LogLevel;
 use std::collections::HashSet;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::media::session_data::SessionData;
-use crate::Message;
+use crate::Data;
 
 pub struct MediaImpl {
-    tx: Sender<Message>,
+    tx: Sender<Data>,
 }
 
 impl MediaImpl {
-    pub fn new(tx: Sender<Message>) -> Self {
+    pub fn new(tx: Sender<Data>) -> Self {
         Self { tx }
     }
 
@@ -55,7 +54,7 @@ impl MediaImpl {
     }
 
     async fn process_player_updates(
-        data_tx: Sender<Message>,
+        data_tx: Sender<Data>,
         tx: Sender<MediaMessage>,
         mut rx: Receiver<MediaMessage>,
     ) {
@@ -85,29 +84,18 @@ impl MediaImpl {
         }
     }
 
-    async fn process_player(tx: Sender<Message>, name: String, player: Player) {
+    async fn process_player(tx: Sender<Data>, name: String, player: Player) {
         loop {
             if !player.is_running() {
                 break;
             }
 
-            let playback_status = match player.get_playback_status() {
-                Ok(playback_status) => playback_status,
-                Err(err) => {
-                    tx.send(Message::Log(LogLevel::Error, format!("{:?}", err)))
-                        .await
-                        .unwrap();
-                    break;
-                }
-            };
+            let playback_status = player.get_playback_status().unwrap();
 
             match playback_status {
                 mpris::PlaybackStatus::Playing => {
-                    let message = match Self::get_session_data(&player) {
-                        Ok(data) => Message::Event(false, name.clone(), data),
-                        Err(err) => Message::Log(LogLevel::Error, format!("{:?}", err)),
-                    };
-                    tx.send(message).await.unwrap();
+                    let data = Self::get_session_data(&player).unwrap();
+                    tx.send((false, name.clone(), data)).await.unwrap();
                 }
                 _ => {}
             }

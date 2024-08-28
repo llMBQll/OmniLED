@@ -44,10 +44,6 @@ impl Constants {
         root_dir
     }
 
-    pub fn config_dir() -> PathBuf {
-        Self::root_dir().join("config")
-    }
-
     #[cfg(debug_assertions)]
     pub fn applications_dir() -> PathBuf {
         Self::root_dir().join("target").join("debug")
@@ -56,5 +52,13 @@ impl Constants {
     #[cfg(not(debug_assertions))]
     pub fn applications_dir() -> PathBuf {
         Self::root_dir().join("applications")
+    }
+
+    pub fn config_dir() -> PathBuf {
+        Self::root_dir().join("config")
+    }
+
+    pub fn data_dir() -> PathBuf {
+        Constants::root_dir().join("data")
     }
 }

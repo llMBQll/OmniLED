@@ -1,5 +1,5 @@
 use clap::Parser;
-use oled_api::{EventData, EventResponse, LogMessage, LogResponse, Plugin};
+use oled_api::{EventData, EventResponse, Plugin, RequestDirectoryData, RequestDirectoryResponse};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::process::{Command, Stdio};
 use tonic::transport::Server;
@@ -65,27 +65,33 @@ struct RequestPrinter;
 #[tonic::async_trait]
 impl oled_api::plugin_server::Plugin for RequestPrinter {
     async fn event(&self, request: Request<EventData>) -> Result<Response<EventResponse>, Status> {
-        let event = request.get_ref();
+        let data = request.get_ref();
 
-        if !Plugin::is_valid_identifier(&event.name) {
+        if !Plugin::is_valid_identifier(&data.name) {
             return Err(Status::new(Code::InvalidArgument, "Invalid event name"));
         }
 
-        println!("{:?}", event);
+        println!("{:?}", data);
+        println!();
 
         Ok(Response::new(EventResponse {}))
     }
 
-    async fn log(&self, request: Request<LogMessage>) -> Result<Response<LogResponse>, Status> {
-        let log = request.get_ref();
+    async fn request_directory(
+        &self,
+        request: Request<RequestDirectoryData>,
+    ) -> Result<Response<RequestDirectoryResponse>, Status> {
+        let data = request.get_ref();
 
-        let level = match Plugin::log_level_from_integer(log.severity) {
-            Ok(level) => level,
-            Err(err) => return Err(Status::new(Code::InvalidArgument, err.to_string())),
-        };
+        if !Plugin::is_valid_identifier(&data.name) {
+            return Err(Status::new(Code::InvalidArgument, "Invalid event name"));
+        }
 
-        println!("[{}] plugin::{} - {}", level, log.name, log.message);
+        println!("{:?}", data);
+        println!();
 
-        Ok(Response::new(LogResponse {}))
+        Ok(Response::new(RequestDirectoryResponse {
+            directory: format!("example/dir/for/{}", data.name),
+        }))
     }
 }

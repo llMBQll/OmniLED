@@ -1,5 +1,6 @@
 use clap::Parser;
-use oled_api::{LogLevel, Plugin};
+use log::info;
+use oled_api::Plugin;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -17,42 +18,38 @@ async fn main() {
     let options = Options::parse();
     let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
 
-    let (tx, mut rx): (Sender<Message>, Receiver<Message>) = mpsc::channel(256);
+    let path = plugin.get_data_dir().await.unwrap();
+    oled_log::init(path.join("logging.log"));
+
+    let (tx, mut rx): (Sender<Data>, Receiver<Data>) = mpsc::channel(256);
 
     let mut map: HashMap<String, String> = HashMap::from_iter(options.map.into_iter());
     for (from, to) in &map {
-        log_mapping(&tx, &from, &to).await;
+        log_mapping(&from, &to);
     }
     let mode = options.mode;
 
     let media = Media::new(tx.clone());
 
     let loop_handle = tokio::task::spawn(async move {
-        while let Some(message) = rx.recv().await {
-            match message {
-                Message::Event(current, name, session_data) => {
-                    if current && (mode == Focused || mode == Both) {
-                        plugin.update(session_data.clone().into()).await.unwrap();
-                    }
+        while let Some((current, name, session_data)) = rx.recv().await {
+            if current && (mode == Focused || mode == Both) {
+                plugin.update(session_data.clone().into()).await.unwrap();
+            }
 
-                    if mode == Individual || mode == Both {
-                        let transformed = match map.get(&name) {
-                            Some(transformed) => transformed,
-                            None => {
-                                let transformed = transform_name(&tx, &name).await;
-                                map.entry(name).or_insert(transformed)
-                            }
-                        };
-
-                        plugin
-                            .update_with_name(transformed, session_data.into())
-                            .await
-                            .unwrap();
+            if mode == Individual || mode == Both {
+                let transformed = match map.get(&name) {
+                    Some(transformed) => transformed,
+                    None => {
+                        let transformed = transform_name(&name).await;
+                        map.entry(name).or_insert(transformed)
                     }
-                }
-                Message::Log(level, message) => {
-                    plugin.log(&message, level).await.unwrap();
-                }
+                };
+
+                plugin
+                    .update_with_name(transformed, session_data.into())
+                    .await
+                    .unwrap();
             }
         }
     });
@@ -62,13 +59,9 @@ async fn main() {
     loop_handle.await.unwrap();
 }
 
-#[derive(Clone)]
-enum Message {
-    Event(bool, String, SessionData),
-    Log(LogLevel, String),
-}
+type Data = (bool, String, SessionData);
 
-async fn transform_name(tx: &Sender<Message>, name: &String) -> String {
+async fn transform_name(name: &String) -> String {
     let mut new_name = String::with_capacity(name.capacity());
 
     for character in name.chars() {
@@ -83,18 +76,13 @@ async fn transform_name(tx: &Sender<Message>, name: &String) -> String {
         new_name.insert(0, '_')
     }
 
-    log_mapping(tx, &name, &new_name).await;
+    log_mapping(&name, &new_name);
 
     new_name
 }
 
-async fn log_mapping(tx: &Sender<Message>, old: &str, new: &str) {
-    tx.send(Message::Log(
-        LogLevel::Info,
-        format!("Mapped '{}' to '{}'", old, new),
-    ))
-    .await
-    .unwrap();
+fn log_mapping(old: &str, new: &str) {
+    info!("Mapped '{}' to '{}'", old, new);
 }
 
 #[derive(clap::Parser, Debug)]

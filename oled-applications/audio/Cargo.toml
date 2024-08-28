@@ -6,8 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+log = "0.4"
 oled-api = { path = "../../oled-api" }
 oled-derive = { path = "../../oled-derive", features = ["into-proto"] }
+oled-log = { path = "../../oled-log" }
 tokio = { version = "1.38", features = ["full"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]

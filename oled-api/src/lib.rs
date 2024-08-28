@@ -3,8 +3,7 @@ mod plugin {
 }
 
 pub use plugin::*;
-
-use prost::UnknownEnumValue;
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct Plugin {
@@ -24,45 +23,31 @@ impl Plugin {
         &mut self,
         name: &str,
         fields: Table,
-    ) -> Result<tonic::Response<EventResponse>, tonic::Status> {
+    ) -> Result<(), tonic::Status> {
         let data = EventData {
             name: name.to_string(),
             fields: Some(fields),
         };
 
-        self.client.event(data).await
+        self.client.event(data).await?;
+        Ok(())
     }
 
-    pub async fn update(
-        &mut self,
-        fields: Table,
-    ) -> Result<tonic::Response<EventResponse>, tonic::Status> {
+    pub async fn update(&mut self, fields: Table) -> Result<(), tonic::Status> {
         let name = self.name.clone();
-        self.update_with_name(&name, fields).await
+
+        self.update_with_name(&name, fields).await?;
+        Ok(())
     }
 
-    pub async fn log(
-        &mut self,
-        message: &str,
-        level: LogLevel,
-    ) -> Result<tonic::Response<LogResponse>, tonic::Status> {
-        let message = LogMessage {
-            name: self.name.clone(),
-            message: message.to_string(),
-            severity: level.into(),
-        };
-        self.client.log(message).await
-    }
+    pub async fn get_data_dir(&mut self) -> Result<PathBuf, tonic::Status> {
+        let name = self.name.clone();
 
-    pub fn log_level_from_integer(value: i32) -> Result<log::Level, UnknownEnumValue> {
-        match LogLevel::try_from(value) {
-            Ok(LogLevel::Error) => Ok(log::Level::Error),
-            Ok(LogLevel::Warn) => Ok(log::Level::Warn),
-            Ok(LogLevel::Info) => Ok(log::Level::Info),
-            Ok(LogLevel::Debug) => Ok(log::Level::Debug),
-            Ok(LogLevel::Trace) => Ok(log::Level::Trace),
-            Err(err) => Err(err),
-        }
+        let response = self
+            .client
+            .request_directory(RequestDirectoryData { name })
+            .await?;
+        Ok(PathBuf::from(&response.get_ref().directory))
     }
 
     pub fn is_valid_identifier(identifier: &str) -> bool {

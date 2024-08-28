@@ -11,9 +11,11 @@ fn main() {
     };
 
     let root = get_root();
+    let data_root = root.join("data");
     let config_root = root.join("config");
     let applications_root = root.join("applications");
     create_dir(&root);
+    create_dir(&data_root);
     create_dir(&config_root);
     create_dir(&applications_root);
 
