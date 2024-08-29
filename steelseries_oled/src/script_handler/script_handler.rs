@@ -214,30 +214,17 @@ impl ScriptHandler {
             register = function(screen, user_scripts)
                 SCRIPT_HANDLER:register(screen, user_scripts)
             end,
+            setmetatable = setmetatable,
             EVENTS = EVENTS,
             LOG = LOG,
             PLATFORM = PLATFORM,
             SHORTCUTS = SHORTCUTS,
             PREDICATE = {
                 Always = function()
-                    return function()
-                        return true
-                    end
+                    return true
                 end,
                 Never = function()
-                    return function()
-                        return true
-                    end
-                end,
-                Once = function()
-                    local count = 0
-                    return function()
-                        if (count >= 1) then
-                            return false
-                        end
-                        count = count + 1
-                        return true
-                    end
+                    return false
                 end,
                 Times = function(x)
                     local count = 0
