@@ -8,6 +8,7 @@ use std::time::Duration;
 use crate::common::user_data::{UserDataIdentifier, UserDataRef};
 use crate::common::{common::exec_file, scoped_value::ScopedValue};
 use crate::create_table_with_defaults;
+use crate::events::shortcuts::Shortcuts;
 use crate::renderer::renderer::{ContextKey, Renderer};
 use crate::screen::screen::Screen;
 use crate::screen::screens::Screens;
@@ -53,6 +54,8 @@ impl ScriptHandler {
             environment,
         )
         .unwrap();
+
+        ScreenDataMap::load(lua);
 
         value
     }
@@ -307,5 +310,151 @@ impl ScriptOutput {
             .and_then(|duration| Some(Duration::from_millis(duration)))
             .unwrap_or(DEFAULT_UPDATE_TIME);
         Ok(duration)
+    }
+}
+
+#[derive(Clone)]
+enum BuilderType {
+    Screen,
+    Script,
+}
+
+#[derive(Clone)]
+struct ScreenBuilder {
+    scripts: Vec<UserScript>,
+    shortcut: Vec<String>,
+    device_name: Option<String>,
+    builder_type: Option<BuilderType>,
+    screen_count: usize,
+    id: usize,
+}
+
+impl ScreenBuilder {
+    pub fn new(lua: &Lua) -> Self {
+        let mut data_map = UserDataRef::<ScreenDataMap>::load(lua);
+        let id = data_map.get_mut().new_entry();
+
+        Self {
+            scripts: vec![],
+            shortcut: vec![],
+            device_name: None,
+            builder_type: None,
+            screen_count: 0,
+            id,
+        }
+    }
+}
+
+impl UserData for ScreenBuilder {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method_mut("with_screen", |lua, builder, scripts: Vec<UserScript>| {
+            if let Some(BuilderType::Script) = builder.builder_type {
+                // TODO error
+            }
+            builder.builder_type = Some(BuilderType::Screen);
+
+            let mut screen = 0;
+            let id = builder.id;
+            for mut script in scripts {
+                let predicate = script.predicate;
+                let wrapper = lua
+                    .create_function(move |lua, _: ()| {
+                        let data_map = UserDataRef::<ScreenDataMap>::load(lua);
+                        let current_screen = data_map.get().get_current(id);
+
+                        if screen != current_screen {
+                            return Ok(false);
+                        }
+
+                        let predicate_check = match &predicate {
+                            Some(predicate) => predicate.call::<_, bool>(())?,
+                            None => true,
+                        };
+
+                        Ok(predicate_check)
+                    })
+                    .unwrap();
+
+                script.predicate = Some(wrapper.into_owned());
+                builder.scripts.push(script);
+
+                screen += 1;
+            }
+
+            Ok(builder.clone())
+        });
+
+        methods.add_method_mut("build", |lua, builder, _: ()| {
+            if builder.screen_count > 1 && !builder.shortcut.is_empty() {
+                let mut shortcuts = UserDataRef::<Shortcuts>::load(lua);
+
+                let id = builder.id;
+                let toggle_screen = lua
+                    .create_function(|lua, _: ()| {
+                        let mut data_map = UserDataRef::<ScreenDataMap>::load(lua);
+                        data_map.get_mut().toggle(id);
+                        Ok(())
+                    })
+                    .unwrap();
+
+                shortcuts
+                    .get_mut()
+                    .register(builder.shortcut.clone(), toggle_screen, None);
+            }
+
+            Ok(())
+        });
+    }
+}
+
+#[derive(Clone)]
+struct ScreenData {
+    current: usize,
+    count: usize,
+}
+
+impl UserData for ScreenData {}
+
+struct ScreenDataMap {
+    data: Vec<ScreenData>,
+}
+
+impl ScreenDataMap {
+    pub fn load(lua: &Lua) {
+        let map = Self { data: vec![] };
+
+        lua.globals().set(Self::identifier(), map).unwrap();
+    }
+
+    pub fn new_entry(&mut self) -> usize {
+        let id = self.data.len();
+        self.data.push(ScreenData {
+            current: 0,
+            count: 0,
+        });
+        id
+    }
+
+    pub fn add_screen(&mut self, id: usize) {
+        self.data[id].count += 1;
+    }
+
+    pub fn get_current(&self, id: usize) -> usize {
+        self.data[id].current
+    }
+
+    pub fn toggle(&mut self, id: usize) {
+        self.data[id].current += 1;
+        if self.data[id].current == self.data[id].count {
+            self.data[id].current = 0;
+        }
+    }
+}
+
+impl UserData for ScreenDataMap {}
+
+impl UserDataIdentifier for ScreenDataMap {
+    fn identifier() -> &'static str {
+        "SCREEN_DATA_MAP"
     }
 }

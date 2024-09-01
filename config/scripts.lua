@@ -236,12 +236,12 @@ function DEVICE_BUILDER:with_screen(screen)
     -- TODO assert no 'with_script' calls
 
     self.screen_count = self.screen_count + 1
-    local scren_number = self.screen_count
+    local screen_number = self.screen_count
     for _, script in ipairs(screen) do
         -- Wrap predicate within screen predicate
         local predicate = script.predicate
         local wrapped_predicate = function()
-            if self.current_screen == scren_number and (predicate == nil or predicate()) then
+            if self.current_screen == screen_number and (predicate == nil or predicate()) then
                 return true
             end
             return false
@@ -270,16 +270,16 @@ end
 
 function DEVICE_BUILDER:enable()
     SHORTCUTS:register(
-        self.shortcut,
-        function()
-            if self.current_screen == self.screen_count then
-                self.current_screen = 1
-            else
-                self.current_screen = self.current_screen + 1
-            end
-            LOG:debug('Current screen: ' .. self.current_screen)
-        end,
-        SHORTCUTS.RESET_STATE
+            self.shortcut,
+            function()
+                if self.current_screen == self.screen_count then
+                    self.current_screen = 1
+                else
+                    self.current_screen = self.current_screen + 1
+                end
+                LOG:debug('Current screen: ' .. self.current_screen)
+            end,
+            SHORTCUTS.RESET_STATE
     )
 
     register(self.name, self.scripts)
@@ -293,26 +293,26 @@ function DEVICES:find(name)
 end
 
 DEVICES:find('Steelseries Apex 7 TKL')
-    :with_screen({
-        {
-            action = volume,
-            predicate = PREDICATE.Times(1),
-            run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
-        },
-        {
-            action = spotify,
-            run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
-        },
-        {
-            action = clock,
-            run_on = { 'CLOCK.Seconds' },
-        },
-    })
-    :with_screen({
-        {
-            action = weather,
-            run_on = { 'CLOCK.Seconds' },
-        }
-    })
-    :with_screen_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
-    :enable()
+       :with_screen({
+    {
+        action = volume,
+        predicate = PREDICATE.Times(1),
+        run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
+    },
+    {
+        action = spotify,
+        run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
+    },
+    {
+        action = clock,
+        run_on = { 'CLOCK.Seconds' },
+    },
+})
+       :with_screen({
+    {
+        action = weather,
+        run_on = { 'CLOCK.Seconds' },
+    }
+})
+       :with_screen_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
+       :enable()

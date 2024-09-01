@@ -43,7 +43,7 @@ impl Shortcuts {
         Ok(())
     }
 
-    fn register(&mut self, mut keys: Vec<String>, on_match: Function, flags: Option<u8>) {
+    pub fn register(&mut self, mut keys: Vec<String>, on_match: Function, flags: Option<u8>) {
         keys.sort();
         keys.dedup();
         let keys = keys
