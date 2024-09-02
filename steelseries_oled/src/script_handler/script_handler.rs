@@ -353,9 +353,8 @@ impl UserData for ScreenBuilder {
             }
             builder.builder_type = Some(BuilderType::Screen);
 
-            let mut screen = 0;
             let id = builder.id;
-            for mut script in scripts {
+            for (screen, mut script) in scripts.into_iter().enumerate() {
                 let predicate = script.predicate;
                 let wrapper = lua
                     .create_function(move |lua, _: ()| {
@@ -377,8 +376,6 @@ impl UserData for ScreenBuilder {
 
                 script.predicate = Some(wrapper.into_owned());
                 builder.scripts.push(script);
-
-                screen += 1;
             }
 
             Ok(builder.clone())
@@ -390,7 +387,7 @@ impl UserData for ScreenBuilder {
 
                 let id = builder.id;
                 let toggle_screen = lua
-                    .create_function(|lua, _: ()| {
+                    .create_function(move |lua, _: ()| {
                         let mut data_map = UserDataRef::<ScreenDataMap>::load(lua);
                         data_map.get_mut().toggle(id);
                         Ok(())
