@@ -1,8 +1,9 @@
 #![windows_subsystem = "windows"]
 
-use log::error;
+use log::{debug, error};
 use mlua::Lua;
 use std::sync::atomic::AtomicBool;
+use std::time::Instant;
 
 use crate::app_loader::app_loader::AppLoader;
 use crate::common::common::proto_to_lua_value;
@@ -36,6 +37,8 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 
 #[tokio::main]
 async fn main() {
+    let init_begin = Instant::now();
+
     let lua = Lua::new();
 
     Logger::load(&lua);
@@ -53,6 +56,10 @@ async fn main() {
     let settings = UserDataRef::<Settings>::load(&lua);
     let interval = settings.get().update_interval;
     let event_loop = EventLoop::new();
+
+    let init_end = Instant::now();
+    debug!("Initialized in {:?}", init_end - init_begin);
+
     event_loop
         .run(interval, &RUNNING, |events| {
             let mut shortcuts = UserDataRef::<Shortcuts>::load(&lua);

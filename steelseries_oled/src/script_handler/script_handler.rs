@@ -266,7 +266,7 @@ impl UserData for ScriptHandler {
             },
         );
 
-        methods.add_method_mut("reset", |lua, handler, screen: String| {
+        methods.add_method_mut("reset", |_lua, handler, screen: String| {
             handler.reset(screen);
             Ok(())
         });
@@ -369,6 +369,10 @@ impl UserData for ScreenBuilder {
             builder.builder_type = Some(BuilderType::Screen);
 
             let id = builder.id;
+
+            let mut data_map = UserDataRef::<ScreenDataMap>::load(lua);
+            data_map.get_mut().add_screen(id);
+
             for (screen, mut script) in scripts.into_iter().enumerate() {
                 let predicate = script.predicate;
                 let wrapper = lua
@@ -392,6 +396,17 @@ impl UserData for ScreenBuilder {
                 script.predicate = Some(wrapper.into_owned());
                 builder.scripts.push(script);
             }
+
+            Ok(builder.clone())
+        });
+
+        methods.add_method_mut("with_script", |_lua, builder, script: UserScript| {
+            if let Some(BuilderType::Screen) = builder.builder_type {
+                // TODO error
+            }
+            builder.builder_type = Some(BuilderType::Script);
+
+            builder.scripts.push(script);
 
             Ok(builder.clone())
         });

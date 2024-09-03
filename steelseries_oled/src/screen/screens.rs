@@ -1,5 +1,5 @@
 use convert_case::{Case, Casing};
-use log::error;
+use log::{debug, error};
 use mlua::{chunk, Function, Lua, OwnedTable, Table, UserData, UserDataMethods, Value};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -102,8 +102,11 @@ impl Screens {
         let type_name = type_name.split("::").last().unwrap();
         let type_name = type_name.to_case(Case::Snake);
 
-        let constructor: fn(&Lua, Value) -> Box<dyn Screen> =
-            |lua, settings| Box::new(T::init(lua, settings).unwrap());
+        let constructor: fn(&Lua, Value) -> Box<dyn Screen> = |lua, settings| {
+            let mut screen = Box::new(T::init(lua, settings).unwrap());
+            debug!("Initialized '{}'", screen.name(lua).unwrap());
+            screen
+        };
 
         let name = type_name.clone();
         let loader = lua

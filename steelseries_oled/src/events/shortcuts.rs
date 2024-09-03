@@ -19,7 +19,7 @@ impl Shortcuts {
         )
     }
 
-    pub fn process_key(&mut self, lua: &Lua, key_name: &str, action: &str) -> mlua::Result<()> {
+    pub fn process_key(&mut self, _lua: &Lua, key_name: &str, action: &str) -> mlua::Result<()> {
         for entry in self.shortcuts.iter_mut() {
             let position = match entry.keys.iter_mut().position(|x| x.key == key_name) {
                 Some(position) => position,
@@ -34,6 +34,7 @@ impl Shortcuts {
 
             // This disallows updates when someone is repeatedly pressing keys faster than
             // the specified timeout, good enough for now
+            // TODO add option to customize retrigger delay and do not discard quick presses
             if all_pressed && Instant::now() - entry.last_update > Duration::from_millis(175) {
                 entry.on_match.call::<_, ()>(())?;
                 entry.last_update = Instant::now();
