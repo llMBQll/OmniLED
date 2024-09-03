@@ -1,9 +1,9 @@
+use crate::keyboard::keyboard::KeyboardEvent;
+use device_query::Keycode;
 use lazy_static::lazy_static;
 use oled_api::Field;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-
-use crate::keyboard::keyboard::KeyboardEvent;
 
 type ApplicationEvent = (String, HashMap<String, Field>);
 
@@ -28,6 +28,17 @@ impl EventQueue {
 
     pub fn push(&mut self, event: Event) {
         self.queue.push(event);
+    }
+
+    pub fn contains_key(&self, key: &Keycode) -> bool {
+        for event in self.queue.iter() {
+            if let Event::Keyboard(event) = event {
+                if event.key == *key {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub fn get_events(&mut self) -> Vec<Event> {

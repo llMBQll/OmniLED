@@ -1,10 +1,3 @@
-use mlua::{
-    chunk, ErrorContext, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table, UserData,
-    UserDataMethods, Value,
-};
-use oled_derive::FromLuaValue;
-use std::time::Duration;
-
 use crate::common::user_data::{UserDataIdentifier, UserDataRef};
 use crate::common::{common::exec_file, scoped_value::ScopedValue};
 use crate::create_table_with_defaults;
@@ -14,6 +7,13 @@ use crate::screen::screen::Screen;
 use crate::screen::screens::Screens;
 use crate::script_handler::script_data_types::{load_script_data_types, Operation};
 use crate::settings::settings::{get_full_path, Settings};
+use log::warn;
+use mlua::{
+    chunk, ErrorContext, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table, UserData,
+    UserDataMethods, Value,
+};
+use oled_derive::FromLuaValue;
+use std::time::Duration;
 
 pub struct ScriptHandler {
     environment: OwnedTable,
@@ -23,6 +23,7 @@ pub struct ScriptHandler {
 
 struct ScreenContext {
     screen: Box<dyn Screen>,
+    name: String,
     scripts: Vec<UserScript>,
     marked_for_update: Vec<bool>,
     time_remaining: Duration,
@@ -70,8 +71,8 @@ impl ScriptHandler {
         let env = self.environment.to_ref();
 
         if !env.contains_key(application_name.clone()).unwrap() {
-            env.set(application_name.clone(), lua.create_table().unwrap())
-                .unwrap();
+            let empty = lua.create_table().unwrap();
+            env.set(application_name.clone(), empty).unwrap();
         }
 
         let entry: Table = env.get(application_name.clone()).unwrap();
@@ -97,12 +98,17 @@ impl ScriptHandler {
         Ok(())
     }
 
-    pub fn reset(&mut self) {
-        for screen in &mut self.screens {
-            screen.marked_for_update = vec![false; screen.marked_for_update.len()];
-            screen.time_remaining = Duration::ZERO;
-            screen.last_priority = 0;
-            screen.repeats = None;
+    fn reset(&mut self, screen_name: String) {
+        match self.screens.iter_mut().find(|x| x.name == screen_name) {
+            Some(ctx) => {
+                ctx.marked_for_update = vec![false; ctx.marked_for_update.len()];
+                ctx.time_remaining = Duration::ZERO;
+                ctx.last_priority = 0;
+                ctx.repeats = None;
+            }
+            None => {
+                warn!("Screen {} not found", screen_name);
+            }
         }
     }
 
@@ -113,13 +119,14 @@ impl ScriptHandler {
         user_scripts: Vec<UserScript>,
     ) -> mlua::Result<()> {
         let mut screens = UserDataRef::<Screens>::load(lua);
-        let screen = screens.get_mut().load_screen(lua, screen_name)?;
+        let screen = screens.get_mut().load_screen(lua, screen_name.clone())?;
 
         let screen_count = self.screens.len();
         let script_count = user_scripts.len();
 
         let context = ScreenContext {
             screen,
+            name: screen_name,
             scripts: user_scripts,
             marked_for_update: vec![false; script_count],
             time_remaining: Default::default(),
@@ -217,6 +224,9 @@ impl ScriptHandler {
             register = function(screen, user_scripts)
                 SCRIPT_HANDLER:register(screen, user_scripts)
             end,
+            reset = function(screen)
+                SCRIPT_HANDLER:reset(screen)
+            end,
             setmetatable = setmetatable,
             EVENTS = EVENTS,
             LOG = LOG,
@@ -255,6 +265,11 @@ impl UserData for ScriptHandler {
                 handler.register(lua, screen, user_scripts)
             },
         );
+
+        methods.add_method_mut("reset", |lua, handler, screen: String| {
+            handler.reset(screen);
+            Ok(())
+        });
     }
 }
 
@@ -396,7 +411,7 @@ impl UserData for ScreenBuilder {
 
                 shortcuts
                     .get_mut()
-                    .register(builder.shortcut.clone(), toggle_screen, None);
+                    .register(builder.shortcut.clone(), toggle_screen);
             }
 
             Ok(())

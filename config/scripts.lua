@@ -272,14 +272,14 @@ function DEVICE_BUILDER:enable()
     SHORTCUTS:register(
             self.shortcut,
             function()
+                reset(self.name)
                 if self.current_screen == self.screen_count then
                     self.current_screen = 1
                 else
                     self.current_screen = self.current_screen + 1
                 end
                 LOG:debug('Current screen: ' .. self.current_screen)
-            end,
-            SHORTCUTS.RESET_STATE
+            end
     )
 
     register(self.name, self.scripts)
@@ -316,3 +316,10 @@ DEVICES:find('Steelseries Apex 7 TKL')
 })
        :with_screen_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
        :enable()
+
+--SHORTCUTS:register(
+--        { 'KEY(RAlt)', 'KEY(Slash)' },
+--        function()
+--            LOG:debug('Omegalul')
+--        end
+--)
