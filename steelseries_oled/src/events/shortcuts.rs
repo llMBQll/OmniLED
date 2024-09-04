@@ -1,8 +1,11 @@
-use mlua::{Function, Lua, OwnedFunction, UserData, UserDataMethods};
-use std::time::{Duration, Instant};
-
 use crate::common::scoped_value::ScopedValue;
 use crate::common::user_data::UserDataIdentifier;
+use device_query::Keycode;
+use log::{error, warn};
+use mlua::{Function, Lua, OwnedFunction, UserData, UserDataMethods};
+use regex::Regex;
+use std::str::FromStr;
+use std::time::{Duration, Instant};
 
 pub struct Shortcuts {
     shortcuts: Vec<ShortcutEntry>,
@@ -43,22 +46,51 @@ impl Shortcuts {
         Ok(())
     }
 
-    pub fn register(&mut self, mut keys: Vec<String>, on_match: Function) {
+    pub fn register(&mut self, mut keys: Vec<String>, on_match: Function) -> mlua::Result<()> {
+        let pattern = Regex::new(r"^KEY\((.*)\)$").unwrap();
+
         keys.sort();
         keys.dedup();
-        let keys = keys
+
+        let mut error_found = false;
+        let sorted = keys
             .into_iter()
-            .map(|key| KeyState {
-                key,
-                pressed: false,
+            .filter_map(|key| match pattern.captures(&key) {
+                Some(captures) => {
+                    let content = captures.get(1).unwrap().as_str();
+                    if let Err(_) = Keycode::from_str(content) {
+                        warn!(
+                            "Failed to parse keycode '{}', this is not always an error",
+                            content
+                        );
+                    }
+
+                    Some(KeyState {
+                        key,
+                        pressed: false,
+                    })
+                }
+                None => {
+                    error!("String '{}' does not match pattern 'KEY(Keycode)'", key);
+                    error_found = true;
+                    None
+                }
             })
             .collect();
 
+        if error_found {
+            return Err(mlua::Error::RuntimeError(
+                "Failed to parse some of the provided keycodes".to_string(),
+            ));
+        }
+
         self.shortcuts.push(ShortcutEntry {
-            keys,
+            keys: sorted,
             on_match: on_match.into_owned(),
             last_update: Instant::now(),
         });
+
+        Ok(())
     }
 }
 
@@ -66,10 +98,7 @@ impl UserData for Shortcuts {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
-            |_lua, this, (keys, on_match): (Vec<String>, Function)| {
-                this.register(keys, on_match);
-                Ok(())
-            },
+            |_lua, this, (keys, on_match): (Vec<String>, Function)| this.register(keys, on_match),
         );
     }
 }

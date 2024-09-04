@@ -366,9 +366,25 @@ impl ScreenBuilder {
 
 impl UserData for ScreenBuilder {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method_mut("with_script", |_lua, builder, script: UserScript| {
+            if let Some(BuilderType::Screen) = builder.builder_type {
+                return Err(mlua::Error::RuntimeError(
+                    "Can't use 'with_script' after calling 'with_screen' or 'with_screen_toggle'."
+                        .to_string(),
+                ));
+            }
+            builder.builder_type = Some(BuilderType::Script);
+
+            builder.scripts.push(script);
+
+            Ok(builder.clone())
+        });
+
         methods.add_method_mut("with_screen", |lua, builder, scripts: Vec<UserScript>| {
             if let Some(BuilderType::Script) = builder.builder_type {
-                // TODO error
+                return Err(mlua::Error::RuntimeError(
+                    "Can't use 'with_screen' after calling 'with_script'.".to_string(),
+                ));
             }
             builder.builder_type = Some(BuilderType::Screen);
 
@@ -400,22 +416,12 @@ impl UserData for ScreenBuilder {
             Ok(builder.clone())
         });
 
-        methods.add_method_mut("with_script", |_lua, builder, script: UserScript| {
-            if let Some(BuilderType::Screen) = builder.builder_type {
-                // TODO error
-            }
-            builder.builder_type = Some(BuilderType::Script);
-
-            builder.scripts.push(script);
-
-            Ok(builder.clone())
-        });
-
         methods.add_method_mut("with_screen_toggle", |_lua, builder, keys: Vec<String>| {
             if let Some(BuilderType::Script) = builder.builder_type {
-                // TODO error
+                return Err(mlua::Error::RuntimeError(
+                    "Can't use 'with_screen_toggle' after calling 'with_script'.".to_string(),
+                ));
             }
-            // TODO verify keys validity
             builder.builder_type = Some(BuilderType::Screen);
 
             builder.shortcut = keys;
@@ -425,8 +431,6 @@ impl UserData for ScreenBuilder {
 
         methods.add_method_mut("build", |lua, builder, _: ()| {
             if builder.screen_count > 1 && !builder.shortcut.is_empty() {
-                let mut shortcuts = UserDataRef::<Shortcuts>::load(lua);
-
                 let current = builder.current_screen.clone();
                 let count = builder.screen_count;
                 let name = builder.device_name.clone();
@@ -444,13 +448,14 @@ impl UserData for ScreenBuilder {
                     })
                     .unwrap();
 
+                let mut shortcuts = UserDataRef::<Shortcuts>::load(lua);
                 shortcuts
                     .get_mut()
-                    .register(builder.shortcut.clone(), toggle_screen);
+                    .register(builder.shortcut.clone(), toggle_screen)?;
             }
 
-            let mut sript_handler = UserDataRef::<ScriptHandler>::load(lua);
-            sript_handler.get_mut().register(
+            let mut script_handler = UserDataRef::<ScriptHandler>::load(lua);
+            script_handler.get_mut().register(
                 lua,
                 builder.device_name.clone(),
                 builder.scripts.clone(),
