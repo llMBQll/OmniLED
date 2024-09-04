@@ -42,10 +42,10 @@ async fn main() {
     let lua = Lua::new();
 
     Logger::load(&lua);
-    let _shortcuts = Shortcuts::load(&lua);
     Constants::load(&lua);
     Settings::load(&lua);
     PluginServer::load(&lua).await;
+    let _shortcuts = Shortcuts::load(&lua);
     let _screens = Screens::load(&lua);
     let _sandbox = ScriptHandler::load(&lua);
     let _tray = TrayIcon::new(&RUNNING);
@@ -100,6 +100,7 @@ async fn main() {
                 }
             }
 
+            shortcuts.get_mut().update();
             script_handler.get_mut().update(&lua, interval).unwrap();
         })
         .await;

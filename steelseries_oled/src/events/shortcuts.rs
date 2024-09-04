@@ -1,47 +1,72 @@
-use crate::common::scoped_value::ScopedValue;
-use crate::common::user_data::UserDataIdentifier;
 use device_query::Keycode;
 use log::{error, warn};
 use mlua::{Function, Lua, OwnedFunction, UserData, UserDataMethods};
 use regex::Regex;
 use std::str::FromStr;
-use std::time::{Duration, Instant};
+
+use crate::common::scoped_value::ScopedValue;
+use crate::common::user_data::{UserDataIdentifier, UserDataRef};
+use crate::settings::settings::Settings;
 
 pub struct Shortcuts {
     shortcuts: Vec<ShortcutEntry>,
+    delay: usize,
+    rate: usize,
+    current_tick: usize,
 }
 
 impl Shortcuts {
     pub fn load(lua: &Lua) -> ScopedValue {
+        let settings = UserDataRef::<Settings>::load(lua);
+        let delay = settings.get().keyboard_ticks_repeat_delay;
+        let rate = settings.get().keyboard_ticks_repeat_rate;
+
         ScopedValue::new(
             lua,
             Self::identifier(),
             Self {
                 shortcuts: Vec::new(),
+                delay,
+                rate,
+                current_tick: 0,
             },
         )
     }
 
     pub fn process_key(&mut self, _lua: &Lua, key_name: &str, action: &str) -> mlua::Result<()> {
         for entry in self.shortcuts.iter_mut() {
-            let position = match entry.keys.iter_mut().position(|x| x.key == key_name) {
+            let position = match entry.keys.iter().position(|x| x.key == key_name) {
                 Some(position) => position,
                 None => continue,
             };
 
-            // calculate all_pressed BEFORE updating the state
-            // TODO shouldn't this be the other way around?
+            entry.keys[position].pressed = action == "Pressed";
             let all_pressed = entry.keys.iter().all(|x| x.pressed);
 
-            entry.keys[position].pressed = action == "Pressed";
+            let press = all_pressed && !entry.last_all_pressed;
+            let hold = all_pressed && entry.last_all_pressed;
+            let required_ticks = match entry.hold_updates {
+                0 => self.delay,
+                _ => self.rate,
+            };
+            let delta_ticks = self.current_tick - entry.last_update_tick;
+            let update = (self.current_tick != entry.last_update_tick)
+                && (press || (hold && delta_ticks >= required_ticks));
 
-            // This disallows updates when someone is repeatedly pressing keys faster than
-            // the specified timeout, good enough for now
-            // TODO add option to customize retrigger delay and do not discard quick presses
-            if all_pressed && Instant::now() - entry.last_update > Duration::from_millis(175) {
+            if update {
+                entry.last_update_tick = self.current_tick;
                 entry.on_match.call::<_, ()>(())?;
-                entry.last_update = Instant::now();
+
+                if hold {
+                    entry.hold_updates += 1;
+                }
             }
+
+            if !hold {
+                entry.hold_updates = 0;
+            }
+
+            entry.last_all_pressed = all_pressed;
         }
         Ok(())
     }
@@ -87,10 +112,16 @@ impl Shortcuts {
         self.shortcuts.push(ShortcutEntry {
             keys: sorted,
             on_match: on_match.into_owned(),
-            last_update: Instant::now(),
+            last_all_pressed: false,
+            last_update_tick: 0,
+            hold_updates: 0,
         });
 
         Ok(())
+    }
+
+    pub fn update(&mut self) {
+        self.current_tick += 1;
     }
 }
 
@@ -112,7 +143,9 @@ impl UserDataIdentifier for Shortcuts {
 struct ShortcutEntry {
     keys: Vec<KeyState>,
     on_match: OwnedFunction,
-    last_update: Instant,
+    last_all_pressed: bool,
+    last_update_tick: usize,
+    hold_updates: usize,
 }
 
 struct KeyState {
