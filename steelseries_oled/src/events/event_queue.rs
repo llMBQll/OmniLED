@@ -1,8 +1,9 @@
-use crate::keyboard::keyboard::KeyboardEvent;
 use lazy_static::lazy_static;
 use oled_api::Field;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+
+use crate::keyboard::keyboard::KeyboardEvent;
 
 type ApplicationEvent = (String, HashMap<String, Field>);
 
