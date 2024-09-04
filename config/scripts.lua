@@ -165,7 +165,8 @@ local function weather()
     }
 end
 
-find('Steelseries Apex 7 TKL')
+SCREEN_BUILDER
+    :new('Steelseries Apex 7 TKL')
     :with_screen({
         {
             action = volume,
@@ -187,4 +188,4 @@ find('Steelseries Apex 7 TKL')
         }
     })
     :with_screen_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
-    :build()
+    :register()

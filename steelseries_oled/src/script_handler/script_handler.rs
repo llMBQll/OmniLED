@@ -14,7 +14,7 @@ use crate::create_table_with_defaults;
 use crate::events::shortcuts::Shortcuts;
 use crate::renderer::renderer::{ContextKey, Renderer};
 use crate::screen::screen::Screen;
-use crate::screen::screens::Screens;
+use crate::screen::screens::{ScreenStatus, Screens};
 use crate::script_handler::script_data_types::{load_script_data_types, Operation};
 use crate::settings::settings::{get_full_path, Settings};
 
@@ -222,7 +222,7 @@ impl ScriptHandler {
 
     fn make_sandbox(lua: &Lua) -> Table {
         let find_fn = lua
-            .create_function(|_, name: String| Ok(ScreenBuilder::new(name)))
+            .create_function(|_, name: String| Ok(ScreenBuilderImpl::new(name)))
             .unwrap();
 
         let always_fn = lua.create_function(|_, _: ()| Ok(true)).unwrap();
@@ -258,6 +258,7 @@ impl ScriptHandler {
                 Times = $times_fn,
             }
         });
+        env.set(ScreenBuilder::identifier(), ScreenBuilder).unwrap();
         load_script_data_types(lua, &env);
 
         env
@@ -335,6 +336,36 @@ impl ScriptOutput {
     }
 }
 
+struct ScreenBuilder;
+
+impl UserData for ScreenBuilder {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method("new", |lua, _, name: String| {
+            let screens = UserDataRef::<Screens>::load(lua);
+
+            let builder = match screens.get().screen_status(&name) {
+                Some(ScreenStatus::Available) => Ok(ScreenBuilderImpl::new(name)),
+                Some(ScreenStatus::Loaded) => Err(mlua::Error::RuntimeError(format!(
+                    "Device '{}' already loaded.",
+                    name
+                ))),
+                None => Err(mlua::Error::RuntimeError(format!(
+                    "Device '{}' not found.",
+                    name
+                ))),
+            };
+
+            builder
+        });
+    }
+}
+
+impl UserDataIdentifier for ScreenBuilder {
+    fn identifier() -> &'static str {
+        "SCREEN_BUILDER"
+    }
+}
+
 #[derive(Clone)]
 enum BuilderType {
     Screen,
@@ -342,7 +373,7 @@ enum BuilderType {
 }
 
 #[derive(Clone)]
-struct ScreenBuilder {
+struct ScreenBuilderImpl {
     scripts: Vec<UserScript>,
     shortcut: Vec<String>,
     device_name: String,
@@ -351,7 +382,7 @@ struct ScreenBuilder {
     current_screen: Rc<RefCell<usize>>,
 }
 
-impl ScreenBuilder {
+impl ScreenBuilderImpl {
     pub fn new(name: String) -> Self {
         Self {
             scripts: vec![],
@@ -364,7 +395,7 @@ impl ScreenBuilder {
     }
 }
 
-impl UserData for ScreenBuilder {
+impl UserData for ScreenBuilderImpl {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method_mut("with_script", |_lua, builder, script: UserScript| {
             if let Some(BuilderType::Screen) = builder.builder_type {
@@ -429,7 +460,7 @@ impl UserData for ScreenBuilder {
             Ok(builder.clone())
         });
 
-        methods.add_method_mut("build", |lua, builder, _: ()| {
+        methods.add_method_mut("register", |lua, builder, _: ()| {
             if builder.screen_count > 1 && !builder.shortcut.is_empty() {
                 let current = builder.current_screen.clone();
                 let count = builder.screen_count;

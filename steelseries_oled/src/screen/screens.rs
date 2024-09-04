@@ -30,6 +30,13 @@ impl Screens {
         screens
     }
 
+    pub fn screen_status(&self, name: &str) -> Option<ScreenStatus> {
+        self.screens.get(name).map(|entry| match entry {
+            ScreenEntry::Initializer(_) => ScreenStatus::Available,
+            ScreenEntry::Loaded => ScreenStatus::Loaded,
+        })
+    }
+
     pub fn load_screen(&mut self, lua: &Lua, name: String) -> mlua::Result<Box<dyn Screen>> {
         let entry = self.screens.entry(name);
         let entry = match entry {
@@ -179,4 +186,9 @@ enum ScreenEntry {
 struct Initializer {
     settings: OwnedTable,
     constructor: fn(&Lua, Value) -> Box<dyn Screen>,
+}
+
+pub enum ScreenStatus {
+    Available,
+    Loaded,
 }
