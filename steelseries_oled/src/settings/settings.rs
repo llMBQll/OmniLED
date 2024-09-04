@@ -1,5 +1,6 @@
 use log::{debug, error, info};
 use mlua::{chunk, Lua, LuaSerdeExt, UserData, Value};
+use oled_derive::UserDataIdentifier;
 use serde::Deserialize;
 use serde_with::{serde_as, DurationMilliSeconds};
 use std::path::PathBuf;
@@ -9,11 +10,11 @@ use crate::common::common::exec_file;
 use crate::common::user_data::{UserDataIdentifier, UserDataRef};
 use crate::constants::constants::Constants;
 use crate::create_table;
-use crate::logging::logger::{LevelFilter, Logger};
+use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
 
 #[serde_as]
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, UserDataIdentifier)]
 pub struct Settings {
     #[serde(default = "Settings::applications_file")]
     pub applications_file: String,
@@ -70,7 +71,7 @@ impl Settings {
         }
 
         let settings = UserDataRef::<Settings>::load(lua);
-        let logger = UserDataRef::<Logger>::load(lua);
+        let logger = UserDataRef::<Log>::load(lua);
         logger.get().set_level_filter(settings.get().log_level);
 
         debug!("Loaded settings {:?}", settings.get());
@@ -148,12 +149,6 @@ impl Default for Settings {
 }
 
 impl UserData for Settings {}
-
-impl UserDataIdentifier for Settings {
-    fn identifier() -> &'static str {
-        "SETTINGS"
-    }
-}
 
 pub fn get_full_path(path: &String) -> String {
     let path_buf = PathBuf::from(path);

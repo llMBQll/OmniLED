@@ -1,6 +1,7 @@
 use convert_case::{Case, Casing};
 use log::{debug, error};
 use mlua::{chunk, Function, Lua, OwnedTable, Table, UserData, UserDataMethods, Value};
+use oled_derive::UserDataIdentifier;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
@@ -17,6 +18,7 @@ use crate::settings::settings::{get_full_path, Settings};
 
 type Constructor = fn(&Lua, Value) -> Box<dyn Screen>;
 
+#[derive(UserDataIdentifier)]
 pub struct Screens {
     screens: HashMap<String, ScreenEntry>,
     constructors: HashMap<String, Constructor>,
@@ -169,12 +171,6 @@ impl UserData for Screens {
                 manager.add_configuration(name, kind, settings)
             },
         );
-    }
-}
-
-impl UserDataIdentifier for Screens {
-    fn identifier() -> &'static str {
-        "SCREENS"
     }
 }
 

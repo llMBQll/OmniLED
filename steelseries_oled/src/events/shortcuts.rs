@@ -1,6 +1,7 @@
 use device_query::Keycode;
 use log::{error, warn};
 use mlua::{Function, Lua, OwnedFunction, UserData, UserDataMethods};
+use oled_derive::UserDataIdentifier;
 use regex::Regex;
 use std::str::FromStr;
 
@@ -8,6 +9,7 @@ use crate::common::scoped_value::ScopedValue;
 use crate::common::user_data::{UserDataIdentifier, UserDataRef};
 use crate::settings::settings::Settings;
 
+#[derive(UserDataIdentifier)]
 pub struct Shortcuts {
     shortcuts: Vec<ShortcutEntry>,
     delay: usize,
@@ -131,12 +133,6 @@ impl UserData for Shortcuts {
             "register",
             |_lua, this, (keys, on_match): (Vec<String>, Function)| this.register(keys, on_match),
         );
-    }
-}
-
-impl UserDataIdentifier for Shortcuts {
-    fn identifier() -> &'static str {
-        "SHORTCUTS"
     }
 }
 

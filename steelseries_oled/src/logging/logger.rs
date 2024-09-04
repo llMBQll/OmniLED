@@ -1,23 +1,25 @@
-use crate::common::user_data::UserDataIdentifier;
-use crate::constants::constants::Constants;
 use log::{debug, error, info, trace, warn};
 use log4rs::Handle;
 use mlua::{Lua, UserData, UserDataMethods};
+use oled_derive::UserDataIdentifier;
 use serde::de;
 use serde::de::Error;
 use std::path::PathBuf;
 
-#[derive(Clone, Debug)]
-pub struct Logger {
+use crate::common::user_data::UserDataIdentifier;
+use crate::constants::constants::Constants;
+
+#[derive(Clone, Debug, UserDataIdentifier)]
+pub struct Log {
     handle: Handle,
 }
 
-impl Logger {
+impl Log {
     pub fn load(lua: &Lua) {
         let handle = oled_log::init(Self::get_path());
-        let logger = Logger { handle };
+        let logger = Log { handle };
 
-        lua.globals().set(Logger::identifier(), logger).unwrap();
+        lua.globals().set(Log::identifier(), logger).unwrap();
     }
 
     pub fn set_level_filter(&self, level_filter: LevelFilter) {
@@ -29,7 +31,7 @@ impl Logger {
     }
 }
 
-impl UserData for Logger {
+impl UserData for Log {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method("debug", |_, _, message: String| {
             debug!("{}", message);
@@ -75,11 +77,5 @@ where
         "Debug" => Ok(log::LevelFilter::Debug),
         "Trace" => Ok(log::LevelFilter::Trace),
         value => Err(Error::unknown_variant(value, NAMES)),
-    }
-}
-
-impl UserDataIdentifier for Logger {
-    fn identifier() -> &'static str {
-        "LOG"
     }
 }

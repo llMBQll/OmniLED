@@ -1,5 +1,6 @@
 use log::{error, warn};
 use mlua::{chunk, Lua, UserData};
+use oled_derive::UserDataIdentifier;
 
 use crate::app_loader::process::{Config, Process};
 use crate::common::common::exec_file;
@@ -9,6 +10,7 @@ use crate::constants::constants::Constants;
 use crate::create_table_with_defaults;
 use crate::settings::settings::{get_full_path, Settings};
 
+#[derive(UserDataIdentifier)]
 pub struct AppLoader {
     processes: Vec<Process>,
 }
@@ -70,9 +72,3 @@ impl AppLoader {
 }
 
 impl UserData for AppLoader {}
-
-impl UserDataIdentifier for AppLoader {
-    fn identifier() -> &'static str {
-        "APP_LOADER"
-    }
-}

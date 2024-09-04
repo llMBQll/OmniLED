@@ -13,7 +13,7 @@ use crate::events::event_loop::EventLoop;
 use crate::events::event_queue::Event;
 use crate::events::shortcuts::Shortcuts;
 use crate::keyboard::keyboard::{process_events, KeyboardEventEventType};
-use crate::logging::logger::Logger;
+use crate::logging::logger::Log;
 use crate::screen::screens::Screens;
 use crate::script_handler::script_handler::ScriptHandler;
 use crate::server::server::PluginServer;
@@ -41,7 +41,7 @@ async fn main() {
 
     let lua = Lua::new();
 
-    Logger::load(&lua);
+    Log::load(&lua);
     Constants::load(&lua);
     Settings::load(&lua);
     PluginServer::load(&lua).await;

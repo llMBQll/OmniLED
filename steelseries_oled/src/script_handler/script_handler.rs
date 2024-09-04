@@ -3,7 +3,7 @@ use mlua::{
     chunk, ErrorContext, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table, UserData,
     UserDataMethods, Value,
 };
-use oled_derive::FromLuaValue;
+use oled_derive::{FromLuaValue, UserDataIdentifier};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
@@ -18,6 +18,7 @@ use crate::screen::screens::{ScreenStatus, Screens};
 use crate::script_handler::script_data_types::{load_script_data_types, Operation};
 use crate::settings::settings::{get_full_path, Settings};
 
+#[derive(UserDataIdentifier)]
 pub struct ScriptHandler {
     environment: OwnedTable,
     renderer: Renderer,
@@ -269,12 +270,6 @@ impl UserData for ScriptHandler {
     }
 }
 
-impl UserDataIdentifier for ScriptHandler {
-    fn identifier() -> &'static str {
-        "SCRIPT_HANDLER"
-    }
-}
-
 #[derive(FromLuaValue, Clone)]
 struct UserScript {
     #[mlua(transform(Self::transform_function))]
@@ -324,6 +319,7 @@ impl ScriptOutput {
     }
 }
 
+#[derive(UserDataIdentifier)]
 struct ScreenBuilder;
 
 impl UserData for ScreenBuilder {
@@ -345,12 +341,6 @@ impl UserData for ScreenBuilder {
 
             builder
         });
-    }
-}
-
-impl UserDataIdentifier for ScreenBuilder {
-    fn identifier() -> &'static str {
-        "SCREEN_BUILDER"
     }
 }
 

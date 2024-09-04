@@ -19,3 +19,13 @@ pub fn into_proto_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStr
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     into_proto::expand_into_proto_derive(input)
 }
+
+#[cfg(feature = "user-data-identifier")]
+mod user_data_identifier;
+
+#[cfg(feature = "user-data-identifier")]
+#[proc_macro_derive(UserDataIdentifier)]
+pub fn user_data_identifier_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    user_data_identifier::expand_into_user_data_identifier_derive(input)
+}
