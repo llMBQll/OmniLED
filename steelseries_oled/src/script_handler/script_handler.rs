@@ -221,10 +221,6 @@ impl ScriptHandler {
     }
 
     fn make_sandbox(lua: &Lua) -> Table {
-        let find_fn = lua
-            .create_function(|_, name: String| Ok(ScreenBuilderImpl::new(name)))
-            .unwrap();
-
         let always_fn = lua.create_function(|_, _: ()| Ok(true)).unwrap();
 
         let never_fn = lua.create_function(|_, _: ()| Ok(false)).unwrap();
@@ -240,14 +236,6 @@ impl ScriptHandler {
             .unwrap();
 
         let env = create_table_with_defaults!(lua, {
-            find = $find_fn,
-            register = function(screen, user_scripts)
-                SCRIPT_HANDLER:register(screen, user_scripts)
-            end,
-            reset = function(screen)
-                SCRIPT_HANDLER:reset(screen)
-            end,
-            setmetatable = setmetatable,
             EVENTS = EVENTS,
             LOG = LOG,
             PLATFORM = PLATFORM,
