@@ -347,7 +347,7 @@ struct ScreenBuilder {
     shortcut: Vec<String>,
     device_name: String,
     builder_type: Option<BuilderType>,
-    screen_count: Rc<RefCell<usize>>,
+    screen_count: usize,
     current_screen: Rc<RefCell<usize>>,
 }
 
@@ -358,7 +358,7 @@ impl ScreenBuilder {
             shortcut: vec![],
             device_name: name,
             builder_type: None,
-            screen_count: Rc::new(RefCell::new(0)),
+            screen_count: 0,
             current_screen: Rc::new(RefCell::new(0)),
         }
     }
@@ -372,8 +372,8 @@ impl UserData for ScreenBuilder {
             }
             builder.builder_type = Some(BuilderType::Screen);
 
-            let screen = *builder.screen_count.borrow();
-            *builder.screen_count.borrow_mut() += 1;
+            let screen = builder.screen_count;
+            builder.screen_count += 1;
 
             for mut script in scripts {
                 let current_screen = builder.current_screen.clone();
@@ -424,16 +424,16 @@ impl UserData for ScreenBuilder {
         });
 
         methods.add_method_mut("build", |lua, builder, _: ()| {
-            if *builder.screen_count.borrow() > 1 && !builder.shortcut.is_empty() {
+            if builder.screen_count > 1 && !builder.shortcut.is_empty() {
                 let mut shortcuts = UserDataRef::<Shortcuts>::load(lua);
 
                 let current = builder.current_screen.clone();
-                let count = builder.screen_count.clone();
+                let count = builder.screen_count;
                 let name = builder.device_name.clone();
                 let toggle_screen = lua
                     .create_function_mut(move |lua, _: ()| {
                         *current.borrow_mut() += 1;
-                        if *current.borrow() == *count.borrow() {
+                        if *current.borrow() == count {
                             *current.borrow_mut() = 0;
                         }
 
