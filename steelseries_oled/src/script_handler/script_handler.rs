@@ -1,4 +1,4 @@
-use log::{debug, warn};
+use log::warn;
 use mlua::{
     chunk, ErrorContext, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table, UserData,
     UserDataMethods, Value,
@@ -99,8 +99,8 @@ impl ScriptHandler {
         Ok(())
     }
 
-    fn reset(&mut self, screen_name: String) {
-        match self.screens.iter_mut().find(|x| x.name == screen_name) {
+    fn reset(&mut self, screen_name: &String) {
+        match self.screens.iter_mut().find(|x| x.name == *screen_name) {
             Some(ctx) => {
                 ctx.marked_for_update = vec![false; ctx.marked_for_update.len()];
                 ctx.time_remaining = Duration::ZERO;
@@ -274,7 +274,7 @@ impl UserData for ScriptHandler {
         );
 
         methods.add_method_mut("reset", |_lua, handler, screen: String| {
-            handler.reset(screen);
+            handler.reset(&screen);
             Ok(())
         });
     }
@@ -372,14 +372,15 @@ impl UserData for ScreenBuilder {
             }
             builder.builder_type = Some(BuilderType::Screen);
 
+            let screen = *builder.screen_count.borrow();
             *builder.screen_count.borrow_mut() += 1;
 
-            for (screen, mut script) in scripts.into_iter().enumerate() {
+            for mut script in scripts {
                 let current_screen = builder.current_screen.clone();
                 let predicate = script.predicate;
                 let wrapper = lua
                     .create_function(move |_, _: ()| {
-                        if screen != *current_screen.borrow() {
+                        if *current_screen.borrow() != screen {
                             return Ok(false);
                         }
 
@@ -428,12 +429,17 @@ impl UserData for ScreenBuilder {
 
                 let current = builder.current_screen.clone();
                 let count = builder.screen_count.clone();
+                let name = builder.device_name.clone();
                 let toggle_screen = lua
-                    .create_function_mut(move |_, _: ()| {
+                    .create_function_mut(move |lua, _: ()| {
                         *current.borrow_mut() += 1;
                         if *current.borrow() == *count.borrow() {
                             *current.borrow_mut() = 0;
                         }
+
+                        let mut script_handler = UserDataRef::<ScriptHandler>::load(lua);
+                        script_handler.get_mut().reset(&name);
+
                         Ok(())
                     })
                     .unwrap();

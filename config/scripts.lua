@@ -169,7 +169,6 @@ find('Steelseries Apex 7 TKL')
     :with_screen({
         {
             action = volume,
-            predicate = PREDICATE.Always,
             run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
         },
         {
