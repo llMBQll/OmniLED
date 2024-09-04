@@ -24,6 +24,12 @@ pub struct Settings {
     #[serde(default = "Settings::log_level")]
     pub log_level: LevelFilter,
 
+    #[serde(default = "Settings::keyboard_ticks_repeat_delay")]
+    pub keyboard_ticks_repeat_delay: usize,
+
+    #[serde(default = "Settings::keyboard_ticks_repeat_rate")]
+    pub keyboard_ticks_repeat_rate: usize,
+
     #[serde(default = "Settings::scripts_file")]
     pub scripts_file: String,
 
@@ -86,6 +92,14 @@ impl Settings {
         LevelFilter(log::LevelFilter::Info)
     }
 
+    fn keyboard_ticks_repeat_delay() -> usize {
+        2
+    }
+
+    fn keyboard_ticks_repeat_rate() -> usize {
+        2
+    }
+
     fn scripts_file() -> String {
         String::from("scripts.lua")
     }
@@ -121,6 +135,8 @@ impl Default for Settings {
             applications_file: Settings::applications_file(),
             font: Settings::font(),
             log_level: Settings::log_level(),
+            keyboard_ticks_repeat_delay: Settings::keyboard_ticks_repeat_delay(),
+            keyboard_ticks_repeat_rate: Settings::keyboard_ticks_repeat_rate(),
             scripts_file: Settings::scripts_file(),
             scrolling_text_ticks_at_edge: Settings::scrolling_text_ticks_at_edge(),
             scrolling_text_ticks_per_move: Settings::scrolling_text_ticks_per_move(),

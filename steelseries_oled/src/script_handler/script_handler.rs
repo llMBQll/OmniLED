@@ -1,16 +1,20 @@
+use log::warn;
 use mlua::{
     chunk, ErrorContext, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table, UserData,
     UserDataMethods, Value,
 };
 use oled_derive::FromLuaValue;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 
 use crate::common::user_data::{UserDataIdentifier, UserDataRef};
 use crate::common::{common::exec_file, scoped_value::ScopedValue};
 use crate::create_table_with_defaults;
+use crate::events::shortcuts::Shortcuts;
 use crate::renderer::renderer::{ContextKey, Renderer};
 use crate::screen::screen::Screen;
-use crate::screen::screens::Screens;
+use crate::screen::screens::{ScreenStatus, Screens};
 use crate::script_handler::script_data_types::{load_script_data_types, Operation};
 use crate::settings::settings::{get_full_path, Settings};
 
@@ -22,6 +26,7 @@ pub struct ScriptHandler {
 
 struct ScreenContext {
     screen: Box<dyn Screen>,
+    name: String,
     scripts: Vec<UserScript>,
     marked_for_update: Vec<bool>,
     time_remaining: Duration,
@@ -67,8 +72,8 @@ impl ScriptHandler {
         let env = self.environment.to_ref();
 
         if !env.contains_key(application_name.clone()).unwrap() {
-            env.set(application_name.clone(), lua.create_table().unwrap())
-                .unwrap();
+            let empty = lua.create_table().unwrap();
+            env.set(application_name.clone(), empty).unwrap();
         }
 
         let entry: Table = env.get(application_name.clone()).unwrap();
@@ -94,29 +99,35 @@ impl ScriptHandler {
         Ok(())
     }
 
-    pub fn reset(&mut self) {
-        for screen in &mut self.screens {
-            screen.marked_for_update = vec![false; screen.marked_for_update.len()];
-            screen.time_remaining = Duration::ZERO;
-            screen.last_priority = 0;
-            screen.repeats = None;
+    fn reset(&mut self, screen_name: &String) {
+        match self.screens.iter_mut().find(|x| x.name == *screen_name) {
+            Some(ctx) => {
+                ctx.marked_for_update = vec![false; ctx.marked_for_update.len()];
+                ctx.time_remaining = Duration::ZERO;
+                ctx.last_priority = 0;
+                ctx.repeats = None;
+            }
+            None => {
+                warn!("Screen {} not found", screen_name);
+            }
         }
     }
 
-    fn register(
+    pub(self) fn register(
         &mut self,
         lua: &Lua,
         screen_name: String,
         user_scripts: Vec<UserScript>,
     ) -> mlua::Result<()> {
         let mut screens = UserDataRef::<Screens>::load(lua);
-        let screen = screens.get_mut().load_screen(lua, screen_name)?;
+        let screen = screens.get_mut().load_screen(lua, screen_name.clone())?;
 
         let screen_count = self.screens.len();
         let script_count = user_scripts.len();
 
         let context = ScreenContext {
             screen,
+            name: screen_name,
             scripts: user_scripts,
             marked_for_update: vec![false; script_count],
             time_remaining: Default::default(),
@@ -127,6 +138,14 @@ impl ScriptHandler {
         self.screens.push(context);
 
         Ok(())
+    }
+
+    fn test_predicate(function: &Option<OwnedFunction>) -> mlua::Result<bool> {
+        let predicate = match function {
+            Some(predicate) => predicate.call::<_, bool>(())?,
+            None => true,
+        };
+        Ok(predicate)
     }
 
     fn update_impl(
@@ -158,11 +177,7 @@ impl ScriptHandler {
                 break;
             }
 
-            let predicate = match &ctx.scripts[priority].predicate {
-                Some(predicate) => predicate.call::<_, bool>(())?,
-                None => true,
-            };
-            if marked_for_update && predicate {
+            if marked_for_update && Self::test_predicate(&ctx.scripts[priority].predicate)? {
                 to_update = Some(priority);
                 update_modifier = None;
                 break;
@@ -206,15 +221,32 @@ impl ScriptHandler {
     }
 
     fn make_sandbox(lua: &Lua) -> Table {
+        let always_fn = lua.create_function(|_, _: ()| Ok(true)).unwrap();
+
+        let never_fn = lua.create_function(|_, _: ()| Ok(false)).unwrap();
+
+        let times_fn = lua
+            .create_function(|lua, n: usize| {
+                let mut count = 0;
+                lua.create_function_mut(move |_, _: ()| {
+                    count += 1;
+                    Ok(count <= n)
+                })
+            })
+            .unwrap();
+
         let env = create_table_with_defaults!(lua, {
-            register = function(screen, user_scripts)
-                SCRIPT_HANDLER:register(screen, user_scripts)
-            end,
             EVENTS = EVENTS,
             LOG = LOG,
             PLATFORM = PLATFORM,
             SHORTCUTS = SHORTCUTS,
+            PREDICATE = {
+                Always = $always_fn,
+                Never = $never_fn,
+                Times = $times_fn,
+            }
         });
+        env.set(ScreenBuilder::identifier(), ScreenBuilder).unwrap();
         load_script_data_types(lua, &env);
 
         env
@@ -229,6 +261,11 @@ impl UserData for ScriptHandler {
                 handler.register(lua, screen, user_scripts)
             },
         );
+
+        methods.add_method_mut("reset", |_lua, handler, screen: String| {
+            handler.reset(&screen);
+            Ok(())
+        });
     }
 }
 
@@ -284,5 +321,166 @@ impl ScriptOutput {
             .and_then(|duration| Some(Duration::from_millis(duration)))
             .unwrap_or(DEFAULT_UPDATE_TIME);
         Ok(duration)
+    }
+}
+
+struct ScreenBuilder;
+
+impl UserData for ScreenBuilder {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method("new", |lua, _, name: String| {
+            let screens = UserDataRef::<Screens>::load(lua);
+
+            let builder = match screens.get().screen_status(&name) {
+                Some(ScreenStatus::Available) => Ok(ScreenBuilderImpl::new(name)),
+                Some(ScreenStatus::Loaded) => Err(mlua::Error::RuntimeError(format!(
+                    "Device '{}' already loaded.",
+                    name
+                ))),
+                None => Err(mlua::Error::RuntimeError(format!(
+                    "Device '{}' not found.",
+                    name
+                ))),
+            };
+
+            builder
+        });
+    }
+}
+
+impl UserDataIdentifier for ScreenBuilder {
+    fn identifier() -> &'static str {
+        "SCREEN_BUILDER"
+    }
+}
+
+#[derive(Clone)]
+enum BuilderType {
+    Screen,
+    Script,
+}
+
+#[derive(Clone)]
+struct ScreenBuilderImpl {
+    scripts: Vec<UserScript>,
+    shortcut: Vec<String>,
+    device_name: String,
+    builder_type: Option<BuilderType>,
+    screen_count: usize,
+    current_screen: Rc<RefCell<usize>>,
+}
+
+impl ScreenBuilderImpl {
+    pub fn new(name: String) -> Self {
+        Self {
+            scripts: vec![],
+            shortcut: vec![],
+            device_name: name,
+            builder_type: None,
+            screen_count: 0,
+            current_screen: Rc::new(RefCell::new(0)),
+        }
+    }
+}
+
+impl UserData for ScreenBuilderImpl {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method_mut("with_script", |_lua, builder, script: UserScript| {
+            if let Some(BuilderType::Screen) = builder.builder_type {
+                return Err(mlua::Error::RuntimeError(
+                    "Can't use 'with_script' after calling 'with_screen' or 'with_screen_toggle'."
+                        .to_string(),
+                ));
+            }
+            builder.builder_type = Some(BuilderType::Script);
+
+            builder.scripts.push(script);
+
+            Ok(builder.clone())
+        });
+
+        methods.add_method_mut("with_screen", |lua, builder, scripts: Vec<UserScript>| {
+            if let Some(BuilderType::Script) = builder.builder_type {
+                return Err(mlua::Error::RuntimeError(
+                    "Can't use 'with_screen' after calling 'with_script'.".to_string(),
+                ));
+            }
+            builder.builder_type = Some(BuilderType::Screen);
+
+            let screen = builder.screen_count;
+            builder.screen_count += 1;
+
+            for mut script in scripts {
+                let current_screen = builder.current_screen.clone();
+                let predicate = script.predicate;
+                let wrapper = lua
+                    .create_function(move |_, _: ()| {
+                        if *current_screen.borrow() != screen {
+                            return Ok(false);
+                        }
+
+                        let predicate_check = match &predicate {
+                            Some(predicate) => predicate.call::<_, bool>(())?,
+                            None => true,
+                        };
+
+                        Ok(predicate_check)
+                    })
+                    .unwrap();
+
+                script.predicate = Some(wrapper.into_owned());
+                builder.scripts.push(script);
+            }
+
+            Ok(builder.clone())
+        });
+
+        methods.add_method_mut("with_screen_toggle", |_lua, builder, keys: Vec<String>| {
+            if let Some(BuilderType::Script) = builder.builder_type {
+                return Err(mlua::Error::RuntimeError(
+                    "Can't use 'with_screen_toggle' after calling 'with_script'.".to_string(),
+                ));
+            }
+            builder.builder_type = Some(BuilderType::Screen);
+
+            builder.shortcut = keys;
+
+            Ok(builder.clone())
+        });
+
+        methods.add_method_mut("register", |lua, builder, _: ()| {
+            if builder.screen_count > 1 && !builder.shortcut.is_empty() {
+                let current = builder.current_screen.clone();
+                let count = builder.screen_count;
+                let name = builder.device_name.clone();
+                let toggle_screen = lua
+                    .create_function_mut(move |lua, _: ()| {
+                        *current.borrow_mut() += 1;
+                        if *current.borrow() == count {
+                            *current.borrow_mut() = 0;
+                        }
+
+                        let mut script_handler = UserDataRef::<ScriptHandler>::load(lua);
+                        script_handler.get_mut().reset(&name);
+
+                        Ok(())
+                    })
+                    .unwrap();
+
+                let mut shortcuts = UserDataRef::<Shortcuts>::load(lua);
+                shortcuts
+                    .get_mut()
+                    .register(builder.shortcut.clone(), toggle_screen)?;
+            }
+
+            let mut script_handler = UserDataRef::<ScriptHandler>::load(lua);
+            script_handler.get_mut().register(
+                lua,
+                builder.device_name.clone(),
+                builder.scripts.clone(),
+            )?;
+
+            Ok(())
+        });
     }
 }

@@ -165,49 +165,27 @@ local function weather()
     }
 end
 
-local current_screen = 1
-local max_screens = 2
-SHORTCUTS:register(
-        { 'KEY(RAlt)', 'KEY(Slash)' },
-        function()
-            if current_screen == max_screens then
-                current_screen = 1
-            else
-                current_screen = current_screen + 1
-            end
-            LOG:debug('Current screen: ' .. current_screen)
-        end,
-        SHORTCUTS.RESET_STATE
-)
-
-function current_screen_is(screen)
-    return function()
-        return current_screen == screen
-    end
-end
-
-local volume_script = {
-    action = volume,
-    predicate = current_screen_is(1),
-    run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
-}
-
-local spotify_script = {
-    action = spotify,
-    predicate = current_screen_is(1),
-    run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
-}
-
-local clock_script = {
-    action = clock,
-    predicate = current_screen_is(1),
-    run_on = { 'CLOCK.Seconds' },
-}
-
-local weather_script = {
-    action = weather,
-    predicate = current_screen_is(2),
-    run_on = { 'CLOCK.Seconds' },
-}
-
-register('Steelseries Apex 7 TKL', { volume_script, spotify_script, clock_script, weather_script })
+SCREEN_BUILDER
+    :new('Steelseries Apex 7 TKL')
+    :with_screen({
+        {
+            action = volume,
+            run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
+        },
+        {
+            action = spotify,
+            run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
+        },
+        {
+            action = clock,
+            run_on = { 'CLOCK.Seconds' },
+        },
+    })
+    :with_screen({
+        {
+            action = weather,
+            run_on = { 'CLOCK.Seconds' },
+        }
+    })
+    :with_screen_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
+    :register()

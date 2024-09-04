@@ -1,8 +1,7 @@
 use mlua::{Lua, Value};
 
 pub use crate::renderer::buffer::Buffer;
-pub use crate::script_handler::script_data_types::MemoryRepresentation;
-pub use crate::script_handler::script_data_types::Size;
+pub use crate::script_handler::script_data_types::{MemoryRepresentation, Size};
 
 pub trait Screen {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self>
@@ -13,7 +12,6 @@ pub trait Screen {
 
     fn update(&mut self, lua: &Lua, buffer: Buffer) -> mlua::Result<()>;
 
-    #[allow(unused)]
     fn name(&mut self, lua: &Lua) -> mlua::Result<String>;
 
     fn memory_representation(&mut self, lua: &Lua) -> mlua::Result<MemoryRepresentation>;

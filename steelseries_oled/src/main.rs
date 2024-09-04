@@ -1,8 +1,9 @@
 #![windows_subsystem = "windows"]
 
-use log::error;
+use log::{debug, error};
 use mlua::Lua;
 use std::sync::atomic::AtomicBool;
+use std::time::Instant;
 
 use crate::app_loader::app_loader::AppLoader;
 use crate::common::common::proto_to_lua_value;
@@ -36,13 +37,15 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 
 #[tokio::main]
 async fn main() {
+    let init_begin = Instant::now();
+
     let lua = Lua::new();
 
     Logger::load(&lua);
-    let _shortcuts = Shortcuts::load(&lua);
     Constants::load(&lua);
     Settings::load(&lua);
     PluginServer::load(&lua).await;
+    let _shortcuts = Shortcuts::load(&lua);
     let _screens = Screens::load(&lua);
     let _sandbox = ScriptHandler::load(&lua);
     let _tray = TrayIcon::new(&RUNNING);
@@ -53,6 +56,10 @@ async fn main() {
     let settings = UserDataRef::<Settings>::load(&lua);
     let interval = settings.get().update_interval;
     let event_loop = EventLoop::new();
+
+    let init_end = Instant::now();
+    debug!("Initialized in {:?}", init_end - init_begin);
+
     event_loop
         .run(interval, &RUNNING, |events| {
             let mut shortcuts = UserDataRef::<Shortcuts>::load(&lua);
@@ -93,6 +100,7 @@ async fn main() {
                 }
             }
 
+            shortcuts.get_mut().update();
             script_handler.get_mut().update(&lua, interval).unwrap();
         })
         .await;

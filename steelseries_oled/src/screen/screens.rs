@@ -1,5 +1,5 @@
 use convert_case::{Case, Casing};
-use log::error;
+use log::{debug, error};
 use mlua::{chunk, Function, Lua, OwnedTable, Table, UserData, UserDataMethods, Value};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -28,6 +28,13 @@ impl Screens {
         let screens = ScopedValue::new(lua, Self::identifier(), Self::new(constructors));
         Self::load_screens(lua, env);
         screens
+    }
+
+    pub fn screen_status(&self, name: &str) -> Option<ScreenStatus> {
+        self.screens.get(name).map(|entry| match entry {
+            ScreenEntry::Initializer(_) => ScreenStatus::Available,
+            ScreenEntry::Loaded => ScreenStatus::Loaded,
+        })
     }
 
     pub fn load_screen(&mut self, lua: &Lua, name: String) -> mlua::Result<Box<dyn Screen>> {
@@ -102,8 +109,11 @@ impl Screens {
         let type_name = type_name.split("::").last().unwrap();
         let type_name = type_name.to_case(Case::Snake);
 
-        let constructor: fn(&Lua, Value) -> Box<dyn Screen> =
-            |lua, settings| Box::new(T::init(lua, settings).unwrap());
+        let constructor: fn(&Lua, Value) -> Box<dyn Screen> = |lua, settings| {
+            let mut screen = Box::new(T::init(lua, settings).unwrap());
+            debug!("Initialized '{}'", screen.name(lua).unwrap());
+            screen
+        };
 
         let name = type_name.clone();
         let loader = lua
@@ -176,4 +186,9 @@ enum ScreenEntry {
 struct Initializer {
     settings: OwnedTable,
     constructor: fn(&Lua, Value) -> Box<dyn Screen>,
+}
+
+pub enum ScreenStatus {
+    Available,
+    Loaded,
 }
