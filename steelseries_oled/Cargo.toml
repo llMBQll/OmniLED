@@ -28,7 +28,7 @@ serde_with = "3.1"
 oled-api = { path = "../oled-api" }
 oled-derive = { path = "../oled-derive", features = ["from-lua-value"] }
 oled-log = { path = "../oled-log" }
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
 ureq = { version = "2.4", features = ["json"] }
 tonic = "0.12.0"
 tray-item = "0.10"

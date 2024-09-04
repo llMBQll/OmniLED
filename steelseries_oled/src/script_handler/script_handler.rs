@@ -1,3 +1,13 @@
+use log::{debug, warn};
+use mlua::{
+    chunk, ErrorContext, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table, UserData,
+    UserDataMethods, Value,
+};
+use oled_derive::FromLuaValue;
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::time::Duration;
+
 use crate::common::user_data::{UserDataIdentifier, UserDataRef};
 use crate::common::{common::exec_file, scoped_value::ScopedValue};
 use crate::create_table_with_defaults;
@@ -7,13 +17,6 @@ use crate::screen::screen::Screen;
 use crate::screen::screens::Screens;
 use crate::script_handler::script_data_types::{load_script_data_types, Operation};
 use crate::settings::settings::{get_full_path, Settings};
-use log::warn;
-use mlua::{
-    chunk, ErrorContext, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table, UserData,
-    UserDataMethods, Value,
-};
-use oled_derive::FromLuaValue;
-use std::time::Duration;
 
 pub struct ScriptHandler {
     environment: OwnedTable,
@@ -55,8 +58,6 @@ impl ScriptHandler {
             environment,
         )
         .unwrap();
-
-        ScreenDataMap::load(lua);
 
         value
     }
@@ -112,7 +113,7 @@ impl ScriptHandler {
         }
     }
 
-    fn register(
+    pub(self) fn register(
         &mut self,
         lua: &Lua,
         screen_name: String,
@@ -220,7 +221,26 @@ impl ScriptHandler {
     }
 
     fn make_sandbox(lua: &Lua) -> Table {
+        let find_fn = lua
+            .create_function(|_, name: String| Ok(ScreenBuilder::new(name)))
+            .unwrap();
+
+        let always_fn = lua.create_function(|_, _: ()| Ok(true)).unwrap();
+
+        let never_fn = lua.create_function(|_, _: ()| Ok(false)).unwrap();
+
+        let times_fn = lua
+            .create_function(|lua, n: usize| {
+                let mut count = 0;
+                lua.create_function_mut(move |_, _: ()| {
+                    count += 1;
+                    Ok(count <= n)
+                })
+            })
+            .unwrap();
+
         let env = create_table_with_defaults!(lua, {
+            find = $find_fn,
             register = function(screen, user_scripts)
                 SCRIPT_HANDLER:register(screen, user_scripts)
             end,
@@ -233,22 +253,9 @@ impl ScriptHandler {
             PLATFORM = PLATFORM,
             SHORTCUTS = SHORTCUTS,
             PREDICATE = {
-                Always = function()
-                    return true
-                end,
-                Never = function()
-                    return false
-                end,
-                Times = function(x)
-                    local count = 0
-                    return function()
-                        if (count >= x) then
-                            return false
-                        end
-                        count = count + 1
-                        return true
-                    end
-                end,
+                Always = $always_fn,
+                Never = $never_fn,
+                Times = $times_fn,
             }
         });
         load_script_data_types(lua, &env);
@@ -338,24 +345,21 @@ enum BuilderType {
 struct ScreenBuilder {
     scripts: Vec<UserScript>,
     shortcut: Vec<String>,
-    device_name: Option<String>,
+    device_name: String,
     builder_type: Option<BuilderType>,
-    screen_count: usize,
-    id: usize,
+    screen_count: Rc<RefCell<usize>>,
+    current_screen: Rc<RefCell<usize>>,
 }
 
 impl ScreenBuilder {
-    pub fn new(lua: &Lua) -> Self {
-        let mut data_map = UserDataRef::<ScreenDataMap>::load(lua);
-        let id = data_map.get_mut().new_entry();
-
+    pub fn new(name: String) -> Self {
         Self {
             scripts: vec![],
             shortcut: vec![],
-            device_name: None,
+            device_name: name,
             builder_type: None,
-            screen_count: 0,
-            id,
+            screen_count: Rc::new(RefCell::new(0)),
+            current_screen: Rc::new(RefCell::new(0)),
         }
     }
 }
@@ -368,19 +372,14 @@ impl UserData for ScreenBuilder {
             }
             builder.builder_type = Some(BuilderType::Screen);
 
-            let id = builder.id;
-
-            let mut data_map = UserDataRef::<ScreenDataMap>::load(lua);
-            data_map.get_mut().add_screen(id);
+            *builder.screen_count.borrow_mut() += 1;
 
             for (screen, mut script) in scripts.into_iter().enumerate() {
+                let current_screen = builder.current_screen.clone();
                 let predicate = script.predicate;
                 let wrapper = lua
-                    .create_function(move |lua, _: ()| {
-                        let data_map = UserDataRef::<ScreenDataMap>::load(lua);
-                        let current_screen = data_map.get().get_current(id);
-
-                        if screen != current_screen {
+                    .create_function(move |_, _: ()| {
+                        if screen != *current_screen.borrow() {
                             return Ok(false);
                         }
 
@@ -411,15 +410,30 @@ impl UserData for ScreenBuilder {
             Ok(builder.clone())
         });
 
+        methods.add_method_mut("with_screen_toggle", |_lua, builder, keys: Vec<String>| {
+            if let Some(BuilderType::Script) = builder.builder_type {
+                // TODO error
+            }
+            // TODO verify keys validity
+            builder.builder_type = Some(BuilderType::Screen);
+
+            builder.shortcut = keys;
+
+            Ok(builder.clone())
+        });
+
         methods.add_method_mut("build", |lua, builder, _: ()| {
-            if builder.screen_count > 1 && !builder.shortcut.is_empty() {
+            if *builder.screen_count.borrow() > 1 && !builder.shortcut.is_empty() {
                 let mut shortcuts = UserDataRef::<Shortcuts>::load(lua);
 
-                let id = builder.id;
+                let current = builder.current_screen.clone();
+                let count = builder.screen_count.clone();
                 let toggle_screen = lua
-                    .create_function(move |lua, _: ()| {
-                        let mut data_map = UserDataRef::<ScreenDataMap>::load(lua);
-                        data_map.get_mut().toggle(id);
+                    .create_function_mut(move |_, _: ()| {
+                        *current.borrow_mut() += 1;
+                        if *current.borrow() == *count.borrow() {
+                            *current.borrow_mut() = 0;
+                        }
                         Ok(())
                     })
                     .unwrap();
@@ -429,59 +443,14 @@ impl UserData for ScreenBuilder {
                     .register(builder.shortcut.clone(), toggle_screen);
             }
 
+            let mut sript_handler = UserDataRef::<ScriptHandler>::load(lua);
+            sript_handler.get_mut().register(
+                lua,
+                builder.device_name.clone(),
+                builder.scripts.clone(),
+            )?;
+
             Ok(())
         });
-    }
-}
-
-#[derive(Clone)]
-struct ScreenData {
-    current: usize,
-    count: usize,
-}
-
-impl UserData for ScreenData {}
-
-struct ScreenDataMap {
-    data: Vec<ScreenData>,
-}
-
-impl ScreenDataMap {
-    pub fn load(lua: &Lua) {
-        let map = Self { data: vec![] };
-
-        lua.globals().set(Self::identifier(), map).unwrap();
-    }
-
-    pub fn new_entry(&mut self) -> usize {
-        let id = self.data.len();
-        self.data.push(ScreenData {
-            current: 0,
-            count: 0,
-        });
-        id
-    }
-
-    pub fn add_screen(&mut self, id: usize) {
-        self.data[id].count += 1;
-    }
-
-    pub fn get_current(&self, id: usize) -> usize {
-        self.data[id].current
-    }
-
-    pub fn toggle(&mut self, id: usize) {
-        self.data[id].current += 1;
-        if self.data[id].current == self.data[id].count {
-            self.data[id].current = 0;
-        }
-    }
-}
-
-impl UserData for ScreenDataMap {}
-
-impl UserDataIdentifier for ScreenDataMap {
-    fn identifier() -> &'static str {
-        "SCREEN_DATA_MAP"
     }
 }
