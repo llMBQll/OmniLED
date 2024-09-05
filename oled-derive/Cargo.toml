@@ -17,4 +17,4 @@ quote = "1.0"
 [features]
 from-lua-value = []
 into-proto = []
-user-data-identifier = []
+unique-user-data = []

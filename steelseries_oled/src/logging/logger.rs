@@ -1,15 +1,15 @@
 use log::{debug, error, info, trace, warn};
 use log4rs::Handle;
 use mlua::{Lua, UserData, UserDataMethods};
-use oled_derive::UserDataIdentifier;
+use oled_derive::UniqueUserData;
 use serde::de;
 use serde::de::Error;
 use std::path::PathBuf;
 
-use crate::common::user_data::UserDataIdentifier;
+use crate::common::user_data::UniqueUserData;
 use crate::constants::constants::Constants;
 
-#[derive(Clone, Debug, UserDataIdentifier)]
+#[derive(Clone, Debug, UniqueUserData)]
 pub struct Log {
     handle: Handle,
 }

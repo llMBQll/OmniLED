@@ -2,16 +2,16 @@ use mlua::{AnyUserData, Lua, UserData};
 use std::cell::{Ref, RefMut};
 use std::marker::PhantomData;
 
-pub trait UserDataIdentifier {
+pub trait UniqueUserData {
     fn identifier() -> &'static str;
 }
 
-pub struct UserDataRef<'a, T: UserDataIdentifier + UserData + 'static> {
+pub struct UserDataRef<'a, T: UniqueUserData + UserData + 'static> {
     user_data: AnyUserData<'a>,
     phantom_data: PhantomData<T>,
 }
 
-impl<'a, T: UserDataIdentifier + UserData + 'static> UserDataRef<'a, T> {
+impl<'a, T: UniqueUserData + UserData + 'static> UserDataRef<'a, T> {
     pub fn load(lua: &'a Lua) -> Self {
         let user_data = lua.globals().get(T::identifier()).unwrap();
 

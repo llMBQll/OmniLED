@@ -1,13 +1,13 @@
 use convert_case::{Case, Casing};
 use log::{debug, error};
 use mlua::{chunk, Function, Lua, OwnedTable, Table, UserData, UserDataMethods, Value};
-use oled_derive::UserDataIdentifier;
+use oled_derive::UniqueUserData;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 use crate::common::common::exec_file;
 use crate::common::scoped_value::ScopedValue;
-use crate::common::user_data::{UserDataIdentifier, UserDataRef};
+use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::create_table_with_defaults;
 use crate::screen::debug_output::debug_output::DebugOutput;
 use crate::screen::screen::Screen;
@@ -18,7 +18,7 @@ use crate::settings::settings::{get_full_path, Settings};
 
 type Constructor = fn(&Lua, Value) -> Box<dyn Screen>;
 
-#[derive(UserDataIdentifier)]
+#[derive(UniqueUserData)]
 pub struct Screens {
     screens: HashMap<String, ScreenEntry>,
     constructors: HashMap<String, Constructor>,

@@ -1,16 +1,16 @@
 use log::{error, warn};
 use mlua::{chunk, Lua, UserData};
-use oled_derive::UserDataIdentifier;
+use oled_derive::UniqueUserData;
 
 use crate::app_loader::process::{Config, Process};
 use crate::common::common::exec_file;
 use crate::common::scoped_value::ScopedValue;
-use crate::common::user_data::{UserDataIdentifier, UserDataRef};
+use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::constants::Constants;
 use crate::create_table_with_defaults;
 use crate::settings::settings::{get_full_path, Settings};
 
-#[derive(UserDataIdentifier)]
+#[derive(UniqueUserData)]
 pub struct AppLoader {
     processes: Vec<Process>,
 }

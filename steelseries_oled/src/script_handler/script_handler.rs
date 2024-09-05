@@ -3,12 +3,12 @@ use mlua::{
     chunk, ErrorContext, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table, UserData,
     UserDataMethods, Value,
 };
-use oled_derive::{FromLuaValue, UserDataIdentifier};
+use oled_derive::{FromLuaValue, UniqueUserData};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
-use crate::common::user_data::{UserDataIdentifier, UserDataRef};
+use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::common::{common::exec_file, scoped_value::ScopedValue};
 use crate::create_table_with_defaults;
 use crate::events::shortcuts::Shortcuts;
@@ -18,7 +18,7 @@ use crate::screen::screens::{ScreenStatus, Screens};
 use crate::script_handler::script_data_types::{load_script_data_types, Operation};
 use crate::settings::settings::{get_full_path, Settings};
 
-#[derive(UserDataIdentifier)]
+#[derive(UniqueUserData)]
 pub struct ScriptHandler {
     environment: OwnedTable,
     renderer: Renderer,
@@ -319,7 +319,7 @@ impl ScriptOutput {
     }
 }
 
-#[derive(UserDataIdentifier)]
+#[derive(UniqueUserData)]
 struct ScreenBuilder;
 
 impl UserData for ScreenBuilder {

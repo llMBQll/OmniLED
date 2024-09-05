@@ -1,20 +1,20 @@
 use log::{debug, error, info};
 use mlua::{chunk, Lua, LuaSerdeExt, UserData, Value};
-use oled_derive::UserDataIdentifier;
+use oled_derive::UniqueUserData;
 use serde::Deserialize;
 use serde_with::{serde_as, DurationMilliSeconds};
 use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::common::common::exec_file;
-use crate::common::user_data::{UserDataIdentifier, UserDataRef};
+use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::constants::Constants;
 use crate::create_table;
 use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
 
 #[serde_as]
-#[derive(Deserialize, Debug, UserDataIdentifier)]
+#[derive(Deserialize, Debug, UniqueUserData)]
 pub struct Settings {
     #[serde(default = "Settings::applications_file")]
     pub applications_file: String,
