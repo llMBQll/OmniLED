@@ -1,9 +1,7 @@
 use log::{debug, error, info, trace, warn};
 use log4rs::Handle;
-use mlua::{Lua, UserData, UserDataMethods};
-use oled_derive::UniqueUserData;
-use serde::de;
-use serde::de::Error;
+use mlua::{FromLua, Lua, UserData, UserDataMethods};
+use oled_derive::{FromLuaValue, UniqueUserData};
 use std::path::PathBuf;
 
 use crate::common::user_data::UniqueUserData;
@@ -23,7 +21,7 @@ impl Log {
     }
 
     pub fn set_level_filter(&self, level_filter: LevelFilter) {
-        oled_log::change_log_level(&self.handle, Self::get_path(), level_filter.0);
+        oled_log::change_log_level(&self.handle, Self::get_path(), level_filter.into());
     }
 
     fn get_path() -> PathBuf {
@@ -59,23 +57,25 @@ impl UserData for Log {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Copy)]
-pub struct LevelFilter(#[serde(deserialize_with = "deserialize_log_level")] pub log::LevelFilter);
+#[derive(Debug, Copy, Clone, FromLuaValue)]
+pub enum LevelFilter {
+    Off,
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
 
-fn deserialize_log_level<'de, D>(deserializer: D) -> Result<log::LevelFilter, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    const NAMES: &[&str] = &["Off", "Error", "Warn", "Info", "Debug", "Trace"];
-
-    let s: String = de::Deserialize::deserialize(deserializer)?;
-    match s.as_str() {
-        "Off" => Ok(log::LevelFilter::Off),
-        "Error" => Ok(log::LevelFilter::Error),
-        "Warn" => Ok(log::LevelFilter::Warn),
-        "Info" => Ok(log::LevelFilter::Info),
-        "Debug" => Ok(log::LevelFilter::Debug),
-        "Trace" => Ok(log::LevelFilter::Trace),
-        value => Err(Error::unknown_variant(value, NAMES)),
+impl Into<log::LevelFilter> for LevelFilter {
+    fn into(self) -> log::LevelFilter {
+        match self {
+            LevelFilter::Off => log::LevelFilter::Off,
+            LevelFilter::Error => log::LevelFilter::Error,
+            LevelFilter::Warn => log::LevelFilter::Warn,
+            LevelFilter::Info => log::LevelFilter::Info,
+            LevelFilter::Debug => log::LevelFilter::Debug,
+            LevelFilter::Trace => log::LevelFilter::Trace,
+        }
     }
 }

@@ -61,11 +61,11 @@ impl FontManager {
                 Ok((font, font_index))
             }
             FontSelector::System(selector) => {
-                let names: Vec<_> = selector.names.into_iter().map(|name| name.0).collect();
+                let names: Vec<_> = selector.names.into_iter().map(|name| name.into()).collect();
                 let properties = Properties {
-                    style: selector.style.0,
-                    weight: selector.weight.0,
-                    stretch: selector.stretch.0,
+                    style: selector.style.into(),
+                    weight: selector.weight.into(),
+                    stretch: selector.stretch.into(),
                 };
                 let handle = SystemSource::new().select_best_match(&names, &properties)?;
                 let font = handle.load()?;
