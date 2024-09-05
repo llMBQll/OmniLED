@@ -1,4 +1,4 @@
-use log::{debug, error, info};
+use log::{debug, error};
 use mlua::{chunk, Lua, LuaSerdeExt, UserData, Value};
 use oled_derive::UniqueUserData;
 use serde::Deserialize;
@@ -53,8 +53,7 @@ pub struct Settings {
 
 impl Settings {
     pub fn load(lua: &Lua) {
-        let filename = get_full_path(&Self::settings_file());
-        let load_settings = lua
+        let load_settings_fn = lua
             .create_function(move |lua, settings: Value| {
                 let settings: Settings = lua.from_value(settings)?;
                 lua.globals().set(Settings::identifier(), settings).unwrap();
@@ -62,12 +61,15 @@ impl Settings {
             })
             .unwrap();
 
-        let env = create_table!(lua, {Settings = $load_settings});
+        let filename = get_full_path(&Self::settings_file());
+        let env = create_table!(lua, {Settings = $load_settings_fn});
+
         if let Err(err) = exec_file(lua, &filename, env) {
             error!("Error loading settings: {}. Falling back to default", err);
-            lua.globals()
-                .set(Settings::identifier(), Settings::default())
-                .unwrap();
+
+            let default = Value::Table(lua.create_table().unwrap());
+            let default: Settings = lua.from_value(default).unwrap();
+            lua.globals().set(Settings::identifier(), default).unwrap();
         }
 
         let settings = UserDataRef::<Settings>::load(lua);
@@ -75,10 +77,6 @@ impl Settings {
         logger.get().set_level_filter(settings.get().log_level);
 
         debug!("Loaded settings {:?}", settings.get());
-        info!(
-            "{}",
-            serde_json::to_string_pretty(&FontSelector::Default).unwrap()
-        );
     }
 
     fn applications_file() -> String {
@@ -127,24 +125,6 @@ impl Settings {
 
     fn update_interval() -> Duration {
         Duration::from_millis(100)
-    }
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            applications_file: Settings::applications_file(),
-            font: Settings::font(),
-            log_level: Settings::log_level(),
-            keyboard_ticks_repeat_delay: Settings::keyboard_ticks_repeat_delay(),
-            keyboard_ticks_repeat_rate: Settings::keyboard_ticks_repeat_rate(),
-            scripts_file: Settings::scripts_file(),
-            scrolling_text_ticks_at_edge: Settings::scrolling_text_ticks_at_edge(),
-            scrolling_text_ticks_per_move: Settings::scrolling_text_ticks_per_move(),
-            server_port: Settings::server_port(),
-            supported_screens_file: Settings::supported_screens_file(),
-            update_interval: Settings::update_interval(),
-        }
     }
 }
 
