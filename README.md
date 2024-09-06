@@ -1,31 +1,24 @@
 # Steelseries OLED
 
-## Linux Dependencies
+Control your SteelSeries OLED devices (and more) on Windows and Linux.
 
-Pkg Config
-sudo apt install pkg-config -y
+## Features
 
-D-Bus
-sudo apt install libdbus-1-dev -y
+### Customizable
 
-Protobuf compiler
-Download latest from protobuf #TODO determine minimal supported version
+Don't like the layout? No problem. Using custom scripts you can configure what the screen displays and set
+triggers for running your scripts.
 
-Font Config
-sudo apt install libfontconfig-dev -y
+### Extensible
 
-X11 
-sudo apt install libx11-dev -y
+Missing data you would like? Implement the gRPC client in your favourite language and send custom data to the server.
 
-## Allow access to usb device
+Your device not on the list? There is a great chance it will work anyway, just add an entry to the screen list and write
+a transform function if necessary.
 
-Add rules file
-```
-❯ cat /etc/udev/rules.d/69-steelseries-oled.rules
-SUBSYSTEM=="usb", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1618", MODE="0666", GROUP="plugdev"
-```
+## Installation
 
-Reload rules (additionally may need to unplug and plug the device or restart system)
-```
-sudo udevadm control --reload-rules
-```
+Follow OS specific instructions
+
+- [Linux](docs/install_linux.md)
+- [Windows](docs/install_windows.md)
