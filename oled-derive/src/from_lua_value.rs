@@ -51,17 +51,25 @@ fn generate_initializer(name: &Ident, data: &Data) -> TokenStream {
                         None => initializer,
                     };
 
+                    let initializer = quote! {
+                        #initializer.map_err(|err| {
+                            err.with_context(|_| {
+                                format!("Error occurred when parsing {}.{}", stringify!(#name), stringify!(#field))
+                            })
+                        })?
+                    };
+
                     let initializer = match attrs.default {
                         Some(default) => quote!{
-                            #initializer.unwrap_or(#default)
+                            {
+                                if !table.contains_key(stringify!(#field))? {
+                                    #default
+                                } else {
+                                    #initializer
+                                }
+                            }
                         },
-                        None => quote! {
-                            #initializer.map_err(|err| {
-                                err.with_context(|_| {
-                                    format!("Error occurred when parsing {}.{}", stringify!(#name), stringify!(#field))
-                                })
-                            })?
-                        },
+                        None => initializer,
                     };
 
                     quote! {
@@ -78,38 +86,71 @@ fn generate_initializer(name: &Ident, data: &Data) -> TokenStream {
             }
             syn::Fields::Unnamed(_) | syn::Fields::Unit => unimplemented!(),
         },
+
         Data::Enum(ref data) => {
-            let idents: Vec<_> = data
+            let fields: Vec<_> = data
                 .variants
                 .iter()
                 .map(|variant| {
                     match &variant.fields {
                         syn::Fields::Named(_) => unimplemented!(),
-                        syn::Fields::Unnamed(_) => todo!(),
-                        syn::Fields::Unit => {}
+                        syn::Fields::Unnamed(_) => {
+                            (FieldType::Unnamed, &variant.ident)
+                        },
+                        syn::Fields::Unit => {
+                            (FieldType::Unit, &variant.ident)
+                        }
                     }
-                    &variant.ident
                 })
                 .collect();
 
-            let names = idents.iter().map(|ident| {
+            let names = fields.iter().map(|field| {
+                let ident = field.1;
                 quote! {
                     stringify!(#ident),
                 }
             });
             let names = quote! { vec![#(#names)*] };
 
-            let initializers = idents.iter().map(|ident| {
-                quote! {
-                    stringify!(#ident) => Ok(Self::#ident),
+            let mut unnamed_initializers = Vec::new();
+            let mut unit_initializers = Vec::new();
+
+            for field in fields {
+                match field {
+                    (FieldType::Unnamed, ident) => {
+                        unnamed_initializers.push(quote! {
+                            else if table.contains_key(stringify!(#ident))? {
+                                Ok(Self::#ident(table.get(stringify!(#ident))?))
+                            }
+                        });
+                    },
+                    (FieldType::Unit, ident) => {
+                        unit_initializers.push(quote! {
+                            stringify!(#ident) => Ok(Self::#ident),
+                        });
+                    },
                 }
-            });
-            let initializers = quote! { #(#initializers)* };
+            };
+
+            let unnamed_initializers = quote! { #(#unnamed_initializers)* };
+            let unit_initializers = quote! { #(#unit_initializers)* };
 
             let initializer = quote! {
+                mlua::Value::Table(table) => {
+                    if false {
+                        unreachable!();
+                    }
+                    #unnamed_initializers
+                    else {
+                        Err(mlua::Error::runtime(format!(
+                            "Expected one of {:?}",
+                            #names
+                        )))
+                    }
+                },
                 mlua::Value::String(string) => {
                     match string.to_str().unwrap() {
-                        #initializers
+                        #unit_initializers
                         string => Err(mlua::Error::runtime(format!(
                             "Expected one of {:?}, got '{}'",
                             #names,
@@ -123,6 +164,13 @@ fn generate_initializer(name: &Ident, data: &Data) -> TokenStream {
         }
         Data::Union(_) => unimplemented!(),
     }
+}
+
+#[derive(Debug)]
+enum FieldType {
+    // Named,
+    Unnamed,
+    Unit,
 }
 
 struct LuaAttributes {
