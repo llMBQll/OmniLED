@@ -1,5 +1,5 @@
 use log::{debug, error};
-use mlua::{chunk, FromLua, Lua, UserData};
+use mlua::{chunk, ErrorContext, FromLua, Lua, UserData};
 use oled_derive::{FromLuaValue, UniqueUserData};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -63,7 +63,7 @@ impl Settings {
         let env = create_table!(lua, {Settings = $load_settings_fn});
 
         if let Err(err) = exec_file(lua, &filename, env) {
-            error!("Error loading settings: {}. Falling back to default", err);
+            error!("Error loading settings: {}. Falling back to default settings", err);
 
             let default: Settings = lua.load(chunk! { {} }).eval().unwrap();
             lua.globals().set(Settings::identifier(), default).unwrap();

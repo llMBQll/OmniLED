@@ -51,17 +51,25 @@ fn generate_initializer(name: &Ident, data: &Data) -> TokenStream {
                         None => initializer,
                     };
 
+                    let initializer = quote! {
+                        #initializer.map_err(|err| {
+                            err.with_context(|_| {
+                                format!("Error occurred when parsing {}.{}", stringify!(#name), stringify!(#field))
+                            })
+                        })?
+                    };
+
                     let initializer = match attrs.default {
                         Some(default) => quote!{
-                            #initializer.unwrap_or(#default)
+                            {
+                                if !table.contains_key(stringify!(#field))? {
+                                    #default
+                                } else {
+                                    #initializer
+                                }
+                            }
                         },
-                        None => quote! {
-                            #initializer.map_err(|err| {
-                                err.with_context(|_| {
-                                    format!("Error occurred when parsing {}.{}", stringify!(#name), stringify!(#field))
-                                })
-                            })?
-                        },
+                        None => initializer,
                     };
 
                     quote! {
