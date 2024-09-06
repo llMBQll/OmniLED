@@ -41,3 +41,6 @@ features = ["ksni"]
 # Compile tray icon assets for windows
 [target.'cfg(target_os = "windows")'.build-dependencies]
 windres = "0.2"
+
+[features]
+dev = []

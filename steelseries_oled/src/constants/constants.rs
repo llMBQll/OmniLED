@@ -31,25 +31,31 @@ impl Constants {
         lua.globals().set("PLATFORM", platform).unwrap();
     }
 
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "dev")]
     pub fn root_dir() -> PathBuf {
         let root_dir = PathBuf::from(".");
         root_dir
     }
 
-    #[cfg(not(debug_assertions))]
+    #[cfg(not(feature = "dev"))]
     pub fn root_dir() -> PathBuf {
         let root_dir = dirs_next::config_dir().expect("Couldn't get default config directory");
         let root_dir = root_dir.join("SteelseriesOLED");
         root_dir
     }
 
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "dev")]
     pub fn applications_dir() -> PathBuf {
-        Self::root_dir().join("target").join("debug")
+        #[cfg(debug_assertions)]
+        const PATH: &str = "debug";
+
+        #[cfg(not(debug_assertions))]
+        const PATH: &str = "release";
+
+        Self::root_dir().join("target").join(PATH)
     }
 
-    #[cfg(not(debug_assertions))]
+    #[cfg(not(feature = "dev"))]
     pub fn applications_dir() -> PathBuf {
         Self::root_dir().join("applications")
     }
