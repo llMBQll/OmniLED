@@ -15,18 +15,19 @@ macro_rules! create_table {
 macro_rules! create_table_with_defaults {
     ($lua:ident, $values:tt) => {
         {
-            let macro_private_dump = $lua.create_function(|_, value: mlua::Value| {
+            let dump_fn = $lua.create_function(|_, value: mlua::Value| {
                 let string = format!("{:#?}", value);
                 Ok(string)
             }).unwrap();
 
-            $lua.load(chunk! {
-                local function round(value)
-                    return math.floor(value + 0.5)
-                end
+            let round_fn = $lua.create_function(|_, value: f64| {
+                let value = value.round() as i64;
+                Ok(value)
+            }).unwrap();
 
+            $lua.load(chunk! {
                 new_table = $values
-                new_table["dump"] = $macro_private_dump
+                new_table["dump"] = $dump_fn
                 new_table["ipairs"] = ipairs
                 new_table["next"] = next
                 new_table["pairs"] = pairs
@@ -36,7 +37,7 @@ macro_rules! create_table_with_defaults {
                 new_table["tostring"] = tostring
                 new_table["type"] = type
                 new_table["coroutine"] = { close = coroutine.close, create = coroutine.create, isyieldable = coroutine.isyieldable, resume = coroutine.resume, running = coroutine.running, status = coroutine.status, wrap = coroutine.wrap, yield = coroutine.yield }
-                new_table["math"] = { abs = math.abs, acos = math.acos, asin = math.asin, atan = math.atan, atan2 = math.atan2, ceil = math.ceil, cos = math.cos, cosh = math.cosh, deg = math.deg, exp = math.exp, floor = math.floor, fmod = math.fmod, frexp = math.frexp, huge = math.huge, ldexp = math.ldexp, log = math.log, log10 = math.log10, max = math.max, maxinteger = math.maxinteger, min = math.min, mininteger = math.mininteger, modf = math.modf, pi = math.pi, pow = math.pow, rad = math.rad, random = math.random, randomseed = math.randomseed, round = round, sin = math.sin, sinh = math.sinh, sqrt = math.sqrt, tan = math.tan, tanh = math.tanh, tointeger = math.tointeger, type = math.type, ult = math.ult }
+                new_table["math"] = { abs = math.abs, acos = math.acos, asin = math.asin, atan = math.atan, atan2 = math.atan2, ceil = math.ceil, cos = math.cos, cosh = math.cosh, deg = math.deg, exp = math.exp, floor = math.floor, fmod = math.fmod, frexp = math.frexp, huge = math.huge, ldexp = math.ldexp, log = math.log, log10 = math.log10, max = math.max, maxinteger = math.maxinteger, min = math.min, mininteger = math.mininteger, modf = math.modf, pi = math.pi, pow = math.pow, rad = math.rad, random = math.random, randomseed = math.randomseed, round = $round_fn, sin = math.sin, sinh = math.sinh, sqrt = math.sqrt, tan = math.tan, tanh = math.tanh, tointeger = math.tointeger, type = math.type, ult = math.ult }
                 new_table["os"] = { clock = os.clock, date = os.date, difftime = os.difftime, getenv = os.getenv, time = os.time }
                 new_table["string"] = { byte = string.byte, char = string.char, dump = string.dump, find = string.find, format = string.format, gmatch = string.gmatch, gsub = string.gsub, len = string.len, lower = string.lower, match = string.match, pack = string.pack, packsize = string.packsize, rep = string.rep, reverse = string.reverse, sub = string.sub, unpack = string.unpack, upper = string.upper }
                 new_table["table"] = { concat = table.concat, insert = table.insert, move = table.move, pack = table.pack, remove = table.remove, sort = table.sort, unpack = table.unpack }
