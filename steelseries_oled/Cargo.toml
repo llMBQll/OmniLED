@@ -9,6 +9,7 @@ default-run = "steelseries_oled"
 [dependencies]
 convert_case = "0.6"
 device_query = "2.0"
+dirs-next = "2.0"
 font-kit = "0.14"
 freetype-rs = "*"
 image = "0.25"
