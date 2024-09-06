@@ -55,7 +55,7 @@ pub fn exec_file(lua: &Lua, name: &str, env: Table) -> mlua::Result<()> {
         (_, Value::String(err)) => Err(mlua::Error::runtime(format!(
             "Error when running file {}: {}",
             name,
-            err.to_str().unwrap()
+            err.to_str()?
         ))),
         _ => Err(mlua::Error::runtime(format!(
             "Error when running file {}",

@@ -1,3 +1,4 @@
+use log::trace;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
@@ -26,7 +27,8 @@ impl EventLoop {
 
             let end = Instant::now();
             let update_duration = end - begin;
-            // println!("Update took {} us", update_duration.as_micros());
+            trace!("Update took {:?}", update_duration);
+
             tokio::time::sleep(interval.saturating_sub(update_duration)).await;
         }
     }
