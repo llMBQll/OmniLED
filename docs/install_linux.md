@@ -6,11 +6,12 @@
 
 ## Install Dependencies
 
-- pkg-config `apt install pkg-config`
-- libdbus `apt install libdbus-1-dev`
-- protoc `apt install protoc`
-- libfontconfig `apt install libfontconfig-dev`
-- libx11 `apt install libx11-dev`
+- rust - [Instructions](https://rustup.rs/)
+- pkg-config - `apt install pkg-config`
+- libdbus - `apt install libdbus-1-dev`
+- protoc - `apt install protoc`
+- libfontconfig - `apt install libfontconfig-dev`
+- libx11 - `apt install libx11-dev`
 
 ## Allow USB access
 
