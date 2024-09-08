@@ -169,21 +169,21 @@ SCREEN_BUILDER
     :new('Steelseries Apex 7 TKL')
     :with_screen({
         {
-            action = volume,
+            layout = volume,
             run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
         },
         {
-            action = spotify,
+            layout = spotify,
             run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
         },
         {
-            action = clock,
+            layout = clock,
             run_on = { 'CLOCK.Seconds' },
         },
     })
     :with_screen({
         {
-            action = weather,
+            layout = weather,
             run_on = { 'CLOCK.Seconds' },
         }
     })

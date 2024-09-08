@@ -9,7 +9,7 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use crate::common::user_data::UserDataRef;
-use crate::screen::screen::{Buffer, MemoryRepresentation, Screen, Size};
+use crate::devices::device::{Buffer, Device, MemoryRepresentation, Size};
 use crate::settings::settings::Settings;
 
 pub struct Simulator {
@@ -27,7 +27,7 @@ struct SimulatorSettings {
     name: String,
 }
 
-impl Screen for Simulator {
+impl Device for Simulator {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
         let settings = SimulatorSettings::from_lua(settings, lua)?;
 

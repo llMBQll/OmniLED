@@ -2,7 +2,7 @@ use mlua::{ErrorContext, FromLua, Function, Lua, OwnedFunction, UserData, Value}
 use num_traits::Unsigned;
 use oled_derive::FromLuaValue;
 
-use crate::screen::screen::{MemoryRepresentation, Settings, Size};
+use crate::devices::device::{MemoryRepresentation, Settings, Size};
 
 #[derive(FromLuaValue, Clone)]
 pub struct USBDeviceSettings {

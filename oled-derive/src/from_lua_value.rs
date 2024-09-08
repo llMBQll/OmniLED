@@ -91,16 +91,10 @@ fn generate_initializer(name: &Ident, data: &Data) -> TokenStream {
             let fields: Vec<_> = data
                 .variants
                 .iter()
-                .map(|variant| {
-                    match &variant.fields {
-                        syn::Fields::Named(_) => unimplemented!(),
-                        syn::Fields::Unnamed(_) => {
-                            (FieldType::Unnamed, &variant.ident)
-                        },
-                        syn::Fields::Unit => {
-                            (FieldType::Unit, &variant.ident)
-                        }
-                    }
+                .map(|variant| match &variant.fields {
+                    syn::Fields::Named(_) => unimplemented!(),
+                    syn::Fields::Unnamed(_) => (FieldType::Unnamed, &variant.ident),
+                    syn::Fields::Unit => (FieldType::Unit, &variant.ident),
                 })
                 .collect();
 
@@ -123,14 +117,14 @@ fn generate_initializer(name: &Ident, data: &Data) -> TokenStream {
                                 Ok(Self::#ident(table.get(stringify!(#ident))?))
                             }
                         });
-                    },
+                    }
                     (FieldType::Unit, ident) => {
                         unit_initializers.push(quote! {
                             stringify!(#ident) => Ok(Self::#ident),
                         });
-                    },
+                    }
                 }
-            };
+            }
 
             let unnamed_initializers = quote! { #(#unnamed_initializers)* };
             let unit_initializers = quote! { #(#unit_initializers)* };

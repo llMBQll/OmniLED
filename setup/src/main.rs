@@ -22,7 +22,7 @@ fn main() {
     let settings_source_root = if options.dev { "config" } else { "defaults" };
     for file in vec![
         "applications.lua",
-        "screens.lua",
+        "devices.lua",
         "scripts.lua",
         "settings.lua",
     ] {

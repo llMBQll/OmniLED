@@ -342,5 +342,5 @@ impl<'a> Drop for Context<'a> {
 #[derive(Eq, Hash, PartialEq)]
 pub struct ContextKey {
     pub script: usize,
-    pub screen: usize,
+    pub device: usize,
 }

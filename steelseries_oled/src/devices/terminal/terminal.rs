@@ -1,16 +1,16 @@
 use mlua::{Lua, Value};
 
-use crate::screen::debug_output::debug_output_settings::DebugOutputSettings;
-use crate::screen::screen::{Buffer, MemoryRepresentation, Screen, Settings, Size};
+use crate::devices::device::{Buffer, Device, MemoryRepresentation, Settings, Size};
+use crate::devices::terminal::terminal_settings::TerminalSettings;
 
-pub struct DebugOutput {
+pub struct Terminal {
     name: String,
     screen_size: Size,
 }
 
-impl Screen for DebugOutput {
+impl Device for Terminal {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
-        let settings = DebugOutputSettings::new(lua, settings)?;
+        let settings = TerminalSettings::new(lua, settings)?;
 
         Ok(Self {
             name: settings.name,

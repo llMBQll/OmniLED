@@ -1,6 +1,6 @@
 Settings {
-    update_interval = 100,
     applications_file = 'applications.lua',
+    devices_file = 'devices.lua',
     font = 'Default',
     log_level = 'Debug',
     keyboard_ticks_repeat_delay = 2,
@@ -9,5 +9,5 @@ Settings {
     server_port = 6969,
     scrolling_text_ticks_at_edge = 8,
     scrolling_text_ticks_per_move = 2,
-    supported_screens_file = 'screens.lua',
+    update_interval = 100,
 }

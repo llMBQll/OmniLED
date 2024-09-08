@@ -1,7 +1,7 @@
-pub mod screen;
-pub mod screens;
+pub mod device;
+pub mod devices;
 
-mod debug_output;
 mod simulator;
 mod steelseries_engine;
+mod terminal;
 mod usb_device;

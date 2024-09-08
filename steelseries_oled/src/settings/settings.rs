@@ -16,6 +16,9 @@ pub struct Settings {
     #[mlua(default(String::from("applications.lua")))]
     pub applications_file: String,
 
+    #[mlua(default(String::from("devices.lua")))]
+    pub devices_file: String,
+
     #[mlua(default(FontSelector::Default))]
     pub font: FontSelector,
 
@@ -40,9 +43,6 @@ pub struct Settings {
     #[mlua(default(6969))]
     pub server_port: u16,
 
-    #[mlua(default(String::from("screens.lua")))]
-    pub supported_screens_file: String,
-
     #[mlua(transform(Self::from_millis))]
     #[mlua(default(Duration::from_millis(100)))]
     pub update_interval: Duration,
@@ -63,7 +63,10 @@ impl Settings {
         let env = create_table!(lua, {Settings = $load_settings_fn});
 
         if let Err(err) = exec_file(lua, &filename, env) {
-            error!("Error loading settings: {}. Falling back to default settings", err);
+            error!(
+                "Error loading settings: {}. Falling back to default settings",
+                err
+            );
 
             let default: Settings = lua.load(chunk! { {} }).eval().unwrap();
             lua.globals().set(Settings::identifier(), default).unwrap();

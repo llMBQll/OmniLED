@@ -3,7 +3,7 @@ use mlua::{Lua, Value};
 pub use crate::renderer::buffer::Buffer;
 pub use crate::script_handler::script_data_types::{MemoryRepresentation, Size};
 
-pub trait Screen {
+pub trait Device {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self>
     where
         Self: Sized;

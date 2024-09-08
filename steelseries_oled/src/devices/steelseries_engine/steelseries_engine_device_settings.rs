@@ -1,7 +1,7 @@
 use mlua::{ErrorContext, FromLua, Lua, Value};
 use oled_derive::FromLuaValue;
 
-use crate::screen::screen::{Settings, Size};
+use crate::devices::device::{Settings, Size};
 
 #[derive(FromLuaValue, Clone)]
 pub struct SteelseriesEngineDeviceSettings {

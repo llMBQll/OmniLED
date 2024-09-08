@@ -4,8 +4,8 @@ use mlua::{Lua, OwnedFunction, Value};
 use rusb::{DeviceHandle, GlobalContext};
 use std::time::Duration;
 
-use crate::screen::screen::{MemoryRepresentation, Screen, Settings, Size};
-use crate::screen::usb_device::usb_device_settings::{USBDeviceSettings, USBSettings};
+use crate::devices::device::{Device, MemoryRepresentation, Settings, Size};
+use crate::devices::usb_device::usb_device_settings::{USBDeviceSettings, USBSettings};
 
 pub struct USBDevice {
     name: String,
@@ -31,7 +31,7 @@ impl USBDevice {
     }
 }
 
-impl Screen for USBDevice {
+impl Device for USBDevice {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
         let settings = USBDeviceSettings::new(lua, settings)?;
 

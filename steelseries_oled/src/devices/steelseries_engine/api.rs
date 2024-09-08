@@ -73,7 +73,7 @@ impl Api {
             "event": "DUMMY_EVENT",
             "handlers": [{
                 "device-type": "screened",
-                "mode": "screen",
+                "mode": "devices",
                 "zone": "one",
                 "datas": [{
                     "has-text": true,

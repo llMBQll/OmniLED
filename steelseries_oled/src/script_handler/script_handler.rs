@@ -11,10 +11,10 @@ use std::time::Duration;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::common::{common::exec_file, scoped_value::ScopedValue};
 use crate::create_table_with_defaults;
+use crate::devices::device::Device;
+use crate::devices::devices::{DeviceStatus, Devices};
 use crate::events::shortcuts::Shortcuts;
 use crate::renderer::renderer::{ContextKey, Renderer};
-use crate::screen::screen::Screen;
-use crate::screen::screens::{ScreenStatus, Screens};
 use crate::script_handler::script_data_types::{load_script_data_types, Operation};
 use crate::settings::settings::{get_full_path, Settings};
 
@@ -22,11 +22,11 @@ use crate::settings::settings::{get_full_path, Settings};
 pub struct ScriptHandler {
     environment: OwnedTable,
     renderer: Renderer,
-    screens: Vec<ScreenContext>,
+    devices: Vec<DeviceContext>,
 }
 
-struct ScreenContext {
-    screen: Box<dyn Screen>,
+struct DeviceContext {
+    device: Box<dyn Device>,
     name: String,
     scripts: Vec<UserScript>,
     marked_for_update: Vec<bool>,
@@ -48,7 +48,7 @@ impl ScriptHandler {
             ScriptHandler {
                 renderer: Renderer::new(lua),
                 environment: environment.clone().into_owned(),
-                screens: vec![],
+                devices: vec![],
             },
         );
 
@@ -81,10 +81,10 @@ impl ScriptHandler {
         entry.set(event.clone(), data.clone()).unwrap();
 
         let key = format!("{}.{}", application_name, event);
-        for screen in &mut self.screens {
-            for (index, script) in screen.scripts.iter().enumerate() {
+        for device in &mut self.devices {
+            for (index, script) in device.scripts.iter().enumerate() {
                 if script.run_on.contains(&key) {
-                    screen.marked_for_update[index] = true;
+                    device.marked_for_update[index] = true;
                 }
             }
         }
@@ -94,14 +94,14 @@ impl ScriptHandler {
 
     pub fn update(&mut self, lua: &Lua, time_passed: Duration) -> mlua::Result<()> {
         let env = self.environment.to_ref();
-        for screen in &mut self.screens {
-            Self::update_impl(lua, screen, &mut self.renderer, &env, time_passed)?;
+        for device in &mut self.devices {
+            Self::update_impl(lua, device, &mut self.renderer, &env, time_passed)?;
         }
         Ok(())
     }
 
-    fn reset(&mut self, screen_name: &String) {
-        match self.screens.iter_mut().find(|x| x.name == *screen_name) {
+    fn reset(&mut self, device_name: &String) {
+        match self.devices.iter_mut().find(|x| x.name == *device_name) {
             Some(ctx) => {
                 ctx.marked_for_update = vec![false; ctx.marked_for_update.len()];
                 ctx.time_remaining = Duration::ZERO;
@@ -109,7 +109,7 @@ impl ScriptHandler {
                 ctx.repeats = None;
             }
             None => {
-                warn!("Screen {} not found", screen_name);
+                warn!("Device {} not found", device_name);
             }
         }
     }
@@ -117,26 +117,26 @@ impl ScriptHandler {
     pub(self) fn register(
         &mut self,
         lua: &Lua,
-        screen_name: String,
+        device_name: String,
         user_scripts: Vec<UserScript>,
     ) -> mlua::Result<()> {
-        let mut screens = UserDataRef::<Screens>::load(lua);
-        let screen = screens.get_mut().load_screen(lua, screen_name.clone())?;
+        let mut devices = UserDataRef::<Devices>::load(lua);
+        let device = devices.get_mut().load_device(lua, device_name.clone())?;
 
-        let screen_count = self.screens.len();
+        let device_count = self.devices.len();
         let script_count = user_scripts.len();
 
-        let context = ScreenContext {
-            screen,
-            name: screen_name,
+        let context = DeviceContext {
+            device,
+            name: device_name,
             scripts: user_scripts,
             marked_for_update: vec![false; script_count],
             time_remaining: Default::default(),
             last_priority: 0,
             repeats: None,
-            index: screen_count,
+            index: device_count,
         };
-        self.screens.push(context);
+        self.devices.push(context);
 
         Ok(())
     }
@@ -151,7 +151,7 @@ impl ScriptHandler {
 
     fn update_impl(
         lua: &Lua,
-        ctx: &mut ScreenContext,
+        ctx: &mut DeviceContext,
         renderer: &mut Renderer,
         env: &Table,
         time_passed: Duration,
@@ -190,22 +190,22 @@ impl ScriptHandler {
             None => return Ok(()),
         };
 
-        let size = ctx.screen.size(lua)?;
-        let memory_representation = ctx.screen.memory_representation(lua)?;
+        let size = ctx.device.size(lua)?;
+        let memory_representation = ctx.device.memory_representation(lua)?;
         env.set("SCREEN", size)?;
 
-        let output: ScriptOutput = ctx.scripts[to_update].action.call(())?;
+        let output: ScriptOutput = ctx.scripts[to_update].layout.call(())?;
         let (end_auto_repeat, image) = renderer.render(
             ContextKey {
                 script: to_update,
-                screen: ctx.index,
+                device: ctx.index,
             },
             size,
             output.data,
             memory_representation,
         );
 
-        ctx.screen.update(lua, image)?;
+        ctx.device.update(lua, image)?;
 
         ctx.repeats = match (output.repeats, end_auto_repeat) {
             (Some(Repeat::ToFit), _) => Some(Repeat::ToFit),
@@ -258,13 +258,13 @@ impl UserData for ScriptHandler {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
-            |lua, handler, (screen, user_scripts): (String, Vec<UserScript>)| {
-                handler.register(lua, screen, user_scripts)
+            |lua, handler, (device, user_scripts): (String, Vec<UserScript>)| {
+                handler.register(lua, device, user_scripts)
             },
         );
 
-        methods.add_method_mut("reset", |_lua, handler, screen: String| {
-            handler.reset(&screen);
+        methods.add_method_mut("reset", |_lua, handler, device: String| {
+            handler.reset(&device);
             Ok(())
         });
     }
@@ -273,7 +273,7 @@ impl UserData for ScriptHandler {
 #[derive(FromLuaValue, Clone)]
 struct UserScript {
     #[mlua(transform(Self::transform_function))]
-    action: OwnedFunction,
+    layout: OwnedFunction,
 
     #[mlua(transform(Self::transform_function_option))]
     predicate: Option<OwnedFunction>,
@@ -325,11 +325,11 @@ struct ScreenBuilder;
 impl UserData for ScreenBuilder {
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
         methods.add_method("new", |lua, _, name: String| {
-            let screens = UserDataRef::<Screens>::load(lua);
+            let devices = UserDataRef::<Devices>::load(lua);
 
-            let builder = match screens.get().screen_status(&name) {
-                Some(ScreenStatus::Available) => Ok(ScreenBuilderImpl::new(name)),
-                Some(ScreenStatus::Loaded) => Err(mlua::Error::RuntimeError(format!(
+            let builder = match devices.get().device_status(&name) {
+                Some(DeviceStatus::Available) => Ok(ScreenBuilderImpl::new(name)),
+                Some(DeviceStatus::Loaded) => Err(mlua::Error::RuntimeError(format!(
                     "Device '{}' already loaded.",
                     name
                 ))),
