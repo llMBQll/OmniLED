@@ -45,7 +45,7 @@ impl PluginServer {
             .unwrap();
 
         std::fs::write(
-            Constants::root_dir().join("server.json"),
+            Constants::data_dir().join("server.json"),
             serde_json::to_string_pretty(&info).unwrap(),
         )
         .unwrap();

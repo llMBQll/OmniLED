@@ -1,8 +1,4 @@
 .idea
-.vscode
 /target
-cmake-build*
-Cargo.lock
-server.json
-logging.log
 /data
+Cargo.lock
