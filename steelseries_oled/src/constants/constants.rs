@@ -57,7 +57,7 @@ impl Constants {
 
     #[cfg(not(feature = "dev"))]
     pub fn applications_dir() -> PathBuf {
-        Self::root_dir().join("applications")
+        Self::root_dir().join("bin")
     }
 
     pub fn config_dir() -> PathBuf {

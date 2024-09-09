@@ -1,70 +1,160 @@
+#![feature(concat_idents)]
+
 use clap::Parser;
-use std::env;
+use convert_case::{Case, Casing};
 use std::path::PathBuf;
 use std::process::Command;
+use std::{env, fs};
+
+use crate::util::{
+    ask_user, get_app_exe_path, get_bin_dir, get_config_dir, get_data_dir, get_root_dir,
+    read_user_input,
+};
+
+mod bytes;
+mod util;
+
+#[derive(clap::Parser, Debug)]
+#[command(author, version, about)]
+struct Options {
+    #[clap(subcommand)]
+    selector: Selector,
+}
+
+#[derive(clap::Subcommand, Debug)]
+enum Selector {
+    Install(InstallOptions),
+    Uninstall(UninstallOptions),
+}
+
+#[derive(clap::Args, Debug)]
+struct InstallOptions {
+    /// Your configuration will not be overridden by default, you can reset config to default using
+    /// this flag
+    #[clap(short, long)]
+    override_config: bool,
+
+    #[clap(short, long)]
+    enable_autostart: bool,
+
+    #[clap(short, long)]
+    interactive: bool,
+}
+
+#[derive(clap::Args, Debug)]
+struct UninstallOptions {
+    /// By default, uninstaller will remove the entire install directory and autostart entry
+    /// By enabling this flag you can keep your configuration files untouched
+    #[clap(short, long)]
+    keep_config: bool,
+
+    #[clap(short, long)]
+    interactive: bool,
+}
 
 fn main() {
     let options = Options::parse();
-    let source = match (options.debug, options.release) {
-        (Some(true), _) => "target/debug/",
-        _ => "target/release/",
+
+    match options.selector {
+        Selector::Install(options) => install(options),
+        Selector::Uninstall(options) => uninstall(options),
     };
+}
 
-    let root = get_root();
-    let data_root = root.join("data");
-    let config_root = root.join("config");
-    let applications_root = root.join("applications");
-    create_dir(&root);
-    create_dir(&data_root);
-    create_dir(&config_root);
-    create_dir(&applications_root);
+fn install_binary_impl(name: &str, bytes: &[u8]) {
+    let target = get_bin_dir()
+        .join(name)
+        .with_extension(env::consts::EXE_EXTENSION);
+    println!("Copying binary: {}", target.display());
+    fs::write(&target, bytes).unwrap();
+}
 
-    let settings_source_root = if options.dev { "config" } else { "defaults" };
-    for file in vec![
-        "applications.lua",
-        "devices.lua",
-        "scripts.lua",
-        "settings.lua",
+fn install_config_impl(name: &str, bytes: &[u8], override_config: bool) {
+    let target = get_config_dir().join(name).with_extension("lua");
+
+    if override_config || !target.exists() {
+        println!("Copying config file: {}", target.display());
+        fs::write(&target, bytes).unwrap();
+    } else {
+        println!(
+            "Skipped copying config file (file already exists): {}",
+            target.display()
+        );
+    }
+}
+
+macro_rules! install_binary {
+    ($name:expr) => {
+        install_binary_impl(&stringify!($name).to_case(Case::Snake), $name)
+    };
+}
+
+macro_rules! install_config {
+    ($name:expr, $override_config:expr) => {
+        install_config_impl(
+            &stringify!($name).to_case(Case::Snake),
+            $name,
+            $override_config,
+        )
+    };
+}
+
+fn install(options: InstallOptions) {
+    use bytes::*;
+
+    for directory in &vec![
+        get_root_dir(),
+        get_bin_dir(),
+        get_config_dir(),
+        get_data_dir(),
     ] {
-        copy(&settings_source_root, &config_root, file, false);
+        create_dir(directory);
     }
 
-    for app in vec!["audio", "clock", "media", "weather"] {
-        copy(source, &applications_root, &get_bin_path(app), true);
-    }
-    copy(source, &root, &get_bin_path("steelseries_oled"), true);
+    install_binary!(STEELSERIES_OLED);
+    install_binary!(AUDIO);
+    install_binary!(CLOCK);
+    install_binary!(MEDIA);
+    install_binary!(WEATHER);
 
-    setup_autostart();
-    start();
+    let override_config = options.override_config
+        || (options.interactive && ask_user("Do you wish to override your config?"));
+
+    install_config!(APPLICATIONS, override_config);
+    install_config!(DEVICES, override_config);
+    install_config!(SCRIPTS, override_config);
+    install_config!(SETTINGS, override_config);
+
+    let autostart = options.enable_autostart
+        || (options.interactive
+            && ask_user("Do you wish for application to start automatically when logging in?"));
+
+    if autostart {
+        autostart_enable();
+    }
+
+    run();
 
     println!("Setup finished, press Enter to exit");
     _ = read_user_input();
 }
 
-#[derive(clap::Parser, Debug)]
-#[command(author, version, about)]
-struct Options {
-    /// Install debug binaries
-    #[clap(long, group = "type", action = clap::ArgAction::SetTrue)]
-    debug: Option<bool>,
+fn uninstall(options: UninstallOptions) {
+    let keep_config =
+        options.keep_config || (options.interactive && ask_user("Do you wish to keep config?"));
 
-    /// Install release binaries, this is the default behavior
-    #[clap(long, group = "type", action = clap::ArgAction::SetTrue)]
-    release: Option<bool>,
+    autostart_disable();
 
-    /// Run in dev environment
-    #[clap(short, long, group = "type")]
-    dev: bool,
-}
+    let paths = if keep_config {
+        vec![get_bin_dir(), get_data_dir()]
+    } else {
+        vec![get_root_dir()]
+    };
 
-fn get_app_name() -> &'static str {
-    "SteelseriesOLED"
-}
-
-fn get_root() -> PathBuf {
-    let root = dirs_next::config_dir().expect("Couldn't get default config directory");
-    let root = root.join(get_app_name());
-    root
+    for path in paths {
+        println!("Removing {}", path.display());
+        fs::remove_dir_all(path).unwrap()
+    }
 }
 
 fn create_dir(path: &PathBuf) {
@@ -72,103 +162,73 @@ fn create_dir(path: &PathBuf) {
         println!("Directory {:?} already exists", path);
     } else {
         println!("Creating directory {:?}", path);
-        std::fs::create_dir_all(path).unwrap();
+        fs::create_dir_all(path).unwrap();
     }
 }
 
-fn get_bin_path(name: &str) -> String {
-    PathBuf::from(name)
-        .with_extension(env::consts::EXE_EXTENSION)
-        .to_str()
-        .unwrap()
-        .to_string()
+fn autostart_enable() {
+    os::autostart_enable();
 }
 
-fn copy(src_root: &str, dst_root: &PathBuf, name: &str, override_file: bool) {
-    let src = PathBuf::from(src_root).join(name);
-    let dst = PathBuf::from(dst_root).join(name);
-
-    if !src.exists() {
-        eprintln!("Source {:?} doesn't exist", src);
-        std::process::exit(1);
-    }
-
-    if dst.exists() {
-        if override_file {
-            println!("Copying {:?} to {:?} [Override!]", src, dst);
-            std::fs::copy(src, dst).expect("Failed to copy files");
-        } else {
-            println!(
-                "Copying {:?} to {:?} skipped, file already exists",
-                src, dst
-            );
-        }
-    } else {
-        println!("Copying {:?} to {:?}", src, dst);
-        std::fs::copy(src, dst).expect("Failed to copy files");
-    }
+fn autostart_disable() {
+    os::autostart_disable();
 }
 
-fn read_user_input() -> String {
-    let mut response = String::new();
-    std::io::stdin().read_line(&mut response).unwrap();
-
-    if let Some('\n') = response.chars().next_back() {
-        response.pop();
-    }
-    if let Some('\r') = response.chars().next_back() {
-        response.pop();
-    }
-
-    response
+fn run() {
+    println!("Running 'Steelseries OLED'");
+    Command::new(get_app_exe_path()).spawn().unwrap();
 }
 
 #[cfg(target_os = "windows")]
-fn setup_autostart() {
+mod os {
     use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
     use winreg::RegKey;
 
-    println!("Do you want 'Steelseries OLED' to launch automatically when you log in [Y/N]?");
-    let response = read_user_input();
-    let autostart = response.to_ascii_lowercase() == "y";
+    use crate::util::{get_app_exe_path, get_app_name};
 
-    let reg_current_user = RegKey::predef(HKEY_CURRENT_USER);
-    let reg_run = reg_current_user
-        .open_subkey_with_flags(
-            "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
-            KEY_READ | KEY_WRITE,
-        )
-        .unwrap();
+    fn get_registry_entry() -> RegKey {
+        let reg_current_user = RegKey::predef(HKEY_CURRENT_USER);
+        reg_current_user
+            .open_subkey_with_flags(
+                "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+                KEY_READ | KEY_WRITE,
+            )
+            .unwrap()
+    }
 
-    if autostart {
-        let path = get_root().join("steelseries_oled.exe");
-        match reg_run.set_value(get_app_name(), &path.to_str().unwrap()) {
+    pub fn autostart_enable() {
+        let registry_entry = get_registry_entry();
+
+        let path = get_app_exe_path();
+        match registry_entry.set_value(get_app_name(), &path.to_str().unwrap()) {
             Ok(_) => println!("Added 'Steelseries OLED' as an autostart program"),
             Err(err) => println!(
                 "Failed to add 'Steelseries OLED' as an autostart program: {}",
                 err
             ),
         }
-    } else {
-        _ = reg_run.delete_value(get_app_name());
-        println!("'Steelseries OLED' will not start automatically");
+    }
+
+    pub fn autostart_disable() {
+        let registry_entry = get_registry_entry();
+
+        match registry_entry.delete_value(get_app_name()) {
+            Ok(_) => println!("Removed 'Steelseries OLED' from autostart programs"),
+            Err(err) => println!(
+                "Failed to remove 'Steelseries OLED' from autostart programs: {}",
+                err
+            ),
+        };
     }
 }
 
 #[cfg(target_os = "linux")]
-fn setup_autostart() {
-    println!("Autostart setup is not yet available on Linux");
-}
-
-fn start() {
-    println!("Do you want to start 'Steelseries OLED' now [Y/N]?");
-    let response = read_user_input();
-    if response.to_ascii_lowercase() != "y" {
-        return;
+mod os {
+    pub fn autostart_enable() {
+        println!("Autostart setup is not yet available on Linux");
     }
 
-    let path = get_root()
-        .join(PathBuf::from("steelseries_oled").with_extension(env::consts::EXE_EXTENSION));
-    println!("Running 'Steelseries OLED'");
-    Command::new(path).spawn().unwrap();
+    pub fn autostart_disable() {
+        // Nothing to disable yet
+    }
 }
