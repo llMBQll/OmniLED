@@ -4,8 +4,6 @@ version = "0.1.0"
 edition = "2021"
 default-run = "steelseries_oled"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 convert_case = "0.6"
 device_query = "2.0"
@@ -33,12 +31,10 @@ ureq = { version = "2.4", features = ["json"] }
 tonic = "0.12.0"
 tray-item = "0.10"
 
-# Enable tray icon support on linux
 [target.'cfg(target_os = "linux")'.dependencies.tray-item]
 version = "0.10"
 features = ["ksni"]
 
-# Compile tray icon assets for windows
 [target.'cfg(target_os = "windows")'.build-dependencies]
 windres = "0.2"
 
