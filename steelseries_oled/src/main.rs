@@ -45,11 +45,11 @@ async fn main() {
     Constants::load(&lua);
     Settings::load(&lua);
     PluginServer::load(&lua).await;
-    let _shortcuts = Shortcuts::load(&lua);
-    let _devices = Devices::load(&lua);
-    let _sandbox = ScriptHandler::load(&lua);
+    Shortcuts::load(&lua);
+    Devices::load(&lua);
+    ScriptHandler::load(&lua);
     let _tray = TrayIcon::new(&RUNNING);
-    let _apps = AppLoader::load(&lua);
+    AppLoader::load(&lua);
 
     let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
 

@@ -4,7 +4,6 @@ use oled_derive::UniqueUserData;
 
 use crate::app_loader::process::{Config, Process};
 use crate::common::common::exec_file;
-use crate::common::scoped_value::ScopedValue;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::constants::Constants;
 use crate::create_table_with_defaults;
@@ -16,10 +15,9 @@ pub struct AppLoader {
 }
 
 impl AppLoader {
-    pub fn load(lua: &Lua) -> ScopedValue {
-        let app_loader = ScopedValue::new(
+    pub fn load(lua: &Lua) {
+        Self::set_unique(
             lua,
-            Self::identifier(),
             Self {
                 processes: Vec::new(),
             },
@@ -51,12 +49,10 @@ impl AppLoader {
         let settings = UserDataRef::<Settings>::load(lua);
         exec_file(lua, &get_full_path(&settings.get().applications_file), env).unwrap();
 
-        let app_loader_ref = UserDataRef::<AppLoader>::load(lua);
-        if app_loader_ref.get().processes.len() == 0 {
+        let app_loader = UserDataRef::<AppLoader>::load(lua);
+        if app_loader.get().processes.len() == 0 {
             warn!("App loader didn't load any applications");
         }
-
-        app_loader
     }
 
     fn start_process(&mut self, app_config: Config) {

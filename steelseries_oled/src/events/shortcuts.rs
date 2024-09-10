@@ -5,7 +5,6 @@ use oled_derive::UniqueUserData;
 use regex::Regex;
 use std::str::FromStr;
 
-use crate::common::scoped_value::ScopedValue;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::settings::settings::Settings;
 
@@ -18,21 +17,20 @@ pub struct Shortcuts {
 }
 
 impl Shortcuts {
-    pub fn load(lua: &Lua) -> ScopedValue {
+    pub fn load(lua: &Lua) {
         let settings = UserDataRef::<Settings>::load(lua);
         let delay = settings.get().keyboard_ticks_repeat_delay;
         let rate = settings.get().keyboard_ticks_repeat_rate;
 
-        ScopedValue::new(
+        Self::set_unique(
             lua,
-            Self::identifier(),
             Self {
                 shortcuts: Vec::new(),
                 delay,
                 rate,
                 current_tick: 0,
             },
-        )
+        );
     }
 
     pub fn process_key(&mut self, _lua: &Lua, key_name: &str, action: &str) -> mlua::Result<()> {

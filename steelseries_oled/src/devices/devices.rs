@@ -6,7 +6,6 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 use crate::common::common::exec_file;
-use crate::common::scoped_value::ScopedValue;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
@@ -25,11 +24,10 @@ pub struct Devices {
 }
 
 impl Devices {
-    pub fn load(lua: &Lua) -> ScopedValue {
+    pub fn load(lua: &Lua) {
         let (constructors, env) = Self::create_loaders(lua);
-        let devices = ScopedValue::new(lua, Self::identifier(), Self::new(constructors));
+        Self::set_unique(lua, Self::new(constructors));
         Self::load_devices(lua, env);
-        devices
     }
 
     pub fn device_status(&self, name: &str) -> Option<DeviceStatus> {

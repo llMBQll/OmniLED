@@ -5,8 +5,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
+use crate::common::common::exec_file;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
-use crate::common::{common::exec_file, scoped_value::ScopedValue};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
@@ -36,12 +36,11 @@ struct DeviceContext {
 const DEFAULT_UPDATE_TIME: Duration = Duration::from_millis(1000);
 
 impl ScriptHandler {
-    pub fn load(lua: &Lua) -> ScopedValue {
+    pub fn load(lua: &Lua) {
         let environment = Self::make_sandbox(lua);
 
-        let value = ScopedValue::new(
+        Self::set_unique(
             lua,
-            Self::identifier(),
             ScriptHandler {
                 renderer: Renderer::new(lua),
                 environment: environment.clone(),
@@ -56,8 +55,6 @@ impl ScriptHandler {
             environment,
         )
         .unwrap();
-
-        value
     }
 
     pub fn set_value(
