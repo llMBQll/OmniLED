@@ -1,4 +1,4 @@
-use mlua::{Lua, Table, TableExt, Value};
+use mlua::{Lua, ObjectLike, Table, Value};
 use oled_api::field::Field as FieldEntry;
 use oled_api::Field;
 
@@ -51,7 +51,7 @@ pub fn exec_file(lua: &Lua, name: &str, env: Table) -> mlua::Result<()> {
     let (func, err): (Value, Value) = lua.globals().call_function("loadfile", (name, "t", env))?;
 
     match (func, err) {
-        (Value::Function(func), Value::Nil) => func.call::<_, ()>(()),
+        (Value::Function(func), Value::Nil) => func.call::<_>(()),
         (_, Value::String(err)) => Err(mlua::Error::runtime(format!(
             "Error when running file {}: {}",
             name,

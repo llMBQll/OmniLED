@@ -1,6 +1,6 @@
 use convert_case::{Case, Casing};
 use log::{debug, error};
-use mlua::{chunk, Function, Lua, OwnedTable, Table, UserData, UserDataMethods, Value};
+use mlua::{chunk, Function, Lua, Table, UserData, UserDataMethods, Value};
 use oled_derive::UniqueUserData;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -54,7 +54,7 @@ impl Devices {
         let entry = entry.remove();
         let device = match entry {
             DeviceEntry::Initializer(initializer) => {
-                let value = Value::Table(initializer.settings.to_ref());
+                let value = Value::Table(initializer.settings);
                 let device = (initializer.constructor)(lua, value);
                 device
             }
@@ -148,7 +148,7 @@ impl Devices {
             Entry::Vacant(entry) => {
                 let loader = self.constructors[&kind];
                 entry.insert(DeviceEntry::Initializer(Initializer {
-                    settings: settings.into_owned(),
+                    settings,
                     constructor: loader,
                 }));
             }
@@ -159,7 +159,7 @@ impl Devices {
 }
 
 impl UserData for Devices {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+    fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut(
             "add_configuration",
             |_lua, manager, (name, kind, settings): (String, String, Table)| {
@@ -175,7 +175,7 @@ enum DeviceEntry {
 }
 
 struct Initializer {
-    settings: OwnedTable,
+    settings: Table,
     constructor: fn(&Lua, Value) -> Box<dyn Device>,
 }
 

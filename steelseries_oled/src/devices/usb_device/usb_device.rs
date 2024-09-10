@@ -1,6 +1,6 @@
 use crate::renderer::buffer::Buffer;
 use log::{debug, warn};
-use mlua::{Lua, OwnedFunction, Value};
+use mlua::{Function, Lua, Value};
 use rusb::{DeviceHandle, GlobalContext};
 use std::time::Duration;
 
@@ -11,7 +11,7 @@ pub struct USBDevice {
     name: String,
     size: Size,
     settings: USBSettings,
-    transform: Option<OwnedFunction>,
+    transform: Option<Function>,
     handle: DeviceHandle<GlobalContext>,
     representation: MemoryRepresentation,
 }

@@ -1,6 +1,6 @@
 use device_query::Keycode;
 use log::{error, warn};
-use mlua::{Function, Lua, OwnedFunction, UserData, UserDataMethods};
+use mlua::{Function, Lua, UserData, UserDataMethods};
 use oled_derive::UniqueUserData;
 use regex::Regex;
 use std::str::FromStr;
@@ -57,7 +57,7 @@ impl Shortcuts {
 
             if update {
                 entry.last_update_tick = self.current_tick;
-                entry.on_match.call::<_, ()>(())?;
+                entry.on_match.call::<_>(())?;
 
                 if hold {
                     entry.hold_updates += 1;
@@ -113,7 +113,7 @@ impl Shortcuts {
 
         self.shortcuts.push(ShortcutEntry {
             keys: sorted,
-            on_match: on_match.into_owned(),
+            on_match,
             last_all_pressed: false,
             last_update_tick: 0,
             hold_updates: 0,
@@ -128,7 +128,7 @@ impl Shortcuts {
 }
 
 impl UserData for Shortcuts {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+    fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
             |_lua, this, (keys, on_match): (Vec<String>, Function)| this.register(keys, on_match),
@@ -138,7 +138,7 @@ impl UserData for Shortcuts {
 
 struct ShortcutEntry {
     keys: Vec<KeyState>,
-    on_match: OwnedFunction,
+    on_match: Function,
     last_all_pressed: bool,
     last_update_tick: usize,
     hold_updates: usize,

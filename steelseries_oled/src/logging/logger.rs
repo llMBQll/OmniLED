@@ -30,7 +30,7 @@ impl Log {
 }
 
 impl UserData for Log {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("debug", |_, _, message: String| {
             debug!("{}", message);
             Ok(())

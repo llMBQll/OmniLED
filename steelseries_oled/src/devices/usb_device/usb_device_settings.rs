@@ -1,4 +1,4 @@
-use mlua::{ErrorContext, FromLua, Function, Lua, OwnedFunction, UserData, Value};
+use mlua::{ErrorContext, FromLua, Function, Lua, UserData, Value};
 use num_traits::Unsigned;
 use oled_derive::FromLuaValue;
 
@@ -9,18 +9,8 @@ pub struct USBDeviceSettings {
     pub name: String,
     pub screen_size: Size,
     pub usb_settings: USBSettings,
-    #[mlua(transform(Self::transform_function))]
-    pub transform: Option<OwnedFunction>,
+    pub transform: Option<Function>,
     pub memory_representation: MemoryRepresentation,
-}
-
-impl USBDeviceSettings {
-    fn transform_function(
-        function: Option<Function>,
-        _lua: &Lua,
-    ) -> mlua::Result<Option<OwnedFunction>> {
-        Ok(function.map(|function| function.into_owned()))
-    }
 }
 
 impl Settings for USBDeviceSettings {

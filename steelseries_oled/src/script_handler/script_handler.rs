@@ -1,8 +1,5 @@
 use log::warn;
-use mlua::{
-    chunk, ErrorContext, FromLua, Function, Lua, OwnedFunction, OwnedTable, Table, UserData,
-    UserDataMethods, Value,
-};
+use mlua::{chunk, ErrorContext, FromLua, Function, Lua, Table, UserData, UserDataMethods, Value};
 use oled_derive::{FromLuaValue, UniqueUserData};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -20,7 +17,7 @@ use crate::settings::settings::{get_full_path, Settings};
 
 #[derive(UniqueUserData)]
 pub struct ScriptHandler {
-    environment: OwnedTable,
+    environment: Table,
     renderer: Renderer,
     devices: Vec<DeviceContext>,
 }
@@ -47,7 +44,7 @@ impl ScriptHandler {
             Self::identifier(),
             ScriptHandler {
                 renderer: Renderer::new(lua),
-                environment: environment.clone().into_owned(),
+                environment: environment.clone(),
                 devices: vec![],
             },
         );
@@ -70,7 +67,7 @@ impl ScriptHandler {
         event: String,
         data: Value,
     ) -> mlua::Result<()> {
-        let env = self.environment.to_ref();
+        let env = &self.environment;
 
         if !env.contains_key(application_name.clone()).unwrap() {
             let empty = lua.create_table().unwrap();
@@ -93,7 +90,7 @@ impl ScriptHandler {
     }
 
     pub fn update(&mut self, lua: &Lua, time_passed: Duration) -> mlua::Result<()> {
-        let env = self.environment.to_ref();
+        let env = &self.environment;
         for device in &mut self.devices {
             Self::update_impl(lua, device, &mut self.renderer, &env, time_passed)?;
         }
@@ -141,9 +138,9 @@ impl ScriptHandler {
         Ok(())
     }
 
-    fn test_predicate(function: &Option<OwnedFunction>) -> mlua::Result<bool> {
+    fn test_predicate(function: &Option<Function>) -> mlua::Result<bool> {
         let predicate = match function {
-            Some(predicate) => predicate.call::<_, bool>(())?,
+            Some(predicate) => predicate.call::<_>(())?,
             None => true,
         };
         Ok(predicate)
@@ -255,7 +252,7 @@ impl ScriptHandler {
 }
 
 impl UserData for ScriptHandler {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
             |lua, handler, (device, user_scripts): (String, Vec<UserScript>)| {
@@ -272,26 +269,9 @@ impl UserData for ScriptHandler {
 
 #[derive(FromLuaValue, Clone)]
 struct UserScript {
-    #[mlua(transform(Self::transform_function))]
-    layout: OwnedFunction,
-
-    #[mlua(transform(Self::transform_function_option))]
-    predicate: Option<OwnedFunction>,
-
+    layout: Function,
+    predicate: Option<Function>,
     run_on: Vec<String>,
-}
-
-impl UserScript {
-    fn transform_function(function: Function, _lua: &Lua) -> mlua::Result<OwnedFunction> {
-        Ok(function.into_owned())
-    }
-
-    fn transform_function_option(
-        function: Option<Function>,
-        _lua: &Lua,
-    ) -> mlua::Result<Option<OwnedFunction>> {
-        Ok(function.and_then(|p| Some(p.into_owned())))
-    }
 }
 
 #[derive(FromLuaValue, Debug, PartialEq, Copy, Clone)]
@@ -323,7 +303,7 @@ impl ScriptOutput {
 struct ScreenBuilder;
 
 impl UserData for ScreenBuilder {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("new", |lua, _, name: String| {
             let devices = UserDataRef::<Devices>::load(lua);
 
@@ -374,7 +354,7 @@ impl ScreenBuilderImpl {
 }
 
 impl UserData for ScreenBuilderImpl {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut("with_script", |_lua, builder, script: UserScript| {
             if let Some(BuilderType::Screen) = builder.builder_type {
                 return Err(mlua::Error::RuntimeError(
@@ -410,7 +390,7 @@ impl UserData for ScreenBuilderImpl {
                         }
 
                         let predicate_check = match &predicate {
-                            Some(predicate) => predicate.call::<_, bool>(())?,
+                            Some(predicate) => predicate.call(())?,
                             None => true,
                         };
 
@@ -418,7 +398,7 @@ impl UserData for ScreenBuilderImpl {
                     })
                     .unwrap();
 
-                script.predicate = Some(wrapper.into_owned());
+                script.predicate = Some(wrapper);
                 builder.scripts.push(script);
             }
 

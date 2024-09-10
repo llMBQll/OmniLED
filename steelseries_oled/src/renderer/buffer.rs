@@ -69,7 +69,7 @@ impl Buffer {
 }
 
 impl UserData for Buffer {
-    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("bytes", |_lua, buffer, _: ()| Ok(buffer.bytes().to_vec()));
 
         methods.add_method("rows", |_lua, buffer, _: ()| {

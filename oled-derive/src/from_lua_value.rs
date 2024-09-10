@@ -11,8 +11,8 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
 
     // TODO handle generics of deriving type, for now only lifetime "'a" is allowed
     let expanded = quote! {
-        impl<'a> FromLua<'a> for #name #ty_generics {
-            fn from_lua(value: mlua::Value<'a>, lua: &'a mlua::Lua) -> mlua::Result<#name #ty_generics #where_clause> {
+        impl FromLua for #name #ty_generics {
+            fn from_lua(value: mlua::Value, lua: &mlua::Lua) -> mlua::Result<#name #ty_generics #where_clause> {
                 match value {
                     #initializer,
                     mlua::Value::UserData(user_data) => {
@@ -143,7 +143,7 @@ fn generate_initializer(name: &Ident, data: &Data) -> TokenStream {
                     }
                 },
                 mlua::Value::String(string) => {
-                    match string.to_str().unwrap() {
+                    match &*string.to_str().unwrap() {
                         #unit_initializers
                         string => Err(mlua::Error::runtime(format!(
                             "Expected one of {:?}, got '{}'",
