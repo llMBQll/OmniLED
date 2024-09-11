@@ -55,7 +55,7 @@ impl Shortcuts {
 
             if update {
                 entry.last_update_tick = self.current_tick;
-                entry.on_match.call::<_>(())?;
+                entry.on_match.call::<()>(())?;
 
                 if hold {
                     entry.hold_updates += 1;
