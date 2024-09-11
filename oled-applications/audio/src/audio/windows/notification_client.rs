@@ -8,7 +8,7 @@ use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
 #[implement(IMMNotificationClient)]
 pub struct NotificationClient<T>
 where
-    T: Fn(&PCWSTR),
+    T: Fn(&PCWSTR) + 'static,
 {
     callback: T,
 }
@@ -22,7 +22,7 @@ impl<T: Fn(&PCWSTR)> NotificationClient<T> {
 }
 
 #[allow(non_snake_case)]
-impl<T: Fn(&PCWSTR)> IMMNotificationClient_Impl for NotificationClient<T> {
+impl<T: Fn(&PCWSTR)> IMMNotificationClient_Impl for NotificationClient_Impl<T> {
     fn OnDeviceStateChanged(&self, _device_id: &PCWSTR, _new_state: DEVICE_STATE) -> Result<()> {
         Ok(())
     }

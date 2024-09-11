@@ -1,8 +1,8 @@
-use const_format::{map_ascii_case, Case};
+use convert_case::{Case, Casing};
 use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields};
-use oled_derive::FromLuaTable;
+use oled_derive::FromLuaValue;
 
-#[derive(Debug, Clone, Copy, FromLuaTable)]
+#[derive(Debug, Clone, Copy, FromLuaValue)]
 pub struct Point {
     pub x: usize,
     pub y: usize,
@@ -10,21 +10,21 @@ pub struct Point {
 
 impl UserData for Point {}
 
-#[derive(Debug, Clone, Copy, FromLuaTable)]
+#[derive(Debug, Clone, Copy, FromLuaValue)]
 pub struct Size {
     pub width: usize,
     pub height: usize,
 }
 
 impl UserData for Size {
-    fn add_fields<'lua, F: UserDataFields<'lua, Self>>(fields: &mut F) {
+    fn add_fields<F: UserDataFields<Self>>(fields: &mut F) {
         fields.add_field_method_get("Width", |_, this| Ok(this.width));
 
         fields.add_field_method_get("Height", |_, this| Ok(this.height));
     }
 }
 
-#[derive(Debug, Clone, Copy, FromLuaTable)]
+#[derive(Debug, Clone, Copy, FromLuaValue)]
 pub struct Rectangle {
     pub origin: Point,
     pub size: Size,
@@ -32,7 +32,7 @@ pub struct Rectangle {
 
 impl UserData for Rectangle {}
 
-#[derive(Debug, Clone, FromLuaTable)]
+#[derive(Debug, Clone, FromLuaValue)]
 pub struct OledImage {
     pub size: Size,
     pub bytes: Vec<u8>,
@@ -49,7 +49,7 @@ pub enum Operation {
 
 impl UserData for Operation {}
 
-#[derive(Clone, Debug, FromLuaTable)]
+#[derive(Clone, Debug, FromLuaValue)]
 pub struct Bar {
     pub value: f32,
     pub position: Rectangle,
@@ -60,7 +60,7 @@ pub struct Bar {
 
 impl UserData for Bar {}
 
-#[derive(Clone, Debug, FromLuaTable)]
+#[derive(Clone, Debug, FromLuaValue)]
 pub struct Image {
     pub image: OledImage,
     pub position: Rectangle,
@@ -71,7 +71,7 @@ pub struct Image {
 
 impl UserData for Image {}
 
-#[derive(Clone, Debug, FromLuaTable)]
+#[derive(Clone, Debug, FromLuaValue)]
 pub struct Text {
     pub text: String,
     pub position: Rectangle,
@@ -82,7 +82,7 @@ pub struct Text {
 
 impl UserData for Text {}
 
-#[derive(Clone, Copy, Debug, Default, FromLuaTable)]
+#[derive(Clone, Copy, Debug, Default, FromLuaValue)]
 pub struct Modifiers {
     #[mlua(default(false))]
     pub flip_horizontal: bool,
@@ -104,11 +104,17 @@ pub struct Modifiers {
 
 impl UserData for Modifiers {}
 
+#[derive(Clone, Copy, FromLuaValue)]
+pub enum MemoryRepresentation {
+    BitPerPixel,
+    BytePerPixel,
+}
+
 macro_rules! register_function {
     ($lua:ident, $table:ident, $func_name:ident) => {
         $table
             .set(
-                map_ascii_case!(Case::Pascal, stringify!($func_name)),
+                stringify!($func_name).to_case(Case::Pascal),
                 $lua.create_function($func_name).unwrap(),
             )
             .unwrap();

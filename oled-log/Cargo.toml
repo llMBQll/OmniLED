@@ -1,0 +1,10 @@
+[package]
+name = "oled-log"
+version = "0.1.0"
+authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
+license = "GPL-3.0-only"
+edition = "2021"
+
+[dependencies]
+log = "0.4"
+log4rs = "1.3"

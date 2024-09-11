@@ -1,6 +1,5 @@
-use std::sync::{Arc, Mutex};
-
-use crate::media::session_data::SessionData;
+use crate::Data;
+use tokio::sync::mpsc::Sender;
 
 #[cfg(target_os = "windows")]
 mod windows;
@@ -16,16 +15,14 @@ type MediaImpl = linux::media_impl::MediaImpl;
 
 pub mod session_data;
 
-pub type Callback = dyn FnMut(&String, &SessionData, bool) + Send;
-
 pub struct Media {
     inner: MediaImpl,
 }
 
 impl Media {
-    pub fn new(callback: Arc<Mutex<Callback>>) -> Self {
+    pub fn new(tx: Sender<Data>) -> Self {
         Self {
-            inner: MediaImpl::new(callback),
+            inner: MediaImpl::new(tx),
         }
     }
 

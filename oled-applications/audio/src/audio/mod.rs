@@ -10,14 +10,19 @@ type AudioImpl = windows::audio_impl::AudioImpl;
 #[cfg(target_os = "linux")]
 type AudioImpl = linux::audio_impl::AudioImpl;
 
+use tokio::runtime::Handle;
+use tokio::sync::mpsc::Sender;
+
+use crate::AudioData;
+
 pub struct Audio {
     _inner: AudioImpl,
 }
 
 impl Audio {
-    pub fn new(volume_callback: fn(bool, i32, Option<String>)) -> Self {
+    pub fn new(tx: Sender<AudioData>, handle: Handle) -> Self {
         Self {
-            _inner: AudioImpl::new(volume_callback),
+            _inner: AudioImpl::new(tx, handle),
         }
     }
 }

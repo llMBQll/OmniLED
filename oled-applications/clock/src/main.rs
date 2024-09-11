@@ -1,8 +1,9 @@
 use chrono::prelude::*;
-use oled_api::types::{Array, Field, Table};
-use oled_api::Api;
-use std::{env, thread, time};
+use oled_api::Plugin;
+use oled_derive::IntoProto;
+use std::{env, time};
 
+#[derive(IntoProto)]
 struct Names {
     day_names: Vec<&'static str>,
     month_names: Vec<&'static str>,
@@ -38,27 +39,7 @@ impl Names {
     }
 }
 
-impl Into<Table> for Names {
-    fn into(self) -> Table {
-        let transform_vec = |vec: Vec<&str>| -> Field {
-            let array = Array {
-                items: vec.iter().map(|entry| (*entry).into()).collect(),
-            };
-
-            array.into()
-        };
-
-        let mut table = Table::default();
-        table
-            .items
-            .insert("DayNames".to_owned(), transform_vec(self.day_names));
-        table
-            .items
-            .insert("MonthNames".to_owned(), transform_vec(self.month_names));
-        table
-    }
-}
-
+#[derive(Clone, IntoProto)]
 struct Time {
     hours: u32,
     minutes: u32,
@@ -69,37 +50,16 @@ struct Time {
     year: i32,
 }
 
-impl Into<Table> for &Time {
-    fn into(self) -> Table {
-        let mut table = Table::default();
-        table.items.insert("Hours".to_owned(), self.hours.into());
-        table
-            .items
-            .insert("Minutes".to_owned(), self.minutes.into());
-        table
-            .items
-            .insert("Seconds".to_owned(), self.seconds.into());
-        table
-            .items
-            .insert("MonthDay".to_owned(), self.month_day.into());
-        table
-            .items
-            .insert("WeekDay".to_owned(), self.week_day.into());
-        table.items.insert("Month".to_owned(), self.month.into());
-        table.items.insert("Year".to_owned(), self.year.into());
-        table
-    }
-}
-
 const NAME: &str = "CLOCK";
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
-    let address = args[1].as_str();
-    let api = Api::new(address, NAME);
+    let address = &args[1];
+    let mut plugin = Plugin::new(NAME, address).await.unwrap();
 
     // Send initial data that will not be updated
-    api.update(Names::new().into());
+    plugin.update(Names::new().into()).await.unwrap();
 
     let mut time = Time {
         hours: 0,
@@ -114,7 +74,7 @@ fn main() {
     loop {
         let local = Local::now();
         if local.second() == time.seconds {
-            thread::sleep(time::Duration::from_millis(10));
+            tokio::time::sleep(time::Duration::from_millis(10)).await;
             continue;
         }
         time.seconds = local.second();
@@ -124,7 +84,7 @@ fn main() {
         time.week_day = local.weekday().number_from_monday();
         time.month = local.month();
         time.year = local.year();
-        api.update((&time).into());
-        thread::sleep(time::Duration::from_millis(500));
+        plugin.update(time.clone().into()).await.unwrap();
+        tokio::time::sleep(time::Duration::from_millis(500)).await;
     }
 }

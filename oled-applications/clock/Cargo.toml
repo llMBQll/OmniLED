@@ -1,10 +1,12 @@
 [package]
 name = "clock"
 version = "0.1.0"
+authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
+license = "GPL-3.0-only"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 chrono = { version = "0.4", features = ["clock"] }
 oled-api = { path = "../../oled-api" }
+oled-derive = { path = "../../oled-derive", features = ["into-proto"] }
+tokio = { version = "1.38", features = ["full"] }

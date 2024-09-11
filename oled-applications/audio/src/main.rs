@@ -1,29 +1,38 @@
 use audio::Audio;
-use oled_api::types::Table;
-use oled_api::Api;
-use std::{env, sync::OnceLock, thread, time};
+use oled_api::Plugin;
+use oled_derive::IntoProto;
+use std::env;
+use std::error::Error;
+use tokio::runtime::Handle;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 mod audio;
 
 const NAME: &str = "AUDIO";
 
-static API: OnceLock<Api> = OnceLock::new();
-
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
     let address = args[1].as_str();
+    let mut plugin = Plugin::new(NAME, address).await?;
 
-    API.set(Api::new(address, NAME)).unwrap();
+    let path = plugin.get_data_dir().await.unwrap();
+    oled_log::init(path.join("logging.log"));
 
-    let _audio = Audio::new(|muted, volume, name| {
-        API.get()
-            .unwrap()
-            .update(AudioData::new(muted, volume, name).into());
-    });
+    let (tx, mut rx): (Sender<AudioData>, Receiver<AudioData>) = mpsc::channel(256);
 
-    thread::sleep(time::Duration::MAX);
+    let handle = Handle::current();
+    let _audio = Audio::new(tx, handle);
+
+    while let Some(data) = rx.recv().await {
+        plugin.update(data.into()).await.unwrap();
+    }
+
+    Ok(())
 }
 
+#[derive(IntoProto)]
 struct AudioData {
     is_muted: bool,
     volume: i32,
@@ -37,21 +46,5 @@ impl AudioData {
             volume,
             name,
         }
-    }
-}
-
-impl Into<Table> for AudioData {
-    fn into(self) -> Table {
-        let mut table = Table::default();
-
-        table
-            .items
-            .insert("IsMuted".to_string(), self.is_muted.into());
-        table.items.insert("Volume".to_string(), self.volume.into());
-        if let Some(name) = self.name {
-            table.items.insert("Name".to_string(), name.into());
-        }
-
-        table
     }
 }

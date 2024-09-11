@@ -1,145 +1,96 @@
-use log::error;
-use mlua::{chunk, Lua, LuaSerdeExt, Value};
-use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DurationMilliSeconds};
+use log::{debug, error};
+use mlua::{chunk, ErrorContext, FromLua, Lua, UserData};
+use oled_derive::{FromLuaValue, UniqueUserData};
 use std::path::PathBuf;
-use std::sync::OnceLock;
 use std::time::Duration;
 
 use crate::common::common::exec_file;
+use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::constants::Constants;
 use crate::create_table;
+use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
 
-#[serde_as]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Clone, UniqueUserData, FromLuaValue)]
 pub struct Settings {
-    #[serde(default = "Settings::applications_file")]
+    #[mlua(default(String::from("applications.lua")))]
     pub applications_file: String,
 
-    #[serde(default = "Settings::font")]
+    #[mlua(default(String::from("devices.lua")))]
+    pub devices_file: String,
+
+    #[mlua(default(FontSelector::Default))]
     pub font: FontSelector,
 
-    #[serde(default = "Settings::scripts_file")]
+    #[mlua(default(LevelFilter::Info))]
+    pub log_level: LevelFilter,
+
+    #[mlua(default(2))]
+    pub keyboard_ticks_repeat_delay: usize,
+
+    #[mlua(default(2))]
+    pub keyboard_ticks_repeat_rate: usize,
+
+    #[mlua(default(String::from("scripts.lua")))]
     pub scripts_file: String,
 
-    #[serde(default = "Settings::scrolling_text_ticks_at_edge")]
+    #[mlua(default(8))]
     pub scrolling_text_ticks_at_edge: usize,
 
-    #[serde(default = "Settings::scrolling_text_ticks_per_move")]
+    #[mlua(default(2))]
     pub scrolling_text_ticks_per_move: usize,
 
-    #[serde(default = "Settings::server_port")]
+    #[mlua(default(6969))]
     pub server_port: u16,
 
-    #[serde(default = "Settings::server_port_strict")]
-    pub server_port_strict: bool,
-
-    #[serde(default = "Settings::settings_file")]
-    pub settings_file: String,
-
-    #[serde(default = "Settings::supported_screens_file")]
-    pub supported_screens_file: String,
-
-    #[serde_as(as = "DurationMilliSeconds")]
-    #[serde(default = "Settings::update_interval")]
+    #[mlua(transform(Self::from_millis))]
+    #[mlua(default(Duration::from_millis(100)))]
     pub update_interval: Duration,
 }
 
-static SETTINGS: OnceLock<Settings> = OnceLock::new();
-
 impl Settings {
     pub fn load(lua: &Lua) {
-        let filename = get_full_path(&Self::settings_file());
-        let load_settings = lua
-            .create_function(move |lua, settings: Value| {
-                let settings: Settings = lua.from_value(settings)?;
-                Self::set(lua, settings);
+        const PATH: &str = "settings.lua";
+
+        let load_settings_fn = lua
+            .create_function(move |lua, settings: Settings| {
+                lua.globals().set(Settings::identifier(), settings).unwrap();
                 Ok(())
             })
             .unwrap();
 
-        let env = create_table!(lua, {Settings = $load_settings});
+        let filename = get_full_path(PATH);
+        let env = create_table!(lua, {Settings = $load_settings_fn});
+
         if let Err(err) = exec_file(lua, &filename, env) {
-            error!("Couldn't load settings, falling back to default {}", err);
+            error!(
+                "Error loading settings: {}. Falling back to default settings",
+                err
+            );
+
+            let default: Settings = lua.load(chunk! { {} }).eval().unwrap();
+            lua.globals().set(Settings::identifier(), default).unwrap();
         }
+
+        let settings = UserDataRef::<Settings>::load(lua);
+        let logger = UserDataRef::<Log>::load(lua);
+        logger.get().set_level_filter(settings.get().log_level);
+
+        debug!("Loaded settings {:?}", settings.get());
     }
 
-    pub fn get() -> &'static Self {
-        SETTINGS.get().unwrap()
-    }
-
-    fn set(lua: &Lua, settings: Settings) {
-        lua.globals()
-            .set("SETTINGS", lua.to_value(&settings).unwrap())
-            .unwrap();
-
-        SETTINGS.get_or_init(move || settings);
-    }
-
-    fn applications_file() -> String {
-        String::from("applications.lua")
-    }
-
-    fn font() -> FontSelector {
-        FontSelector::Default
-    }
-
-    fn scripts_file() -> String {
-        String::from("scripts.lua")
-    }
-
-    fn scrolling_text_ticks_at_edge() -> usize {
-        8
-    }
-
-    fn scrolling_text_ticks_per_move() -> usize {
-        2
-    }
-
-    fn server_port() -> u16 {
-        6969
-    }
-
-    fn server_port_strict() -> bool {
-        false
-    }
-
-    fn settings_file() -> String {
-        String::from("settings.lua")
-    }
-
-    fn supported_screens_file() -> String {
-        String::from("screens.lua")
-    }
-
-    fn update_interval() -> Duration {
-        Duration::from_millis(100)
+    fn from_millis(millis: u64, _: &Lua) -> mlua::Result<Duration> {
+        Ok(Duration::from_millis(millis))
     }
 }
 
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            applications_file: Settings::applications_file(),
-            font: Settings::font(),
-            scripts_file: Settings::scripts_file(),
-            scrolling_text_ticks_at_edge: Settings::scrolling_text_ticks_at_edge(),
-            scrolling_text_ticks_per_move: Settings::scrolling_text_ticks_per_move(),
-            server_port: Settings::server_port(),
-            server_port_strict: Settings::server_port_strict(),
-            settings_file: Settings::settings_file(),
-            supported_screens_file: Settings::supported_screens_file(),
-            update_interval: Settings::update_interval(),
-        }
-    }
-}
+impl UserData for Settings {}
 
-pub fn get_full_path(path: &String) -> String {
+pub fn get_full_path(path: &str) -> String {
     let path_buf = PathBuf::from(path);
     match path_buf.is_absolute() {
-        true => path.clone(),
-        false => Constants::root_dir()
+        true => path.to_string(),
+        false => Constants::config_dir()
             .join(path)
             .to_str()
             .unwrap()

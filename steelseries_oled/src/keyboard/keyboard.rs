@@ -16,12 +16,10 @@ pub fn process_events(running: &AtomicBool) {
         {
             let mut guard = event_queue.lock().unwrap();
             for key in keys.iter() {
-                if !previous_state.contains(&key) {
-                    guard.push(Event::Keyboard(KeyboardEvent {
-                        key: key.clone(),
-                        event_type: KeyboardEventEventType::Press,
-                    }));
-                }
+                guard.push(Event::Keyboard(KeyboardEvent {
+                    key: key.clone(),
+                    event_type: KeyboardEventEventType::Press,
+                }));
             }
             for key in previous_state {
                 if !keys.contains(&key) {
@@ -34,7 +32,7 @@ pub fn process_events(running: &AtomicBool) {
         }
         previous_state = keys;
 
-        std::thread::sleep(Duration::from_millis(10));
+        std::thread::sleep(Duration::from_millis(25));
     }
 }
 

@@ -6,7 +6,9 @@ members = [
     "oled-applications/clock",
     "oled-applications/media",
     "oled-applications/weather",
-    "debug-runner",
+    "oled-api",
+    "oled-derive",
+    "oled-log",
     "setup",
 ]
 

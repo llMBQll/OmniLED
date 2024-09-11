@@ -1,18 +1,20 @@
 #![windows_subsystem = "windows"]
 
-use log::error;
-use mlua::{AnyUserData, AnyUserDataExt, Lua};
+use log::{debug, error};
+use mlua::Lua;
 use std::sync::atomic::AtomicBool;
+use std::time::Instant;
 
 use crate::app_loader::app_loader::AppLoader;
 use crate::common::common::proto_to_lua_value;
+use crate::common::user_data::UserDataRef;
 use crate::constants::constants::Constants;
+use crate::devices::devices::Devices;
 use crate::events::event_loop::EventLoop;
 use crate::events::event_queue::Event;
 use crate::events::shortcuts::Shortcuts;
 use crate::keyboard::keyboard::{process_events, KeyboardEventEventType};
-use crate::logging::logger::Logger;
-use crate::screen::screens::Screens;
+use crate::logging::logger::Log;
 use crate::script_handler::script_handler::ScriptHandler;
 use crate::server::server::PluginServer;
 use crate::settings::settings::Settings;
@@ -21,11 +23,11 @@ use crate::tray_icon::tray_icon::TrayIcon;
 mod app_loader;
 mod common;
 mod constants;
+mod devices;
 mod events;
 mod keyboard;
 mod logging;
 mod renderer;
-mod screen;
 mod script_handler;
 mod server;
 mod settings;
@@ -35,27 +37,33 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 
 #[tokio::main]
 async fn main() {
+    let init_begin = Instant::now();
+
     let lua = Lua::new();
 
-    Logger::load(&lua);
-    let _shortcuts = Shortcuts::load(&lua);
+    Log::load(&lua);
     Constants::load(&lua);
     Settings::load(&lua);
-    PluginServer::load(&lua);
-    let _screens = Screens::load(&lua);
-    let _sandbox = ScriptHandler::load(&lua);
+    PluginServer::load(&lua).await;
+    Shortcuts::load(&lua);
+    Devices::load(&lua);
+    ScriptHandler::load(&lua);
     let _tray = TrayIcon::new(&RUNNING);
-    let _apps = AppLoader::load(&lua);
+    AppLoader::load(&lua);
 
     let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
 
-    let interval = Settings::get().update_interval;
+    let settings = UserDataRef::<Settings>::load(&lua);
+    let interval = settings.get().update_interval;
     let event_loop = EventLoop::new();
+
+    let init_end = Instant::now();
+    debug!("Initialized in {:?}", init_end - init_begin);
+
     event_loop
         .run(interval, &RUNNING, |events| {
-            let event_handler: AnyUserData = lua.globals().get("SCRIPT_HANDLER").unwrap();
-            let shortcuts: AnyUserData = lua.globals().get("SHORTCUTS").unwrap();
-            let interval = interval.as_millis() as u64;
+            let mut shortcuts = UserDataRef::<Shortcuts>::load(&lua);
+            let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
 
             for event in events {
                 match event {
@@ -66,38 +74,34 @@ async fn main() {
                             let value = match proto_to_lua_value(&lua, value) {
                                 Ok(value) => value,
                                 Err(err) => {
-                                    error!("Failed to convert json value: {}", err);
+                                    error!("Failed to convert protobuf value: {}", err);
                                     continue;
                                 }
                             };
 
-                            // TODO error handling
-                            event_handler
-                                .call_method::<_, ()>(
-                                    "set_value",
-                                    (application.clone(), name, value),
-                                )
+                            script_handler
+                                .get_mut()
+                                .set_value(&lua, application.clone(), name, value)
                                 .unwrap();
                         }
                     }
                     Event::Keyboard(event) => {
-                        let event_name = format!("KEY({})", event.key);
-                        let event_type = match event.event_type {
+                        let key_name = format!("KEY({})", event.key);
+                        let action = match event.event_type {
                             KeyboardEventEventType::Press => "Pressed",
                             KeyboardEventEventType::Release => "Released",
                         };
 
                         shortcuts
-                            .call_method::<_, ()>("process_key", (event_name, event_type))
+                            .get_mut()
+                            .process_key(&lua, &key_name, action)
                             .unwrap();
                     }
                 }
             }
 
-            // TODO error handling
-            event_handler
-                .call_method::<_, ()>("update", interval)
-                .unwrap();
+            shortcuts.get_mut().update();
+            script_handler.get_mut().update(&lua, interval).unwrap();
         })
         .await;
 

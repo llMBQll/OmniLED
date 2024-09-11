@@ -1,41 +1,44 @@
 [package]
 name = "steelseries_oled"
 version = "0.1.0"
+authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
+license = "GPL-3.0-only"
 edition = "2021"
 default-run = "steelseries_oled"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-const_format = "0.2"
+convert_case = "0.6"
 device_query = "2.0"
 dirs-next = "2.0"
-font-kit = "0.13"
+font-kit = "0.14"
 freetype-rs = "*"
 image = "0.25"
 lazy_static = "1.4"
 log = "0.4"
-log4rs = "1.2"
-mlua = { version = "0.9", features = ["async", "lua54", "vendored", "macros", "serialize", "unstable"] }
+log4rs = "1.3"
+mlua = { version = "0.10.0-beta.2", features = ["lua54", "vendored", "macros"] }
+minifb = "0.27"
 num-traits = "0.2"
-prost = "0.12"
+prost = "0.13"
 opener = { version = "0.7", features = ["reveal"] }
+regex = "1.10"
 rusb = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_with = "3.1"
 oled-api = { path = "../oled-api" }
-oled-derive = { path = "../oled-derive" }
-oled-server = { path = "../oled-server" }
-tokio = { version = "1", features = ["full"] }
+oled-derive = { path = "../oled-derive", features = ["from-lua-value", "unique-user-data"] }
+oled-log = { path = "../oled-log" }
+tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
 ureq = { version = "2.4", features = ["json"] }
-tray-item = "0.9"
+tonic = "0.12.0"
+tray-item = "0.10"
 
-# Enable tray icon support on linux
 [target.'cfg(target_os = "linux")'.dependencies.tray-item]
-version = "0.9"
+version = "0.10"
 features = ["ksni"]
 
-# Compile tray icon assets for windows
 [target.'cfg(target_os = "windows")'.build-dependencies]
 windres = "0.2"
+
+[features]
+dev = []

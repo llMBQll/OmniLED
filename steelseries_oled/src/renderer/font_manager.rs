@@ -61,11 +61,11 @@ impl FontManager {
                 Ok((font, font_index))
             }
             FontSelector::System(selector) => {
-                let names: Vec<_> = selector.names.into_iter().map(|name| name.0).collect();
+                let names: Vec<_> = selector.names.into_iter().map(|name| name.into()).collect();
                 let properties = Properties {
-                    style: selector.style.0,
-                    weight: selector.weight.0,
-                    stretch: selector.stretch.0,
+                    style: selector.style.into(),
+                    weight: selector.weight.into(),
+                    stretch: selector.stretch.into(),
                 };
                 let handle = SystemSource::new().select_best_match(&names, &properties)?;
                 let font = handle.load()?;
@@ -137,10 +137,10 @@ pub struct Bitmap {
 }
 
 impl Bitmap {
-    pub fn get(&self, row: usize, col: usize) -> bool {
-        let row_begin = row * self.stride;
-        let mut byte = self.buffer[row_begin + col / 8];
-        let bit = Bit::new(&mut byte, 7 - col % 8);
+    pub fn get(&self, x: usize, y: usize) -> bool {
+        let row_begin = y * self.stride;
+        let mut byte = self.buffer[row_begin + x / 8];
+        let bit = Bit::new(&mut byte, 7 - x % 8);
         bit.get()
     }
 }

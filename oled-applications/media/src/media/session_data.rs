@@ -1,36 +1,19 @@
-use oled_api::types::Table;
+use oled_derive::IntoProto;
 use std::time::Duration;
 
+#[derive(Clone, IntoProto)]
 pub struct SessionData {
     pub artist: String,
     pub title: String,
+    #[proto(transform(Self::duration_into_ms))]
     pub progress: Duration,
+    #[proto(transform(Self::duration_into_ms))]
     pub duration: Duration,
     pub playing: bool,
 }
 
-impl Into<Table> for &SessionData {
-    fn into(self) -> Table {
-        let mut table = Table::default();
-
-        table
-            .items
-            .insert("Artist".to_string(), self.artist.as_str().into());
-        table
-            .items
-            .insert("Title".to_string(), self.title.as_str().into());
-        table.items.insert(
-            "Progress".to_string(),
-            (self.progress.as_millis() as i64).into(),
-        );
-        table.items.insert(
-            "Duration".to_string(),
-            (self.duration.as_millis() as i64).into(),
-        );
-        table
-            .items
-            .insert("Playing".to_string(), self.playing.into());
-
-        table
+impl SessionData {
+    fn duration_into_ms(duration: Duration) -> i64 {
+        duration.as_millis() as i64
     }
 }

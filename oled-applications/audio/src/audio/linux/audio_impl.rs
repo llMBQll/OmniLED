@@ -6,6 +6,10 @@ use pulse::volume::Volume;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
+use tokio::runtime::Handle;
+use tokio::sync::mpsc::Sender;
+
+use crate::AudioData;
 
 pub struct AudioImpl {
     _main_loop: Mainloop,
@@ -13,7 +17,7 @@ pub struct AudioImpl {
 }
 
 impl AudioImpl {
-    pub fn new(volume_callback: fn(bool, i32, Option<String>)) -> Self {
+    pub fn new(tx: Sender<AudioData>, handle: Handle) -> Self {
         /**********************|
         | Create the main loop |
         |**********************/
@@ -42,7 +46,7 @@ impl AudioImpl {
                     break;
                 }
                 pulse::context::State::Failed | pulse::context::State::Terminated => {
-                    panic!("Libpulse starttup failed");
+                    panic!("Libpulse startup failed");
                 }
                 _ => {
                     main_loop.wait();
@@ -60,7 +64,8 @@ impl AudioImpl {
             ctx.clone(),
             current_index.clone(),
             current_state.clone(),
-            volume_callback,
+            tx.clone(),
+            handle.clone(),
         );
 
         /**************************|
@@ -72,6 +77,8 @@ impl AudioImpl {
                 Some(Facility::Sink) => {
                     let introspector = ctx.borrow_mut().introspect();
                     introspector.get_sink_info_by_index(index, {
+                        let tx = tx.clone();
+                        let handle = handle.clone();
                         let current_index = current_index.clone();
                         let current_state = current_state.clone();
                         move |list| match list {
@@ -86,7 +93,8 @@ impl AudioImpl {
                                 Self::update_state(
                                     current_state.clone(),
                                     (muted, volume),
-                                    volume_callback,
+                                    tx.clone(),
+                                    handle.clone(),
                                 );
                             }
                             _ => {}
@@ -97,7 +105,8 @@ impl AudioImpl {
                     ctx.clone(),
                     current_index.clone(),
                     current_state.clone(),
-                    volume_callback,
+                    tx.clone(),
+                    handle.clone(),
                 ),
                 _ => {}
             }
@@ -138,7 +147,8 @@ impl AudioImpl {
     fn update_state(
         current_state: Rc<RefCell<(bool, i32)>>,
         state: (bool, i32),
-        volume_callback: fn(bool, i32, Option<String>),
+        tx: Sender<AudioData>,
+        handle: Handle,
     ) {
         let mut current_state = current_state.borrow_mut();
         if *current_state == state {
@@ -147,14 +157,17 @@ impl AudioImpl {
         *current_state = state;
 
         let (muted, volume) = state;
-        volume_callback(muted, volume, None);
+        handle.spawn(async move {
+            tx.send(AudioData::new(muted, volume, None)).await.unwrap();
+        });
     }
 
     fn update_default_sink(
         ctx: Rc<RefCell<Context>>,
         current_index: Rc<RefCell<Option<u32>>>,
         current_state: Rc<RefCell<(bool, i32)>>,
-        volume_callback: fn(bool, i32, Option<String>),
+        tx: Sender<AudioData>,
+        handle: Handle,
     ) {
         let introspector = ctx.borrow_mut().introspect();
         introspector.get_server_info(move |server_info| {
@@ -164,8 +177,11 @@ impl AudioImpl {
             introspector.get_sink_info_by_name(name.as_str(), {
                 let current_index = current_index.clone();
                 let current_state = current_state.clone();
+                let tx = tx.clone();
+                let handle = handle.clone();
                 move |list| match list {
                     pulse::callbacks::ListResult::Item(info) => {
+                        let tx = tx.clone();
                         if Self::is_current_index(current_index.clone(), info.index) {
                             return;
                         }
@@ -176,7 +192,11 @@ impl AudioImpl {
 
                         *current_index.borrow_mut() = Some(info.index);
                         *current_state.borrow_mut() = (muted, volume);
-                        (volume_callback)(muted, volume, Some(name));
+                        handle.spawn(async move {
+                            tx.send(AudioData::new(muted, volume, Some(name)))
+                                .await
+                                .unwrap();
+                        });
                     }
                     _ => {}
                 }

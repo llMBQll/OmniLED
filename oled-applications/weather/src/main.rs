@@ -1,42 +1,51 @@
 use clap::Parser;
-use oled_api::types::Table;
-use oled_api::Api;
-use std::{collections::HashMap, thread, time};
+use log::debug;
+use oled_api::{Plugin, Table};
+use oled_derive::IntoProto;
+use std::{collections::HashMap, time};
 use ureq::Agent;
 
 mod weather_api;
 
 const NAME: &str = "WEATHER";
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let options = Options::parse();
+    let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
 
-    let api = Api::new(&options.address, NAME);
-    load_and_send_images(&api);
+    let path = plugin.get_data_dir().await.unwrap();
+    oled_log::init(path.join("logging.log"));
+
+    debug!("{:?}", options);
+
+    load_and_send_images(&mut plugin).await;
 
     let (coordinates, name) = match options.selector {
         Selector::In(name) => (get_coordinates_from_name(&name), name.city),
         Selector::At(coordinates) => (coordinates, "N/A".to_string()),
     };
 
+    debug!("Mapped to {} at {:?}", name, coordinates);
+
     let agent = Agent::new();
 
     loop {
         let weather = weather_api::get_weather(&agent, &coordinates, &name);
-        api.update(weather.into());
+        plugin.update(weather.into()).await.unwrap();
 
-        thread::sleep(time::Duration::from_secs(15 * 60));
+        tokio::time::sleep(time::Duration::from_secs(15 * 60)).await;
     }
 }
 
-fn load_and_send_images(api: &Api) {
+async fn load_and_send_images(plugin: &mut Plugin) {
     let images = weather_api::load_images();
 
     let mut table = Table::default();
     for (name, image) in images {
         table.items.insert(name.into(), image.into());
     }
-    api.update(table)
+    plugin.update(table).await.unwrap();
 }
 
 fn get_coordinates_from_name(name: &Name) -> Coordinates {
@@ -76,6 +85,7 @@ fn get_coordinates_from_name(name: &Name) -> Coordinates {
         .expect("Couldn't find coordinates for the given query")
 }
 
+#[derive(IntoProto)]
 struct WeatherData {
     latitude: f64,
     longitude: f64,
@@ -90,52 +100,13 @@ struct WeatherData {
     city: String,
 }
 
-impl Into<Table> for WeatherData {
-    fn into(self) -> Table {
-        let mut table = Table::default();
-
-        table
-            .items
-            .insert("Latitude".to_string(), self.latitude.into());
-        table
-            .items
-            .insert("Longitude".to_string(), self.longitude.into());
-        table
-            .items
-            .insert("Temperature".to_string(), self.temperature.into());
-        table
-            .items
-            .insert("WindSpeed".to_string(), self.wind_speed.into());
-        table
-            .items
-            .insert("WindDirection".to_string(), self.wind_direction.into());
-        table
-            .items
-            .insert("ImageKey".to_string(), self.image_key.into());
-        table.items.insert(
-            "WeatherDescription".to_string(),
-            self.weather_description.into(),
-        );
-        table.items.insert("IsDay".to_string(), self.is_day.into());
-        table
-            .items
-            .insert("UpdateHour".to_string(), self.update_hour.into());
-        table
-            .items
-            .insert("UpdateMinute".to_string(), self.update_minute.into());
-        table.items.insert("City".to_string(), self.city.into());
-
-        table
-    }
-}
-
-#[derive(clap::Args)]
+#[derive(clap::Args, Debug)]
 struct Coordinates {
     latitude: f64,
     longitude: f64,
 }
 
-#[derive(clap::Args)]
+#[derive(clap::Args, Debug)]
 struct Name {
     city: String,
 
@@ -146,7 +117,7 @@ struct Name {
     administrative: Option<String>,
 }
 
-#[derive(clap::Subcommand)]
+#[derive(clap::Subcommand, Debug)]
 enum Selector {
     /// Selects location by city name
     In(Name),
@@ -155,7 +126,7 @@ enum Selector {
     At(Coordinates),
 }
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Options {
     #[clap(subcommand)]

@@ -1,16 +1,22 @@
 [package]
 name = "setup"
 version = "0.1.0"
+authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
+license = "GPL-3.0-only"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
+convert_case = "0.6.0"
 dirs-next = "2.0"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.52"
 
-#[target.'cfg(target_os = "windows")'.build-dependencies]
-#winres = "0.1"
+[build-dependencies]
+convert_case = "0.6.0"
+steelseries_oled = { path = "../steelseries_oled", artifact = "bin" }
+audio = { path = "../oled-applications/audio", artifact = "bin" }
+clock = { path = "../oled-applications/clock", artifact = "bin" }
+media = { path = "../oled-applications/media", artifact = "bin" }
+weather = { path = "../oled-applications/weather", artifact = "bin" }
