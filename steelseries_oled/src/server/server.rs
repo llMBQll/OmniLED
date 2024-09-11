@@ -1,5 +1,6 @@
-use mlua::{Lua, LuaSerdeExt};
+use mlua::{Lua, UserData, UserDataFields};
 use oled_api::{EventData, EventResponse, Plugin, RequestDirectoryData, RequestDirectoryResponse};
+use serde::Serialize;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -19,9 +20,10 @@ pub struct PluginServer {
 impl PluginServer {
     pub async fn load(lua: &Lua) {
         let settings = UserDataRef::<Settings>::load(lua);
-        let port: u16 = settings.get().server_port;
 
+        let port: u16 = settings.get().server_port;
         let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
+
         tokio::task::spawn(
             Server::builder()
                 .add_service(oled_api::plugin_server::PluginServer::new(Self::new()))
@@ -33,28 +35,43 @@ impl PluginServer {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
-        let info = serde_json::json!({
-            "address": address,
-            "ip": "127.0.0.1",
-            "port": port,
-            "timestamp": timestamp,
-        });
-
-        lua.globals()
-            .set("SERVER", lua.to_value(&info).unwrap())
-            .unwrap();
+        let info = ServerInfo {
+            address,
+            ip: String::from("127.0.0.1"),
+            port,
+            timestamp,
+        };
 
         std::fs::write(
             Constants::data_dir().join("server.json"),
             serde_json::to_string_pretty(&info).unwrap(),
         )
         .unwrap();
+
+        lua.globals().set("SERVER", info).unwrap();
     }
 
     fn new() -> Self {
         Self {
             event_queue: EventQueue::instance(),
         }
+    }
+}
+
+#[derive(Clone, Serialize)]
+struct ServerInfo {
+    address: String,
+    ip: String,
+    port: u16,
+    timestamp: u64,
+}
+
+impl UserData for ServerInfo {
+    fn add_fields<F: UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("address", |_, info| Ok(info.address.clone()));
+        fields.add_field_method_get("ip", |_, info| Ok(info.ip.clone()));
+        fields.add_field_method_get("port", |_, info| Ok(info.port));
+        fields.add_field_method_get("timestamp", |_, info| Ok(info.timestamp));
     }
 }
 
