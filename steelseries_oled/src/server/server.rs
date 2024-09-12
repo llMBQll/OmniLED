@@ -1,9 +1,9 @@
 use mlua::{Lua, UserData, UserDataFields};
 use oled_api::{EventData, EventResponse, Plugin, RequestDirectoryData, RequestDirectoryResponse};
 use serde::Serialize;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
+use tokio::net::TcpListener;
 use tonic::transport::Server;
 use tonic::{Code, Request, Response, Status};
 
@@ -20,17 +20,21 @@ pub struct PluginServer {
 impl PluginServer {
     pub async fn load(lua: &Lua) {
         let settings = UserDataRef::<Settings>::load(lua);
-
         let port: u16 = settings.get().server_port;
-        let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
+
+        let listener = TcpListener::bind(format!("127.0.0.1:{port}"))
+            .await
+            .unwrap();
+        let address = listener.local_addr().unwrap();
+        let bound_port = address.port();
 
         tokio::task::spawn(
             Server::builder()
                 .add_service(oled_api::plugin_server::PluginServer::new(Self::new()))
-                .serve(address),
+                .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener)),
         );
 
-        let address = format!("127.0.0.1:{port}");
+        let address = format!("127.0.0.1:{bound_port}");
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -38,7 +42,7 @@ impl PluginServer {
         let info = ServerInfo {
             address,
             ip: String::from("127.0.0.1"),
-            port,
+            port: bound_port,
             timestamp,
         };
 
