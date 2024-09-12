@@ -10,7 +10,7 @@ pub struct Point {
 
 impl UserData for Point {}
 
-#[derive(Debug, Clone, Copy, FromLuaValue)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, FromLuaValue)]
 pub struct Size {
     pub width: usize,
     pub height: usize,

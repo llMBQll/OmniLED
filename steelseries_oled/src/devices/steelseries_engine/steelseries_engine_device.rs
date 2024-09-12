@@ -14,9 +14,12 @@ impl Device for SteelseriesEngineDevice {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
         let settings = SteelseriesEngineDeviceSettings::new(lua, settings)?;
 
+        let screen_size = settings.screen_size;
+        api::init(screen_size);
+
         Ok(Self {
             name: settings.name,
-            size: settings.screen_size,
+            size: screen_size,
         })
     }
 
@@ -25,7 +28,7 @@ impl Device for SteelseriesEngineDevice {
     }
 
     fn update(&mut self, _: &Lua, buffer: Buffer) -> mlua::Result<()> {
-        api::update(buffer.bytes());
+        api::update(&self.size, buffer.bytes());
         Ok(())
     }
 

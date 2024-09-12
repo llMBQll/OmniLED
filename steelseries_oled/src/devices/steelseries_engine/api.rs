@@ -1,14 +1,22 @@
 use lazy_static::lazy_static;
 use log::error;
 use serde_json::Value;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::sync::Mutex;
 use ureq::{Agent, Error};
 
-pub fn update(data: &[u8]) {
-    API.lock().unwrap().update(data);
+use crate::devices::device::Size;
+use crate::renderer::buffer::{BitBuffer, BufferTrait};
+
+pub fn init(size: Size) {
+    API.lock().unwrap().register_size(size);
+}
+
+pub fn update(size: &Size, data: &[u8]) {
+    API.lock().unwrap().update(size, data);
 }
 
 // TODO error (propagation) handling on raw api calls
@@ -20,34 +28,41 @@ lazy_static! {
 struct Api {
     agent: Agent,
     address: Option<String>,
+    counter: usize,
+    sizes: HashSet<Size>,
 }
 
-const GAME: &str = "RUST_STEELSERIES_OLED";
-const GAME_DISPLAY_NAME: &str = "[Rust] Steelseries OLED";
+const GAME: &str = "MBQ_STEELSERIES_OLED";
+const GAME_DISPLAY_NAME: &str = "Steelseries OLED";
 const DEVELOPER: &str = "MBQ";
 const TIMEOUT: u32 = 60000;
 
 impl Api {
     pub fn new() -> Self {
-        let api = Self {
+        Self {
             agent: Agent::new(),
             address: None,
-        };
-
-        api
+            counter: 0,
+            sizes: HashSet::new(),
+        }
     }
 
-    pub fn update(&mut self, data: &[u8]) {
+    pub fn register_size(&mut self, size: Size) {
+        self.sizes.insert(size);
+    }
+
+    pub fn update(&mut self, size: &Size, data: &[u8]) {
         let update = serde_json::json!({
             "game": GAME,
-            "event": "UPDATE",
+            "event": Self::get_event(&size),
             "data": {
-                "value": 0,
+                "value": self.counter,
                 "frame": {
-                    "image-data": data
+                    Self::get_image_data_field(&size): data
                 }
             }
         });
+        self.counter += 1;
 
         self.game_event(serde_json::to_string(&update).unwrap().as_str())
     }
@@ -61,27 +76,31 @@ impl Api {
         });
         self.game_metadata(serde_json::to_string(&metadata).unwrap().as_str());
 
-        let handlers = serde_json::json!({
-            "game": GAME,
-            "golisp": "(handler \"UPDATE\" (lambda (data) (on-device 'screened show-image: (list-to-bytearray (image-data: (frame: data))))))"
-        });
-        self.load_golisp_handlers(serde_json::to_string(&handlers).unwrap().as_str());
+        let sizes = self.sizes.clone();
+        for size in sizes {
+            // Use buffer type for correctly handling widths not divisible by 8 which in theory
+            // should not happen as all currently available devices have 128 pixel width
+            let buffer = BitBuffer::new(Size {
+                width: size.width,
+                height: size.height,
+            });
+            let empty_data = buffer.bytes();
 
-        // bind dummy event or else steelseries api seems to ignore golisp updates
-        let dummy_event = serde_json::json!({
-            "game": GAME,
-            "event": "DUMMY_EVENT",
-            "handlers": [{
-                "device-type": "screened",
-                "mode": "devices",
-                "zone": "one",
-                "datas": [{
-                    "has-text": true,
-                    "context-frame-key": "dummy-text"
+            let handler = serde_json::json!({
+                "game": GAME,
+                "event": Self::get_event(&size),
+                "handlers": [{
+                    "datas": [{
+                        "has-text": false,
+                        "image-data": empty_data,
+                    }],
+                    "device-type": Self::get_device_type(&size),
+                    "mode": "screen",
+                    "zone": "one",
                 }]
-            }]
-        });
-        self.bind_game_event(serde_json::to_string(&dummy_event).unwrap().as_str());
+            });
+            self.bind_game_event(serde_json::to_string(&handler).unwrap().as_str());
+        }
 
         // todo!("Register heartbeat event")
     }
@@ -94,10 +113,6 @@ impl Api {
 
     fn game_metadata(&mut self, json: &str) {
         self.call("/game_metadata", json)
-    }
-
-    fn load_golisp_handlers(&mut self, json: &str) {
-        self.call("/load_golisp_handlers", json)
     }
 
     fn bind_game_event(&mut self, json: &str) {
@@ -168,7 +183,7 @@ impl Api {
             panic!("{} doesn't exist", dir);
         }
 
-        // Rest of the errors are non fatal, it is possible that Steelseries Engine is not yet ready
+        // Rest of the errors are non-fatal, it is possible that Steelseries Engine is not yet ready
         let path = format!("{}/coreProps.json", dir);
         let file = match File::open(path) {
             Ok(file) => file,
@@ -180,12 +195,21 @@ impl Api {
             Err(_) => return None,
         };
 
-        Some(
-            json["address"]
-                .as_str()
-                .map(|address| String::from(address))
-                .unwrap(),
-        )
+        json["address"]
+            .as_str()
+            .map(|address| String::from(address))
+    }
+
+    fn get_event(size: &Size) -> String {
+        format!("UPDATE-{}X{}", size.width, size.height)
+    }
+
+    fn get_image_data_field(size: &Size) -> String {
+        format!("image-data-{}x{}", size.width, size.height)
+    }
+
+    fn get_device_type(size: &Size) -> String {
+        format!("screened-{}x{}", size.width, size.height)
     }
 }
 
