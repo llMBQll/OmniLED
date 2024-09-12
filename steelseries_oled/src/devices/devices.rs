@@ -11,7 +11,6 @@ use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::simulator::simulator::Simulator;
 use crate::devices::steelseries_engine::steelseries_engine_device::SteelseriesEngineDevice;
-use crate::devices::terminal::terminal::Terminal;
 use crate::devices::usb_device::usb_device::USBDevice;
 use crate::settings::settings::{get_full_path, Settings};
 
@@ -88,7 +87,6 @@ impl Devices {
         let loaders = [
             Self::create_loader::<Simulator>(lua),
             Self::create_loader::<SteelseriesEngineDevice>(lua),
-            Self::create_loader::<Terminal>(lua),
             Self::create_loader::<USBDevice>(lua),
         ];
         for (name, constructor, loader) in loaders {
