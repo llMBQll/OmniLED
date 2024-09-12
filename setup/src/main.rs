@@ -135,7 +135,7 @@ fn install(options: InstallOptions) {
             && ask_user("Do you wish for application to start automatically when logging in?"));
 
     if autostart {
-        autostart_enable();
+        os::autostart_enable();
     }
 
     run();
@@ -148,7 +148,7 @@ fn uninstall(options: UninstallOptions) {
     let keep_config =
         options.keep_config || (options.interactive && ask_user("Do you wish to keep config?"));
 
-    autostart_disable();
+    os::autostart_disable();
 
     let paths = if keep_config {
         vec![get_bin_dir(), get_data_dir()]
@@ -169,14 +169,6 @@ fn create_dir(path: &PathBuf) {
         println!("Creating directory {:?}", path);
         fs::create_dir_all(path).unwrap();
     }
-}
-
-fn autostart_enable() {
-    os::autostart_enable();
-}
-
-fn autostart_disable() {
-    os::autostart_disable();
 }
 
 fn run() {
