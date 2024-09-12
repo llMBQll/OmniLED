@@ -1,10 +1,9 @@
 #![feature(concat_idents)]
 
-use clap::Parser;
+use clap::{ArgAction, Args, Parser, Subcommand};
 use convert_case::{Case, Casing};
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
 use std::process::Command;
 use std::{env, fs};
 
@@ -16,42 +15,54 @@ use crate::util::{
 mod bytes;
 mod util;
 
-#[derive(clap::Parser, Debug)]
+#[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Options {
     #[clap(subcommand)]
     selector: Selector,
 }
 
-#[derive(clap::Subcommand, Debug)]
+#[derive(Subcommand, Debug)]
 enum Selector {
     Install(InstallOptions),
     Uninstall(UninstallOptions),
 }
 
-#[derive(clap::Args, Debug)]
+#[derive(Args, Debug)]
 struct InstallOptions {
-    /// Your configuration will not be overridden by default, you can reset config to default using
-    /// this flag
-    #[clap(short, long)]
-    override_config: bool,
-
-    #[clap(short, long)]
-    enable_autostart: bool,
-
+    /// Run in interactive mode. Installer will prompt user for
+    /// responses instead of getting settings from CLI options.
     #[clap(short, long)]
     interactive: bool,
+
+    /// Override your config files with defaults. Required in non-interactive mode.
+    #[clap(
+        short, long, action = ArgAction::Set,
+        conflicts_with = "interactive", required_unless_present = "interactive"
+    )]
+    override_config: Option<bool>,
+
+    /// Control if installer should make program start on login. Required in non-interactive mode.
+    #[clap(
+        short, long, action = ArgAction::Set,
+        conflicts_with = "interactive", required_unless_present = "interactive"
+    )]
+    enable_autostart: Option<bool>,
 }
 
-#[derive(clap::Args, Debug)]
+#[derive(Args, Debug)]
 struct UninstallOptions {
-    /// By default, uninstaller will remove the entire install directory and autostart entry
-    /// By enabling this flag you can keep your configuration files untouched
-    #[clap(short, long)]
-    keep_config: bool,
-
+    /// Run in interactive mode. Installer will prompt user for
+    /// responses instead of getting settings from CLI options.
     #[clap(short, long)]
     interactive: bool,
+
+    /// Override your config files with defaults. Required in non-interactive mode.
+    #[clap(
+        short, long, action = ArgAction::Set,
+        conflicts_with = "interactive", required_unless_present = "interactive"
+    )]
+    keep_config: Option<bool>,
 }
 
 fn main() {
@@ -113,7 +124,7 @@ fn install(options: InstallOptions) {
         get_config_dir(),
         get_data_dir(),
     ] {
-        create_dir(directory);
+        fs::create_dir_all(directory).unwrap();
     }
 
     install_binary!(STEELSERIES_OLED);
@@ -122,7 +133,7 @@ fn install(options: InstallOptions) {
     install_binary!(MEDIA);
     install_binary!(WEATHER);
 
-    let override_config = options.override_config
+    let override_config = options.override_config == Some(true)
         || (options.interactive && ask_user("Do you wish to override your config?"));
 
     install_config!(APPLICATIONS, override_config);
@@ -130,7 +141,7 @@ fn install(options: InstallOptions) {
     install_config!(SCRIPTS, override_config);
     install_config!(SETTINGS, override_config);
 
-    let autostart = options.enable_autostart
+    let autostart = options.enable_autostart == Some(true)
         || (options.interactive
             && ask_user("Do you wish for application to start automatically when logging in?"));
 
@@ -145,8 +156,8 @@ fn install(options: InstallOptions) {
 }
 
 fn uninstall(options: UninstallOptions) {
-    let keep_config =
-        options.keep_config || (options.interactive && ask_user("Do you wish to keep config?"));
+    let keep_config = options.keep_config == Some(true)
+        || (options.interactive && ask_user("Do you wish to keep config?"));
 
     os::autostart_disable();
 
@@ -159,15 +170,6 @@ fn uninstall(options: UninstallOptions) {
     for path in paths {
         println!("Removing {}", path.display());
         fs::remove_dir_all(path).unwrap()
-    }
-}
-
-fn create_dir(path: &PathBuf) {
-    if path.exists() {
-        println!("Directory {:?} already exists", path);
-    } else {
-        println!("Creating directory {:?}", path);
-        fs::create_dir_all(path).unwrap();
     }
 }
 
