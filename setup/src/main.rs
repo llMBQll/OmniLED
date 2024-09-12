@@ -2,6 +2,8 @@
 
 use clap::Parser;
 use convert_case::{Case, Casing};
+use std::fs::File;
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 use std::{env, fs};
@@ -61,12 +63,15 @@ fn main() {
     };
 }
 
-fn install_binary_impl(name: &str, bytes: &[u8]) {
+fn install_binary_impl(name: &str, bytes: &[u8]) -> std::io::Result<()> {
     let target = get_bin_dir()
         .join(name)
         .with_extension(env::consts::EXE_EXTENSION);
     println!("Copying binary: {}", target.display());
-    fs::write(&target, bytes).unwrap();
+
+    let mut file = File::create(target)?;
+    file.write_all(bytes)?;
+    os::set_exe_permissions(&mut file)
 }
 
 fn install_config_impl(name: &str, bytes: &[u8], override_config: bool) {
@@ -85,7 +90,7 @@ fn install_config_impl(name: &str, bytes: &[u8], override_config: bool) {
 
 macro_rules! install_binary {
     ($name:expr) => {
-        install_binary_impl(&stringify!($name).to_case(Case::Snake), $name)
+        install_binary_impl(&stringify!($name).to_case(Case::Snake), $name).unwrap()
     };
 }
 
@@ -181,6 +186,7 @@ fn run() {
 
 #[cfg(target_os = "windows")]
 mod os {
+    use std::fs::File;
     use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
     use winreg::RegKey;
 
@@ -220,15 +226,29 @@ mod os {
             ),
         };
     }
+
+    pub fn set_exe_permissions(_file: &mut File) -> std::io::Result<()> {
+        // No special handling required
+        Ok(())
+    }
 }
 
 #[cfg(target_os = "linux")]
 mod os {
+    use std::fs::File;
+    use std::os::unix::fs::PermissionsExt;
+
     pub fn autostart_enable() {
         println!("Autostart setup is not yet available on Linux");
     }
 
     pub fn autostart_disable() {
         // Nothing to disable yet
+    }
+
+    pub fn set_exe_permissions(file: &mut File) -> std::io::Result<()> {
+        let mut permissions = file.metadata()?.permissions();
+        permissions.set_mode(0o775);
+        file.set_permissions(permissions)
     }
 }
