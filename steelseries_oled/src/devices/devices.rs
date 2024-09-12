@@ -1,6 +1,6 @@
 use convert_case::{Case, Casing};
 use log::{debug, error};
-use mlua::{chunk, Function, Lua, Table, UserData, UserDataMethods, Value};
+use mlua::{chunk, Function, Lua, Table, UserData, Value};
 use oled_derive::UniqueUserData;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -113,13 +113,11 @@ impl Devices {
             .create_function(move |lua, settings: Table| {
                 let device_name: String = settings.get("name")?;
                 let function_name = function_name.clone();
-                lua.load(chunk! {
-                    DEVICES:add_configuration($device_name, $function_name, $settings)
-                })
-                .exec()
-                .unwrap();
 
-                Ok(())
+                let mut devices = UserDataRef::<Devices>::load(lua);
+                devices
+                    .get_mut()
+                    .add_configuration(device_name, function_name, settings)
             })
             .unwrap();
 
@@ -142,6 +140,9 @@ impl Devices {
                 return Err(mlua::Error::runtime(message));
             }
             Entry::Vacant(entry) => {
+                let name = entry.key();
+                debug!("Added device '{}' with name '{}'", kind, name);
+
                 let loader = self.constructors[&kind];
                 entry.insert(DeviceEntry::Initializer(Initializer {
                     settings,
@@ -154,16 +155,7 @@ impl Devices {
     }
 }
 
-impl UserData for Devices {
-    fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method_mut(
-            "add_configuration",
-            |_lua, manager, (name, kind, settings): (String, String, Table)| {
-                manager.add_configuration(name, kind, settings)
-            },
-        );
-    }
-}
+impl UserData for Devices {}
 
 enum DeviceEntry {
     Initializer(Initializer),
