@@ -1,7 +1,8 @@
 use chrono::prelude::*;
+use clap::Parser;
 use oled_api::Plugin;
 use oled_derive::IntoProto;
-use std::{env, time};
+use std::time;
 
 #[derive(IntoProto)]
 struct Names {
@@ -54,9 +55,8 @@ const NAME: &str = "CLOCK";
 
 #[tokio::main]
 async fn main() {
-    let args: Vec<String> = env::args().collect();
-    let address = &args[1];
-    let mut plugin = Plugin::new(NAME, address).await.unwrap();
+    let options = Options::parse();
+    let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
 
     // Send initial data that will not be updated
     plugin.update(Names::new().into()).await.unwrap();
@@ -87,4 +87,11 @@ async fn main() {
         plugin.update(time.clone().into()).await.unwrap();
         tokio::time::sleep(time::Duration::from_millis(500)).await;
     }
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about)]
+struct Options {
+    #[clap(short, long)]
+    address: String,
 }

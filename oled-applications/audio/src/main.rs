@@ -1,7 +1,7 @@
 use audio::Audio;
+use clap::Parser;
 use oled_api::Plugin;
 use oled_derive::IntoProto;
-use std::env;
 use std::error::Error;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
@@ -13,9 +13,8 @@ const NAME: &str = "AUDIO";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let args: Vec<String> = env::args().collect();
-    let address = args[1].as_str();
-    let mut plugin = Plugin::new(NAME, address).await?;
+    let options = Options::parse();
+    let mut plugin = Plugin::new(NAME, &options.address).await?;
 
     let path = plugin.get_data_dir().await.unwrap();
     oled_log::init(path.join("logging.log"));
@@ -47,4 +46,11 @@ impl AudioData {
             name,
         }
     }
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about)]
+struct Options {
+    #[clap(short, long)]
+    address: String,
 }
