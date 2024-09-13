@@ -56,7 +56,7 @@ impl FontManager {
         match selector.clone() {
             FontSelector::Default => Ok(Self::load_default_font()),
             FontSelector::Filesystem(selector) => {
-                let font_index = selector.font_index.unwrap_or(0);
+                let font_index = selector.font_index;
                 let font = Font::from_path(&selector.path, font_index)?;
                 Ok((font, font_index))
             }

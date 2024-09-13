@@ -239,8 +239,8 @@ impl ScrollingTextControl {
     pub fn new(lua: &Lua) -> Self {
         let settings = UserDataRef::<Settings>::load(lua);
         let text_control = Self {
-            ticks_at_edge: settings.get().scrolling_text_ticks_at_edge,
-            ticks_per_move: settings.get().scrolling_text_ticks_per_move,
+            ticks_at_edge: settings.get().text_ticks_scroll_delay,
+            ticks_per_move: settings.get().text_ticks_scroll_rate,
         };
         text_control
     }

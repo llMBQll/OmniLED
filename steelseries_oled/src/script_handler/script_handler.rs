@@ -13,7 +13,7 @@ use crate::devices::devices::{DeviceStatus, Devices};
 use crate::events::shortcuts::Shortcuts;
 use crate::renderer::renderer::{ContextKey, Renderer};
 use crate::script_handler::script_data_types::{load_script_data_types, Operation};
-use crate::settings::settings::{get_full_path, Settings};
+use crate::settings::settings::get_full_path;
 
 #[derive(UniqueUserData)]
 pub struct ScriptHandler {
@@ -48,13 +48,7 @@ impl ScriptHandler {
             },
         );
 
-        let settings = UserDataRef::<Settings>::load(lua);
-        exec_file(
-            lua,
-            &get_full_path(&settings.get().scripts_file),
-            environment,
-        )
-        .unwrap();
+        exec_file(lua, &get_full_path("scripts.lua"), environment).unwrap();
     }
 
     pub fn set_value(
