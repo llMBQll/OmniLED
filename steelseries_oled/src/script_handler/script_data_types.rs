@@ -1,4 +1,3 @@
-use convert_case::{Case, Casing};
 use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields};
 use oled_derive::FromLuaValue;
 
@@ -26,7 +25,7 @@ impl UserData for Size {
 
 #[derive(Debug, Clone, Copy, FromLuaValue)]
 pub struct Rectangle {
-    pub origin: Point,
+    pub position: Point,
     pub size: Size,
 }
 
@@ -52,7 +51,8 @@ impl UserData for Operation {}
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Bar {
     pub value: f32,
-    pub position: Rectangle,
+    pub position: Point,
+    pub size: Size,
 
     #[mlua(default)]
     pub modifiers: Modifiers,
@@ -63,7 +63,8 @@ impl UserData for Bar {}
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Image {
     pub image: OledImage,
-    pub position: Rectangle,
+    pub position: Point,
+    pub size: Size,
 
     #[mlua(default)]
     pub modifiers: Modifiers,
@@ -74,7 +75,8 @@ impl UserData for Image {}
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Text {
     pub text: String,
-    pub position: Rectangle,
+    pub position: Point,
+    pub size: Size,
 
     #[mlua(default)]
     pub modifiers: Modifiers,
@@ -110,56 +112,20 @@ pub enum MemoryRepresentation {
     BytePerPixel,
 }
 
-macro_rules! register_function {
-    ($lua:ident, $table:ident, $func_name:ident) => {
-        $table
-            .set(
-                stringify!($func_name).to_case(Case::Pascal),
-                $lua.create_function($func_name).unwrap(),
-            )
-            .unwrap();
-    };
-}
-
 pub fn load_script_data_types(lua: &Lua, env: &Table) {
-    register_function!(lua, env, point);
-    register_function!(lua, env, size);
-    register_function!(lua, env, rectangle);
-    register_function!(lua, env, oled_image);
-    register_function!(lua, env, bar);
-    register_function!(lua, env, image);
-    register_function!(lua, env, text);
-    register_function!(lua, env, modifiers);
-}
+    macro_rules! register_function {
+        ($lua:ident, $table:ident, $type_name:ident) => {
+            $table
+                .set(
+                    stringify!($type_name),
+                    $lua.create_function(|_: &Lua, obj: $type_name| Ok(Operation::$type_name(obj)))
+                        .unwrap(),
+                )
+                .unwrap();
+        };
+    }
 
-fn point(_: &Lua, obj: Point) -> mlua::Result<Point> {
-    Ok(obj)
-}
-
-fn size(_: &Lua, obj: Size) -> mlua::Result<Size> {
-    Ok(obj)
-}
-
-fn rectangle(_: &Lua, obj: Rectangle) -> mlua::Result<Rectangle> {
-    Ok(obj)
-}
-
-fn oled_image(_: &Lua, obj: OledImage) -> mlua::Result<OledImage> {
-    Ok(obj)
-}
-
-fn bar(_: &Lua, obj: Bar) -> mlua::Result<Operation> {
-    Ok(Operation::Bar(obj))
-}
-
-fn image(_: &Lua, obj: Image) -> mlua::Result<Operation> {
-    Ok(Operation::Image(obj))
-}
-
-fn text(_: &Lua, obj: Text) -> mlua::Result<Operation> {
-    Ok(Operation::Text(obj))
-}
-
-fn modifiers(_: &Lua, obj: Modifiers) -> mlua::Result<Modifiers> {
-    Ok(obj)
+    register_function!(lua, env, Bar);
+    register_function!(lua, env, Image);
+    register_function!(lua, env, Text);
 }

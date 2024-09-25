@@ -60,7 +60,7 @@ impl Buffer {
             return None;
         }
 
-        let (x, y) = (area.origin.x + x as usize, area.origin.y + y as usize);
+        let (x, y) = (area.position.x + x as usize, area.position.y + y as usize);
         match x < self.buffer.width() && y < self.buffer.height() {
             true => Some((x, y)),
             false => None,
@@ -151,12 +151,6 @@ impl BufferTrait for ByteBuffer {
     }
 }
 
-impl Into<Vec<u8>> for ByteBuffer {
-    fn into(self) -> Vec<u8> {
-        self.data
-    }
-}
-
 pub struct BitBuffer {
     width: usize,
     height: usize,
@@ -217,11 +211,5 @@ impl BufferTrait for BitBuffer {
         if let Some(mut bit) = self.bit_at(x, y) {
             bit.reset();
         }
-    }
-}
-
-impl Into<Vec<u8>> for BitBuffer {
-    fn into(self) -> Vec<u8> {
-        self.data
     }
 }

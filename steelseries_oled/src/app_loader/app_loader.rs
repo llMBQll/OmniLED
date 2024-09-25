@@ -1,4 +1,4 @@
-use log::{error, warn};
+use log::{debug, error, warn};
 use mlua::{chunk, Lua, UserData};
 use oled_derive::UniqueUserData;
 
@@ -57,6 +57,7 @@ impl AppLoader {
     fn start_process(&mut self, app_config: Config) {
         match Process::new(&app_config) {
             Ok(process) => {
+                debug!("Starting process: {:?}", app_config);
                 self.processes.push(process);
             }
             Err(err) => {

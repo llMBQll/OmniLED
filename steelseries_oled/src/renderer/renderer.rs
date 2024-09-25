@@ -8,7 +8,7 @@ use crate::common::user_data::UserDataRef;
 use crate::renderer::buffer::{BitBuffer, Buffer, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
 use crate::script_handler::script_data_types::{
-    MemoryRepresentation, Modifiers, OledImage, Operation, Text,
+    MemoryRepresentation, Modifiers, OledImage, Operation, Point, Text,
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
@@ -47,15 +47,24 @@ impl Renderer {
 
         for operation in operations {
             match operation {
-                Operation::Bar(bar) => {
-                    Self::render_bar(&mut buffer, bar.position, bar.value, bar.modifiers)
-                }
-                Operation::Image(image) => {
-                    Self::render_image(&mut buffer, image.position, image.image, image.modifiers)
-                }
+                Operation::Bar(bar) => Self::render_bar(
+                    &mut buffer,
+                    bar.position,
+                    bar.size,
+                    bar.value,
+                    bar.modifiers,
+                ),
+                Operation::Image(image) => Self::render_image(
+                    &mut buffer,
+                    image.position,
+                    image.size,
+                    image.image,
+                    image.modifiers,
+                ),
                 Operation::Text(text) => self.render_text(
                     &mut buffer,
                     text.position,
+                    text.size,
                     text.text,
                     text.modifiers,
                     &mut text_offsets,
@@ -66,18 +75,19 @@ impl Renderer {
         (end_auto_repeat, buffer)
     }
 
-    fn render_bar(buffer: &mut Buffer, rect: Rectangle, value: f32, modifiers: Modifiers) {
+    fn render_bar(
+        buffer: &mut Buffer,
+        position: Point,
+        size: Size,
+        value: f32,
+        modifiers: Modifiers,
+    ) {
         let (height, width) = match modifiers.vertical {
-            true => (
-                (rect.size.height as f32 * value / 100.0) as usize,
-                rect.size.width,
-            ),
-            false => (
-                rect.size.height,
-                (rect.size.width as f32 * value / 100.0) as usize,
-            ),
+            true => ((size.height as f32 * value / 100.0) as usize, size.width),
+            false => (size.height, (size.width as f32 * value / 100.0) as usize),
         };
 
+        let rect = Rectangle { position, size };
         for y in 0..height as isize {
             for x in 0..width as isize {
                 buffer.set(x, y, &rect, &modifiers);
@@ -85,16 +95,23 @@ impl Renderer {
         }
     }
 
-    fn render_image(buffer: &mut Buffer, rect: Rectangle, image: OledImage, modifiers: Modifiers) {
-        if rect.size.width == 0 || rect.size.height == 0 {
+    fn render_image(
+        buffer: &mut Buffer,
+        position: Point,
+        size: Size,
+        image: OledImage,
+        modifiers: Modifiers,
+    ) {
+        if size.width == 0 || size.height == 0 {
             return;
         }
 
-        let x_factor = image.size.width as f64 / rect.size.width as f64;
-        let y_factor = image.size.height as f64 / rect.size.height as f64;
+        let x_factor = image.size.width as f64 / size.width as f64;
+        let y_factor = image.size.height as f64 / size.height as f64;
 
-        for y in 0..rect.size.height as isize {
-            for x in 0..rect.size.width as isize {
+        let rect = Rectangle { position, size };
+        for y in 0..size.height as isize {
+            for x in 0..size.width as isize {
                 // Use nearest neighbour interpolation for now as it's the quickest to implement
                 // TODO allow specifying scaling algorithm as modifier
                 // TODO potentially cache scaled images
@@ -116,13 +133,14 @@ impl Renderer {
     fn render_text(
         &mut self,
         buffer: &mut Buffer,
-        rect: Rectangle,
+        position: Point,
+        size: Size,
         text: String,
         modifiers: Modifiers,
         offsets: &mut IntoIter<usize>,
     ) {
         let mut cursor_x = 0;
-        let cursor_y = rect.size.height as isize;
+        let cursor_y = size.height as isize;
 
         let offset = offsets.next().unwrap();
         let mut characters = text.chars();
@@ -130,6 +148,7 @@ impl Renderer {
             _ = characters.next();
         }
 
+        let rect = Rectangle { position, size };
         let character_height = modifiers.font_size.unwrap_or(rect.size.height);
         for character in characters {
             let character = self.font_manager.get_character(character, character_height);
@@ -198,11 +217,8 @@ impl Renderer {
             return 0;
         }
 
-        let height = text
-            .modifiers
-            .font_size
-            .unwrap_or(text.position.size.height);
-        let width = text.position.size.width;
+        let height = text.modifiers.font_size.unwrap_or(text.size.height);
+        let width = text.size.width;
         let character = font_manager.get_character('a', height);
         let char_width = character.metrics.advance as usize;
         let max_characters = width / max(char_width, 1);
