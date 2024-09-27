@@ -45,7 +45,7 @@ impl Settings {
 
         let load_settings_fn = lua
             .create_function(move |lua, settings: Settings| {
-                lua.globals().set(Settings::identifier(), settings).unwrap();
+                Settings::set_unique(lua, settings);
                 Ok(())
             })
             .unwrap();
@@ -60,7 +60,7 @@ impl Settings {
             );
 
             let default: Settings = lua.load(chunk! { {} }).eval().unwrap();
-            lua.globals().set(Settings::identifier(), default).unwrap();
+            Settings::set_unique(lua, default);
         }
 
         let settings = UserDataRef::<Settings>::load(lua);
@@ -83,8 +83,7 @@ pub fn get_full_path(path: &str) -> String {
         true => path.to_string(),
         false => Constants::config_dir()
             .join(path)
-            .to_str()
-            .unwrap()
+            .to_string_lossy()
             .to_string(),
     }
 }

@@ -24,7 +24,7 @@ impl FontManager {
         let (data, font_index) = Self::load_font(selector);
         let face = library
             .new_memory_face(data.to_vec(), font_index as isize)
-            .unwrap();
+            .unwrap_or_else(|_| panic!("Selected font doesn't face at index {}", font_index));
 
         Self {
             _library: library,

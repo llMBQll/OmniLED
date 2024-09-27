@@ -17,7 +17,7 @@ impl Log {
         let handle = oled_log::init(Self::get_path());
         let logger = Log { handle };
 
-        lua.globals().set(Log::identifier(), logger).unwrap();
+        Log::set_unique(lua, logger);
     }
 
     pub fn set_level_filter(&self, level_filter: LevelFilter) {

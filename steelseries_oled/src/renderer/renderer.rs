@@ -142,7 +142,7 @@ impl Renderer {
         let mut cursor_x = 0;
         let cursor_y = size.height as isize;
 
-        let offset = offsets.next().unwrap();
+        let offset = offsets.next().expect("Each 'Text' shall have its offset");
         let mut characters = text.chars();
         for _ in 0..offset {
             _ = characters.next();
@@ -295,6 +295,7 @@ impl<'a> Context<'a> {
     }
 
     pub fn read(&mut self, key: &String) -> usize {
+        // TODO what is happening here
         match self.context_info.entry(key.clone()) {
             Entry::Occupied(_) => {
                 return *self.map.get(key).unwrap();

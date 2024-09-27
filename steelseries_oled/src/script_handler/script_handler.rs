@@ -60,13 +60,13 @@ impl ScriptHandler {
     ) -> mlua::Result<()> {
         let env = &self.environment;
 
-        if !env.contains_key(application_name.clone()).unwrap() {
-            let empty = lua.create_table().unwrap();
-            env.set(application_name.clone(), empty).unwrap();
+        if !env.contains_key(application_name.clone())? {
+            let empty = lua.create_table()?;
+            env.set(application_name.clone(), empty)?;
         }
 
-        let entry: Table = env.get(application_name.clone()).unwrap();
-        entry.set(event.clone(), data.clone()).unwrap();
+        let entry: Table = env.get(application_name.clone())?;
+        entry.set(event.clone(), data.clone())?;
 
         let key = format!("{}.{}", application_name, event);
         for device in &mut self.devices {
