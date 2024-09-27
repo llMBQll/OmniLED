@@ -48,7 +48,7 @@ impl<T: Fn(&PCWSTR)> IMMNotificationClient_Impl for NotificationClient_Impl<T> {
         Ok(())
     }
 
-    fn OnPropertyValueChanged(&self, _pwstrdeviceid: &PCWSTR, _key: &PROPERTYKEY) -> Result<()> {
+    fn OnPropertyValueChanged(&self, _device_id: &PCWSTR, _key: &PROPERTYKEY) -> Result<()> {
         Ok(())
     }
 }
