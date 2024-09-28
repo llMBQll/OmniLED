@@ -201,7 +201,7 @@ impl Renderer {
             })
             .collect();
 
-        match ctx.was_reset() {
+        match ctx.has_new_data() {
             true => (false, vec![0; offsets.len()]),
             false => (ctx.can_wrap(), offsets),
         }
@@ -223,17 +223,17 @@ impl Renderer {
         let char_width = character.metrics.advance as usize;
         let max_characters = width / max(char_width, 1);
         let len = text.text.chars().count();
-        let tick = ctx.read(&text.text);
+        let tick = ctx.get_tick(&text.text);
 
         if len <= max_characters {
-            ctx.set(&text.text, true);
+            ctx.set_wrap(&text.text);
             return 0;
         }
 
         let max_shifts = len - max_characters;
         let max_ticks = 2 * control.ticks_at_edge + max_shifts * control.ticks_per_move;
         if tick >= max_ticks {
-            ctx.set(&text.text, true);
+            ctx.set_wrap(&text.text);
         }
 
         if tick <= control.ticks_at_edge {
@@ -262,8 +262,14 @@ impl ScrollingTextControl {
     }
 }
 
+struct TextData {
+    tick: usize,
+    can_wrap: bool,
+    updated: bool,
+}
+
 struct ScrollingTextData {
-    contexts: HashMap<ContextKey, HashMap<String, usize>>,
+    contexts: HashMap<ContextKey, HashMap<String, TextData>>,
 }
 
 impl ScrollingTextData {
@@ -274,84 +280,78 @@ impl ScrollingTextData {
     }
 
     pub fn get_context(&mut self, ctx: ContextKey) -> Context {
-        let map = self.contexts.entry(ctx).or_insert(HashMap::new());
-        Context::new(map)
+        let text_data = self.contexts.entry(ctx).or_insert(HashMap::new());
+        Context::new(text_data)
     }
 }
 
 struct Context<'a> {
-    map: &'a mut HashMap<String, usize>,
-    context_info: HashMap<String, bool>,
-    reset: bool,
+    text_data: &'a mut HashMap<String, TextData>,
+    new_data: bool,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(map: &'a mut HashMap<String, usize>) -> Self {
+    pub fn new(text_data: &'a mut HashMap<String, TextData>) -> Self {
         Self {
-            map,
-            context_info: HashMap::new(),
-            reset: false,
+            text_data,
+            new_data: false,
         }
     }
 
-    pub fn read(&mut self, key: &String) -> usize {
-        // TODO what is happening here
-        match self.context_info.entry(key.clone()) {
-            Entry::Occupied(_) => {
-                return *self.map.get(key).unwrap();
+    pub fn get_tick(&mut self, key: &String) -> usize {
+        match self.text_data.entry(key.clone()) {
+            Entry::Occupied(mut data) => {
+                let data = data.get_mut();
+                if !data.updated {
+                    data.tick += 1;
+                    data.updated = true;
+                }
+                data.tick
             }
-            Entry::Vacant(entry) => {
-                entry.insert(false);
-            }
-        }
+            Entry::Vacant(data) => {
+                self.new_data = true;
 
-        match self.map.entry(key.clone()) {
-            Entry::Occupied(entry) => {
-                let ticks = entry.get() + 1;
-                *entry.into_mut() = ticks;
-                ticks
-            }
-            Entry::Vacant(entry) => {
-                self.reset = true;
-
-                let ticks = 0;
-                entry.insert(ticks);
-                ticks
+                let tick = 0;
+                data.insert(TextData {
+                    tick,
+                    can_wrap: false,
+                    updated: true,
+                });
+                tick
             }
         }
     }
 
-    pub fn set(&mut self, key: &String, can_wrap: bool) {
-        self.context_info.insert(key.clone(), can_wrap);
-    }
-
-    pub fn was_reset(&self) -> bool {
-        self.reset
+    pub fn set_wrap(&mut self, key: &String) {
+        if let Some(data) = self.text_data.get_mut(key) {
+            data.can_wrap = true;
+        };
     }
 
     pub fn can_wrap(&self) -> bool {
-        self.context_info.iter().all(|(_, can_wrap)| *can_wrap)
+        self.new_data || self.text_data.iter().all(|(_, data)| data.can_wrap)
+    }
+
+    pub fn has_new_data(&self) -> bool {
+        self.new_data
     }
 }
 
 impl<'a> Drop for Context<'a> {
     fn drop(&mut self) {
-        if self.reset {
-            // remove all stale entries from map - old keys will not be present in context_info
-            *self.map = self
-                .map
-                .iter()
-                .filter_map(|(key, value)| match self.context_info.contains_key(key) {
-                    true => Some((key.clone(), *value)),
-                    false => None,
-                })
-                .collect();
+        if self.new_data {
+            self.text_data.retain(|_, data| data.updated);
         }
 
-        if self.reset || self.can_wrap() {
-            for (_, tick) in &mut *self.map {
-                *tick = 0;
+        if self.can_wrap() {
+            for (_, data) in &mut *self.text_data {
+                data.tick = 0;
             }
+        }
+
+        for (_, data) in &mut *self.text_data {
+            data.can_wrap = false;
+            data.updated = false;
         }
     }
 }
