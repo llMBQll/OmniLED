@@ -12,7 +12,7 @@ use crate::common::user_data::UserDataRef;
 use crate::devices::device::{Buffer, Device, MemoryRepresentation, Size};
 use crate::settings::settings::Settings;
 
-pub struct Simulator {
+pub struct Emulator {
     size: Size,
     name: String,
     buffer: Arc<Mutex<Vec<u32>>>,
@@ -22,14 +22,14 @@ pub struct Simulator {
 }
 
 #[derive(Clone, FromLuaValue)]
-struct SimulatorSettings {
+struct EmulatorSettings {
     screen_size: Size,
     name: String,
 }
 
-impl Device for Simulator {
+impl Device for Emulator {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
-        let settings = SimulatorSettings::from_lua(settings, lua)?;
+        let settings = EmulatorSettings::from_lua(settings, lua)?;
 
         let size = settings.screen_size;
         let name = settings.name.clone();
@@ -116,7 +116,7 @@ impl Device for Simulator {
     }
 }
 
-impl Drop for Simulator {
+impl Drop for Emulator {
     fn drop(&mut self) {
         self.running.store(false, Ordering::Relaxed);
         self.window_thread_handle.take().map(JoinHandle::join);

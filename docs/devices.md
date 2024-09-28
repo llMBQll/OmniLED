@@ -97,11 +97,11 @@ usb_device {
 }
 ```
 
-### Add New Simulator
+### Add New Emulator
 
-To quickly prototype new layouts you can set up a simulator which will open a window on your screen.
+To quickly prototype new layouts you can set up a emulator which will open a window on your screen.
 
-Add `simulator` entry with the following parameters:  
+Add `emulator` entry with the following parameters:  
 Required:
 
 - `name` - unique name that will identify your device when registering it for events
@@ -110,7 +110,7 @@ Required:
 **Example**
 
 ```lua
-simulator {
+emulator {
     name = 'Steelseries Apex 7 TKL',
     screen_size = {
         width = 128,
