@@ -2813,14 +2813,9 @@ dependencies = [
 name = "setup"
 version = "0.1.0"
 dependencies = [
- "audio",
  "clap 4.5.17",
- "clock",
  "convert_case",
  "dirs-next",
- "media",
- "steelseries_oled",
- "weather",
  "winreg 0.52.0",
 ]
 

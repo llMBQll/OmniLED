@@ -9,9 +9,18 @@ fn name_upper(name: &str) -> String {
 }
 
 fn binary_path(name: &str) -> String {
-    // Reference: https://doc.rust-lang.org/beta/cargo/reference/unstable.html#artifact-dependencies
-    let key = format!("CARGO_BIN_FILE_{}_{}", name_upper(name), name);
-    env::var(key).unwrap()
+    #[cfg(debug_assertions)]
+    const RELEASE_TYPE: &str = "debug";
+
+    #[cfg(not(debug_assertions))]
+    const RELEASE_TYPE: &str = "release";
+
+    format!(
+        "../../../../../target/{}/{}{}",
+        RELEASE_TYPE,
+        name,
+        env::consts::EXE_SUFFIX
+    )
 }
 
 fn main() {

@@ -1,5 +1,3 @@
-#![feature(concat_idents)]
-
 use clap::{ArgAction, Args, Parser, Subcommand};
 use convert_case::{Case, Casing};
 use std::fs::File;
