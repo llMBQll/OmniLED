@@ -21,7 +21,7 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
                     },
                     other => Err(mlua::Error::FromLuaConversionError {
                         from: other.type_name(),
-                        to: stringify!(#name),
+                        to: String::from(stringify!(#name)),
                         message: None,
                     }),
                 }
