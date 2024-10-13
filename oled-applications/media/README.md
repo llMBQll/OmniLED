@@ -53,8 +53,23 @@ Examples:
 - `my_app_name.exe` > `MY_APP_NAME_EXE`
 - `123fourfive` > `_123FOURFIVE`
 
+> To see actual resulting mapping check `data/media/logging.log`. An entry will be logged every time a new source is
+> detected.
+>
+> Example log entry
+`[2024-09-28 15:00:45:425][INFO][media] Mapped '308046B0AF4A39CB' to '_308046B0AF4A39CB'`
+
 ## Media Events
 
 Media sends a single type of event, and its name depends on the selected [mode](#reporting-mode).
 
-`MEDIA` or mapped application name: table
+> Availability of event fields depends entirely on the media source. Be sure to check if a field is present when
+> handling media events.
+
+`MEDIA` or `<MAPPED_NAME>`: table
+
+- `Artist`: string,
+- `Title`: string,
+- `Progress`: integer (value in milliseconds),
+- `Duration`: integer (value in milliseconds),
+- `Playing`: bool,
