@@ -34,7 +34,7 @@ async fn main() {
         let weather = weather_api::get_weather(&agent, &coordinates, &name);
         plugin.update(weather.into()).await.unwrap();
 
-        tokio::time::sleep(time::Duration::from_secs(15 * 60)).await;
+        tokio::time::sleep(time::Duration::from_secs(options.interval * 60)).await;
     }
 }
 
@@ -138,7 +138,7 @@ struct Options {
 
     /// Interval between getting new weather data in minutes
     #[clap(short, long, default_value = "15")]
-    interval: u32,
+    interval: u64,
 
     /// Temperature unit
     #[clap(short, long, value_parser = ["C", "Celsius", "F", "Fahrenheit"], default_value = "Celsius", ignore_case = true)]
