@@ -63,6 +63,9 @@ Examples:
 
 Media sends a single type of event, and its name depends on the selected [mode](#reporting-mode).
 
+> There is a discrepancy in event frequency between current implementations on Windows and Linux operating systems.  
+> On Windows the interval seems to be around 4 seconds and on Linux it's a fixed update interval of 1 second.
+
 > Availability of event fields depends entirely on the media source. Be sure to check if a field is present when
 > handling media events.
 
