@@ -38,7 +38,7 @@ fn generate_initializer(name: &Ident, data: &Data) -> TokenStream {
                 let names = fields.named.iter().map(|f| {
                     let field = &f.ident;
 
-                    let attrs = get_attributes(&f.attrs);
+                    let attrs = get_field_attributes(&f.attrs);
 
                     let initializer = quote! {
                         table.get(stringify!(#field))
@@ -167,15 +167,27 @@ enum FieldType {
     Unit,
 }
 
-struct LuaAttributes {
+struct StructAttributes {
+    verify: Option<TokenStream>,
+}
+
+fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
+    let mut attributes = parse_attributes("mlua", attributes);
+
+    StructAttributes {
+        verify: get_attribute(&mut attributes, "verify"),
+    }
+}
+
+struct FieldAttributes {
     default: Option<TokenStream>,
     transform: Option<TokenStream>,
 }
 
-fn get_attributes(attributes: &Vec<Attribute>) -> LuaAttributes {
+fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
     let mut attributes = parse_attributes("mlua", attributes);
 
-    LuaAttributes {
+    FieldAttributes {
         default: get_attribute_with_default_value(
             &mut attributes,
             "default",
