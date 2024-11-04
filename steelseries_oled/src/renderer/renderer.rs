@@ -1,17 +1,17 @@
-use mlua::Lua;
-use std::cmp::max;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::vec::IntoIter;
-
 use crate::common::user_data::UserDataRef;
 use crate::renderer::buffer::{BitBuffer, Buffer, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
 use crate::script_handler::script_data_types::{
-    MemoryRepresentation, Modifiers, OledImage, Operation, Point, Text,
+    MemoryRepresentation, Modifiers, OledImage, Operation, Point, Range, Text,
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
+use mlua::Lua;
+use num_traits::clamp;
+use std::cmp::max;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::vec::IntoIter;
 
 pub struct Renderer {
     font_manager: FontManager,
@@ -52,6 +52,7 @@ impl Renderer {
                     bar.position,
                     bar.size,
                     bar.value,
+                    bar.range,
                     bar.modifiers,
                 ),
                 Operation::Image(image) => Self::render_image(
@@ -80,11 +81,17 @@ impl Renderer {
         position: Point,
         size: Size,
         value: f32,
+        range: Range,
         modifiers: Modifiers,
     ) {
+        // TODO verify range.max is greater than range.min
+
+        let value = clamp(value, range.min, range.max);
+        let percentage = (value - range.min) / (range.max - range.min);
+
         let (height, width) = match modifiers.vertical {
-            true => ((size.height as f32 * value / 100.0) as usize, size.width),
-            false => (size.height, (size.width as f32 * value / 100.0) as usize),
+            true => ((size.height as f32 * percentage) as usize, size.width),
+            false => (size.height, (size.width as f32 * percentage) as usize),
         };
 
         let rect = Rectangle { position, size };

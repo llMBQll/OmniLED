@@ -22,11 +22,69 @@ By default, font size will be equal to widget height. It can be changed via `fon
 
 Image
 
-- `image`: OledImage.
+- `image`: OledImage. Image that will be displayed on screen.
+
+Image will be scaled from its original size to widget's dimensions.
 
 Bar
 
-- `value`: float. Percentage of bar that should be filled.
+- `value`: float. Amount of the bar that will be filled depends on where `value` lies in the `range`. It is calculated
+  using the following formula `(value - range.min) / (range.max - range.min) * 100%`.
+- `range`: Range. Minimum and Maximum values that can be displayed on the bar.
 
-[//]: # (TODO update the Bar to accept range, while using \(0, 100\) by default)
-mnjhh
+`range` is optional and will be `[0.0, 100.0]` by default.
+
+## Data Types
+
+Point
+
+- `x`: integer. X-coordinate
+- `y`: integer. Y-coordinate
+
+```lua
+point = {
+    x = 1,
+    y = 2,
+}
+```
+
+Range
+
+- `min`: float. Lower end of the range (inclusive)
+- `max`: float. Upper end of the range (inclusive)
+
+```lua
+range = {
+    min = 10.1,
+    max = 99.9,
+}
+```
+
+Size
+
+- `width`: integer. Width value
+- `height`: integer. Height value
+
+```lua
+size = {
+    width = 7,
+    height = 8,
+}
+```
+
+OledImage
+
+- `size`: Size. Source image size
+- `bytes`: \[byte\]. Byte per pixel greyscale data. All non-zero values will result in the pixels being on.
+
+`size.width * size.height` must be equal to length of the `bytes` array.
+
+```lua
+image = {
+    size = {
+        width = 2,
+        height = 2,
+    },
+    bytes = { 0, 1, 0, 1 },
+}
+```

@@ -48,7 +48,8 @@ local function spotify()
                 modifiers = { font_size = 16 },
             },
             Bar {
-                value = CLOCK.Seconds * 100.0 / 59,
+                value = CLOCK.Seconds,
+                range = { min = 0, max = 59 },
                 position = { x = 0, y = SCREEN.Height - 2 },
                 size = { width = SCREEN.Width, height = 2 },
             },
@@ -80,7 +81,8 @@ local function clock()
                 modifiers = { font_size = 14 },
             },
             Bar {
-                value = CLOCK.Seconds * 100.0 / 59,
+                value = CLOCK.Seconds,
+                range = { min = 0, max = 59 },
                 position = { x = 0, y = SCREEN.Height - 2 },
                 size = { width = SCREEN.Width, height = 2 },
             }
@@ -125,7 +127,8 @@ local function weather()
                 modifiers = { font_size = 14 },
             },
             Bar {
-                value = CLOCK.Seconds * 100.0 / 59,
+                value = CLOCK.Seconds,
+                range = { min = 0, max = 59 },
                 position = { x = 0, y = SCREEN.Height - 2 },
                 size = { width = SCREEN.Width, height = 2 },
             },

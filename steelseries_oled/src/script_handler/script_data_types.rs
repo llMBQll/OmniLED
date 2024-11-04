@@ -49,8 +49,18 @@ pub enum Operation {
 impl UserData for Operation {}
 
 #[derive(Clone, Debug, FromLuaValue)]
+pub struct Range {
+    pub min: f32,
+    pub max: f32,
+}
+
+impl UserData for Range {}
+
+#[derive(Clone, Debug, FromLuaValue)]
 pub struct Bar {
     pub value: f32,
+    #[mlua(default(Range {min: 0.0, max: 100.0}))]
+    pub range: Range,
     pub position: Point,
     pub size: Size,
 
