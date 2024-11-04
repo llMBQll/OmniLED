@@ -2,7 +2,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput};
 
-use crate::common::{get_content, get_optional_content, is_attribute};
+use crate::common::{get_attribute, get_attribute_with_default_value, parse_attributes};
 
 pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
@@ -38,7 +38,7 @@ fn generate_initializer(name: &Ident, data: &Data) -> TokenStream {
                 let names = fields.named.iter().map(|f| {
                     let field = &f.ident;
 
-                    let attrs = parse_attributes(&f.attrs);
+                    let attrs = get_attributes(&f.attrs);
 
                     let initializer = quote! {
                         table.get(stringify!(#field))
@@ -172,33 +172,15 @@ struct LuaAttributes {
     transform: Option<TokenStream>,
 }
 
-fn parse_attributes(attributes: &Vec<Attribute>) -> LuaAttributes {
-    let mut default: Option<TokenStream> = None;
-    let mut transform: Option<TokenStream> = None;
+fn get_attributes(attributes: &Vec<Attribute>) -> LuaAttributes {
+    let mut attributes = parse_attributes("mlua", attributes);
 
-    for attr in attributes {
-        if !attr.path().is_ident("mlua") {
-            continue;
-        }
-
-        attr.parse_nested_meta(|meta| {
-            if is_attribute(&meta, "default") {
-                default = match get_optional_content(&meta)? {
-                    Some(content) => Some(content),
-                    None => Some(quote!(Default::default())),
-                };
-                return Ok(());
-            }
-
-            if is_attribute(&meta, "transform") {
-                transform = Some(get_content(&meta)?);
-                return Ok(());
-            }
-
-            Ok(())
-        })
-        .unwrap();
+    LuaAttributes {
+        default: get_attribute_with_default_value(
+            &mut attributes,
+            "default",
+            quote!(Default::default()),
+        ),
+        transform: get_attribute(&mut attributes, "transform"),
     }
-
-    LuaAttributes { default, transform }
 }

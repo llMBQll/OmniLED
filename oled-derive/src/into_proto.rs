@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput, Type};
 
-use crate::common::{get_content, is_attribute};
+use crate::common::{get_attribute, parse_attributes};
 
 pub fn expand_into_proto_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
@@ -42,7 +42,7 @@ fn generate_assignments(data: &Data) -> TokenStream {
                         false
                     };
 
-                    let attrs = parse_attributes(&field.attrs);
+                    let attrs = get_attributes(&field.attrs);
 
                     let value_accessor = if is_option {
                         quote! { value }
@@ -83,24 +83,10 @@ struct ProtoAttributes {
     transform: Option<TokenStream>,
 }
 
-fn parse_attributes(attributes: &Vec<Attribute>) -> ProtoAttributes {
-    let mut transform: Option<TokenStream> = None;
+fn get_attributes(attributes: &Vec<Attribute>) -> ProtoAttributes {
+    let mut attributes = parse_attributes("proto", attributes);
 
-    for attr in attributes {
-        if !attr.path().is_ident("proto") {
-            continue;
-        }
-
-        attr.parse_nested_meta(|meta| {
-            if is_attribute(&meta, "transform") {
-                transform = Some(get_content(&meta)?);
-                return Ok(());
-            }
-
-            Ok(())
-        })
-        .unwrap();
+    ProtoAttributes {
+        transform: get_attribute(&mut attributes, "transform"),
     }
-
-    ProtoAttributes { transform }
 }
