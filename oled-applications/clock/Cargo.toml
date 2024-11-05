@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 chrono = { version = "0.4", features = ["clock"] }
+clap = { version = "4.4", features = ["derive"] }
 oled-api = { path = "../../oled-api" }
 oled-derive = { path = "../../oled-derive", features = ["into-proto"] }
 tokio = { version = "1.38", features = ["full"] }

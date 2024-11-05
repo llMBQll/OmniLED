@@ -1,8 +1,9 @@
+use log::error;
 use mlua::{Lua, UserData, UserDataFields};
 use oled_api::{EventData, EventResponse, Plugin, RequestDirectoryData, RequestDirectoryResponse};
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::net::TcpListener;
 use tonic::transport::Server;
 use tonic::{Code, Request, Response, Status};
@@ -37,7 +38,10 @@ impl PluginServer {
         let address = format!("127.0.0.1:{bound_port}");
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_else(|err| {
+                error!("Failed to get unix epoch time: {}", err);
+                Duration::ZERO
+            })
             .as_millis() as u64;
         let info = ServerInfo {
             address,
@@ -97,12 +101,17 @@ impl oled_api::plugin_server::Plugin for PluginServer {
         let mut fields = None;
         std::mem::swap(&mut fields, &mut event.fields);
 
+        let fields = match fields {
+            Some(fields) => fields,
+            None => std::unreachable!("This has type Option<Table> due the code generator, field is required in proto definition")
+        };
+
         self.event_queue
             .lock()
             .unwrap()
             .push(events::event_queue::Event::Application((
                 name,
-                fields.unwrap().items,
+                fields.items,
             )));
 
         Ok(Response::new(EventResponse {}))

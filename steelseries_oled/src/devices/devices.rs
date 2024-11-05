@@ -9,10 +9,10 @@ use crate::common::common::exec_file;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
-use crate::devices::simulator::simulator::Simulator;
+use crate::devices::emulator::emulator::Emulator;
 use crate::devices::steelseries_engine::steelseries_engine_device::SteelseriesEngineDevice;
 use crate::devices::usb_device::usb_device::USBDevice;
-use crate::settings::settings::{get_full_path, Settings};
+use crate::settings::settings::get_full_path;
 
 type Constructor = fn(&Lua, Value) -> Box<dyn Device>;
 
@@ -74,8 +74,7 @@ impl Devices {
     }
 
     fn load_devices(lua: &Lua, env: Table) {
-        let settings = UserDataRef::<Settings>::load(lua);
-        exec_file(lua, &get_full_path(&settings.get().devices_file), env).unwrap();
+        exec_file(lua, &get_full_path("devices.lua"), env).unwrap();
     }
 
     fn create_loaders(lua: &Lua) -> (HashMap<String, Constructor>, Table) {
@@ -85,7 +84,7 @@ impl Devices {
         });
 
         let loaders = [
-            Self::create_loader::<Simulator>(lua),
+            Self::create_loader::<Emulator>(lua),
             Self::create_loader::<SteelseriesEngineDevice>(lua),
             Self::create_loader::<USBDevice>(lua),
         ];

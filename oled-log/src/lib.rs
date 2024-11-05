@@ -5,8 +5,8 @@ use log4rs::encode::pattern::PatternEncoder;
 use log4rs::{Config, Handle};
 use std::path::Path;
 
-pub fn init(file_path: impl AsRef<Path>) -> Handle {
-    let config = create_config(file_path, default_log_level());
+pub fn init_with_level(file_path: impl AsRef<Path>, level_filter: log::LevelFilter) -> Handle {
+    let config = create_config(file_path, level_filter);
     let handle = log4rs::init_config(config).unwrap();
 
     std::panic::set_hook(Box::new(|panic_info| {
@@ -15,6 +15,10 @@ pub fn init(file_path: impl AsRef<Path>) -> Handle {
     }));
 
     handle
+}
+
+pub fn init(file_path: impl AsRef<Path>) -> Handle {
+    init_with_level(file_path, default_log_level())
 }
 
 pub fn change_log_level(

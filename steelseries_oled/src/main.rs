@@ -48,18 +48,18 @@ async fn main() {
     Shortcuts::load(&lua);
     Devices::load(&lua);
     ScriptHandler::load(&lua);
-    let _tray = TrayIcon::new(&RUNNING);
     AppLoader::load(&lua);
 
-    let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
+    let _tray = TrayIcon::new(&RUNNING);
 
-    let settings = UserDataRef::<Settings>::load(&lua);
-    let interval = settings.get().update_interval;
-    let event_loop = EventLoop::new();
+    let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
 
     let init_end = Instant::now();
     debug!("Initialized in {:?}", init_end - init_begin);
 
+    let settings = UserDataRef::<Settings>::load(&lua);
+    let interval = settings.get().update_interval;
+    let event_loop = EventLoop::new();
     event_loop
         .run(interval, &RUNNING, |events| {
             let mut shortcuts = UserDataRef::<Shortcuts>::load(&lua);

@@ -24,13 +24,25 @@ impl FontManager {
         let (data, font_index) = Self::load_font(selector);
         let face = library
             .new_memory_face(data.to_vec(), font_index as isize)
-            .unwrap();
+            .unwrap_or_else(|_| panic!("Selected font doesn't face at index {}", font_index));
 
         Self {
             _library: library,
             face,
             cache: HashMap::new(),
         }
+    }
+
+    pub fn get_font_size_for_height(&self, height: usize) -> usize {
+        let ascender = self.face.ascender();
+        let descencer = self.face.descender();
+        let unit_per_em = self.face.raw().units_per_EM;
+
+        let target = unit_per_em as f64 * height as f64 / (ascender - descencer) as f64 + 2.0;
+
+        debug!("height: {height}, ascender: {ascender}, descencer: {descencer}, unit_per_EM: {unit_per_em}, result: {target}");
+
+        target as usize
     }
 
     pub fn get_character(&mut self, character: char, height: usize) -> &Character {
@@ -56,7 +68,7 @@ impl FontManager {
         match selector.clone() {
             FontSelector::Default => Ok(Self::load_default_font()),
             FontSelector::Filesystem(selector) => {
-                let font_index = selector.font_index.unwrap_or(0);
+                let font_index = selector.font_index;
                 let font = Font::from_path(&selector.path, font_index)?;
                 Ok((font, font_index))
             }

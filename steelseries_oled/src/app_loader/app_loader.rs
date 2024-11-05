@@ -1,4 +1,4 @@
-use log::{error, warn};
+use log::{debug, error, warn};
 use mlua::{chunk, Lua, UserData};
 use oled_derive::UniqueUserData;
 
@@ -7,7 +7,7 @@ use crate::common::common::exec_file;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::constants::Constants;
 use crate::create_table_with_defaults;
-use crate::settings::settings::{get_full_path, Settings};
+use crate::settings::settings::get_full_path;
 
 #[derive(UniqueUserData)]
 pub struct AppLoader {
@@ -46,8 +46,7 @@ impl AppLoader {
             PLATFORM = PLATFORM,
         });
 
-        let settings = UserDataRef::<Settings>::load(lua);
-        exec_file(lua, &get_full_path(&settings.get().applications_file), env).unwrap();
+        exec_file(lua, &get_full_path("applications.lua"), env).unwrap();
 
         let app_loader = UserDataRef::<AppLoader>::load(lua);
         if app_loader.get().processes.len() == 0 {
@@ -58,6 +57,7 @@ impl AppLoader {
     fn start_process(&mut self, app_config: Config) {
         match Process::new(&app_config) {
             Ok(process) => {
+                debug!("Starting process: {:?}", app_config);
                 self.processes.push(process);
             }
             Err(err) => {

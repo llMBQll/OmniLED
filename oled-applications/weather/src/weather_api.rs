@@ -4,9 +4,14 @@ use serde::de;
 use std::collections::HashMap;
 use ureq::Agent;
 
-use crate::{Coordinates, WeatherData};
+use crate::{Coordinates, Options, WeatherData};
 
-pub fn get_weather(agent: &Agent, coordinates: &Coordinates, city: &String) -> WeatherData {
+pub fn get_weather(
+    agent: &Agent,
+    coordinates: &Coordinates,
+    city: &String,
+    options: &Options,
+) -> WeatherData {
     const OPEN_METEO_BASE: &str = "https://api.open-meteo.com/v1/forecast";
 
     let res = agent
@@ -14,6 +19,14 @@ pub fn get_weather(agent: &Agent, coordinates: &Coordinates, city: &String) -> W
         .query("current_weather", "true")
         .query("latitude", &coordinates.latitude.to_string())
         .query("longitude", &coordinates.longitude.to_string())
+        .query(
+            "wind_speed_unit",
+            speed_unit_param(&options.wind_speed_unit),
+        )
+        .query(
+            "temperature_unit",
+            temperature_unit_param(&options.temperature_unit),
+        )
         .call()
         .unwrap();
     let result: WeatherResult = res.into_json().unwrap();
@@ -27,17 +40,45 @@ pub fn get_weather(agent: &Agent, coordinates: &Coordinates, city: &String) -> W
     let weather = result.current_weather.weather_code;
 
     WeatherData {
+        city: city.clone(),
+        image_key: get_image_key(weather, is_day),
+        is_day,
         latitude: result.latitude,
         longitude: result.longitude,
         temperature: result.current_weather.temperature,
-        wind_speed: result.current_weather.wind_speed,
-        wind_direction: result.current_weather.wind_direction,
-        image_key: get_image_key(weather, is_day),
-        weather_description: weather.to_desc(),
-        is_day,
+        temperature_unit: temperature_unit_data(&options.temperature_unit).to_string(),
         update_hour: time.hour(),
         update_minute: time.minute(),
-        city: city.clone(),
+        weather_description: weather.to_desc(),
+        wind_direction: result.current_weather.wind_direction,
+        wind_speed: result.current_weather.wind_speed,
+        wind_speed_unit: options.wind_speed_unit.clone(),
+    }
+}
+
+fn speed_unit_param(unit: &str) -> &'static str {
+    match unit {
+        "km/h" => "kmh",
+        "m/s" => "ms",
+        "mph" => "mph",
+        "knots" => "kn",
+        _ => std::unreachable!(),
+    }
+}
+
+fn temperature_unit_param(unit: &str) -> &'static str {
+    match unit {
+        "C" | "Celsius" => "celsius",
+        "F" | "Fahrenheit" => "fahrenheit",
+        _ => std::unreachable!(),
+    }
+}
+
+fn temperature_unit_data(unit: &str) -> &'static str {
+    match unit {
+        "C" | "Celsius" => "C",
+        "F" | "Fahrenheit" => "F",
+        _ => std::unreachable!(),
     }
 }
 

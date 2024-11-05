@@ -1,4 +1,6 @@
+use log::debug;
 use mlua::Lua;
+use num_traits::clamp;
 use std::cmp::max;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -8,7 +10,7 @@ use crate::common::user_data::UserDataRef;
 use crate::renderer::buffer::{BitBuffer, Buffer, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
 use crate::script_handler::script_data_types::{
-    MemoryRepresentation, Modifiers, OledImage, Operation, Text,
+    MemoryRepresentation, Modifiers, OledImage, Operation, Point, Range, Text,
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
@@ -47,15 +49,25 @@ impl Renderer {
 
         for operation in operations {
             match operation {
-                Operation::Bar(bar) => {
-                    Self::render_bar(&mut buffer, bar.position, bar.value, bar.modifiers)
-                }
-                Operation::Image(image) => {
-                    Self::render_image(&mut buffer, image.position, image.image, image.modifiers)
-                }
+                Operation::Bar(bar) => Self::render_bar(
+                    &mut buffer,
+                    bar.position,
+                    bar.size,
+                    bar.value,
+                    bar.range,
+                    bar.modifiers,
+                ),
+                Operation::Image(image) => Self::render_image(
+                    &mut buffer,
+                    image.position,
+                    image.size,
+                    image.image,
+                    image.modifiers,
+                ),
                 Operation::Text(text) => self.render_text(
                     &mut buffer,
                     text.position,
+                    text.size,
                     text.text,
                     text.modifiers,
                     &mut text_offsets,
@@ -66,18 +78,36 @@ impl Renderer {
         (end_auto_repeat, buffer)
     }
 
-    fn render_bar(buffer: &mut Buffer, rect: Rectangle, value: f32, modifiers: Modifiers) {
+    fn clear_background(buffer: &mut Buffer, position: Point, size: Size, modifiers: &Modifiers) {
+        let rect = Rectangle { position, size };
+        for y in 0..size.height as isize {
+            for x in 0..size.width as isize {
+                buffer.reset(x, y, &rect, &modifiers);
+            }
+        }
+    }
+
+    fn render_bar(
+        buffer: &mut Buffer,
+        position: Point,
+        size: Size,
+        value: f32,
+        range: Range,
+        modifiers: Modifiers,
+    ) {
+        if modifiers.clear_background {
+            Self::clear_background(buffer, position, size, &modifiers);
+        }
+
+        let value = clamp(value, range.min, range.max);
+        let percentage = (value - range.min) / (range.max - range.min);
+
         let (height, width) = match modifiers.vertical {
-            true => (
-                (rect.size.height as f32 * value / 100.0) as usize,
-                rect.size.width,
-            ),
-            false => (
-                rect.size.height,
-                (rect.size.width as f32 * value / 100.0) as usize,
-            ),
+            true => ((size.height as f32 * percentage) as usize, size.width),
+            false => (size.height, (size.width as f32 * percentage) as usize),
         };
 
+        let rect = Rectangle { position, size };
         for y in 0..height as isize {
             for x in 0..width as isize {
                 buffer.set(x, y, &rect, &modifiers);
@@ -85,16 +115,27 @@ impl Renderer {
         }
     }
 
-    fn render_image(buffer: &mut Buffer, rect: Rectangle, image: OledImage, modifiers: Modifiers) {
-        if rect.size.width == 0 || rect.size.height == 0 {
+    fn render_image(
+        buffer: &mut Buffer,
+        position: Point,
+        size: Size,
+        image: OledImage,
+        modifiers: Modifiers,
+    ) {
+        if size.width == 0 || size.height == 0 {
             return;
         }
 
-        let x_factor = image.size.width as f64 / rect.size.width as f64;
-        let y_factor = image.size.height as f64 / rect.size.height as f64;
+        if modifiers.clear_background {
+            Self::clear_background(buffer, position, size, &modifiers);
+        }
 
-        for y in 0..rect.size.height as isize {
-            for x in 0..rect.size.width as isize {
+        let x_factor = image.size.width as f64 / size.width as f64;
+        let y_factor = image.size.height as f64 / size.height as f64;
+
+        let rect = Rectangle { position, size };
+        for y in 0..size.height as isize {
+            for x in 0..size.width as isize {
                 // Use nearest neighbour interpolation for now as it's the quickest to implement
                 // TODO allow specifying scaling algorithm as modifier
                 // TODO potentially cache scaled images
@@ -116,21 +157,37 @@ impl Renderer {
     fn render_text(
         &mut self,
         buffer: &mut Buffer,
-        rect: Rectangle,
+        position: Point,
+        size: Size,
         text: String,
         modifiers: Modifiers,
         offsets: &mut IntoIter<usize>,
     ) {
-        let mut cursor_x = 0;
-        let cursor_y = rect.size.height as isize;
+        if modifiers.clear_background {
+            Self::clear_background(buffer, position, size, &modifiers);
+        }
 
-        let offset = offsets.next().unwrap();
+        let mut cursor_x = 0;
+        let cursor_y = size.height as isize;
+
+        let offset = offsets.next().expect("Each 'Text' shall have its offset");
         let mut characters = text.chars();
         for _ in 0..offset {
             _ = characters.next();
         }
 
-        let character_height = modifiers.font_size.unwrap_or(rect.size.height);
+        let rect = Rectangle { position, size };
+        let character_height = match modifiers.font_size {
+            Some(size) => {
+                debug!("Received size: {}", size);
+                size
+            }
+            None => {
+                let size = self.font_manager.get_font_size_for_height(rect.size.height);
+                debug!("Calculated size {} for height {}", size, rect.size.height);
+                size
+            }
+        };
         for character in characters {
             let character = self.font_manager.get_character(character, character_height);
             let bitmap = &character.bitmap;
@@ -139,12 +196,11 @@ impl Renderer {
             for bitmap_y in 0..bitmap.rows as isize {
                 for bitmap_x in 0..bitmap.cols as isize {
                     let x = cursor_x + bitmap_x + metrics.offset_x;
-                    let y = cursor_y + bitmap_y - metrics.offset_y;
+                    let y = cursor_y + bitmap_y - metrics.offset_y - (character_height as f64 * 100.0 / 360.0) as isize;
 
-                    if x < 0
-                        || y < 0
-                        || (modifiers.strict && x >= rect.size.width as isize)
-                        || (modifiers.strict && y >= rect.size.height as isize)
+                    if x < 0 || y < 0
+                    // || x >= rect.size.width as isize
+                    // || y >= rect.size.height as isize
                     {
                         continue;
                     }
@@ -182,7 +238,7 @@ impl Renderer {
             })
             .collect();
 
-        match ctx.was_reset() {
+        match ctx.has_new_data() {
             true => (false, vec![0; offsets.len()]),
             false => (ctx.can_wrap(), offsets),
         }
@@ -198,26 +254,23 @@ impl Renderer {
             return 0;
         }
 
-        let height = text
-            .modifiers
-            .font_size
-            .unwrap_or(text.position.size.height);
-        let width = text.position.size.width;
+        let height = text.modifiers.font_size.unwrap_or(text.size.height);
+        let width = text.size.width;
         let character = font_manager.get_character('a', height);
         let char_width = character.metrics.advance as usize;
         let max_characters = width / max(char_width, 1);
         let len = text.text.chars().count();
-        let tick = ctx.read(&text.text);
+        let tick = ctx.get_tick(&text.text);
 
         if len <= max_characters {
-            ctx.set(&text.text, true);
+            ctx.set_wrap(&text.text);
             return 0;
         }
 
         let max_shifts = len - max_characters;
         let max_ticks = 2 * control.ticks_at_edge + max_shifts * control.ticks_per_move;
         if tick >= max_ticks {
-            ctx.set(&text.text, true);
+            ctx.set_wrap(&text.text);
         }
 
         if tick <= control.ticks_at_edge {
@@ -239,15 +292,21 @@ impl ScrollingTextControl {
     pub fn new(lua: &Lua) -> Self {
         let settings = UserDataRef::<Settings>::load(lua);
         let text_control = Self {
-            ticks_at_edge: settings.get().scrolling_text_ticks_at_edge,
-            ticks_per_move: settings.get().scrolling_text_ticks_per_move,
+            ticks_at_edge: settings.get().text_ticks_scroll_delay,
+            ticks_per_move: settings.get().text_ticks_scroll_rate,
         };
         text_control
     }
 }
 
+struct TextData {
+    tick: usize,
+    can_wrap: bool,
+    updated: bool,
+}
+
 struct ScrollingTextData {
-    contexts: HashMap<ContextKey, HashMap<String, usize>>,
+    contexts: HashMap<ContextKey, HashMap<String, TextData>>,
 }
 
 impl ScrollingTextData {
@@ -258,83 +317,78 @@ impl ScrollingTextData {
     }
 
     pub fn get_context(&mut self, ctx: ContextKey) -> Context {
-        let map = self.contexts.entry(ctx).or_insert(HashMap::new());
-        Context::new(map)
+        let text_data = self.contexts.entry(ctx).or_insert(HashMap::new());
+        Context::new(text_data)
     }
 }
 
 struct Context<'a> {
-    map: &'a mut HashMap<String, usize>,
-    context_info: HashMap<String, bool>,
-    reset: bool,
+    text_data: &'a mut HashMap<String, TextData>,
+    new_data: bool,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(map: &'a mut HashMap<String, usize>) -> Self {
+    pub fn new(text_data: &'a mut HashMap<String, TextData>) -> Self {
         Self {
-            map,
-            context_info: HashMap::new(),
-            reset: false,
+            text_data,
+            new_data: false,
         }
     }
 
-    pub fn read(&mut self, key: &String) -> usize {
-        match self.context_info.entry(key.clone()) {
-            Entry::Occupied(_) => {
-                return *self.map.get(key).unwrap();
+    pub fn get_tick(&mut self, key: &String) -> usize {
+        match self.text_data.entry(key.clone()) {
+            Entry::Occupied(mut data) => {
+                let data = data.get_mut();
+                if !data.updated {
+                    data.tick += 1;
+                    data.updated = true;
+                }
+                data.tick
             }
-            Entry::Vacant(entry) => {
-                entry.insert(false);
-            }
-        }
+            Entry::Vacant(data) => {
+                self.new_data = true;
 
-        match self.map.entry(key.clone()) {
-            Entry::Occupied(entry) => {
-                let ticks = entry.get() + 1;
-                *entry.into_mut() = ticks;
-                ticks
-            }
-            Entry::Vacant(entry) => {
-                self.reset = true;
-
-                let ticks = 0;
-                entry.insert(ticks);
-                ticks
+                let tick = 0;
+                data.insert(TextData {
+                    tick,
+                    can_wrap: false,
+                    updated: true,
+                });
+                tick
             }
         }
     }
 
-    pub fn set(&mut self, key: &String, can_wrap: bool) {
-        self.context_info.insert(key.clone(), can_wrap);
-    }
-
-    pub fn was_reset(&self) -> bool {
-        self.reset
+    pub fn set_wrap(&mut self, key: &String) {
+        if let Some(data) = self.text_data.get_mut(key) {
+            data.can_wrap = true;
+        };
     }
 
     pub fn can_wrap(&self) -> bool {
-        self.context_info.iter().all(|(_, can_wrap)| *can_wrap)
+        self.new_data || self.text_data.iter().all(|(_, data)| data.can_wrap)
+    }
+
+    pub fn has_new_data(&self) -> bool {
+        self.new_data
     }
 }
 
 impl<'a> Drop for Context<'a> {
     fn drop(&mut self) {
-        if self.reset {
-            // remove all stale entries from map - old keys will not be present in context_info
-            *self.map = self
-                .map
-                .iter()
-                .filter_map(|(key, value)| match self.context_info.contains_key(key) {
-                    true => Some((key.clone(), *value)),
-                    false => None,
-                })
-                .collect();
+        if self.new_data {
+            self.text_data.retain(|_, data| data.updated);
         }
 
-        if self.reset || self.can_wrap() {
-            for (_, tick) in &mut *self.map {
-                *tick = 0;
+        if self.can_wrap() {
+            for (_, data) in &mut *self.text_data {
+                data.tick = 0;
             }
+        }
+
+        for (_, data) in &mut *self.text_data {
+            data.can_wrap = false;
+            data.updated = false;
         }
     }
 }

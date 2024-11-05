@@ -13,12 +13,6 @@ use crate::renderer::font_selector::FontSelector;
 
 #[derive(Debug, Clone, UniqueUserData, FromLuaValue)]
 pub struct Settings {
-    #[mlua(default(String::from("applications.lua")))]
-    pub applications_file: String,
-
-    #[mlua(default(String::from("devices.lua")))]
-    pub devices_file: String,
-
     #[mlua(default(FontSelector::Default))]
     pub font: FontSelector,
 
@@ -31,16 +25,13 @@ pub struct Settings {
     #[mlua(default(2))]
     pub keyboard_ticks_repeat_rate: usize,
 
-    #[mlua(default(String::from("scripts.lua")))]
-    pub scripts_file: String,
-
     #[mlua(default(8))]
-    pub scrolling_text_ticks_at_edge: usize,
+    pub text_ticks_scroll_delay: usize,
 
     #[mlua(default(2))]
-    pub scrolling_text_ticks_per_move: usize,
+    pub text_ticks_scroll_rate: usize,
 
-    #[mlua(default(6969))]
+    #[mlua(default(0))]
     pub server_port: u16,
 
     #[mlua(transform(Self::from_millis))]
@@ -54,7 +45,7 @@ impl Settings {
 
         let load_settings_fn = lua
             .create_function(move |lua, settings: Settings| {
-                lua.globals().set(Settings::identifier(), settings).unwrap();
+                Settings::set_unique(lua, settings);
                 Ok(())
             })
             .unwrap();
@@ -69,7 +60,7 @@ impl Settings {
             );
 
             let default: Settings = lua.load(chunk! { {} }).eval().unwrap();
-            lua.globals().set(Settings::identifier(), default).unwrap();
+            Settings::set_unique(lua, default);
         }
 
         let settings = UserDataRef::<Settings>::load(lua);
@@ -92,8 +83,7 @@ pub fn get_full_path(path: &str) -> String {
         true => path.to_string(),
         false => Constants::config_dir()
             .join(path)
-            .to_str()
-            .unwrap()
+            .to_string_lossy()
             .to_string(),
     }
 }

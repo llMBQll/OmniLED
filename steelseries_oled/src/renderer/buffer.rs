@@ -16,18 +16,11 @@ impl Buffer {
     }
 
     pub fn set(&mut self, x: isize, y: isize, area: &Rectangle, modifiers: &Modifiers) {
-        let (x, y) = match self.translate(x, y, area, modifiers) {
-            Some(pos) => pos,
-            None => {
-                return;
-            }
-        };
+        self.set_value(true, x, y, area, modifiers);
+    }
 
-        match (modifiers.strict, self.buffer.get(x, y)) {
-            (false, Some(true)) => self.buffer.reset(x, y),
-            (_, Some(_)) => self.buffer.set(x, y),
-            (_, None) => {}
-        }
+    pub fn reset(&mut self, x: isize, y: isize, area: &Rectangle, modifiers: &Modifiers) {
+        self.set_value(false, x, y, area, modifiers);
     }
 
     pub fn bytes(&self) -> &[u8] {
@@ -37,6 +30,27 @@ impl Buffer {
     pub fn rows(&self) -> Vec<&[u8]> {
         let chunk_size = self.buffer.row_stride();
         self.buffer.bytes().chunks(chunk_size).collect()
+    }
+
+    fn set_value(
+        &mut self,
+        value: bool,
+        x: isize,
+        y: isize,
+        area: &Rectangle,
+        modifiers: &Modifiers,
+    ) {
+        let (x, y) = match self.translate(x, y, area, modifiers) {
+            Some(pos) => pos,
+            None => {
+                return;
+            }
+        };
+
+        match value ^ modifiers.negative {
+            true => self.buffer.set(x, y),
+            false => self.buffer.reset(x, y),
+        }
     }
 
     fn translate(
@@ -60,7 +74,7 @@ impl Buffer {
             return None;
         }
 
-        let (x, y) = (area.origin.x + x as usize, area.origin.y + y as usize);
+        let (x, y) = (area.position.x + x as usize, area.position.y + y as usize);
         match x < self.buffer.width() && y < self.buffer.height() {
             true => Some((x, y)),
             false => None,
@@ -87,6 +101,7 @@ pub trait BufferTrait {
     fn height(&self) -> usize;
     fn bytes(&self) -> &Vec<u8>;
     fn row_stride(&self) -> usize;
+    #[allow(unused)]
     fn get(&mut self, x: usize, y: usize) -> Option<bool>;
     fn set(&mut self, x: usize, y: usize);
     fn reset(&mut self, x: usize, y: usize);
@@ -151,12 +166,6 @@ impl BufferTrait for ByteBuffer {
     }
 }
 
-impl Into<Vec<u8>> for ByteBuffer {
-    fn into(self) -> Vec<u8> {
-        self.data
-    }
-}
-
 pub struct BitBuffer {
     width: usize,
     height: usize,
@@ -217,11 +226,5 @@ impl BufferTrait for BitBuffer {
         if let Some(mut bit) = self.bit_at(x, y) {
             bit.reset();
         }
-    }
-}
-
-impl Into<Vec<u8>> for BitBuffer {
-    fn into(self) -> Vec<u8> {
-        self.data
     }
 }

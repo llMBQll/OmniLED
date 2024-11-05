@@ -1,11 +1,11 @@
 load_app {
     path = get_default_path('clock'),
-    args = { SERVER.address },
+    args = { '--address', SERVER.address },
 }
 
 load_app {
     path = get_default_path('audio'),
-    args = { SERVER.address },
+    args = { '--address', SERVER.address },
 }
 
 load_app {

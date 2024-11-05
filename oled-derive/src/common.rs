@@ -1,31 +1,76 @@
+use convert_case::Case;
 use proc_macro2::TokenStream;
-use syn::meta::ParseNestedMeta;
-use syn::{parenthesized, token};
+use std::collections::HashMap;
+use syn::{parenthesized, token, Attribute};
 
-pub fn is_attribute(meta: &ParseNestedMeta, attribute: &str) -> bool {
-    meta.path.is_ident(attribute)
-}
-
-pub fn get_optional_content(meta: &ParseNestedMeta) -> syn::Result<Option<TokenStream>> {
-    if meta.input.peek(token::Paren) {
-        let content;
-        parenthesized!(content in meta.input);
-        let s = content.parse()?;
-        Ok(Some(s))
-    } else {
-        Ok(None)
+pub fn get_attribute_with_default_value(
+    attributes: &mut HashMap<String, Option<TokenStream>>,
+    key: &str,
+    default: TokenStream,
+) -> Option<TokenStream> {
+    match attributes.remove(key) {
+        Some(content) => Some(content.unwrap_or(default)),
+        None => None,
     }
 }
 
-pub fn get_content(meta: &ParseNestedMeta) -> syn::Result<TokenStream> {
-    match get_optional_content(meta)? {
-        Some(content) => Ok(content),
-        None => Err(syn::Error::new(
-            meta.input.span(),
-            format!(
-                "'{}' attribute requires an argument",
-                meta.path.require_ident()?
-            ),
-        )),
+pub fn get_attribute(
+    attributes: &mut HashMap<String, Option<TokenStream>>,
+    key: &str,
+) -> Option<TokenStream> {
+    match attributes.remove(key) {
+        Some(content) => match content {
+            Some(content) => Some(content),
+            None => panic!("Attribute {key} requires an argument"),
+        },
+        None => None,
+    }
+}
+
+pub fn parse_attributes(
+    root: &str,
+    attributes: &Vec<Attribute>,
+) -> HashMap<String, Option<TokenStream>> {
+    attributes
+        .iter()
+        .filter_map(|attribute: &Attribute| {
+            if !attribute.path().is_ident(root) {
+                return None;
+            }
+
+            let mut attribute_name: String = String::new();
+            let mut attribute_value: Option<TokenStream> = None;
+            attribute
+                .parse_nested_meta(|meta| {
+                    attribute_name = meta.path.get_ident().unwrap().to_string();
+
+                    if meta.input.peek(token::Paren) {
+                        let content;
+                        parenthesized!(content in meta.input);
+                        let stream = content.parse()?;
+                        attribute_value = Some(stream);
+                    }
+
+                    Ok(())
+                })
+                .unwrap();
+
+            Some((attribute_name, attribute_value))
+        })
+        .collect()
+}
+
+pub fn get_case(rename_strategy: &TokenStream) -> Case {
+    let strategy = rename_strategy.to_string();
+    match strategy.as_str() {
+        "lowercase" => Case::Lower,
+        "UPPERCASE" => Case::Upper,
+        "PascalCase" => Case::Pascal,
+        "camelCase" => Case::Camel,
+        "snake_case" => Case::Snake,
+        "SCREAMING_SNAKE_CASE" => Case::ScreamingSnake,
+        "kebab-case" => Case::Kebab,
+        "SCREAMING-KEBAB-CASE" => Case::UpperKebab,
+        convention => panic!("Unknown case convention '{}'", convention),
     }
 }

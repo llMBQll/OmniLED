@@ -5,11 +5,13 @@ pub trait UniqueUserData {
     fn identifier() -> &'static str;
 
     fn set_unique<T: IntoLua + UniqueUserData>(lua: &Lua, value: T) {
-        if lua.globals().contains_key(T::identifier()).unwrap() {
-            panic!("Value '{}' was already set", T::identifier());
+        let identifier = T::identifier();
+
+        if lua.globals().contains_key(identifier).unwrap() {
+            panic!("Global value '{}' is already set", identifier);
         }
 
-        lua.globals().set(T::identifier(), value).unwrap()
+        lua.globals().set(identifier, value).unwrap()
     }
 }
 

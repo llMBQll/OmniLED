@@ -15,8 +15,3 @@ winreg = "0.52"
 
 [build-dependencies]
 convert_case = "0.6.0"
-steelseries_oled = { path = "../steelseries_oled", artifact = "bin" }
-audio = { path = "../oled-applications/audio", artifact = "bin" }
-clock = { path = "../oled-applications/clock", artifact = "bin" }
-media = { path = "../oled-applications/media", artifact = "bin" }
-weather = { path = "../oled-applications/weather", artifact = "bin" }

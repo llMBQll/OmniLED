@@ -13,7 +13,7 @@ use crate::devices::devices::{DeviceStatus, Devices};
 use crate::events::shortcuts::Shortcuts;
 use crate::renderer::renderer::{ContextKey, Renderer};
 use crate::script_handler::script_data_types::{load_script_data_types, Operation};
-use crate::settings::settings::{get_full_path, Settings};
+use crate::settings::settings::get_full_path;
 
 #[derive(UniqueUserData)]
 pub struct ScriptHandler {
@@ -48,13 +48,7 @@ impl ScriptHandler {
             },
         );
 
-        let settings = UserDataRef::<Settings>::load(lua);
-        exec_file(
-            lua,
-            &get_full_path(&settings.get().scripts_file),
-            environment,
-        )
-        .unwrap();
+        exec_file(lua, &get_full_path("scripts.lua"), environment).unwrap();
     }
 
     pub fn set_value(
@@ -66,13 +60,13 @@ impl ScriptHandler {
     ) -> mlua::Result<()> {
         let env = &self.environment;
 
-        if !env.contains_key(application_name.clone()).unwrap() {
-            let empty = lua.create_table().unwrap();
-            env.set(application_name.clone(), empty).unwrap();
+        if !env.contains_key(application_name.clone())? {
+            let empty = lua.create_table()?;
+            env.set(application_name.clone(), empty)?;
         }
 
-        let entry: Table = env.get(application_name.clone()).unwrap();
-        entry.set(event.clone(), data.clone()).unwrap();
+        let entry: Table = env.get(application_name.clone())?;
+        entry.set(event.clone(), data.clone())?;
 
         let key = format!("{}.{}", application_name, event);
         for device in &mut self.devices {

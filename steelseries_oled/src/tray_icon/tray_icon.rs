@@ -9,6 +9,7 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
+    #[must_use]
     pub fn new(running: &'static AtomicBool) -> Self {
         let mut tray = TrayItem::new("Steelseries OLED", Self::load_icon()).unwrap();
 

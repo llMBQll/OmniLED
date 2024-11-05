@@ -20,6 +20,17 @@ macro_rules! create_table_with_defaults {
                 Ok(string)
             }).unwrap();
 
+            let env_fn = $lua.create_function(|_, key: String| {
+                match std::env::var(&key) {
+                    Ok(value) => Ok(value),
+                    Err(err) => Err(mlua::Error::runtime(format!(
+                        "Couldn't read env variable '{}': {}",
+                        key,
+                        err
+                    ))),
+                }
+            }).unwrap();
+
             let round_fn = $lua.create_function(|_, value: f64| {
                 let value = value.round() as i64;
                 Ok(value)
@@ -27,6 +38,7 @@ macro_rules! create_table_with_defaults {
 
             $lua.load(chunk! {
                 new_table = $values
+                new_table["env"] = $env_fn
                 new_table["dump"] = $dump_fn
                 new_table["ipairs"] = ipairs
                 new_table["next"] = next

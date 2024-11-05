@@ -21,9 +21,9 @@ async fn main() {
 
     load_and_send_images(&mut plugin).await;
 
-    let (coordinates, name) = match options.selector {
-        Selector::In(name) => (get_coordinates_from_name(&name), name.city),
-        Selector::At(coordinates) => (coordinates, "N/A".to_string()),
+    let (coordinates, name) = match &options.selector {
+        Selector::In(name) => (get_coordinates_from_name(name), &name.city),
+        Selector::At(coordinates) => (coordinates.clone(), &"N/A".to_string()),
     };
 
     debug!("Mapped to {} at {:?}", name, coordinates);
@@ -31,10 +31,10 @@ async fn main() {
     let agent = Agent::new();
 
     loop {
-        let weather = weather_api::get_weather(&agent, &coordinates, &name);
+        let weather = weather_api::get_weather(&agent, &coordinates, name, &options);
         plugin.update(weather.into()).await.unwrap();
 
-        tokio::time::sleep(time::Duration::from_secs(15 * 60)).await;
+        tokio::time::sleep(time::Duration::from_secs(options.interval * 60)).await;
     }
 }
 
@@ -86,21 +86,24 @@ fn get_coordinates_from_name(name: &Name) -> Coordinates {
 }
 
 #[derive(IntoProto)]
+#[proto(rename_all(PascalCase))]
 struct WeatherData {
+    city: String,
+    image_key: &'static str,
+    is_day: bool,
     latitude: f64,
     longitude: f64,
     temperature: f64,
-    wind_speed: f64,
-    wind_direction: u32,
-    is_day: bool,
+    temperature_unit: String,
     weather_description: String,
-    image_key: &'static str,
+    wind_direction: u32,
+    wind_speed: f64,
+    wind_speed_unit: String,
     update_hour: u32,
     update_minute: u32,
-    city: String,
 }
 
-#[derive(clap::Args, Debug)]
+#[derive(clap::Args, Debug, Clone)]
 struct Coordinates {
     latitude: f64,
     longitude: f64,
@@ -138,11 +141,15 @@ struct Options {
 
     /// Interval between getting new weather data in minutes
     #[clap(short, long, default_value = "15")]
-    interval: u32,
+    interval: u64,
 
     /// Temperature unit
-    #[clap(short, long, value_parser = ["C", "Celsius", "F", "Fahrenheit"], default_value = "Celsius", ignore_case = true)]
-    unit: String,
+    #[clap(short, long, value_parser = ["C", "Celsius", "F", "Fahrenheit"], default_value = "Celsius")]
+    temperature_unit: String,
+
+    /// Wind speed unit
+    #[clap(short, long, value_parser = ["km/h", "m/s", "mph", "knots"], default_value = "km/h")]
+    wind_speed_unit: String,
 }
 
 /// All GeocodingData fields, some (all?) of which are optional
