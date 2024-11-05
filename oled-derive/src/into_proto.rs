@@ -1,14 +1,15 @@
-use convert_case::{Case, Casing};
+use convert_case::Casing;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput, Type};
 
-use crate::common::{get_attribute, parse_attributes};
+use crate::common::{get_attribute, get_case, parse_attributes};
 
 pub fn expand_into_proto_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
     // let (_impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let assignments = generate_assignments(&input.data);
+    let struct_attrs = get_struct_attributes(&input.attrs);
+    let assignments = generate_assignments(&input.data, &struct_attrs);
 
     // TODO handle generics of deriving type
     let expanded = quote! {
@@ -23,7 +24,7 @@ pub fn expand_into_proto_derive(input: DeriveInput) -> proc_macro::TokenStream {
     proc_macro::TokenStream::from(expanded)
 }
 
-fn generate_assignments(data: &Data) -> TokenStream {
+fn generate_assignments(data: &Data, struct_attrs: &StructAttributes) -> TokenStream {
     match *data {
         Data::Struct(ref data) => match data.fields {
             syn::Fields::Named(ref fields) => {
@@ -33,7 +34,11 @@ fn generate_assignments(data: &Data) -> TokenStream {
                         Some(field) => format!("{}", field),
                         None => String::new(),
                     };
-                    let renamed = field_name.to_case(Case::Pascal);
+
+                    let renamed = match &struct_attrs.rename_all {
+                        Some(rename_all) => field_name.to_case(get_case(&rename_all)),
+                        None => field_name,
+                    };
 
                     // TODO find a better way of checking whether type is an Option<_> or not
                     let is_option = if let Type::Path(type_path) = &field.ty {
@@ -42,7 +47,7 @@ fn generate_assignments(data: &Data) -> TokenStream {
                         false
                     };
 
-                    let attrs = get_attributes(&field.attrs);
+                    let attrs = get_field_attributes(&field.attrs);
 
                     let value_accessor = if is_option {
                         quote! { value }
@@ -79,14 +84,26 @@ fn generate_assignments(data: &Data) -> TokenStream {
     }
 }
 
-struct ProtoAttributes {
+struct StructAttributes {
+    rename_all: Option<TokenStream>,
+}
+
+fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
+    let mut attributes = parse_attributes("proto", attributes);
+
+    StructAttributes {
+        rename_all: get_attribute(&mut attributes, "rename_all"),
+    }
+}
+
+struct FieldAttributes {
     transform: Option<TokenStream>,
 }
 
-fn get_attributes(attributes: &Vec<Attribute>) -> ProtoAttributes {
+fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
     let mut attributes = parse_attributes("proto", attributes);
 
-    ProtoAttributes {
+    FieldAttributes {
         transform: get_attribute(&mut attributes, "transform"),
     }
 }

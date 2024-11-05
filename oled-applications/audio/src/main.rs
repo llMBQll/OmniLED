@@ -32,6 +32,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 #[derive(IntoProto)]
+#[proto(rename_all(PascalCase))]
 struct AudioData {
     is_muted: bool,
     volume: i32,

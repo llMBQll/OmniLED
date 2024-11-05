@@ -1,3 +1,4 @@
+use convert_case::Case;
 use proc_macro2::TokenStream;
 use std::collections::HashMap;
 use syn::{parenthesized, token, Attribute};
@@ -57,4 +58,19 @@ pub fn parse_attributes(
             Some((attribute_name, attribute_value))
         })
         .collect()
+}
+
+pub fn get_case(rename_strategy: &TokenStream) -> Case {
+    let strategy = rename_strategy.to_string();
+    match strategy.as_str() {
+        "lowercase" => Case::Lower,
+        "UPPERCASE" => Case::Upper,
+        "PascalCase" => Case::Pascal,
+        "camelCase" => Case::Camel,
+        "snake_case" => Case::Snake,
+        "SCREAMING_SNAKE_CASE" => Case::ScreamingSnake,
+        "kebab-case" => Case::Kebab,
+        "SCREAMING-KEBAB-CASE" => Case::UpperKebab,
+        convention => panic!("Unknown case convention '{}'", convention),
+    }
 }
