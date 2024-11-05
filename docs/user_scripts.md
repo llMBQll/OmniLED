@@ -11,7 +11,7 @@ Below data types are building blocks for displaying data on screen. Each of them
 - `size`: Size. Width and height of the object.
 - `modifiers`: Modifiers. Display modifiers.
 
-Text
+### Text
 
 - `text`: string. Text to be displayed on screen.
 
@@ -20,13 +20,13 @@ widget larger or enable the `scrolling` modifier to enable automatic scrolling o
 
 By default, font size will be equal to widget height. It can be changed via `font_size` modifier.
 
-Image
+### Image
 
 - `image`: OledImage. Image that will be displayed on screen.
 
 Image will be scaled from its original size to widget's dimensions.
 
-Bar
+### Bar
 
 - `value`: float. Amount of the bar that will be filled depends on where `value` lies in the `range`. It is calculated
   using the following formula `(value - range.min) / (range.max - range.min) * 100%`.
@@ -88,3 +88,15 @@ image = {
     bytes = { 0, 1, 0, 1 },
 }
 ```
+
+Modifiers
+
+Additional display options for widgets.
+
+- `clear_background`: `bool` - Resets all pixels in widget's area before drawing the widget's content.
+- `flip_horizontal`: `bool` – Flips the content horizontally along the middle of the widget width.
+- `flip_vertical`: `bool` – Flips the content vertically along the middle of the widget height.
+- `font_size`: `integer` – Sets the font size, defaulting to the widget height. Currently applies only to [Text](#text).
+- `negative`: `bool` - Swap on and off pixels for a given widget.
+- `scrolling`: `bool` – Enables scrolling for content that exceeds widget size. Currently applies only to [Text](#text).
+- `vertical`: `bool` – Orients the widget vertically. Currently applies only to [Bar](#bar).

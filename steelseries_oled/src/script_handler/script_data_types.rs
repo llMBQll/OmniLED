@@ -111,21 +111,24 @@ impl UserData for Text {}
 #[derive(Clone, Copy, Debug, Default, FromLuaValue)]
 pub struct Modifiers {
     #[mlua(default(false))]
+    pub clear_background: bool,
+
+    #[mlua(default(false))]
     pub flip_horizontal: bool,
 
     #[mlua(default(false))]
     pub flip_vertical: bool,
 
-    #[mlua(default(false))]
-    pub strict: bool,
+    pub font_size: Option<usize>,
 
     #[mlua(default(false))]
-    pub vertical: bool,
+    pub negative: bool,
 
     #[mlua(default(false))]
     pub scrolling: bool,
 
-    pub font_size: Option<usize>,
+    #[mlua(default(false))]
+    pub vertical: bool,
 }
 
 impl UserData for Modifiers {}

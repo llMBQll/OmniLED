@@ -76,6 +76,15 @@ impl Renderer {
         (end_auto_repeat, buffer)
     }
 
+    fn clear_background(buffer: &mut Buffer, position: Point, size: Size, modifiers: &Modifiers) {
+        let rect = Rectangle { position, size };
+        for y in 0..size.height as isize {
+            for x in 0..size.width as isize {
+                buffer.reset(x, y, &rect, &modifiers);
+            }
+        }
+    }
+
     fn render_bar(
         buffer: &mut Buffer,
         position: Point,
@@ -84,7 +93,9 @@ impl Renderer {
         range: Range,
         modifiers: Modifiers,
     ) {
-        // TODO verify range.max is greater than range.min
+        if modifiers.clear_background {
+            Self::clear_background(buffer, position, size, &modifiers);
+        }
 
         let value = clamp(value, range.min, range.max);
         let percentage = (value - range.min) / (range.max - range.min);
@@ -111,6 +122,10 @@ impl Renderer {
     ) {
         if size.width == 0 || size.height == 0 {
             return;
+        }
+
+        if modifiers.clear_background {
+            Self::clear_background(buffer, position, size, &modifiers);
         }
 
         let x_factor = image.size.width as f64 / size.width as f64;
@@ -146,6 +161,10 @@ impl Renderer {
         modifiers: Modifiers,
         offsets: &mut IntoIter<usize>,
     ) {
+        if modifiers.clear_background {
+            Self::clear_background(buffer, position, size, &modifiers);
+        }
+
         let mut cursor_x = 0;
         let cursor_y = size.height as isize;
 
@@ -169,8 +188,8 @@ impl Renderer {
 
                     if x < 0
                         || y < 0
-                        || (modifiers.strict && x >= rect.size.width as isize)
-                        || (modifiers.strict && y >= rect.size.height as isize)
+                        || x >= rect.size.width as isize
+                        || y >= rect.size.height as isize
                     {
                         continue;
                     }
