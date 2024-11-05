@@ -33,6 +33,18 @@ impl FontManager {
         }
     }
 
+    pub fn get_font_size_for_height(&self, height: usize) -> usize {
+        let ascender = self.face.ascender();
+        let descencer = self.face.descender();
+        let unit_per_em = self.face.raw().units_per_EM;
+
+        let target = unit_per_em as f64 * height as f64 / (ascender - descencer) as f64 + 2.0;
+
+        debug!("height: {height}, ascender: {ascender}, descencer: {descencer}, unit_per_EM: {unit_per_em}, result: {target}");
+
+        target as usize
+    }
+
     pub fn get_character(&mut self, character: char, height: usize) -> &Character {
         self.cache.entry((character, height)).or_insert_with(|| {
             self.face

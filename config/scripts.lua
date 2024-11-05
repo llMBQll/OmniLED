@@ -11,7 +11,7 @@ local function volume()
                 text = AUDIO.Name,
                 position = { x = 0, y = SCREEN.Height / 2 },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 2 - 4 },
-                modifiers = { scrolling = true },
+                modifiers = { scrolling = true, clear_background = true, negative = true },
             },
         },
         duration = 2000,
@@ -34,7 +34,7 @@ local function spotify()
                 text = string.format("%s - %s", SPOTIFY.Artist, SPOTIFY.Title),
                 position = { x = 0, y = 1 },
                 size = { width = SCREEN.Width, height = 16 },
-                modifiers = { scrolling = true },
+                modifiers = { scrolling = true, clear_background = true, negative = true },
             },
             Text {
                 text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),

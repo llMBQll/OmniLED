@@ -1,3 +1,11 @@
+use log::debug;
+use mlua::Lua;
+use num_traits::clamp;
+use std::cmp::max;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::vec::IntoIter;
+
 use crate::common::user_data::UserDataRef;
 use crate::renderer::buffer::{BitBuffer, Buffer, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
@@ -6,12 +14,6 @@ use crate::script_handler::script_data_types::{
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
-use mlua::Lua;
-use num_traits::clamp;
-use std::cmp::max;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::vec::IntoIter;
 
 pub struct Renderer {
     font_manager: FontManager,
@@ -175,7 +177,17 @@ impl Renderer {
         }
 
         let rect = Rectangle { position, size };
-        let character_height = modifiers.font_size.unwrap_or(rect.size.height);
+        let character_height = match modifiers.font_size {
+            Some(size) => {
+                debug!("Received size: {}", size);
+                size
+            }
+            None => {
+                let size = self.font_manager.get_font_size_for_height(rect.size.height);
+                debug!("Calculated size {} for height {}", size, rect.size.height);
+                size
+            }
+        };
         for character in characters {
             let character = self.font_manager.get_character(character, character_height);
             let bitmap = &character.bitmap;
@@ -184,12 +196,11 @@ impl Renderer {
             for bitmap_y in 0..bitmap.rows as isize {
                 for bitmap_x in 0..bitmap.cols as isize {
                     let x = cursor_x + bitmap_x + metrics.offset_x;
-                    let y = cursor_y + bitmap_y - metrics.offset_y;
+                    let y = cursor_y + bitmap_y - metrics.offset_y - (character_height as f64 * 100.0 / 360.0) as isize;
 
-                    if x < 0
-                        || y < 0
-                        || x >= rect.size.width as isize
-                        || y >= rect.size.height as isize
+                    if x < 0 || y < 0
+                    // || x >= rect.size.width as isize
+                    // || y >= rect.size.height as isize
                     {
                         continue;
                     }
