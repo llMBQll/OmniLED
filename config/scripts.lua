@@ -25,7 +25,8 @@ local function spotify()
     return {
         data = {
             Bar {
-                value = SPOTIFY.Progress * 100.0 / SPOTIFY.Duration,
+                value = SPOTIFY.Progress,
+                range = { min = 0, max = SPOTIFY.Duration },
                 position = { x = 0, y = 0 },
                 size = { width = SCREEN.Width, height = 2 },
             },
@@ -94,7 +95,7 @@ end
 local function weather()
     local value
     local unit
-    if CLOCK.Seconds % 20 < 10 then
+    if CLOCK.Seconds % 10 < 5 then
         value = string.format("% 3d", math.round(WEATHER.Temperature))
         unit = '°C'
     else
@@ -138,26 +139,26 @@ local function weather()
 end
 
 SCREEN_BUILDER
-        :new('Steelseries Apex 7 TKL')
-        :with_screen({
-    {
-        layout = volume,
-        run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
-    },
-    {
-        layout = spotify,
-        run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
-    },
-    {
-        layout = clock,
-        run_on = { 'CLOCK.Seconds' },
-    },
-})
-        :with_screen({
-    {
-        layout = weather,
-        run_on = { 'CLOCK.Seconds' },
-    }
-})
-        :with_screen_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
-        :register()
+    :new('Steelseries Apex 7 TKL')
+    :with_screen({
+        {
+            layout = volume,
+            run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
+        },
+        {
+            layout = spotify,
+            run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
+        },
+        {
+            layout = clock,
+            run_on = { 'CLOCK.Seconds' },
+        },
+    })
+    :with_screen({
+        {
+            layout = weather,
+            run_on = { 'CLOCK.Seconds' },
+        }
+    })
+    :with_screen_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
+    :register()

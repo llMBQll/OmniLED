@@ -49,9 +49,23 @@ pub enum Operation {
 impl UserData for Operation {}
 
 #[derive(Clone, Debug, FromLuaValue)]
+#[mlua(validate(Self::validate_range))]
 pub struct Range {
     pub min: f32,
     pub max: f32,
+}
+
+impl Range {
+    fn validate_range(range: &Self) -> mlua::Result<()> {
+        if range.min < range.max {
+            Ok(())
+        } else {
+            Err(mlua::Error::runtime(format!(
+                "range.max shall be greater than range.min, got min = {}, max = {}",
+                range.min, range.max
+            )))
+        }
+    }
 }
 
 impl UserData for Range {}

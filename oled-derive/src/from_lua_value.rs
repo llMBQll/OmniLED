@@ -7,13 +7,26 @@ use crate::common::{get_attribute, get_attribute_with_default_value, parse_attri
 pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
     let (_impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let struct_attrs = get_struct_attributes(&input.attrs);
     let initializer = generate_initializer(&name, &input.data);
 
-    // TODO handle generics of deriving type, for now only lifetime "'a" is allowed
+    let validate = match struct_attrs.validate {
+        Some(validate) => quote! {
+            match result {
+                Ok(value) => match #validate(&value) {
+                    Ok(_) => Ok(value),
+                    Err(err) => Err(err),
+                },
+                Err(err) => Err(err),
+            }
+        },
+        None => quote! { result },
+    };
+
     let expanded = quote! {
         impl FromLua for #name #ty_generics {
             fn from_lua(value: mlua::Value, lua: &mlua::Lua) -> mlua::Result<#name #ty_generics #where_clause> {
-                match value {
+                let result = match value {
                     #initializer,
                     mlua::Value::UserData(user_data) => {
                         let data = user_data.borrow::<#name>()?;
@@ -24,10 +37,12 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
                         to: String::from(stringify!(#name)),
                         message: None,
                     }),
-                }
+                };
+                #validate
             }
         }
     };
+
     proc_macro::TokenStream::from(expanded)
 }
 
@@ -168,14 +183,14 @@ enum FieldType {
 }
 
 struct StructAttributes {
-    verify: Option<TokenStream>,
+    validate: Option<TokenStream>,
 }
 
 fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
     let mut attributes = parse_attributes("mlua", attributes);
 
     StructAttributes {
-        verify: get_attribute(&mut attributes, "verify"),
+        validate: get_attribute(&mut attributes, "validate"),
     }
 }
 
