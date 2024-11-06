@@ -1,3 +1,10 @@
+use mlua::Lua;
+use num_traits::clamp;
+use std::cmp::max;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::vec::IntoIter;
+
 use crate::common::user_data::UserDataRef;
 use crate::renderer::buffer::{BitBuffer, Buffer, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
@@ -6,12 +13,6 @@ use crate::script_handler::script_data_types::{
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
-use mlua::Lua;
-use num_traits::clamp;
-use std::cmp::max;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::vec::IntoIter;
 
 pub struct Renderer {
     font_manager: FontManager,
@@ -175,16 +176,28 @@ impl Renderer {
         }
 
         let rect = Rectangle { position, size };
-        let character_height = modifiers.font_size.unwrap_or(rect.size.height);
+
+        let (font_size, offset) = match modifiers.font_size {
+            Some(size) => {
+                let offset = self.font_manager.get_offset(size);
+                (size, offset)
+            }
+            None => {
+                let size = self.font_manager.get_font_size(rect.size.height);
+                let offset = self.font_manager.get_offset(size);
+                (size, offset)
+            }
+        };
+
         for character in characters {
-            let character = self.font_manager.get_character(character, character_height);
+            let character = self.font_manager.get_character(character, font_size);
             let bitmap = &character.bitmap;
             let metrics = &character.metrics;
 
             for bitmap_y in 0..bitmap.rows as isize {
                 for bitmap_x in 0..bitmap.cols as isize {
-                    let x = cursor_x + bitmap_x + metrics.offset_x;
-                    let y = cursor_y + bitmap_y - metrics.offset_y;
+                    let x = cursor_x + bitmap_x + bitmap.offset_x;
+                    let y = cursor_y + bitmap_y - bitmap.offset_y - offset as isize;
 
                     if x < 0
                         || y < 0
@@ -243,11 +256,14 @@ impl Renderer {
             return 0;
         }
 
-        let height = text.modifiers.font_size.unwrap_or(text.size.height);
-        let width = text.size.width;
-        let character = font_manager.get_character('a', height);
+        let font_size = match text.modifiers.font_size {
+            Some(font_size) => font_size,
+            None => font_manager.get_font_size(text.size.height),
+        };
+        let text_width = text.size.width;
+        let character = font_manager.get_character('a', font_size);
         let char_width = character.metrics.advance as usize;
-        let max_characters = width / max(char_width, 1);
+        let max_characters = text_width / max(char_width, 1);
         let len = text.text.chars().count();
         let tick = ctx.get_tick(&text.text);
 

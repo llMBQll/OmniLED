@@ -14,6 +14,8 @@ use crate::renderer::font_selector::FontSelector;
 pub struct FontManager {
     _library: freetype::Library,
     face: freetype::Face,
+    font_scale: f64,
+    offset_scale: f64,
     cache: HashMap<(char, usize), Character>,
 }
 
@@ -24,19 +26,38 @@ impl FontManager {
         let (data, font_index) = Self::load_font(selector);
         let face = library
             .new_memory_face(data.to_vec(), font_index as isize)
-            .unwrap_or_else(|_| panic!("Selected font doesn't face at index {}", font_index));
+            .unwrap_or_else(|_| panic!("Selected font doesn't have a face at index {}", font_index));
+
+        let ascender = face.ascender() as f64;
+        let descender = face.descender() as f64;
+        let em_size = face.em_size() as f64;
+
+        let font_scale = em_size / (ascender - descender);
+        let offset_scale = (-descender) / (ascender - descender);
 
         Self {
             _library: library,
             face,
+            font_scale,
+            offset_scale,
             cache: HashMap::new(),
         }
     }
 
-    pub fn get_character(&mut self, character: char, height: usize) -> &Character {
-        self.cache.entry((character, height)).or_insert_with(|| {
+    pub fn get_font_size(&self, max_height: usize) -> usize {
+        let size = max_height as f64 * self.font_scale;
+        size.round() as usize
+    }
+
+    pub fn get_offset(&self, font_size: usize) -> usize {
+        let offset = font_size as f64 * self.offset_scale;
+        offset.round() as usize
+    }
+
+    pub fn get_character(&mut self, character: char, font_size: usize) -> &Character {
+        self.cache.entry((character, font_size)).or_insert_with(|| {
             self.face
-                .set_pixel_sizes(height as u32, height as u32)
+                .set_pixel_sizes(font_size as u32, font_size as u32)
                 .unwrap();
             self.face
                 .load_char(character as usize, LoadFlag::TARGET_MONO)
@@ -113,16 +134,17 @@ pub struct Character {
 
 #[derive(Debug)]
 pub struct Metrics {
-    pub offset_y: isize,
-    pub offset_x: isize,
+    // TODO legacy parameters, probably should be deleted
+    pub _offset_y: isize,
+    pub _offset_x: isize,
     pub advance: isize,
 }
 
 impl From<freetype::GlyphMetrics> for Metrics {
     fn from(metrics: freetype::GlyphMetrics) -> Self {
         Self {
-            offset_y: (metrics.horiBearingY >> 6) as isize,
-            offset_x: (metrics.horiBearingX >> 6) as isize,
+            _offset_y: (metrics.horiBearingY >> 6) as isize,
+            _offset_x: (metrics.horiBearingX >> 6) as isize,
             advance: (metrics.horiAdvance >> 6) as isize,
         }
     }
@@ -130,6 +152,8 @@ impl From<freetype::GlyphMetrics> for Metrics {
 
 #[derive(Debug)]
 pub struct Bitmap {
+    pub offset_x: isize,
+    pub offset_y: isize,
     pub rows: usize,
     pub cols: usize,
     stride: usize,
@@ -149,6 +173,8 @@ impl From<freetype::BitmapGlyph> for Bitmap {
     fn from(bitmap_glyph: freetype::BitmapGlyph) -> Self {
         let bitmap = bitmap_glyph.bitmap();
         Self {
+            offset_x: bitmap_glyph.left() as isize,
+            offset_y: bitmap_glyph.top() as isize,
             rows: bitmap.rows() as usize,
             cols: bitmap.width() as usize,
             stride: bitmap.pitch() as usize,

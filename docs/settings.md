@@ -26,8 +26,8 @@ Possible Values:
   `"Default"`
 - Filesystem selector - loads font from specified file.
   ```lua
-  {
-    filesystem = {
+  font = {
+    Filesystem = {
       path = ...,
       font_index = ...,
     }
@@ -38,8 +38,8 @@ Possible Values:
   Default: `0`.
 - System selector - find closest match from fonts installed on your computer.
   ```lua
-  {
-    system = {
+  font = {
+    System = {
       names = ...,
       style = ...,
       weight = ...,

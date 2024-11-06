@@ -74,8 +74,8 @@ size = {
 
 OledImage
 
-- `size`: Size. Source image size
-- `bytes`: \[byte\]. Byte per pixel greyscale data. All non-zero values will result in the pixels being on.
+- `size`: Size. Image size in pixels
+- `bytes`: \[byte\]. Row-major black and white image data with one byte per pixel. All non-zero values will result in the pixels being on.
 
 `size.width * size.height` must be equal to length of the `bytes` array.
 
