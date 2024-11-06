@@ -111,6 +111,9 @@ impl UserData for Text {}
 #[derive(Clone, Copy, Debug, Default, FromLuaValue)]
 pub struct Modifiers {
     #[mlua(default(false))]
+    pub ascender_only: bool,
+
+    #[mlua(default(false))]
     pub clear_background: bool,
 
     #[mlua(default(false))]

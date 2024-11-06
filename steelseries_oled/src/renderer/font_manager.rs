@@ -14,9 +14,14 @@ use crate::renderer::font_selector::FontSelector;
 pub struct FontManager {
     _library: freetype::Library,
     face: freetype::Face,
-    font_scale: f64,
-    offset_scale: f64,
+    metrics: FontMetrics,
     cache: HashMap<(char, usize), Character>,
+}
+
+struct FontMetrics {
+    full_scale: f64,
+    ascender_only_scale: f64,
+    offset_scale: f64,
 }
 
 impl FontManager {
@@ -26,32 +31,48 @@ impl FontManager {
         let (data, font_index) = Self::load_font(selector);
         let face = library
             .new_memory_face(data.to_vec(), font_index as isize)
-            .unwrap_or_else(|_| panic!("Selected font doesn't have a face at index {}", font_index));
+            .unwrap_or_else(|_| {
+                panic!("Selected font doesn't have a face at index {}", font_index)
+            });
 
         let ascender = face.ascender() as f64;
         let descender = face.descender() as f64;
         let em_size = face.em_size() as f64;
 
-        let font_scale = em_size / (ascender - descender);
-        let offset_scale = (-descender) / (ascender - descender);
+        let full_scale = em_size / (ascender - descender);
+        let ascender_only_scale = em_size / ascender;
+        let offset_scale = descender.abs() / (ascender - descender);
 
         Self {
             _library: library,
             face,
-            font_scale,
-            offset_scale,
+            metrics: FontMetrics {
+                full_scale,
+                ascender_only_scale,
+                offset_scale,
+            },
             cache: HashMap::new(),
         }
     }
 
-    pub fn get_font_size(&self, max_height: usize) -> usize {
-        let size = max_height as f64 * self.font_scale;
+    pub fn get_font_size(&self, max_height: usize, ascender_only: bool) -> usize {
+        let scale = if ascender_only {
+            self.metrics.ascender_only_scale
+        } else {
+            self.metrics.full_scale
+        };
+
+        let size = max_height as f64 * scale;
         size.round() as usize
     }
 
-    pub fn get_offset(&self, font_size: usize) -> usize {
-        let offset = font_size as f64 * self.offset_scale;
-        offset.round() as usize
+    pub fn get_offset(&self, font_size: usize, ascender_only: bool) -> usize {
+        if ascender_only {
+            0
+        } else {
+            let offset = font_size as f64 * self.metrics.offset_scale;
+            offset.round() as usize
+        }
     }
 
     pub fn get_character(&mut self, character: char, font_size: usize) -> &Character {
@@ -116,8 +137,7 @@ impl FontManager {
     }
 
     fn load_default_font() -> (Font, u32) {
-        const DEFAULT_FONT: &[u8] =
-            include_bytes!("../../assets/fonts/FiraMono/FiraMono-Regular.ttf");
+        const DEFAULT_FONT: &[u8] = include_bytes!("../../assets/fonts/FiraMono/FiraMono-Bold.ttf");
         const DEFAULT_FONT_INDEX: u32 = 0;
 
         let default_font = Arc::new(DEFAULT_FONT.to_vec());
@@ -134,17 +154,12 @@ pub struct Character {
 
 #[derive(Debug)]
 pub struct Metrics {
-    // TODO legacy parameters, probably should be deleted
-    pub _offset_y: isize,
-    pub _offset_x: isize,
     pub advance: isize,
 }
 
 impl From<freetype::GlyphMetrics> for Metrics {
     fn from(metrics: freetype::GlyphMetrics) -> Self {
         Self {
-            _offset_y: (metrics.horiBearingY >> 6) as isize,
-            _offset_x: (metrics.horiBearingX >> 6) as isize,
             advance: (metrics.horiAdvance >> 6) as isize,
         }
     }

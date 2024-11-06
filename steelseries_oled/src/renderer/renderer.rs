@@ -179,12 +179,12 @@ impl Renderer {
 
         let (font_size, offset) = match modifiers.font_size {
             Some(size) => {
-                let offset = self.font_manager.get_offset(size);
+                let offset = self.font_manager.get_offset(size, modifiers.ascender_only);
                 (size, offset)
             }
             None => {
-                let size = self.font_manager.get_font_size(rect.size.height);
-                let offset = self.font_manager.get_offset(size);
+                let size = self.font_manager.get_font_size(rect.size.height, modifiers.ascender_only);
+                let offset = self.font_manager.get_offset(size, modifiers.ascender_only);
                 (size, offset)
             }
         };
@@ -192,7 +192,6 @@ impl Renderer {
         for character in characters {
             let character = self.font_manager.get_character(character, font_size);
             let bitmap = &character.bitmap;
-            let metrics = &character.metrics;
 
             for bitmap_y in 0..bitmap.rows as isize {
                 for bitmap_x in 0..bitmap.cols as isize {
@@ -213,7 +212,7 @@ impl Renderer {
                 }
             }
 
-            cursor_x += metrics.advance;
+            cursor_x += character.metrics.advance;
             if cursor_x > rect.size.width as isize {
                 break;
             }
@@ -258,7 +257,7 @@ impl Renderer {
 
         let font_size = match text.modifiers.font_size {
             Some(font_size) => font_size,
-            None => font_manager.get_font_size(text.size.height),
+            None => font_manager.get_font_size(text.size.height, text.modifiers.ascender_only),
         };
         let text_width = text.size.width;
         let character = font_manager.get_character('a', font_size);
