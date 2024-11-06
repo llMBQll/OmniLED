@@ -117,7 +117,7 @@ impl FontManager {
 
     fn load_default_font() -> (Font, u32) {
         const DEFAULT_FONT: &[u8] =
-            include_bytes!("../../assets/fonts/Meslo/MesloLGLNerdFontMono-Bold.ttf");
+            include_bytes!("../../assets/fonts/FiraMono/FiraMono-Regular.ttf");
         const DEFAULT_FONT_INDEX: u32 = 0;
 
         let default_font = Arc::new(DEFAULT_FONT.to_vec());
