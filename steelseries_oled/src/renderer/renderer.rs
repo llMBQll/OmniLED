@@ -9,7 +9,7 @@ use crate::common::user_data::UserDataRef;
 use crate::renderer::buffer::{BitBuffer, Buffer, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
 use crate::script_handler::script_data_types::{
-    MemoryRepresentation, Modifiers, Offset, OledImage, Point, Range, Text, Widget,
+    Bar, Image, MemoryRepresentation, Modifiers, Point, Text, Widget,
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
@@ -48,32 +48,9 @@ impl Renderer {
 
         for operation in widgets {
             match operation {
-                Widget::Bar(bar) => Self::render_bar(
-                    &mut buffer,
-                    bar.position,
-                    bar.size,
-                    bar.value,
-                    bar.vertical,
-                    bar.range,
-                    bar.modifiers,
-                ),
-                Widget::Image(image) => Self::render_image(
-                    &mut buffer,
-                    image.position,
-                    image.size,
-                    image.image,
-                    image.modifiers,
-                ),
-                Widget::Text(text) => self.render_text(
-                    &mut buffer,
-                    text.position,
-                    text.size,
-                    text.text,
-                    text.text_offset,
-                    text.font_size,
-                    text.modifiers,
-                    &mut text_offsets,
-                ),
+                Widget::Bar(bar) => Self::render_bar(&mut buffer, bar),
+                Widget::Image(image) => Self::render_image(&mut buffer, image),
+                Widget::Text(text) => self.render_text(&mut buffer, text, &mut text_offsets),
             }
         }
 
@@ -89,101 +66,92 @@ impl Renderer {
         }
     }
 
-    fn render_bar(
-        buffer: &mut Buffer,
-        position: Point,
-        size: Size,
-        value: f32,
-        vertical: bool,
-        range: Range,
-        modifiers: Modifiers,
-    ) {
-        if modifiers.clear_background {
-            Self::clear_background(buffer, position, size, &modifiers);
+    fn render_bar(buffer: &mut Buffer, widget: Bar) {
+        if widget.modifiers.clear_background {
+            Self::clear_background(buffer, widget.position, widget.size, &widget.modifiers);
         }
 
-        let value = clamp(value, range.min, range.max);
-        let percentage = (value - range.min) / (range.max - range.min);
+        let value = clamp(widget.value, widget.range.min, widget.range.max);
+        let percentage = (value - widget.range.min) / (widget.range.max - widget.range.min);
 
-        let (height, width) = match vertical {
-            true => ((size.height as f32 * percentage) as usize, size.width),
-            false => (size.height, (size.width as f32 * percentage) as usize),
+        let (height, width) = match widget.vertical {
+            true => (
+                (widget.size.height as f32 * percentage) as usize,
+                widget.size.width,
+            ),
+            false => (
+                widget.size.height,
+                (widget.size.width as f32 * percentage) as usize,
+            ),
         };
 
-        let rect = Rectangle { position, size };
+        let rect = Rectangle {
+            position: widget.position,
+            size: widget.size,
+        };
         for y in 0..height as isize {
             for x in 0..width as isize {
-                buffer.set(x, y, &rect, &modifiers);
+                buffer.set(x, y, &rect, &widget.modifiers);
             }
         }
     }
 
-    fn render_image(
-        buffer: &mut Buffer,
-        position: Point,
-        size: Size,
-        image: OledImage,
-        modifiers: Modifiers,
-    ) {
-        if size.width == 0 || size.height == 0 {
+    fn render_image(buffer: &mut Buffer, widget: Image) {
+        if widget.size.width == 0 || widget.size.height == 0 {
             return;
         }
 
-        if modifiers.clear_background {
-            Self::clear_background(buffer, position, size, &modifiers);
+        if widget.modifiers.clear_background {
+            Self::clear_background(buffer, widget.position, widget.size, &widget.modifiers);
         }
 
-        let x_factor = image.size.width as f64 / size.width as f64;
-        let y_factor = image.size.height as f64 / size.height as f64;
+        let x_factor = widget.image.size.width as f64 / widget.size.width as f64;
+        let y_factor = widget.image.size.height as f64 / widget.size.height as f64;
 
-        let rect = Rectangle { position, size };
-        for y in 0..size.height as isize {
-            for x in 0..size.width as isize {
+        let rect = Rectangle {
+            position: widget.position,
+            size: widget.size,
+        };
+        for y in 0..widget.size.height as isize {
+            for x in 0..widget.size.width as isize {
                 // Use nearest neighbour interpolation for now as it's the quickest to implement
                 // TODO allow specifying scaling algorithm as modifier
                 // TODO potentially cache scaled images
 
                 let image_x = (x as f64 * x_factor).round() as usize;
-                let image_x = image_x.clamp(0, image.size.width - 1);
+                let image_x = image_x.clamp(0, widget.image.size.width - 1);
 
                 let image_y = (y as f64 * y_factor).round() as usize;
-                let image_y = image_y.clamp(0, image.size.height - 1);
+                let image_y = image_y.clamp(0, widget.image.size.height - 1);
 
-                let index = image_y * image.size.width + image_x;
-                if image.bytes[index] != 0 {
-                    buffer.set(x, y, &rect, &modifiers);
+                let index = image_y * widget.image.size.width + image_x;
+                if widget.image.bytes[index] != 0 {
+                    buffer.set(x, y, &rect, &widget.modifiers);
                 }
             }
         }
     }
 
-    fn render_text(
-        &mut self,
-        buffer: &mut Buffer,
-        position: Point,
-        size: Size,
-        text: String,
-        text_offset: Offset,
-        font_size: Option<usize>,
-        modifiers: Modifiers,
-        offsets: &mut IntoIter<usize>,
-    ) {
-        if modifiers.clear_background {
-            Self::clear_background(buffer, position, size, &modifiers);
+    fn render_text(&mut self, buffer: &mut Buffer, widget: Text, offsets: &mut IntoIter<usize>) {
+        if widget.modifiers.clear_background {
+            Self::clear_background(buffer, widget.position, widget.size, &widget.modifiers);
         }
 
         let mut cursor_x = 0;
-        let cursor_y = size.height as isize;
+        let cursor_y = widget.size.height as isize;
 
         let offset = offsets.next().expect("Each 'Text' shall have its offset");
-        let mut characters = text.chars();
+        let mut characters = widget.text.chars();
         for _ in 0..offset {
             _ = characters.next();
         }
 
-        let rect = Rectangle { position, size };
+        let rect = Rectangle {
+            position: widget.position,
+            size: widget.size,
+        };
 
-        let (font_size, text_offset) = match (font_size, text_offset) {
+        let (font_size, text_offset) = match (widget.font_size, widget.text_offset) {
             (Some(font_size), offset_type) => {
                 let offset = self.font_manager.get_offset(font_size, &offset_type);
                 (font_size, offset)
@@ -215,7 +183,7 @@ impl Renderer {
                     }
 
                     if bitmap.get(bitmap_x as usize, bitmap_y as usize) {
-                        buffer.set(x, y, &rect, &modifiers);
+                        buffer.set(x, y, &rect, &widget.modifiers);
                     }
                 }
             }
