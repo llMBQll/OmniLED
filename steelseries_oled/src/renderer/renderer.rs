@@ -17,7 +17,7 @@ use crate::settings::settings::Settings;
 pub struct Renderer {
     font_manager: FontManager,
     scrolling_text_data: ScrollingTextData,
-    scrolling_text_control: ScrollingTextControl,
+    scrolling_text_settings: ScrollingTextSettings,
 }
 
 impl Renderer {
@@ -28,7 +28,7 @@ impl Renderer {
         Self {
             font_manager: FontManager::new(font_selector),
             scrolling_text_data: ScrollingTextData::new(),
-            scrolling_text_control: ScrollingTextControl::new(lua),
+            scrolling_text_settings: ScrollingTextSettings::new(lua),
         }
     }
 
@@ -76,12 +76,12 @@ impl Renderer {
 
         let (height, width) = match widget.vertical {
             true => (
-                (widget.size.height as f32 * percentage) as usize,
+                (widget.size.height as f32 * percentage).round() as usize,
                 widget.size.width,
             ),
             false => (
                 widget.size.height,
-                (widget.size.width as f32 * percentage) as usize,
+                (widget.size.width as f32 * percentage).round() as usize,
             ),
         };
 
@@ -195,20 +195,16 @@ impl Renderer {
         }
     }
 
-    fn precalculate_text(
-        &mut self,
-        ctx: ContextKey,
-        operations: &Vec<Widget>,
-    ) -> (bool, Vec<usize>) {
+    fn precalculate_text(&mut self, ctx: ContextKey, widgets: &Vec<Widget>) -> (bool, Vec<usize>) {
         let mut ctx = self.scrolling_text_data.get_context(ctx);
 
-        let offsets: Vec<usize> = operations
+        let offsets: Vec<usize> = widgets
             .iter()
-            .filter_map(|op| match op {
+            .filter_map(|widget| match widget {
                 Widget::Text(text) => Some(Self::precalculate_single(
                     &mut ctx,
                     &mut self.font_manager,
-                    &self.scrolling_text_control,
+                    &self.scrolling_text_settings,
                     text,
                 )),
                 _ => None,
@@ -224,7 +220,7 @@ impl Renderer {
     fn precalculate_single(
         ctx: &mut Context,
         font_manager: &mut FontManager,
-        control: &ScrollingTextControl,
+        settings: &ScrollingTextSettings,
         text: &Text,
     ) -> usize {
         if !text.scrolling {
@@ -248,34 +244,33 @@ impl Renderer {
         }
 
         let max_shifts = len - max_characters;
-        let max_ticks = 2 * control.ticks_at_edge + max_shifts * control.ticks_per_move;
+        let max_ticks = 2 * settings.ticks_at_edge + max_shifts * settings.ticks_per_move;
         if tick >= max_ticks {
             ctx.set_wrap(&text.text);
         }
 
-        if tick <= control.ticks_at_edge {
+        if tick <= settings.ticks_at_edge {
             0
-        } else if tick >= control.ticks_at_edge + max_shifts * control.ticks_per_move {
+        } else if tick >= settings.ticks_at_edge + max_shifts * settings.ticks_per_move {
             max_shifts
         } else {
-            (tick - control.ticks_at_edge) / control.ticks_per_move
+            (tick - settings.ticks_at_edge) / settings.ticks_per_move
         }
     }
 }
 
-struct ScrollingTextControl {
+struct ScrollingTextSettings {
     ticks_at_edge: usize,
     ticks_per_move: usize,
 }
 
-impl ScrollingTextControl {
+impl ScrollingTextSettings {
     pub fn new(lua: &Lua) -> Self {
         let settings = UserDataRef::<Settings>::load(lua);
-        let text_control = Self {
+        Self {
             ticks_at_edge: settings.get().text_ticks_scroll_delay,
             ticks_per_move: settings.get().text_ticks_scroll_rate,
-        };
-        text_control
+        }
     }
 }
 

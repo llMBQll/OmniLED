@@ -1,6 +1,6 @@
 local function volume()
     return {
-        data = {
+        widgets = {
             Text {
                 text = AUDIO.IsMuted and 'Muted' or AUDIO.Volume,
                 font_size = 24,
@@ -24,7 +24,7 @@ end
 local SPOTIFY_DURATION = PLATFORM.Os == 'windows' and 5000 or 1000
 local function spotify()
     return {
-        data = {
+        widgets = {
             Bar {
                 value = SPOTIFY.Progress,
                 range = { min = 0, max = SPOTIFY.Duration },
@@ -61,7 +61,7 @@ end
 
 local function clock()
     return {
-        data = {
+        widgets = {
             Text {
                 text = string.format("%02d", CLOCK.Hours),
                 font_size = 50,
@@ -104,7 +104,7 @@ local function weather()
     end
 
     return {
-        data = {
+        widgets = {
             Image {
                 image = WEATHER[WEATHER.ImageKey],
                 position = { x = 0, y = 0 },

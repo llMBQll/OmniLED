@@ -189,7 +189,7 @@ impl ScriptHandler {
                 device: ctx.index,
             },
             size,
-            output.data,
+            output.widgets,
             memory_representation,
         );
 
@@ -273,7 +273,7 @@ enum Repeat {
 
 #[derive(FromLuaValue, Clone)]
 struct ScriptOutput {
-    data: Vec<Widget>,
+    widgets: Vec<Widget>,
 
     #[mlua(transform(Self::transform_duration))]
     duration: Duration,
