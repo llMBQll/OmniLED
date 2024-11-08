@@ -97,10 +97,10 @@ local function weather()
     local unit
     if CLOCK.Seconds % 10 < 5 then
         value = string.format("% 3d", math.round(WEATHER.Temperature))
-        unit = '°C'
+        unit = '°' .. WEATHER.TemperatureUnit
     else
         value = string.format("% 3d", math.round(WEATHER.WindSpeed))
-        unit = 'km/h'
+        unit = WEATHER.WindSpeedUnit
     end
 
     return {
@@ -120,7 +120,7 @@ local function weather()
             Text {
                 text = unit,
                 position = { x = 96, y = 0 },
-                size = { width = 30, height = 12 },
+                size = { width = 30, height = 13 },
             },
             Text {
                 text = string.format("%.3s %02d:%02d", CLOCK.DayNames[CLOCK.WeekDay], CLOCK.Hours, CLOCK.Minutes),

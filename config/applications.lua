@@ -22,6 +22,8 @@ load_app {
     args = {
         '--address', SERVER.address,
         '--interval', '10',
+        '--wind-speed-unit', 'm/s',
+        '--temperature-unit', 'Celsius',
         'in', 'Katowice',
     }
 }
