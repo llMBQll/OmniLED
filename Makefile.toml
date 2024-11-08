@@ -43,5 +43,5 @@ dependencies = ["build"]
 [tasks.run-release]
 description = "Run development binaries in release mode"
 command = "cargo"
-args = ["run", "--features=dev"]
+args = ["run", "--release", "--features=dev"]
 dependencies = ["build-release"]

@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use crate::renderer::bit::Bit;
 use crate::renderer::font_selector::FontSelector;
+use crate::script_handler::script_data_types::Offset;
 
 pub struct FontManager {
     _library: freetype::Library,
@@ -55,23 +56,24 @@ impl FontManager {
         }
     }
 
-    pub fn get_font_size(&self, max_height: usize, ascender_only: bool) -> usize {
-        let scale = if ascender_only {
-            self.metrics.ascender_only_scale
-        } else {
-            self.metrics.full_scale
+    pub fn get_font_size(&self, max_height: usize, offset_type: &Offset) -> usize {
+        let scale = match offset_type {
+            Offset::Value(_) | Offset::Auto => self.metrics.full_scale,
+            Offset::AutoUpper => self.metrics.ascender_only_scale,
         };
 
         let size = max_height as f64 * scale;
         size.round() as usize
     }
 
-    pub fn get_offset(&self, font_size: usize, ascender_only: bool) -> usize {
-        if ascender_only {
-            0
-        } else {
-            let offset = font_size as f64 * self.metrics.offset_scale;
-            offset.round() as usize
+    pub fn get_offset(&self, font_size: usize, offset_type: &Offset) -> isize {
+        match offset_type {
+            Offset::Value(offset) => *offset,
+            Offset::Auto => {
+                let offset = font_size as f64 * self.metrics.offset_scale;
+                offset.ceil() as isize
+            }
+            Offset::AutoUpper => 1,
         }
     }
 

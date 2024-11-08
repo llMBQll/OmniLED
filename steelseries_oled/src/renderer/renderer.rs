@@ -9,7 +9,7 @@ use crate::common::user_data::UserDataRef;
 use crate::renderer::buffer::{BitBuffer, Buffer, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
 use crate::script_handler::script_data_types::{
-    MemoryRepresentation, Modifiers, OledImage, Operation, Point, Range, Text,
+    MemoryRepresentation, Modifiers, Offset, OledImage, Operation, Point, Range, Text,
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
@@ -53,6 +53,7 @@ impl Renderer {
                     bar.position,
                     bar.size,
                     bar.value,
+                    bar.vertical,
                     bar.range,
                     bar.modifiers,
                 ),
@@ -68,6 +69,8 @@ impl Renderer {
                     text.position,
                     text.size,
                     text.text,
+                    text.text_offset,
+                    text.font_size,
                     text.modifiers,
                     &mut text_offsets,
                 ),
@@ -91,6 +94,7 @@ impl Renderer {
         position: Point,
         size: Size,
         value: f32,
+        vertical: bool,
         range: Range,
         modifiers: Modifiers,
     ) {
@@ -101,7 +105,7 @@ impl Renderer {
         let value = clamp(value, range.min, range.max);
         let percentage = (value - range.min) / (range.max - range.min);
 
-        let (height, width) = match modifiers.vertical {
+        let (height, width) = match vertical {
             true => ((size.height as f32 * percentage) as usize, size.width),
             false => (size.height, (size.width as f32 * percentage) as usize),
         };
@@ -159,6 +163,8 @@ impl Renderer {
         position: Point,
         size: Size,
         text: String,
+        text_offset: Offset,
+        font_size: Option<usize>,
         modifiers: Modifiers,
         offsets: &mut IntoIter<usize>,
     ) {
@@ -177,15 +183,17 @@ impl Renderer {
 
         let rect = Rectangle { position, size };
 
-        let (font_size, offset) = match modifiers.font_size {
-            Some(size) => {
-                let offset = self.font_manager.get_offset(size, modifiers.ascender_only);
-                (size, offset)
+        let (font_size, text_offset) = match (font_size, text_offset) {
+            (Some(font_size), offset_type) => {
+                let offset = self.font_manager.get_offset(font_size, &offset_type);
+                (font_size, offset)
             }
-            None => {
-                let size = self.font_manager.get_font_size(rect.size.height, modifiers.ascender_only);
-                let offset = self.font_manager.get_offset(size, modifiers.ascender_only);
-                (size, offset)
+            (None, offset_type) => {
+                let font_size = self
+                    .font_manager
+                    .get_font_size(rect.size.height, &offset_type);
+                let offset = self.font_manager.get_offset(font_size, &offset_type);
+                (font_size, offset)
             }
         };
 
@@ -196,7 +204,7 @@ impl Renderer {
             for bitmap_y in 0..bitmap.rows as isize {
                 for bitmap_x in 0..bitmap.cols as isize {
                     let x = cursor_x + bitmap_x + bitmap.offset_x;
-                    let y = cursor_y + bitmap_y - bitmap.offset_y - offset as isize;
+                    let y = cursor_y + bitmap_y - bitmap.offset_y - text_offset;
 
                     if x < 0
                         || y < 0
@@ -251,13 +259,13 @@ impl Renderer {
         control: &ScrollingTextControl,
         text: &Text,
     ) -> usize {
-        if !text.modifiers.scrolling {
+        if !text.scrolling {
             return 0;
         }
 
-        let font_size = match text.modifiers.font_size {
-            Some(font_size) => font_size,
-            None => font_manager.get_font_size(text.size.height, text.modifiers.ascender_only),
+        let font_size = match (text.font_size, text.text_offset) {
+            (Some(font_size), _) => font_size,
+            (None, offset_type) => font_manager.get_font_size(text.size.height, &offset_type),
         };
         let text_width = text.size.width;
         let character = font_manager.get_character('a', font_size);

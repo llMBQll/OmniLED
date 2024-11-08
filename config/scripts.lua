@@ -3,15 +3,16 @@ local function volume()
         data = {
             Text {
                 text = AUDIO.IsMuted and 'Muted' or AUDIO.Volume,
+                font_size = 24,
+                text_offset = 'AutoUpper',
                 position = { x = 0, y = 0 },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
-                modifiers = { font_size = 27, ascender_only = true },
             },
             Text {
                 text = AUDIO.Name,
+                scrolling = true,
                 position = { x = 0, y = SCREEN.Height / 2 },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
-                modifiers = { scrolling = true },
             },
         },
         duration = 2000,
@@ -32,9 +33,9 @@ local function spotify()
             },
             Text {
                 text = string.format("%s - %s", SPOTIFY.Artist, SPOTIFY.Title),
+                scrolling = true,
                 position = { x = 0, y = 2 },
                 size = { width = SCREEN.Width, height = 20 },
-                modifiers = { scrolling = true },
             },
             Text {
                 text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),
@@ -63,15 +64,17 @@ local function clock()
         data = {
             Text {
                 text = string.format("%02d", CLOCK.Hours),
+                font_size = 50,
+                text_offset = 'AutoUpper',
                 position = { x = 10, y = 0 },
                 size = { width = SCREEN.Width / 2, height = SCREEN.Height - 3 },
-                modifiers = { font_size = 50, ascender_only = true },
             },
             Text {
                 text = string.format("%02d", CLOCK.Minutes),
-                position = { x = SCREEN.Width / 2 + 2, y = 0 },
+                font_size = 37,
+                text_offset = 'AutoUpper',
+                position = { x = SCREEN.Width / 2 + 3, y = 0 },
                 size = { width = 54, height = 26 },
-                modifiers = { font_size = 37, ascender_only = true },
             },
             Text {
                 text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month], CLOCK.MonthDay),
@@ -109,9 +112,10 @@ local function weather()
             },
             Text {
                 text = value,
+                font_size = 30,
+                text_offset = 'AutoUpper',
                 position = { x = SCREEN.Height, y = 0 },
                 size = { width = SCREEN.Height * 2, height = SCREEN.Height * 2 / 3 },
-                modifiers = { font_size = 30, ascender_only = true },
             },
             Text {
                 text = unit,

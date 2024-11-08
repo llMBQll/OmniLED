@@ -1,4 +1,4 @@
-use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields};
+use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields, Value};
 use oled_derive::FromLuaValue;
 
 #[derive(Debug, Clone, Copy, FromLuaValue)]
@@ -75,6 +75,8 @@ pub struct Bar {
     pub value: f32,
     #[mlua(default(Range {min: 0.0, max: 100.0}))]
     pub range: Range,
+    #[mlua(default(false))]
+    pub vertical: bool,
     pub position: Point,
     pub size: Size,
 
@@ -99,6 +101,11 @@ impl UserData for Image {}
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Text {
     pub text: String,
+    #[mlua(default(Offset::Auto))]
+    pub text_offset: Offset,
+    pub font_size: Option<usize>,
+    #[mlua(default(false))]
+    pub scrolling: bool,
     pub position: Point,
     pub size: Size,
 
@@ -108,11 +115,40 @@ pub struct Text {
 
 impl UserData for Text {}
 
+#[derive(Copy, Clone, Debug)]
+pub enum Offset {
+    Value(isize),
+    Auto,
+    AutoUpper,
+}
+
+impl UserData for Offset {}
+
+impl FromLua for Offset {
+    fn from_lua(value: Value, _lua: &Lua) -> mlua::Result<Self> {
+        match value {
+            Value::Integer(value) => Ok(Offset::Value(value as isize)),
+            Value::String(value) => {
+                let value = value.to_string_lossy();
+                match value.as_str() {
+                    "Auto" => Ok(Offset::Auto),
+                    "AutoUpper" => Ok(Offset::AutoUpper),
+                    _ => Err(mlua::Error::runtime(format!(
+                        "Expected one of ['Auto', 'AutoUpper'], got '{}'",
+                        value
+                    ))),
+                }
+            }
+            other => Err(mlua::Error::runtime(format!(
+                "Expected type 'integer' or 'string', got '{}'",
+                other.type_name()
+            ))),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, FromLuaValue)]
 pub struct Modifiers {
-    #[mlua(default(false))]
-    pub ascender_only: bool,
-
     #[mlua(default(false))]
     pub clear_background: bool,
 
@@ -122,16 +158,8 @@ pub struct Modifiers {
     #[mlua(default(false))]
     pub flip_vertical: bool,
 
-    pub font_size: Option<usize>,
-
     #[mlua(default(false))]
     pub negative: bool,
-
-    #[mlua(default(false))]
-    pub scrolling: bool,
-
-    #[mlua(default(false))]
-    pub vertical: bool,
 }
 
 impl UserData for Modifiers {}
