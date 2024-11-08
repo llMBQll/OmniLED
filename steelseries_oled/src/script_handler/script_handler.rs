@@ -12,7 +12,7 @@ use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
 use crate::events::shortcuts::Shortcuts;
 use crate::renderer::renderer::{ContextKey, Renderer};
-use crate::script_handler::script_data_types::{load_script_data_types, Operation};
+use crate::script_handler::script_data_types::{load_script_data_types, Widget};
 use crate::settings::settings::get_full_path;
 
 #[derive(UniqueUserData)]
@@ -273,7 +273,7 @@ enum Repeat {
 
 #[derive(FromLuaValue, Clone)]
 struct ScriptOutput {
-    data: Vec<Operation>,
+    data: Vec<Widget>,
 
     #[mlua(transform(Self::transform_duration))]
     duration: Duration,

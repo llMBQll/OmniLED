@@ -40,13 +40,13 @@ pub struct OledImage {
 impl UserData for OledImage {}
 
 #[derive(Clone, Debug, FromLua)]
-pub enum Operation {
+pub enum Widget {
     Bar(Bar),
     Image(Image),
     Text(Text),
 }
 
-impl UserData for Operation {}
+impl UserData for Widget {}
 
 #[derive(Clone, Debug, FromLuaValue)]
 #[mlua(validate(Self::validate_range))]
@@ -171,19 +171,19 @@ pub enum MemoryRepresentation {
 }
 
 pub fn load_script_data_types(lua: &Lua, env: &Table) {
-    macro_rules! register_function {
+    macro_rules! register_widget {
         ($lua:ident, $table:ident, $type_name:ident) => {
             $table
                 .set(
                     stringify!($type_name),
-                    $lua.create_function(|_: &Lua, obj: $type_name| Ok(Operation::$type_name(obj)))
+                    $lua.create_function(|_: &Lua, obj: $type_name| Ok(Widget::$type_name(obj)))
                         .unwrap(),
                 )
                 .unwrap();
         };
     }
 
-    register_function!(lua, env, Bar);
-    register_function!(lua, env, Image);
-    register_function!(lua, env, Text);
+    register_widget!(lua, env, Bar);
+    register_widget!(lua, env, Image);
+    register_widget!(lua, env, Text);
 }

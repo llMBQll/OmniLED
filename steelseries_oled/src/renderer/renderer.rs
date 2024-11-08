@@ -9,7 +9,7 @@ use crate::common::user_data::UserDataRef;
 use crate::renderer::buffer::{BitBuffer, Buffer, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
 use crate::script_handler::script_data_types::{
-    MemoryRepresentation, Modifiers, Offset, OledImage, Operation, Point, Range, Text,
+    MemoryRepresentation, Modifiers, Offset, OledImage, Point, Range, Text, Widget,
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
@@ -36,19 +36,19 @@ impl Renderer {
         &mut self,
         ctx: ContextKey,
         size: Size,
-        operations: Vec<Operation>,
+        widgets: Vec<Widget>,
         memory_representation: MemoryRepresentation,
     ) -> (bool, Buffer) {
         let mut buffer = match memory_representation {
             MemoryRepresentation::BitPerPixel => Buffer::new(BitBuffer::new(size)),
             MemoryRepresentation::BytePerPixel => Buffer::new(ByteBuffer::new(size)),
         };
-        let (end_auto_repeat, text_offsets) = self.precalculate_text(ctx, &operations);
+        let (end_auto_repeat, text_offsets) = self.precalculate_text(ctx, &widgets);
         let mut text_offsets = text_offsets.into_iter();
 
-        for operation in operations {
+        for operation in widgets {
             match operation {
-                Operation::Bar(bar) => Self::render_bar(
+                Widget::Bar(bar) => Self::render_bar(
                     &mut buffer,
                     bar.position,
                     bar.size,
@@ -57,14 +57,14 @@ impl Renderer {
                     bar.range,
                     bar.modifiers,
                 ),
-                Operation::Image(image) => Self::render_image(
+                Widget::Image(image) => Self::render_image(
                     &mut buffer,
                     image.position,
                     image.size,
                     image.image,
                     image.modifiers,
                 ),
-                Operation::Text(text) => self.render_text(
+                Widget::Text(text) => self.render_text(
                     &mut buffer,
                     text.position,
                     text.size,
@@ -230,14 +230,14 @@ impl Renderer {
     fn precalculate_text(
         &mut self,
         ctx: ContextKey,
-        operations: &Vec<Operation>,
+        operations: &Vec<Widget>,
     ) -> (bool, Vec<usize>) {
         let mut ctx = self.scrolling_text_data.get_context(ctx);
 
         let offsets: Vec<usize> = operations
             .iter()
             .filter_map(|op| match op {
-                Operation::Text(text) => Some(Self::precalculate_single(
+                Widget::Text(text) => Some(Self::precalculate_single(
                     &mut ctx,
                     &mut self.font_manager,
                     &self.scrolling_text_control,
