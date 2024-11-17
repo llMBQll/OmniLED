@@ -55,7 +55,7 @@ local function spotify()
             },
         },
         duration = SPOTIFY_DURATION,
-        repeats = 'ToFit',
+        repeats = 'ForDuration',
     }
 end
 
@@ -139,26 +139,26 @@ local function weather()
 end
 
 SCREEN_BUILDER
-    :new('Steelseries Apex 7 TKL')
-    :with_screen({
-        {
-            layout = volume,
-            run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
-        },
-        {
-            layout = spotify,
-            run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
-        },
-        {
-            layout = clock,
-            run_on = { 'CLOCK.Seconds' },
-        },
-    })
-    :with_screen({
-        {
-            layout = weather,
-            run_on = { 'CLOCK.Seconds' },
-        }
-    })
-    :with_screen_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
-    :register()
+        :new('Steelseries Apex 7 TKL')
+        :with_screen({
+    {
+        layout = volume,
+        run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
+    },
+    {
+        layout = spotify,
+        run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
+    },
+    {
+        layout = clock,
+        run_on = { 'CLOCK.Seconds' },
+    },
+})
+        :with_screen({
+    {
+        layout = weather,
+        run_on = { 'CLOCK.Seconds' },
+    }
+})
+        :with_screen_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
+        :register()

@@ -153,9 +153,9 @@ impl ScriptHandler {
         let mut update_modifier = None;
         for (priority, marked_for_update) in marked_for_update.into_iter().enumerate() {
             if !ctx.time_remaining.is_zero() && ctx.last_priority < priority {
-                if let Some(Repeat::ToFit) = ctx.repeats {
+                if let Some(Repeat::ForDuration) = ctx.repeats {
                     to_update = Some(ctx.last_priority);
-                    update_modifier = Some(Repeat::ToFit);
+                    update_modifier = Some(Repeat::ForDuration);
                 }
                 break;
             }
@@ -196,12 +196,12 @@ impl ScriptHandler {
         ctx.device.update(lua, image)?;
 
         ctx.repeats = match (output.repeats, end_auto_repeat) {
-            (Some(Repeat::ToFit), _) => Some(Repeat::ToFit),
-            (Some(Repeat::Once), false) => Some(Repeat::Once),
+            (Repeat::ForDuration, _) => Some(Repeat::ForDuration),
+            (Repeat::Once, false) => Some(Repeat::Once),
             (_, _) => None,
         };
         ctx.time_remaining = match update_modifier {
-            Some(Repeat::ToFit) => ctx.time_remaining,
+            Some(Repeat::ForDuration) => ctx.time_remaining,
             _ => output.duration,
         };
         ctx.last_priority = to_update;
@@ -268,7 +268,7 @@ struct UserScript {
 #[derive(FromLuaValue, Debug, PartialEq, Copy, Clone)]
 enum Repeat {
     Once,
-    ToFit,
+    ForDuration,
 }
 
 #[derive(FromLuaValue, Clone)]
@@ -278,7 +278,8 @@ struct ScriptOutput {
     #[mlua(transform(Self::transform_duration))]
     duration: Duration,
 
-    repeats: Option<Repeat>,
+    #[mlua(default(Repeat::Once))]
+    repeats: Repeat,
 }
 
 impl ScriptOutput {
@@ -371,6 +372,13 @@ impl UserData for ScreenBuilderImpl {
             let screen = builder.screen_count;
             builder.screen_count += 1;
 
+            if scripts.len() == 0 {
+                warn!(
+                    "Registering a screen for device '{}' with 0 layouts",
+                    builder.device_name
+                );
+            }
+
             for mut script in scripts {
                 let current_screen = builder.current_screen.clone();
                 let predicate = script.predicate;
@@ -410,14 +418,18 @@ impl UserData for ScreenBuilderImpl {
         });
 
         methods.add_method_mut("register", |lua, builder, _: ()| {
-            if builder.screen_count > 1 && !builder.shortcut.is_empty() {
+            if !builder.shortcut.is_empty() {
+                if builder.screen_count < 2 {
+                    warn!("Registering shortcut to toggle screens for device '{}', but its screen count is {}", builder.device_name, builder.screen_count);
+                }
+
                 let current = builder.current_screen.clone();
                 let count = builder.screen_count;
                 let name = builder.device_name.clone();
                 let toggle_screen = lua
                     .create_function_mut(move |lua, _: ()| {
                         *current.borrow_mut() += 1;
-                        if *current.borrow() == count {
+                        if *current.borrow() >= count {
                             *current.borrow_mut() = 0;
                         }
 
@@ -432,6 +444,13 @@ impl UserData for ScreenBuilderImpl {
                 shortcuts
                     .get_mut()
                     .register(builder.shortcut.clone(), toggle_screen)?;
+            }
+
+            if builder.screen_count == 0 {
+                warn!(
+                    "Registering device '{}' with zero screens provided",
+                    builder.device_name
+                );
             }
 
             let mut script_handler = UserDataRef::<ScriptHandler>::load(lua);
