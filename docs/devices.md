@@ -45,11 +45,12 @@ steelseries_engine_device {
 This method will send data directly to the USB interface responsible for handling devices' screen.
 Advantage of this approach instead of just relying on SSE to do the work is less CPU usage.
 
-Add `usb_device` entry with the following parameters:  
-Required:
-
-- `name` - unique name that will identify your device when registering it for events
-- `screen_size` - width and height of the screen in pixels
+Add `usb_device` entry with the following parameters:
+- `name`: `string`. Unique name that will identify your device when registering it for events
+    - required
+- `screen_size`: `Size` - width and height of the screen in pixels
+    - required
+    - see [Size](user_scripts.md#size)
 - `usb_settings` - tell where data shall be sent - you can follow [this](#find-usb-settings-for-your-device) section to
   find your values
     - `vendor_id` and `product_id` - USB id of your device
@@ -60,15 +61,16 @@ Required:
     - `BitPerPixel` - this will pack information about 8 pixels into each byte, and will add padding bits in the last
       byte of each row if its length is not a multiple of 8
   > Note: Data is stored as bytes of consecutive rows
+- `transform`: `fn(buffer: Buffer) -> [byte]`. Transform the byte buffer to a form expected by the output device.
+    - optional
+    - see [Buffer](#buffer)
 
-Optional:
+#### Buffer
 
-- `transform` - if the default output is not quite what you require you can transform the data into the desired format.
+- `bytes`: `fn() -> [byte]`. Get a flat array of bytes in a row-major format.
+- `rows`: `fn() -> [[byte]]`. Get an array of arrays of bytes split by row.
 
-This is demonstrated for the `Steelseries Apex 7 TKL` keyboard which expects `BitPerPixel` layout with `0x61` byte at
-the beginning and `0x00` at the end of the buffer.
-
-**Example**
+#### Example
 
 ```lua
 usb_device {

@@ -57,11 +57,11 @@ pub struct Range {
 
 impl Range {
     fn validate_range(range: &Self) -> mlua::Result<()> {
-        if range.min < range.max {
+        if range.min <= range.max {
             Ok(())
         } else {
             Err(mlua::Error::runtime(format!(
-                "range.max shall be greater than range.min, got min = {}, max = {}",
+                "range.max shall be greater or equal than range.min, got min = {}, max = {}",
                 range.min, range.max
             )))
         }

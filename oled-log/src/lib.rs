@@ -1,9 +1,27 @@
-use log::error;
+use log::{error, Metadata, Record};
 use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::{Config, Handle};
 use std::path::Path;
+
+struct RPCLogger {}
+
+impl RPCLogger {}
+
+impl log::Log for RPCLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        todo!()
+    }
+
+    fn log(&self, record: &Record) {
+        todo!()
+    }
+
+    fn flush(&self) {
+        todo!()
+    }
+}
 
 pub fn init_with_level(file_path: impl AsRef<Path>, level_filter: log::LevelFilter) -> Handle {
     let config = create_config(file_path, level_filter);

@@ -10,12 +10,16 @@ achieved by a combination of built-in data types, using predicates and subscribi
 Screen builder ties everything together, allowing to register screens with layouts, and shortcuts for specific
 devices.
 
-`SCREEN_BUILDER` - global object with methods
+Global `SCREEN_BUILDER` object.
+
+[//]: # (TODO link example)
 
 ### Methods
 
 - `new`: `fn(name: string)` - begin a builder to register for device a given device. Device `name` must be registered in
-  devices.lua TODO link
+  devices.lua
+
+  [//]: # (TODO link devices.lua)
 - `with_screen`: `fn(user_scripts: [UserScripts])` - add a screen with an array of user scripts
   (see [UserScript](#user-script)), sorted in order of decreasing priority - first entry has the highest priority.  
   This function can be called multiple times to register many screens for a single device. You will need to register a
@@ -23,6 +27,9 @@ devices.
 - `with_screen_toggle`: `fn(shortcut: [string])` - set a shortcut to toggle between screens. It will go sequentially
   through each screen, and wrap around to the first at the end. Only required if there is more then one screen being
   registered.
+- `with_script`: `fn(user_script: UserScript)` - add a user script. Useful for custom screen management. It requires
+  registering shortcuts manually (see [Shortcuts](#shortcuts)).  
+  This method is mutually exclusive with `with_screen` and `with_screen_toggle`.
 - `register`: `fn()` - end registering device. This function actually performs the actions set up with previous
   functions.
 
@@ -57,43 +64,78 @@ devices.
 - `ForDuration` - Repeats the script for the time specified in `duration` field. This may allow switching to other
   screens in the middle of scrolling text.
 
+## Shortcuts
+
+You can register shortcuts to perform custom actions. This, combined with script predicates, is useful when the screen
+builder with default screen management doesn't quite cut it.
+
+Global `SHORTCUTS` object.
+
+### Methods
+
+`register`: `fn(keys: [string], action: fn())`. Register a key combination and an action that will be executed when the
+combination is pressed.
+
+[//]: # (TODO link example)
+
 ## Widgets
 
 Below data types are building blocks for displaying data on screen. Each of them have a few common attributes
 
-- `position`: Point. Upper-left corner coordinates on screen.
-- `size`: Size. Width and height of the object.
-- `modifiers`: Modifiers. Display modifiers.
+- `position`: `Point`. Upper-left corner coordinates on screen.
+    - required
+    - see: [Point](#point)
+- `size`: `Size`. Width and height of the object.
+    - required
+    - see: [Size](#Size)
+- `modifiers`: `Modifiers`. Display modifiers.
+    - optional
+    - see: [Modifiers](#Modifiers)
+
+### Bar
+
+- `value`: `float`. Amount of the bar that will be filled depends on where `value` lies in the `range`. It is calculated
+  using the following formula `(value - range.min) / (range.max - range.min) * 100%`.
+    - required
+- `range`: `Range`. Minimum and Maximum values that can be displayed on the bar.
+    - default: `[0.0, 100.0]`
+    - see: [Range](#range)
+- `vertical`: `bool`. Makes the bar from bottom to top, instead of left to right.
+    - default: `false`
+
+### Image
+
+- `image`: `OledImage`. Image that will be displayed on screen.
+    - required
+    - see: [OledImage](#oledimage)
+
+Image will be scaled from its original size to widget's dimensions.
 
 ### Text
 
-- `text`: string. Text to be displayed on screen.
+- `text`: `string`. Text to be displayed on screen.
+    - required
+- `scrolling`: `bool`. Scroll text if it's too long.
+    - default: `false`
+- `font_size`: `integer` – Sets the font size.
+    - default: Calculated to fit widget's height
+- `text_offset`: `Offset` - Set text offset from the bottom of the widget.
+    - default: `Auto`
+    - see: [Offset](#offset)
 
 By default, text will be truncated to fit the size of the Text widget. If the text is longer you can either make the
 widget larger or enable the `scrolling` modifier to enable automatic scrolling of text.
 
 By default, font size will be equal to widget height. It can be changed via `font_size` modifier.
 
-### Image
-
-- `image`: OledImage. Image that will be displayed on screen.
-
-Image will be scaled from its original size to widget's dimensions.
-
-### Bar
-
-- `value`: float. Amount of the bar that will be filled depends on where `value` lies in the `range`. It is calculated
-  using the following formula `(value - range.min) / (range.max - range.min) * 100%`.
-- `range`: Range. Minimum and Maximum values that can be displayed on the bar.
-
-`range` is optional and will be `[0.0, 100.0]` by default.
-
 ## Data Types
 
-Point
+### Point
 
-- `x`: integer. X-coordinate
-- `y`: integer. Y-coordinate
+- `x`: `integer`. X-coordinate
+    - required
+- `y`: `integer`. Y-coordinate
+    - required
 
 ```lua
 point = {
@@ -102,10 +144,12 @@ point = {
 }
 ```
 
-Range
+### Range
 
-- `min`: float. Lower end of the range (inclusive)
-- `max`: float. Upper end of the range (inclusive)
+- `min`: `float`. Lower end of the range (inclusive)
+    - required
+- `max`: `float`. Upper end of the range (inclusive)
+    - required
 
 ```lua
 range = {
@@ -114,10 +158,12 @@ range = {
 }
 ```
 
-Size
+### Size
 
-- `width`: integer. Width value
-- `height`: integer. Height value
+- `width`: `integer`. Width value
+    - required
+- `height`: `integer`. Height value
+    - required
 
 ```lua
 size = {
@@ -126,13 +172,30 @@ size = {
 }
 ```
 
-OledImage
+### Offset
 
-- `size`: Size. Image size in pixels
-- `bytes`: \[byte\]. Row-major black and white image data with one byte per pixel. All non-zero values will result in
-  the pixels being on.
+Offset can take the following values:
 
-`size.width * size.height` must be equal to length of the `bytes` array.
+- integer. Offset by number of pixels.
+- `Auto`. Calculate offset to fit any text in widget's height
+- `AutoUpper`. Calculate offset to fit any text that doesn't have any "descendants". Useful for uppercase text or
+  numbers.
+
+```lua
+offset = 1
+offset = 'Auto'
+offset = 'AutoUpper'
+```
+
+### OledImage
+
+- `size`: `Size`. Image size in pixels
+    - required
+    - see: [Size](#Size)
+- `bytes`: `[byte]`. Row-major black and white image data with one byte per pixel. All non-zero values will result in
+  the pixels being on.  
+  `size.width * size.height` must be equal to length of the `bytes` array.
+    - required
 
 ```lua
 image = {
@@ -144,16 +207,15 @@ image = {
 }
 ```
 
-Modifiers
+### Modifiers
 
 Additional display options for widgets.
 
-- `clear_background`: `bool` - Resets all pixels in widget's area before drawing the widget's content.
-- `flip_horizontal`: `bool` – Flips the content horizontally along the middle of the widget width.
-- `flip_vertical`: `bool` – Flips the content vertically along the middle of the widget height.
-- `font_size`: `integer` – Sets the font size, defaulting to the widget height. Currently, applies only
-  to [Text](#text).
-- `negative`: `bool` - Swap on and off pixels for a given widget.
-- `scrolling`: `bool` – Enables scrolling for content that exceeds widget size. Currently, applies only
-  to [Text](#text).
-- `vertical`: `bool` – Orients the widget vertically. Currently, applies only to [Bar](#bar).
+- `clear_background`: `bool`. Resets all pixels in widget's area before drawing the widget's content.
+    - default: `false`
+- `flip_horizontal`: `bool`. Flips the content horizontally along the middle of the widget width.
+    - default: `false`
+- `flip_vertical`: `bool`. Flips the content vertically along the middle of the widget height.
+    - default: `false`
+- `negative`: `bool`. Swap on and off pixels for a given widget.
+    - default: `false`
