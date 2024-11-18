@@ -1,5 +1,6 @@
 use audio::Audio;
 use clap::Parser;
+use log::debug;
 use oled_api::Plugin;
 use oled_derive::IntoProto;
 use std::error::Error;
@@ -22,6 +23,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let _audio = Audio::new(tx, handle);
 
     while let Some(data) = rx.recv().await {
+        if let Some(name) = &data.name {
+            debug!(
+                "New default device: {}, volume: {}%, muted: {}",
+                name, data.volume, data.is_muted
+            );
+        }
+
         plugin.update(data.into()).await.unwrap();
     }
 
