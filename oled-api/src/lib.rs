@@ -3,7 +3,11 @@ mod plugin {
 }
 
 pub use plugin::*;
-use std::path::PathBuf;
+
+use log::{LevelFilter, Metadata, Record};
+use tokio::sync::mpsc::{channel, Sender};
+use tokio::task;
+use tokio_stream::wrappers::ReceiverStream;
 
 #[derive(Debug)]
 pub struct Plugin {
@@ -13,9 +17,24 @@ pub struct Plugin {
 
 impl Plugin {
     pub async fn new(name: &str, url: &str) -> Result<Self, tonic::transport::Error> {
+        let client = plugin_client::PluginClient::connect(format!("http://{url}")).await?;
+
+        let (tx, rx) = channel(128);
+        let logger = PluginLogger::new(tx);
+        log::set_boxed_logger(Box::new(logger))
+            .map(|()| log::set_max_level(LevelFilter::Trace))
+            .unwrap();
+
+        let stream = ReceiverStream::new(rx);
+
+        let mut client_copy = client.clone();
+        task::spawn(async move {
+            client_copy.log(stream).await.unwrap();
+        });
+
         Ok(Self {
             name: name.to_string(),
-            client: plugin_client::PluginClient::connect(format!("http://{url}")).await?,
+            client,
         })
     }
 
@@ -40,16 +59,6 @@ impl Plugin {
         Ok(())
     }
 
-    pub async fn get_data_dir(&mut self) -> Result<PathBuf, tonic::Status> {
-        let name = self.name.clone();
-
-        let response = self
-            .client
-            .request_directory(RequestDirectoryData { name })
-            .await?;
-        Ok(PathBuf::from(&response.get_ref().directory))
-    }
-
     pub fn is_valid_identifier(identifier: &str) -> bool {
         if identifier.len() == 0 {
             return false;
@@ -69,6 +78,60 @@ impl Plugin {
         }
 
         true
+    }
+}
+
+struct PluginLogger {
+    log_sink: Sender<LogData>,
+}
+
+impl PluginLogger {
+    pub fn new(log_sink: Sender<LogData>) -> Self {
+        Self { log_sink }
+    }
+}
+
+impl log::Log for PluginLogger {
+    fn enabled(&self, _metadata: &Metadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &Record) {
+        let log_level: LogLevel = record.level().into();
+        let data = LogData {
+            log_level: log_level as i32,
+            location: record.target().to_string(),
+            message: format!("{}", record.args()),
+        };
+
+        let log_sink = self.log_sink.clone();
+        task::spawn(async move { log_sink.send(data).await.unwrap() });
+    }
+
+    fn flush(&self) {}
+}
+
+impl From<log::Level> for LogLevel {
+    fn from(value: log::Level) -> Self {
+        match value {
+            log::Level::Error => LogLevel::Error,
+            log::Level::Warn => LogLevel::Warn,
+            log::Level::Info => LogLevel::Info,
+            log::Level::Debug => LogLevel::Debug,
+            log::Level::Trace => LogLevel::Trace,
+        }
+    }
+}
+
+impl Into<log::Level> for LogLevel {
+    fn into(self) -> log::Level {
+        match self {
+            LogLevel::Error => log::Level::Error,
+            LogLevel::Warn => log::Level::Warn,
+            LogLevel::Info => log::Level::Info,
+            LogLevel::Debug => log::Level::Debug,
+            LogLevel::Trace => log::Level::Trace,
+        }
     }
 }
 

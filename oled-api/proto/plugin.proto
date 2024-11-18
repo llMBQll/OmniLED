@@ -4,7 +4,7 @@ package plugin;
 
 service Plugin {
   rpc Event(EventData) returns (EventResponse);
-  rpc RequestDirectory(RequestDirectoryData) returns (RequestDirectoryResponse);
+  rpc Log(stream LogData) returns (LogResponse);
 }
 
 message EventData {
@@ -40,10 +40,18 @@ message Image {
   bytes data = 3;
 }
 
-message RequestDirectoryData {
-  string name = 1;
+message LogData {
+  LogLevel log_level = 1;
+  string location = 2;
+  string message = 3;
 }
 
-message RequestDirectoryResponse {
-  string directory = 1;
+enum LogLevel {
+  Error = 0;
+  Warn = 1;
+  Info = 2;
+  Debug = 3;
+  Trace = 4;
 }
+
+message LogResponse {}

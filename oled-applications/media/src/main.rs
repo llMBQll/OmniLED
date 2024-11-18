@@ -18,9 +18,6 @@ async fn main() {
     let options = Options::parse();
     let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
 
-    let path = plugin.get_data_dir().await.unwrap();
-    oled_log::init(path.join("logging.log"));
-
     let (tx, mut rx): (Sender<Data>, Receiver<Data>) = mpsc::channel(256);
 
     let mut map: HashMap<String, String> = HashMap::from_iter(options.map.into_iter());

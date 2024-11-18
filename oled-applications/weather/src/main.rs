@@ -14,9 +14,6 @@ async fn main() {
     let options = Options::parse();
     let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
 
-    let path = plugin.get_data_dir().await.unwrap();
-    oled_log::init(path.join("logging.log"));
-
     debug!("{:?}", options);
 
     load_and_send_images(&mut plugin).await;

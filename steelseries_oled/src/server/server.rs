@@ -1,12 +1,13 @@
-use log::error;
+use log::{error, log};
 use mlua::{Lua, UserData, UserDataFields};
-use oled_api::{EventData, EventResponse, Plugin, RequestDirectoryData, RequestDirectoryResponse};
+use oled_api::{EventData, EventResponse, LogData, LogResponse, Plugin};
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::net::TcpListener;
+use tokio_stream::StreamExt;
 use tonic::transport::Server;
-use tonic::{Code, Request, Response, Status};
+use tonic::{Code, Request, Response, Status, Streaming};
 
 use crate::common::user_data::UserDataRef;
 use crate::constants::constants::Constants;
@@ -117,25 +118,25 @@ impl oled_api::plugin_server::Plugin for PluginServer {
         Ok(Response::new(EventResponse {}))
     }
 
-    async fn request_directory(
+    async fn log(
         &self,
-        request: Request<RequestDirectoryData>,
-    ) -> Result<Response<RequestDirectoryResponse>, Status> {
-        let data = request.get_ref();
+        request: Request<Streaming<LogData>>,
+    ) -> Result<Response<LogResponse>, Status> {
+        let mut in_stream = request.into_inner();
 
-        if !Plugin::is_valid_identifier(&data.name) {
-            return Err(Status::new(Code::InvalidArgument, "Invalid event name"));
-        }
-
-        let path = Constants::data_dir().join(data.name.to_ascii_lowercase());
-        if !path.exists() {
-            if let Err(err) = tokio::fs::create_dir_all(&path).await {
-                return Err(Status::new(Code::Internal, err.to_string()));
+        tokio::spawn(async move {
+            while let Some(result) = in_stream.next().await {
+                match result {
+                    Ok(data) => {
+                        log!(target: &data.location, data.log_level().into(), "{}",data.message);
+                    }
+                    Err(_err) => {
+                        todo!()
+                    }
+                }
             }
-        }
+        });
 
-        Ok(Response::new(RequestDirectoryResponse {
-            directory: path.to_string_lossy().to_string(),
-        }))
+        Ok(Response::new(LogResponse {}))
     }
 }
