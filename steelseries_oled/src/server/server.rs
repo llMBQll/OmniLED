@@ -84,10 +84,10 @@ struct ServerInfo {
 
 impl UserData for ServerInfo {
     fn add_fields<F: UserDataFields<Self>>(fields: &mut F) {
-        fields.add_field_method_get("address", |_, info| Ok(info.address.clone()));
-        fields.add_field_method_get("ip", |_, info| Ok(info.ip.clone()));
-        fields.add_field_method_get("port", |_, info| Ok(info.port));
-        fields.add_field_method_get("timestamp", |_, info| Ok(info.timestamp));
+        fields.add_field_method_get("Address", |_, info| Ok(info.address.clone()));
+        fields.add_field_method_get("Ip", |_, info| Ok(info.ip.clone()));
+        fields.add_field_method_get("Port", |_, info| Ok(info.port));
+        fields.add_field_method_get("Timestamp", |_, info| Ok(info.timestamp));
     }
 }
 
