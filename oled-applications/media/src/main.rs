@@ -1,6 +1,6 @@
 use clap::Parser;
 use log::info;
-use oled_api::Plugin;
+use oled_api::plugin::Plugin;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -17,9 +17,6 @@ const NAME: &str = "MEDIA";
 async fn main() {
     let options = Options::parse();
     let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
-
-    let path = plugin.get_data_dir().await.unwrap();
-    oled_log::init(path.join("logging.log"));
 
     let (tx, mut rx): (Sender<Data>, Receiver<Data>) = mpsc::channel(256);
 

@@ -1,12 +1,14 @@
-use log::error;
+use log::{debug, error, log};
 use mlua::{Lua, UserData, UserDataFields};
-use oled_api::{EventData, EventResponse, Plugin, RequestDirectoryData, RequestDirectoryResponse};
+use oled_api::plugin::Plugin;
+use oled_api::types::{EventData, EventResponse, LogData, LogLevel, LogResponse};
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::net::TcpListener;
+use tokio_stream::StreamExt;
 use tonic::transport::Server;
-use tonic::{Code, Request, Response, Status};
+use tonic::{Code, Request, Response, Status, Streaming};
 
 use crate::common::user_data::UserDataRef;
 use crate::constants::constants::Constants;
@@ -16,22 +18,27 @@ use crate::settings::settings::Settings;
 
 pub struct PluginServer {
     event_queue: Arc<Mutex<EventQueue>>,
+    log_level_filter: log::LevelFilter,
 }
 
 impl PluginServer {
     pub async fn load(lua: &Lua) {
         let settings = UserDataRef::<Settings>::load(lua);
-        let port: u16 = settings.get().server_port;
 
+        let port: u16 = settings.get().server_port;
         let listener = TcpListener::bind(format!("127.0.0.1:{port}"))
             .await
             .unwrap();
         let address = listener.local_addr().unwrap();
         let bound_port = address.port();
 
+        let log_level_filter = settings.get().log_level.into();
+
         tokio::task::spawn(
             Server::builder()
-                .add_service(oled_api::plugin_server::PluginServer::new(Self::new()))
+                .add_service(oled_api::types::plugin_server::PluginServer::new(
+                    Self::new(log_level_filter),
+                ))
                 .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener)),
         );
 
@@ -59,9 +66,10 @@ impl PluginServer {
         lua.globals().set("SERVER", info).unwrap();
     }
 
-    fn new() -> Self {
+    fn new(log_level_filter: log::LevelFilter) -> Self {
         Self {
             event_queue: EventQueue::instance(),
+            log_level_filter,
         }
     }
 }
@@ -84,7 +92,7 @@ impl UserData for ServerInfo {
 }
 
 #[tonic::async_trait]
-impl oled_api::plugin_server::Plugin for PluginServer {
+impl oled_api::types::plugin_server::Plugin for PluginServer {
     async fn event(
         &self,
         mut request: Request<EventData>,
@@ -117,25 +125,33 @@ impl oled_api::plugin_server::Plugin for PluginServer {
         Ok(Response::new(EventResponse {}))
     }
 
-    async fn request_directory(
+    async fn log(
         &self,
-        request: Request<RequestDirectoryData>,
-    ) -> Result<Response<RequestDirectoryResponse>, Status> {
-        let data = request.get_ref();
+        request: Request<Streaming<LogData>>,
+    ) -> Result<Response<LogResponse>, Status> {
+        let mut in_stream = request.into_inner();
 
-        if !Plugin::is_valid_identifier(&data.name) {
-            return Err(Status::new(Code::InvalidArgument, "Invalid event name"));
-        }
-
-        let path = Constants::data_dir().join(data.name.to_ascii_lowercase());
-        if !path.exists() {
-            if let Err(err) = tokio::fs::create_dir_all(&path).await {
-                return Err(Status::new(Code::Internal, err.to_string()));
+        tokio::spawn(async move {
+            while let Some(result) = in_stream.next().await {
+                match result {
+                    Ok(data) => match data.log_level() {
+                        LogLevel::Unknown => {
+                            debug!(target: &data.location, "Received unknown log level. Original log message: '{}'", data.message)
+                        }
+                        level => {
+                            log!(target: &data.location, level.into(), "{}", data.message);
+                        }
+                    },
+                    Err(status) => {
+                        debug!("Connection closed: {}", status);
+                        break;
+                    }
+                }
             }
-        }
+        });
 
-        Ok(Response::new(RequestDirectoryResponse {
-            directory: path.to_string_lossy().to_string(),
-        }))
+        let mut response = LogResponse::default();
+        response.set_log_level_filter(self.log_level_filter.into());
+        Ok(Response::new(response))
     }
 }

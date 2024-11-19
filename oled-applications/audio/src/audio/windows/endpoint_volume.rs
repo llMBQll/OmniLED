@@ -1,4 +1,3 @@
-use log::debug;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc::Sender;
 use windows::core::{implement, GUID};
@@ -48,11 +47,6 @@ impl EndpointVolume {
             let prop = props.GetValue(&PKEY_Device_FriendlyName).unwrap();
             let name = PropVariantToStringAlloc(&prop).unwrap();
             let name = name.to_string().unwrap();
-
-            debug!(
-                "New default device: {}, volume: {}%, muted: {}",
-                name, volume, mute
-            );
 
             handle.spawn(async move {
                 tx.send(AudioData::new(mute, volume, Some(name)))
