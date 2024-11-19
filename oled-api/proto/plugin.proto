@@ -47,11 +47,24 @@ message LogData {
 }
 
 enum LogLevel {
-  Error = 0;
-  Warn = 1;
-  Info = 2;
-  Debug = 3;
-  Trace = 4;
+  LOG_LEVEL_UNKNOWN = 0;
+  LOG_LEVEL_ERROR = 1;
+  LOG_LEVEL_WARN = 2;
+  LOG_LEVEL_INFO = 3;
+  LOG_LEVEL_DEBUG = 4;
+  LOG_LEVEL_TRACE = 5;
 }
 
-message LogResponse {}
+message LogResponse {
+  LogLevelFilter log_level_filter = 1;
+}
+
+enum LogLevelFilter {
+  LOG_LEVEL_FILTER_UNKNOWN = 0;
+  LOG_LEVEL_FILTER_OFF = 1;
+  LOG_LEVEL_FILTER_ERROR = 2;
+  LOG_LEVEL_FILTER_WARN = 3;
+  LOG_LEVEL_FILTER_INFO = 4;
+  LOG_LEVEL_FILTER_DEBUG = 5;
+  LOG_LEVEL_FILTER_TRACE = 6;
+}

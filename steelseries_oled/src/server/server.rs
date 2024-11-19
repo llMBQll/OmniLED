@@ -17,22 +17,25 @@ use crate::settings::settings::Settings;
 
 pub struct PluginServer {
     event_queue: Arc<Mutex<EventQueue>>,
+    log_level_filter: log::LevelFilter,
 }
 
 impl PluginServer {
     pub async fn load(lua: &Lua) {
         let settings = UserDataRef::<Settings>::load(lua);
-        let port: u16 = settings.get().server_port;
 
+        let port: u16 = settings.get().server_port;
         let listener = TcpListener::bind(format!("127.0.0.1:{port}"))
             .await
             .unwrap();
         let address = listener.local_addr().unwrap();
         let bound_port = address.port();
 
+        let log_level_filter = settings.get().log_level.into();
+
         tokio::task::spawn(
             Server::builder()
-                .add_service(oled_api::plugin_server::PluginServer::new(Self::new()))
+                .add_service(oled_api::plugin_server::PluginServer::new(Self::new(log_level_filter)))
                 .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener)),
         );
 
@@ -60,9 +63,10 @@ impl PluginServer {
         lua.globals().set("SERVER", info).unwrap();
     }
 
-    fn new() -> Self {
+    fn new(log_level_filter: log::LevelFilter) -> Self {
         Self {
             event_queue: EventQueue::instance(),
+            log_level_filter,
         }
     }
 }
@@ -128,15 +132,17 @@ impl oled_api::plugin_server::Plugin for PluginServer {
             while let Some(result) = in_stream.next().await {
                 match result {
                     Ok(data) => {
-                        log!(target: &data.location, data.log_level().into(), "{}",data.message);
+                        log!(target: &data.location, data.log_level().into(), "{}", data.message);
                     }
-                    Err(_err) => {
-                        todo!()
+                    Err(err) => {
+                        panic!("Connection closing is not yet handled properly: {}", err);
                     }
                 }
             }
         });
 
-        Ok(Response::new(LogResponse {}))
+        let mut response = LogResponse::default();
+        response.set_log_level_filter(self.log_level_filter.into());
+        Ok(Response::new(response))
     }
 }
