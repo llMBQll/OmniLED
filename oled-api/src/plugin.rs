@@ -1,4 +1,4 @@
-use crate::logging::PluginLogger;
+use crate::logging;
 use crate::types::{plugin_client, EventData, Table};
 use tokio::sync::mpsc::channel;
 use tokio_stream::wrappers::ReceiverStream;
@@ -20,11 +20,7 @@ impl Plugin {
             Ok(response) => response.into_inner().log_level_filter().into(),
             Err(_) => todo!(),
         };
-
-        let logger = PluginLogger::new(tx, log_level);
-        log::set_boxed_logger(Box::new(logger))
-            .map(|()| log::set_max_level(log_level))
-            .unwrap();
+        logging::init(tx, log_level);
 
         Ok(Self {
             name: name.to_string(),

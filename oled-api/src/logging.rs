@@ -1,13 +1,25 @@
 use crate::types::{LogData, LogLevel};
-use log::{LevelFilter, Log, Metadata, Record};
+use log::{error, LevelFilter, Log, Metadata, Record};
 use tokio::{sync::mpsc::Sender, task};
 
-pub struct PluginLogger {
+pub fn init(log_sink: Sender<LogData>, log_level_filter: LevelFilter) {
+    let logger = Logger::new(log_sink, log_level_filter);
+    log::set_boxed_logger(Box::new(logger))
+        .map(|()| log::set_max_level(log_level_filter))
+        .unwrap();
+
+    std::panic::set_hook(Box::new(|panic_info| {
+        error!("{panic_info}");
+        println!("{panic_info}");
+    }));
+}
+
+struct Logger {
     log_sink: Sender<LogData>,
     log_level_filter: LevelFilter,
 }
 
-impl PluginLogger {
+impl Logger {
     pub fn new(log_sink: Sender<LogData>, log_level_filter: LevelFilter) -> Self {
         Self {
             log_sink,
@@ -16,7 +28,7 @@ impl PluginLogger {
     }
 }
 
-impl Log for PluginLogger {
+impl Log for Logger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= self.log_level_filter
     }
