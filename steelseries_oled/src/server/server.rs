@@ -1,6 +1,6 @@
 use log::{error, log};
 use mlua::{Lua, UserData, UserDataFields};
-use oled_api::{EventData, EventResponse, LogData, LogResponse, Plugin};
+use oled_api::{plugin::Plugin, EventData, EventResponse, LogData, LogResponse};
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

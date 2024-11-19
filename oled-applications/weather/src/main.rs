@@ -1,6 +1,6 @@
 use clap::Parser;
 use log::debug;
-use oled_api::{Plugin, Table};
+use oled_api::{plugin::Plugin, Table};
 use oled_derive::IntoProto;
 use std::{collections::HashMap, time};
 use ureq::Agent;

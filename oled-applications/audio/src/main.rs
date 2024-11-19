@@ -1,7 +1,7 @@
 use audio::Audio;
 use clap::Parser;
 use log::debug;
-use oled_api::Plugin;
+use oled_api::plugin::Plugin;
 use oled_derive::IntoProto;
 use std::error::Error;
 use tokio::runtime::Handle;
