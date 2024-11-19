@@ -23,10 +23,12 @@ pub struct PluginServer {
 
 impl PluginServer {
     pub async fn load(lua: &Lua) {
+        const LOCALHOST: &str = "127.0.0.1";
+
         let settings = UserDataRef::<Settings>::load(lua);
 
         let port: u16 = settings.get().server_port;
-        let listener = TcpListener::bind(format!("127.0.0.1:{port}"))
+        let listener = TcpListener::bind(format!("{LOCALHOST}:{port}"))
             .await
             .unwrap();
         let address = listener.local_addr().unwrap();
@@ -42,7 +44,7 @@ impl PluginServer {
                 .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener)),
         );
 
-        let address = format!("127.0.0.1:{bound_port}");
+        let address = format!("{LOCALHOST}:{bound_port}");
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_else(|err| {
@@ -52,7 +54,7 @@ impl PluginServer {
             .as_millis() as u64;
         let info = ServerInfo {
             address,
-            ip: String::from("127.0.0.1"),
+            ip: format!("{LOCALHOST}"),
             port: bound_port,
             timestamp,
         };
