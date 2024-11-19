@@ -1,5 +1,5 @@
 use crate::types::{LogData, LogLevel};
-use log::{LevelFilter, Metadata, Record, Log};
+use log::{LevelFilter, Log, Metadata, Record};
 use tokio::{sync::mpsc::Sender, task};
 
 pub struct PluginLogger {

@@ -8,7 +8,6 @@ members = [
     "oled-applications/weather",
     "oled-api",
     "oled-derive",
-    "oled-log",
     "setup",
 ]
 

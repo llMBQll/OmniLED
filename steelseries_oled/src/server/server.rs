@@ -35,7 +35,9 @@ impl PluginServer {
 
         tokio::task::spawn(
             Server::builder()
-                .add_service(oled_api::plugin_server::PluginServer::new(Self::new(log_level_filter)))
+                .add_service(oled_api::plugin_server::PluginServer::new(Self::new(
+                    log_level_filter,
+                )))
                 .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener)),
         );
 
