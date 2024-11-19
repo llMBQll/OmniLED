@@ -1,5 +1,5 @@
 use chrono::Timelike;
-use oled_api::Image;
+use oled_api::types::Image;
 use serde::de;
 use std::collections::HashMap;
 use ureq::Agent;

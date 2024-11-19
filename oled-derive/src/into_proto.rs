@@ -13,9 +13,9 @@ pub fn expand_into_proto_derive(input: DeriveInput) -> proc_macro::TokenStream {
 
     // TODO handle generics of deriving type
     let expanded = quote! {
-        impl Into<oled_api::Table> for #name {
-            fn into(self) -> oled_api::Table {
-                let mut table = oled_api::Table::default();
+        impl Into<oled_api::types::Table> for #name {
+            fn into(self) -> oled_api::types::Table {
+                let mut table = oled_api::types::Table::default();
                 #assignments
                 table
             }

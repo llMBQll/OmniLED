@@ -1,6 +1,4 @@
 pub mod plugin;
+pub mod types;
 
 mod logging;
-mod types;
-
-pub use types::*;

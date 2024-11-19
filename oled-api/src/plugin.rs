@@ -1,5 +1,5 @@
 use crate::logging::PluginLogger;
-use crate::{plugin_client, EventData, Table};
+use crate::types::{plugin_client, EventData, Table};
 use tokio::sync::mpsc::channel;
 use tokio_stream::wrappers::ReceiverStream;
 
