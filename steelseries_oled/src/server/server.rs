@@ -1,7 +1,7 @@
-use log::{error, log};
+use log::{debug, error, log};
 use mlua::{Lua, UserData, UserDataFields};
 use oled_api::plugin::Plugin;
-use oled_api::types::{EventData, EventResponse, LogData, LogResponse};
+use oled_api::types::{EventData, EventResponse, LogData, LogLevel, LogResponse};
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -134,11 +134,17 @@ impl oled_api::types::plugin_server::Plugin for PluginServer {
         tokio::spawn(async move {
             while let Some(result) = in_stream.next().await {
                 match result {
-                    Ok(data) => {
-                        log!(target: &data.location, data.log_level().into(), "{}", data.message);
-                    }
-                    Err(err) => {
-                        panic!("Connection closing is not yet handled properly: {}", err);
+                    Ok(data) => match data.log_level() {
+                        LogLevel::Unknown => {
+                            debug!(target: &data.location, "Received unknown log level. Original log message: '{}'", data.message)
+                        }
+                        level => {
+                            log!(target: &data.location, level.into(), "{}", data.message);
+                        }
+                    },
+                    Err(status) => {
+                        debug!("Connection closed: {}", status);
+                        break;
                     }
                 }
             }
