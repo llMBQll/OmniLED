@@ -157,10 +157,10 @@ Default: `0`
 ### Update interval (Tick Duration)
 
 This setting will define how ofter the server will process events and render updates on the screen. Lower interval will
-increase responsivenes at the cost of the CPU usage.  
+increase responsiveness at the cost of the CPU usage.  
 Update interval (or tick duration) is defined in milliseconds.
 
-_Note: This setting will also affect all properies dependent on tick duration._
+_Note: This setting will also affect all properties dependent on tick duration._
 
 Property Name: `update_interval`  
 Possible Values: non-negative 64-bit integer  

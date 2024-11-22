@@ -1,0 +1,64 @@
+# Installing on Windows
+
+1. [Install dependencies](#install-dependencies)
+2. [Build from source](#build-from-source) or install using [prebuilt binaries](#prebuilt-binaries).
+
+## Install Dependencies
+
+### Linux
+
+- pkg-config - `apt install pkg-config`
+- libdbus - `apt install libdbus-1-dev`
+- protoc - `apt install protoc`
+- libfontconfig - `apt install libfontconfig-dev`
+- libx11 - `apt install libx11-dev`
+
+### Windows
+
+- [SteelSeries Engine](https://steelseries.com/gg/engine) - Optional. By default, all devices are controlled via raw USB
+  calls, routing via SSE is optional.
+
+### Common
+
+- [Rust](https://rustup.rs/) - Optional. Only required when building from source.
+- [Cargo Make](https://crates.io/crates/cargo-make#installation) - Optional. This is convenient when building from
+  source, though the commands may also be written by hand.
+
+## Build from Source
+
+1. Open Terminal
+2. Download repository and go into the directory  
+   `git clone TODO: URL`  
+   `cd TODO: name`
+3. Build & Install
+   If you have installed cargo make (see [dependencies](#install-dependencies)) you may execute a single command to
+   build binaries and run setup utility
+   > `cargo make run-setup`
+
+   Else you need to compile the targets manually. This requires 2 build steps due to package dependencies.
+   > `cargo build --release -p steelseries_oled -p audio -p clock -p media -p weather`  
+   > `cargo build --release -p setup`  
+   > `cargo run --release --bin setup -- install --interactive`
+
+## Post installation steps
+
+### Linux
+
+#### Allow USB access
+
+To allow this program to access your device, it needs an entry in udev rules.
+
+1. Create udev rules entry  
+   `touch /etc/udev/rules.d/69-steelseries-oled.rules`
+2. Using your favourite text editor add the following line and adapt it for your device
+   `SUBSYSTEM=="usb", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1618", MODE="0666", GROUP="plugdev"`
+3. Reload udev rules (this may not be sufficient so you may need to unplug and plug the device or restart the system)  
+   `sudo udevadm control --reload-rules`
+
+### Common
+
+Personalize and enjoy.
+
+## Prebuilt Binaries
+
+Soon™️

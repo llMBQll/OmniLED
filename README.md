@@ -14,12 +14,9 @@ Control your SteelSeries OLED devices (and more) on Windows and Linux.
 
 - Add custom data by implementing the gRPC client interface
 
-## Installation
+## Install
 
-Follow OS specific instructions
-
-- [Linux](docs/install_linux.md)
-- [Windows](docs/install_windows.md)
+See the [installation steps](docs/install.md)
 
 ## Roadmap
 
