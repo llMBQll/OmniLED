@@ -57,7 +57,7 @@ To allow this program to access your device, it needs an entry in udev rules.
 
 ### Common
 
-Personalize and enjoy.
+You are now ready to proceed to [customization](customization).
 
 ## Prebuilt Binaries
 

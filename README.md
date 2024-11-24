@@ -18,6 +18,17 @@ Control your SteelSeries OLED devices (and more) on Windows and Linux.
 
 See the [installation steps](docs/install.md)
 
+## Customize
+
+SteelseriesOLED provides extensive customization options to cater to many requirements.
+Start customizing [here](docs/customization.md).
+
+## Extend
+
+[//]: # (SteelseriesOLED aims to create a bigger ecosystem. That's why it provides an easy way to extend the functionality via)
+
+[//]: # (adding new plugins. See how can you create your own plugin [here]&#40;docs/&#41;)
+
 ## Roadmap
 
 - [ ] GIF support

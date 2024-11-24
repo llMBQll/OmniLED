@@ -25,5 +25,7 @@ load_app {
         '--wind-speed-unit', 'm/s',
         '--temperature-unit', 'Celsius',
         'in', 'Katowice',
+        '--country-code', 'PL',
+        '--administrative', 'Silesia',
     }
 }
