@@ -1,5 +1,5 @@
 use convert_case::{Case, Casing};
-use log::{debug, error};
+use log::{debug, error, log_enabled};
 use mlua::{chunk, Function, Lua, Table, UserData, Value};
 use oled_derive::UniqueUserData;
 use std::collections::hash_map::Entry;
@@ -96,17 +96,25 @@ impl Devices {
         (constructors, env)
     }
 
-    fn create_loader<T: Device + 'static>(lua: &Lua) -> (String, Constructor, Function) {
+    fn get_type_name<T: Device + 'static>() -> String {
         let type_name = std::any::type_name::<T>();
-        let type_name = type_name.split("::").last().unwrap();
-        let type_name = type_name.to_case(Case::Snake);
+        type_name.split("::").last().unwrap().to_string()
+    }
 
+    fn create_loader<T: Device + 'static>(lua: &Lua) -> (String, Constructor, Function) {
         let constructor: fn(&Lua, Value) -> Box<dyn Device> = |lua, settings| {
             let mut device = Box::new(T::init(lua, settings).unwrap());
-            debug!("Initialized '{}'", device.name(lua).unwrap());
+
+            if log_enabled!(log::Level::Debug) {
+                let type_name = Self::get_type_name::<T>().to_case(Case::Snake);
+                let device_name = device.name(lua).unwrap();
+                debug!("Loaded {} '{}'", type_name, device_name);
+            }
+
             device
         };
 
+        let type_name = Self::get_type_name::<T>().to_case(Case::Snake);
         let function_name = type_name.clone();
         let loader = lua
             .create_function(move |lua, settings: Table| {
@@ -140,7 +148,7 @@ impl Devices {
             }
             Entry::Vacant(entry) => {
                 let name = entry.key();
-                debug!("Added device '{}' with name '{}'", kind, name);
+                debug!("Added config for {} '{}'", kind, name);
 
                 let loader = self.constructors[&kind];
                 entry.insert(DeviceEntry::Initializer(Initializer {
