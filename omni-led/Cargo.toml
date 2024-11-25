@@ -1,10 +1,10 @@
 [package]
-name = "steelseries_oled"
+name = "omni-led"
 version = "0.1.0"
 authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
 license = "GPL-3.0-only"
 edition = "2021"
-default-run = "steelseries_oled"
+default-run = "omni-led"
 
 [dependencies]
 convert_case = "0.6"

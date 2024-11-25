@@ -40,7 +40,7 @@ impl Constants {
     #[cfg(not(feature = "dev"))]
     pub fn root_dir() -> PathBuf {
         let root_dir = dirs_next::config_dir().expect("Couldn't get default config directory");
-        let root_dir = root_dir.join("SteelseriesOLED");
+        let root_dir = root_dir.join("OmniLED");
         root_dir
     }
 

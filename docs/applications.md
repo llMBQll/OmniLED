@@ -4,11 +4,11 @@
 starts. It also supports defining command line arguments that will be passed when starting applications.
 
 > _Note: Applications can be started independently and still send events to the server.  
-Registering in `applications.lua` is handy when application's sole purpose is to send events to SteelseriesOLED._
+Registering in `applications.lua` is handy when application's sole purpose is to send events to OmniLED._
 
 ## Built-in Applications
 
-Steelseries OLED comes some applications pre-installed. Each one comes with its own README file that describes their
+OmniLED comes some applications pre-installed. Each one comes with its own README file that describes their
 usage.
 
 - [audio](../oled-applications/audio/README.md)
@@ -22,7 +22,7 @@ Any client that implements the [gRPC interface](../oled-api/proto/plugin.proto) 
 
 ## Server Address
 
-If an application wants to send events to Steelseries OLED it has to know the server address. There are two options:
+If an application wants to send events to OmniLED it has to know the server address. There are two options:
 
 1. Register application using `applications.lua` file and use global variable `SERVER` to pass server address.
 2. Inside your application, read `server.json` file that is created in `data` directory. There you will find the server

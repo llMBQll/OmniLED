@@ -1,7 +1,7 @@
 # Customization
 
 All files with custom settings can be found in the `config` directory in the installation directory. This should be
-`~/.config` on Linux, or `C:\Users\<USER>\AppData\Roaming\SteelseriesOLED`.  
+`~/.config` on Linux, or `C:\Users\<USER>\AppData\Roaming\OmniLED`.  
 It can also be accessed by pressing the `Settings` menu on the tray icon after the application is running.
 
 > _All settings are loaded on startup and then stay constant until program is restarted!_

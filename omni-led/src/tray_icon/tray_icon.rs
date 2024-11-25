@@ -11,7 +11,7 @@ pub struct TrayIcon {
 impl TrayIcon {
     #[must_use]
     pub fn new(running: &'static AtomicBool) -> Self {
-        let mut tray = TrayItem::new("Steelseries OLED", Self::load_icon()).unwrap();
+        let mut tray = TrayItem::new("OmniLED", Self::load_icon()).unwrap();
 
         tray.add_menu_item("Settings", || {
             if let Err(err) = opener::reveal(Constants::config_dir().join("settings.lua")) {

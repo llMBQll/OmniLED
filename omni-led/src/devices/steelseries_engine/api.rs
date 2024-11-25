@@ -32,8 +32,8 @@ struct Api {
     sizes: HashSet<Size>,
 }
 
-const GAME: &str = "MBQ_STEELSERIES_OLED";
-const GAME_DISPLAY_NAME: &str = "Steelseries OLED";
+const GAME: &str = "MBQ_OMNI_LED";
+const GAME_DISPLAY_NAME: &str = "OmniLED";
 const DEVELOPER: &str = "MBQ";
 const TIMEOUT: u32 = 60000;
 

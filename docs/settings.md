@@ -22,7 +22,7 @@ text._
 Property Name: `font`  
 Possible Values:
 
-- Default - loads default font [MesloLG](../steelseries_oled/assets/fonts/Meslo/).  
+- Default - loads default font [MesloLG](../omni-led/assets/fonts/Meslo/).  
   `"Default"`
 - Filesystem selector - loads font from specified file.
   ```lua
