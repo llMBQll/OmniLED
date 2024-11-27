@@ -1,25 +1,22 @@
 use lazy_static::lazy_static;
-use log::error;
 use serde_json::Value;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::sync::Mutex;
-use ureq::{Agent, Error};
+use ureq::{Agent, Response};
 
 use crate::devices::device::Size;
 use crate::renderer::buffer::{BitBuffer, BufferTrait};
 
-pub fn init(size: Size) {
+pub fn register_size(size: Size) {
     API.lock().unwrap().register_size(size);
 }
 
-pub fn update(size: &Size, data: &[u8]) {
-    API.lock().unwrap().update(size, data);
+pub fn update(size: &Size, data: &[u8]) -> Result<(), Error> {
+    API.lock().unwrap().update(size, data)
 }
-
-// TODO error (propagation) handling on raw api calls
 
 lazy_static! {
     static ref API: Mutex<Api> = Mutex::new(Api::new());
@@ -38,7 +35,7 @@ const DEVELOPER: &str = "MBQ";
 const TIMEOUT: u32 = 60000;
 
 impl Api {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             agent: Agent::new(),
             address: None,
@@ -47,11 +44,11 @@ impl Api {
         }
     }
 
-    pub fn register_size(&mut self, size: Size) {
+    fn register_size(&mut self, size: Size) {
         self.sizes.insert(size);
     }
 
-    pub fn update(&mut self, size: &Size, data: &[u8]) {
+    fn update(&mut self, size: &Size, data: &[u8]) -> Result<(), Error> {
         let update = serde_json::json!({
             "game": GAME,
             "event": Self::get_event(&size),
@@ -67,14 +64,14 @@ impl Api {
         self.game_event(serde_json::to_string(&update).unwrap().as_str())
     }
 
-    fn register(&mut self) {
+    fn register(&mut self) -> Result<(), Error> {
         let metadata = serde_json::json!({
             "game": GAME,
             "game_display_name": GAME_DISPLAY_NAME,
             "developer": DEVELOPER,
             "deinitialize_timer_length_ms": TIMEOUT
         });
-        self.game_metadata(serde_json::to_string(&metadata).unwrap().as_str());
+        self.game_metadata(serde_json::to_string(&metadata).unwrap().as_str())?;
 
         let sizes = self.sizes.clone();
         for size in sizes {
@@ -99,31 +96,33 @@ impl Api {
                     "zone": "one",
                 }]
             });
-            self.bind_game_event(serde_json::to_string(&handler).unwrap().as_str());
+            self.bind_game_event(serde_json::to_string(&handler).unwrap().as_str())?;
         }
 
         // todo!("Register heartbeat event")
+
+        Ok(())
     }
 
     fn unregister(&mut self) {
         let remove_game = serde_json::json!({ "game": GAME });
 
-        self.remove_game(serde_json::to_string(&remove_game).unwrap().as_str());
+        _ = self.remove_game(serde_json::to_string(&remove_game).unwrap().as_str());
     }
 
-    fn game_metadata(&mut self, json: &str) {
+    fn game_metadata(&mut self, json: &str) -> Result<(), Error> {
         self.call("/game_metadata", json)
     }
 
-    fn bind_game_event(&mut self, json: &str) {
+    fn bind_game_event(&mut self, json: &str) -> Result<(), Error> {
         self.call("/bind_game_event", json)
     }
 
-    fn game_event(&mut self, json: &str) {
+    fn game_event(&mut self, json: &str) -> Result<(), Error> {
         self.call("/game_event", json)
     }
 
-    fn remove_game(&mut self, json: &str) {
+    fn remove_game(&mut self, json: &str) -> Result<(), Error> {
         self.call("/remove_game", json)
     }
 
@@ -131,24 +130,29 @@ impl Api {
     //     self.call("/game_heartbeat", json)
     // }
 
-    fn try_reconnecting(&mut self) {
-        if self.address.is_none() {
-            match Self::read_address() {
-                Some(address) => {
+    fn try_reconnecting(&mut self) -> Result<(), Error> {
+        match self.address {
+            Some(_) => Ok(()),
+            None => match Self::read_address() {
+                Ok(address) => {
                     self.address = Some(address);
-                    self.register();
+                    self.register()
                 }
-                None => {}
-            };
+                Err(error) => Err(error),
+            },
         }
     }
 
-    fn call(&mut self, endpoint: &str, json: &str) {
-        self.try_reconnecting();
+    fn call(&mut self, endpoint: &str, json: &str) -> Result<(), Error> {
+        self.try_reconnecting()?;
 
         let address = match &self.address {
             Some(address) => address,
-            None => return,
+            None => {
+                return Err(Error::Disconnected(
+                    "Couldn't read server address".to_string(),
+                ))
+            }
         };
 
         let url = format!("http://{}{}", address, endpoint);
@@ -158,46 +162,56 @@ impl Api {
             .set("Content-Type", "application/json")
             .send_string(json);
         match result {
-            Ok(_) => {}
+            Ok(_) => Ok(()),
             Err(error) => match error {
-                Error::Status(status, response) => {
-                    error!(
-                        "API call to {} failed with code {}: {:?}",
-                        endpoint, status, response
-                    );
-                }
-                Error::Transport(transport) => {
-                    error!("API call to {} failed: {:?}", endpoint, transport);
+                ureq::Error::Status(status, response) => Err(Error::BadRequest(status, response)),
+                ureq::Error::Transport(transport) => {
                     self.address = None;
+                    Err(Error::Disconnected(transport.to_string()))
                 }
             },
         }
     }
 
-    fn read_address() -> Option<String> {
-        // Missing directories are fatal errors
+    fn read_address() -> Result<String, Error> {
         let program_data =
             std::env::var("PROGRAMDATA").expect("PROGRAMDATA env variable not found");
         let dir = format!("{}/SteelSeries/SteelSeries Engine 3", program_data);
         if !Path::new(&dir).is_dir() {
-            panic!("{} doesn't exist", dir);
+            return Err(Error::NotAvailable(format!(
+                "SteelSeries Engine directory '{}' doesn't exist",
+                dir
+            )));
         }
 
-        // Rest of the errors are non-fatal, it is possible that Steelseries Engine is not yet ready
         let path = format!("{}/coreProps.json", dir);
-        let file = match File::open(path) {
+        let file = match File::open(&path) {
             Ok(file) => file,
-            Err(_) => return None,
+            Err(error) => {
+                return Err(Error::NotAvailable(format!(
+                    "Couldn't open '{}'. {}",
+                    path, error
+                )))
+            }
         };
+
         let reader = BufReader::new(file);
         let json: Value = match serde_json::from_reader(reader) {
             Ok(json) => json,
-            Err(_) => return None,
+            Err(error) => {
+                return Err(Error::NotAvailable(format!(
+                    "Couldn't parse properties json. {}",
+                    error
+                )))
+            }
         };
 
         json["address"]
             .as_str()
             .map(|address| String::from(address))
+            .ok_or(Error::NotAvailable(
+                "Couldn't parse properties json. Didn't find 'address' field".to_string(),
+            ))
     }
 
     fn get_event(size: &Size) -> String {
@@ -217,4 +231,11 @@ impl Drop for Api {
     fn drop(&mut self) {
         self.unregister()
     }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    NotAvailable(String),
+    Disconnected(String),
+    BadRequest(u16, Response),
 }
