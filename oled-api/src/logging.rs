@@ -1,9 +1,10 @@
 use crate::types::{LogData, LogLevel};
 use log::{error, LevelFilter, Log, Metadata, Record};
-use tokio::{sync::mpsc::Sender, task};
+use tokio::runtime::Handle;
+use tokio::sync::mpsc::Sender;
 
-pub fn init(log_sink: Sender<LogData>, log_level_filter: LevelFilter) {
-    let logger = Logger::new(log_sink, log_level_filter);
+pub fn init(runtime_handle: Handle, log_sink: Sender<LogData>, log_level_filter: LevelFilter) {
+    let logger = Logger::new(runtime_handle, log_sink, log_level_filter);
     log::set_boxed_logger(Box::new(logger))
         .map(|()| log::set_max_level(log_level_filter))
         .unwrap();
@@ -15,13 +16,19 @@ pub fn init(log_sink: Sender<LogData>, log_level_filter: LevelFilter) {
 }
 
 struct Logger {
+    runtime_handle: Handle,
     log_sink: Sender<LogData>,
     log_level_filter: LevelFilter,
 }
 
 impl Logger {
-    pub fn new(log_sink: Sender<LogData>, log_level_filter: LevelFilter) -> Self {
+    pub fn new(
+        runtime_handle: Handle,
+        log_sink: Sender<LogData>,
+        log_level_filter: LevelFilter,
+    ) -> Self {
         Self {
+            runtime_handle,
             log_sink,
             log_level_filter,
         }
@@ -46,7 +53,8 @@ impl Log for Logger {
         };
 
         let log_sink = self.log_sink.clone();
-        task::spawn(async move { log_sink.send(data).await.unwrap() });
+        self.runtime_handle
+            .spawn(async move { log_sink.send(data).await.unwrap() });
     }
 
     fn flush(&self) {}

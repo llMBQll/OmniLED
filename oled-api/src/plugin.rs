@@ -1,5 +1,6 @@
 use crate::logging;
 use crate::types::{plugin_client, EventData, Table};
+use tokio::runtime::Handle;
 use tokio::sync::mpsc::channel;
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -20,7 +21,7 @@ impl Plugin {
             Ok(response) => response.into_inner().log_level_filter().into(),
             Err(_) => todo!(),
         };
-        logging::init(tx, log_level);
+        logging::init(Handle::current(), tx, log_level);
 
         Ok(Self {
             name: name.to_string(),
