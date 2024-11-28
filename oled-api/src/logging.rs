@@ -1,7 +1,8 @@
-use crate::types::{LogData, LogLevel};
 use log::{error, LevelFilter, Log, Metadata, Record};
 use tokio::runtime::Handle;
 use tokio::sync::mpsc::Sender;
+
+use crate::types::{LogData, LogLevel};
 
 pub fn init(runtime_handle: Handle, log_sink: Sender<LogData>, log_level_filter: LevelFilter) {
     let logger = Logger::new(runtime_handle, log_sink, log_level_filter);

@@ -14,9 +14,23 @@ pub fn register_size(size: Size) {
     API.lock().unwrap().register_size(size);
 }
 
-pub fn update(size: &Size, data: &[u8]) -> Result<(), Error> {
+pub fn update(size: &Size, data: &[u8]) -> Result<()> {
     API.lock().unwrap().update(size, data)
 }
+
+#[derive(Debug)]
+pub enum Error {
+    NotAvailable(String),
+    Disconnected(String),
+    BadRequest(u16, Response),
+}
+
+pub type Result<T> = core::result::Result<T, Error>;
+
+const GAME: &str = "MBQ_OMNI_LED";
+const GAME_DISPLAY_NAME: &str = "OmniLED";
+const DEVELOPER: &str = "MBQ";
+const TIMEOUT: u32 = 60000;
 
 lazy_static! {
     static ref API: Mutex<Api> = Mutex::new(Api::new());
@@ -28,11 +42,6 @@ struct Api {
     counter: usize,
     sizes: HashSet<Size>,
 }
-
-const GAME: &str = "MBQ_OMNI_LED";
-const GAME_DISPLAY_NAME: &str = "OmniLED";
-const DEVELOPER: &str = "MBQ";
-const TIMEOUT: u32 = 60000;
 
 impl Api {
     fn new() -> Self {
@@ -48,7 +57,7 @@ impl Api {
         self.sizes.insert(size);
     }
 
-    fn update(&mut self, size: &Size, data: &[u8]) -> Result<(), Error> {
+    fn update(&mut self, size: &Size, data: &[u8]) -> Result<()> {
         let update = serde_json::json!({
             "game": GAME,
             "event": Self::get_event(&size),
@@ -64,7 +73,7 @@ impl Api {
         self.game_event(serde_json::to_string(&update).unwrap().as_str())
     }
 
-    fn register(&mut self) -> Result<(), Error> {
+    fn register(&mut self) -> Result<()> {
         let metadata = serde_json::json!({
             "game": GAME,
             "game_display_name": GAME_DISPLAY_NAME,
@@ -110,19 +119,19 @@ impl Api {
         _ = self.remove_game(serde_json::to_string(&remove_game).unwrap().as_str());
     }
 
-    fn game_metadata(&mut self, json: &str) -> Result<(), Error> {
+    fn game_metadata(&mut self, json: &str) -> Result<()> {
         self.call("/game_metadata", json)
     }
 
-    fn bind_game_event(&mut self, json: &str) -> Result<(), Error> {
+    fn bind_game_event(&mut self, json: &str) -> Result<()> {
         self.call("/bind_game_event", json)
     }
 
-    fn game_event(&mut self, json: &str) -> Result<(), Error> {
+    fn game_event(&mut self, json: &str) -> Result<()> {
         self.call("/game_event", json)
     }
 
-    fn remove_game(&mut self, json: &str) -> Result<(), Error> {
+    fn remove_game(&mut self, json: &str) -> Result<()> {
         self.call("/remove_game", json)
     }
 
@@ -130,7 +139,7 @@ impl Api {
     //     self.call("/game_heartbeat", json)
     // }
 
-    fn try_reconnecting(&mut self) -> Result<(), Error> {
+    fn try_reconnecting(&mut self) -> Result<()> {
         match self.address {
             Some(_) => Ok(()),
             None => match Self::read_address() {
@@ -143,7 +152,7 @@ impl Api {
         }
     }
 
-    fn call(&mut self, endpoint: &str, json: &str) -> Result<(), Error> {
+    fn call(&mut self, endpoint: &str, json: &str) -> Result<()> {
         self.try_reconnecting()?;
 
         let address = match &self.address {
@@ -173,7 +182,7 @@ impl Api {
         }
     }
 
-    fn read_address() -> Result<String, Error> {
+    fn read_address() -> Result<String> {
         let program_data =
             std::env::var("PROGRAMDATA").expect("PROGRAMDATA env variable not found");
         let dir = format!("{}/SteelSeries/SteelSeries Engine 3", program_data);
@@ -231,11 +240,4 @@ impl Drop for Api {
     fn drop(&mut self) {
         self.unregister()
     }
-}
-
-#[derive(Debug)]
-pub enum Error {
-    NotAvailable(String),
-    Disconnected(String),
-    BadRequest(u16, Response),
 }

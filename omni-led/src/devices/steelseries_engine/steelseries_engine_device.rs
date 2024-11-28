@@ -1,4 +1,3 @@
-use crate::renderer::buffer::Buffer;
 use log::error;
 use mlua::{Lua, Value};
 
@@ -6,6 +5,7 @@ use crate::devices::device::{Device, MemoryRepresentation, Settings, Size};
 use crate::devices::steelseries_engine::api;
 use crate::devices::steelseries_engine::api::Error;
 use crate::devices::steelseries_engine::steelseries_engine_device_settings::SteelseriesEngineDeviceSettings;
+use crate::renderer::buffer::Buffer;
 
 pub struct SteelseriesEngineDevice {
     name: String,
