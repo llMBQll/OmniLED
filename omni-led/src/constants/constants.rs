@@ -1,9 +1,7 @@
 use mlua::{chunk, Lua};
 use std::path::PathBuf;
 use std::{
-    env::consts::{
-        ARCH, DLL_EXTENSION, DLL_PREFIX, DLL_SUFFIX, EXE_EXTENSION, EXE_SUFFIX, FAMILY, OS,
-    },
+    env::consts::{EXE_EXTENSION, EXE_SUFFIX, OS},
     path::MAIN_SEPARATOR_STR,
 };
 
@@ -18,13 +16,8 @@ impl Constants {
 
         let platform = create_table!(lua, {
             ApplicationsDir = $applications_dir,
-            Arch = $ARCH,
-            DllExtension = $DLL_EXTENSION,
-            DllPrefix = $DLL_PREFIX,
-            DllSuffix = $DLL_SUFFIX,
             ExeExtension = $EXE_EXTENSION,
             ExeSuffix = $EXE_SUFFIX,
-            Family = $FAMILY,
             PathSeparator = $MAIN_SEPARATOR_STR,
             Os = $OS,
         });

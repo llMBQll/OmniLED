@@ -21,7 +21,7 @@ load_app {
     path = get_default_path('weather'),
     args = {
         '--address', SERVER.Address,
-        '--interval', '10',
+        '--interval', 10,
         '--wind-speed-unit', 'm/s',
         '--temperature-unit', 'Celsius',
         'in', 'Katowice',
