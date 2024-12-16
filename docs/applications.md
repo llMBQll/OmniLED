@@ -30,7 +30,7 @@ This allows the OmniLED process to manage the application's lifetime — startin
 stopping it when OmniLED shuts down. Additionally, you can define command line arguments that will
 be passed to the application.
 
-To load an application use the global `load_app(application_path: string, args: [string])` function. This allows for the
+To load an application use the global [`load_app`](lua_interfaces.md#load_app) function. This allows for the
 script to set command line arguments.
 
 > _Note: This is the preferred approach when application is only supposed to provide data to OmniLED as it's simply the
@@ -52,7 +52,7 @@ server address.
 #### Using the Global `SERVER` Variable
 
 If the application is registered in `applications.lua`, it can access the
-[`SERVER`](lua_interfaces.md#constants) constant, which contains the
+[`SERVER`](lua_interfaces.md#server) constant, which contains the
 server address. This eliminates the need for the application to determine the server address manually.
 
 #### Reading `server.json`

@@ -140,7 +140,7 @@ end
 
 SCREEN_BUILDER
         :new('Steelseries Apex 7 TKL')
-        :with_screen({
+        :with_layout_group({
     {
         layout = volume,
         run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
@@ -154,11 +154,11 @@ SCREEN_BUILDER
         run_on = { 'CLOCK.Seconds' },
     },
 })
-        :with_screen({
+        :with_layout_group({
     {
         layout = weather,
         run_on = { 'CLOCK.Seconds' },
     }
 })
-        :with_screen_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
+        :with_layout_group_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
         :register()

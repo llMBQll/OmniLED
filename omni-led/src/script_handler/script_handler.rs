@@ -25,7 +25,7 @@ pub struct ScriptHandler {
 struct DeviceContext {
     device: Box<dyn Device>,
     name: String,
-    scripts: Vec<UserScript>,
+    layouts: Vec<Layout>,
     marked_for_update: Vec<bool>,
     time_remaining: Duration,
     last_priority: usize,
@@ -70,8 +70,8 @@ impl ScriptHandler {
 
         let key = format!("{}.{}", application_name, event);
         for device in &mut self.devices {
-            for (index, script) in device.scripts.iter().enumerate() {
-                if script.run_on.contains(&key) {
+            for (index, layout) in device.layouts.iter().enumerate() {
+                if layout.run_on.contains(&key) {
                     device.marked_for_update[index] = true;
                 }
             }
@@ -106,19 +106,19 @@ impl ScriptHandler {
         &mut self,
         lua: &Lua,
         device_name: String,
-        user_scripts: Vec<UserScript>,
+        layouts: Vec<Layout>,
     ) -> mlua::Result<()> {
         let mut devices = UserDataRef::<Devices>::load(lua);
         let device = devices.get_mut().load_device(lua, device_name.clone())?;
 
         let device_count = self.devices.len();
-        let script_count = user_scripts.len();
+        let layout_count = layouts.len();
 
         let context = DeviceContext {
             device,
             name: device_name,
-            scripts: user_scripts,
-            marked_for_update: vec![false; script_count],
+            layouts,
+            marked_for_update: vec![false; layout_count],
             time_remaining: Default::default(),
             last_priority: 0,
             repeats: None,
@@ -166,7 +166,7 @@ impl ScriptHandler {
                 break;
             }
 
-            if marked_for_update && Self::test_predicate(&ctx.scripts[priority].predicate)? {
+            if marked_for_update && Self::test_predicate(&ctx.layouts[priority].predicate)? {
                 to_update = Some(priority);
                 update_modifier = None;
                 break;
@@ -182,7 +182,7 @@ impl ScriptHandler {
         let memory_representation = ctx.device.memory_representation(lua)?;
         env.set("SCREEN", size)?;
 
-        let output: ScriptOutput = ctx.scripts[to_update].layout.call(())?;
+        let output: LayoutData = ctx.layouts[to_update].layout.call(())?;
         let (end_auto_repeat, image) = renderer.render(
             ContextKey {
                 script: to_update,
@@ -246,8 +246,8 @@ impl UserData for ScriptHandler {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
-            |lua, handler, (device, user_scripts): (String, Vec<UserScript>)| {
-                handler.register(lua, device, user_scripts)
+            |lua, handler, (device, layouts): (String, Vec<Layout>)| {
+                handler.register(lua, device, layouts)
             },
         );
 
@@ -259,7 +259,7 @@ impl UserData for ScriptHandler {
 }
 
 #[derive(FromLuaValue, Clone)]
-struct UserScript {
+struct Layout {
     layout: Function,
     predicate: Option<Function>,
     run_on: Vec<String>,
@@ -272,7 +272,7 @@ enum Repeat {
 }
 
 #[derive(FromLuaValue, Clone)]
-struct ScriptOutput {
+struct LayoutData {
     widgets: Vec<Widget>,
 
     #[mlua(transform(Self::transform_duration))]
@@ -282,7 +282,7 @@ struct ScriptOutput {
     repeats: Repeat,
 }
 
-impl ScriptOutput {
+impl LayoutData {
     fn transform_duration(duration: Option<u64>, _lua: &Lua) -> mlua::Result<Duration> {
         let duration = duration
             .and_then(|duration| Some(Duration::from_millis(duration)))
@@ -318,13 +318,13 @@ impl UserData for ScreenBuilder {
 
 #[derive(Clone)]
 enum BuilderType {
-    Screen,
-    Script,
+    Layout,
+    LayoutGroup,
 }
 
 #[derive(Clone)]
 struct ScreenBuilderImpl {
-    scripts: Vec<UserScript>,
+    layouts: Vec<Layout>,
     shortcut: Vec<String>,
     device_name: String,
     builder_type: Option<BuilderType>,
@@ -335,7 +335,7 @@ struct ScreenBuilderImpl {
 impl ScreenBuilderImpl {
     pub fn new(name: String) -> Self {
         Self {
-            scripts: vec![],
+            layouts: vec![],
             shortcut: vec![],
             device_name: name,
             builder_type: None,
@@ -347,41 +347,41 @@ impl ScreenBuilderImpl {
 
 impl UserData for ScreenBuilderImpl {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method_mut("with_script", |_lua, builder, script: UserScript| {
-            if let Some(BuilderType::Screen) = builder.builder_type {
+        methods.add_method_mut("with_layout", |_lua, builder, layout: Layout| {
+            if let Some(BuilderType::LayoutGroup) = builder.builder_type {
                 return Err(mlua::Error::RuntimeError(
-                    "Can't use 'with_script' after calling 'with_screen' or 'with_screen_toggle'."
+                    "Can't use 'with_layout' after calling 'with_layout_group' or 'with_layout_group_toggle'."
                         .to_string(),
                 ));
             }
-            builder.builder_type = Some(BuilderType::Script);
+            builder.builder_type = Some(BuilderType::Layout);
 
-            builder.scripts.push(script);
+            builder.layouts.push(layout);
 
             Ok(builder.clone())
         });
 
-        methods.add_method_mut("with_screen", |lua, builder, scripts: Vec<UserScript>| {
-            if let Some(BuilderType::Script) = builder.builder_type {
+        methods.add_method_mut("with_layout_group", |lua, builder, layouts: Vec<Layout>| {
+            if let Some(BuilderType::Layout) = builder.builder_type {
                 return Err(mlua::Error::RuntimeError(
-                    "Can't use 'with_screen' after calling 'with_script'.".to_string(),
+                    "Can't use 'with_layout_group' after calling 'with_layout'.".to_string(),
                 ));
             }
-            builder.builder_type = Some(BuilderType::Screen);
+            builder.builder_type = Some(BuilderType::LayoutGroup);
 
             let screen = builder.screen_count;
             builder.screen_count += 1;
 
-            if scripts.len() == 0 {
+            if layouts.len() == 0 {
                 warn!(
-                    "Registering a screen for device '{}' with 0 layouts",
+                    "Registering a layout group for device '{}' with 0 layouts",
                     builder.device_name
                 );
             }
 
-            for mut script in scripts {
+            for mut layout in layouts {
                 let current_screen = builder.current_screen.clone();
-                let predicate = script.predicate;
+                let predicate = layout.predicate;
                 let wrapper = lua
                     .create_function(move |_, _: ()| {
                         if *current_screen.borrow() != screen {
@@ -397,25 +397,29 @@ impl UserData for ScreenBuilderImpl {
                     })
                     .unwrap();
 
-                script.predicate = Some(wrapper);
-                builder.scripts.push(script);
+                layout.predicate = Some(wrapper);
+                builder.layouts.push(layout);
             }
 
             Ok(builder.clone())
         });
 
-        methods.add_method_mut("with_screen_toggle", |_lua, builder, keys: Vec<String>| {
-            if let Some(BuilderType::Script) = builder.builder_type {
-                return Err(mlua::Error::RuntimeError(
-                    "Can't use 'with_screen_toggle' after calling 'with_script'.".to_string(),
-                ));
-            }
-            builder.builder_type = Some(BuilderType::Screen);
+        methods.add_method_mut(
+            "with_layout_group_toggle",
+            |_lua, builder, keys: Vec<String>| {
+                if let Some(BuilderType::Layout) = builder.builder_type {
+                    return Err(mlua::Error::RuntimeError(
+                        "Can't use 'with_layout_group_toggle' after calling 'with_layout'."
+                            .to_string(),
+                    ));
+                }
+                builder.builder_type = Some(BuilderType::LayoutGroup);
 
-            builder.shortcut = keys;
+                builder.shortcut = keys;
 
-            Ok(builder.clone())
-        });
+                Ok(builder.clone())
+            },
+        );
 
         methods.add_method_mut("register", |lua, builder, _: ()| {
             if !builder.shortcut.is_empty() {
@@ -457,7 +461,7 @@ impl UserData for ScreenBuilderImpl {
             script_handler.get_mut().register(
                 lua,
                 builder.device_name.clone(),
-                builder.scripts.clone(),
+                builder.layouts.clone(),
             )?;
 
             Ok(())

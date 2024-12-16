@@ -157,25 +157,25 @@
 > > Finalize the builder and register all provided scripts and shortcuts for the provided device. Without this call, no
 > > scripts will be registered.
 >
-> > `with_screen: fn(self, user_scripts: [UserScript])`
+> > `with_layout: fn(self, layout: Layout)`
+> >
+> > Add a single layout. Useful for more advanced custom configuration.
+> >
+> > _Not compatible with `with_layout_group` and `with_layout_group_toggle`._
+>
+> > `with_layout_group: fn(self, layouts: [Layout])`
 > >
 > > Add a screen with an array of user scripts, sorted in order of decreasing priority - first entry has the highest
 > > priority. This function can be called multiple times to register many screens for a single device.
 > >
-> > _Not compatible with `with_script`._
+> > _Not compatible with `with_layout`._
 >
-> > `with_screen_toggle: fn(self, shortcut: [string])`
+> > `with_layout_group_toggle: fn(self, shortcut: [string])`
 > >
 > > Set a shortcut to toggle between screens. It will go sequentially through each screen, and wrap around to the first
 > > at the end. Required if there is more then one screen being registered.
 > >
-> > _Not compatible with `with_script`._
->
-> > `with_script: fn(self, user_script: UserScript)`
-> >
-> > Add a single user script. Useful for more advanced custom configuration.
-> >
-> > _Not compatible with `with_screen` and `with_screen_toggle`._
+> > _Not compatible with `with_layout`._
 
 ---
 
@@ -191,6 +191,27 @@
 ## Types
 
 > ### `Layout`
+>
+> Represents a user-defined script that runs on specific events and creates a layout to be rendered.
+>
+> > `layout_fn: fn() -> LayoutData`
+> >
+> > Function that will return a valid [`LayoutData`](#layoutdata) when triggered.
+>
+> > `run_on: [string]`
+> >
+> > List of events that can trigger the script.
+>
+> > `predicate: fn() -> bool`
+> >
+> > _Optional_. Default: `PREDICATE.Always`.
+> >
+> > Additional predicate to assert if a script should be run. If it returns `false`, the user script will not be run
+> > despite receiving an event specified in the `run_on` array.
+
+---
+
+> ### `LayoutData`
 >
 > Specify the widget layout and other properties required for rendering on screen.
 >
@@ -309,27 +330,6 @@
 > > `width`: `integer`
 > >
 > > Width in pixels.
-
----
-
-> ### `UserScript`
->
-> Represents a user-defined script that runs on specific events and creates a layout to be rendered.
->
-> > `layout: fn() -> Layout`
-> >
-> > Function that will return a valid `Layout` when triggered.
->
-> > `run_on: [string]`
-> >
-> > List of events that can trigger the script.
->
-> > `predicate: fn() -> bool`
-> >
-> > _Optional_. Default: `PREDICATE.Always`.
-> >
-> > Additional predicate to assert if a script should be run. If it returns `false`, the user script will not be run
-> > despite receiving an event specified in the `run_on` array.
 
 ## Widgets
 
