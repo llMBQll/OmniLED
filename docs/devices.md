@@ -1,125 +1,101 @@
 # Devices
 
-Any device you want to display on has to be added to config [devices.lua](../config/devices.lua) first.
-At startup, only syntactic correctness of the config as well as duplicate names will be checked,
-but no devices are loaded until they are registered in [scripts.lua](../config/scripts.lua).
+Before any device is used it has to be added to a config file - `devices.lua`. This file will be read on startup and
+will internally register configs for the listed devices, **but no devices will be activated at that stage**. To know how
+to activate a device from the config and send data to it, read the [user scripts](user_scripts.md) page.
 
-_Note that as long as it is unique, device name does not matter, though it is easier to understand if it matches the
-real device name_
+_Note: Device names are not actually checked to match the real device name. The only requirement is that every name in
+the config is unique._
 
-## Use Already Tested Devices
+## Add device config
 
-Config file comes with some devices predefined, so if you see your device name you are good to go.
+OmniLED supports 3 ways to display data on the screen. Each one just requires registering the device in `devices.lua`
+file. Regardless of the chosen configuration type, the rendered data will look exactly the same and only the way the
+data is delivered to the screen will differ.
 
-## Add New Devices
+### USB Device (Recommended)
 
-If your device is not on the list, you can extend it to accommodate your needs by adding an appropriate config call.  
-In the following entries `Steelseries Apex 7 TKL` will be used as an example.
+Register any USB device using [`usb_device`](lua_interfaces.md#usb_device). This is the most flexible approach as it
+should work for any device. Rendered data can also be transformed via a script to match the format expected by the
+device.
 
-### Add New Steelseries Engine Device (Windows Only)
+> Example `devices.lua` file:
+> ```lua
+> usb_device {
+>     name = 'SteelSeries Apex 7 TKL',
+>     screen_size = {
+>         width = 128,
+>         height = 40,
+>     },
+>     usb_settings = {
+>         vendor_id = '0x1038',
+>         product_id = '0x1618',
+>         interface = '0x01',
+>         endpoint = '0x00',
+>         request_type = '0x21',
+>         request = '0x09',
+>         value = '0x0300',
+>         index = '0x01',
+>     },
+>     transform = function(buffer)
+>         local bytes = buffer:bytes()
+>         table.insert(bytes, 1, 0x61)
+>         table.insert(bytes, 0x00)
+>         return bytes
+>     end,
+>     memory_representation = 'BitPerPixel',
+> }
+> ```
+> In the above example a single usb device config was added for "SteelSeries Apex 7 TKL".
+>
+> It is necessary to provide all usb settings, so the device can be found, and the data is sent to the correct endpoint.
+> This device also expects data represent 8 bits with a single byte, thus `memory_representation` is set to
+> `BitPerPixel`. Additionally, the final rendered byte array is prefixed with byte `0x61` and suffixed with byte `0x00`
+> to match the device's usb protocol.
 
-This will send all updates to Steelseries Engine (SSE) which in turn will send it to your device.
+### SteelSeries Devices (Windows Only)
 
-> This method should work well for a single active device, but having multiple devices loaded in this way is not tested.
+> _Note: This approach requires SteelSeries GG software to be installed and running._
 
-Add `steelseries_engine_device` entry with the following parameters:
-Required:
+Register a SteelSeries device using [`steelseries_engine_device`](lua_interfaces.md#steelseries_engine_device) function.
+This option is the easiest as it only requires knowing the device's screen size, and SteelSeries Engine will take the
+rendered data and send it to the device.
 
-- `name` - unique name that will identify your device when registering it for events
-- `screen_size` - width and height of the screen in pixels
+> Example `devices.lua` file:
+> ```lua
+> steelseries_engine_device {
+>     name = 'SteelSeries Apex 7 TKL',
+>     screen_size = {
+>         width = 128,
+>         height = 40,
+>     },
+> }
+> ```
+> In the above example a single SteelSeries device config was added for "SteelSeries Apex 7 TKL".
+>
+> Compared to the USB device example it's quite a bit simpler as it does not require knowing the usb configuration nor
+> knowing the usb data protocol.
 
-**Example**
+> Note: I was only able to test SteelSeries Engine with a single device. Handing multiple devices via SSE may turn out
+> to be broken.
 
-```lua
-steelseries_engine_device {
-    name = 'Steelseries Apex 7 TKL',
-    screen_size = {
-        width = 128,
-        height = 40,
-    },
-}
-```
+### Emulator
 
-### Add New USB Device
+Register an emulator using [`emulator`](lua_interfaces.md#emulator) function. This will not send data to any physical
+device, rather it will create a new window on your desktop and show the rendered data there. This is particularly useful
+for prototyping, when your device is currently not available, or you just want to test on a bigger screen.
 
-This method will send data directly to the USB interface responsible for handling devices' screen.
-Advantage of this approach instead of just relying on SSE to do the work is less CPU usage.
-
-Add `usb_device` entry with the following parameters:
-- `name`: `string`. Unique name that will identify your device when registering it for events
-    - required
-- `screen_size`: `Size` - width and height of the screen in pixels
-    - required
-    - see [Size](user_scripts.md#size)
-- `usb_settings` - tell where data shall be sent - you can follow [this](#find-usb-settings-for-your-device) section to
-  find your values
-    - `vendor_id` and `product_id` - USB id of your device
-    - `interface`, `endpoint`, `request_type`, `request`, `value` and `index` - USB settings that specify to which
-      interface data will be written
-- `memory_representation` - tell how the data should be rendered
-    - `BytePerPixel` - information will be encoded in separate byte for each pixel
-    - `BitPerPixel` - this will pack information about 8 pixels into each byte, and will add padding bits in the last
-      byte of each row if its length is not a multiple of 8
-  > Note: Data is stored as bytes of consecutive rows
-- `transform`: `fn(buffer: Buffer) -> [byte]`. Transform the byte buffer to a form expected by the output device.
-    - optional
-    - see [Buffer](#buffer)
-
-#### Buffer
-
-- `bytes`: `fn() -> [byte]`. Get a flat array of bytes in a row-major format.
-- `rows`: `fn() -> [[byte]]`. Get an array of arrays of bytes split by row.
-
-#### Example
-
-```lua
-usb_device {
-    name = 'Steelseries Apex 7 TKL',
-    screen_size = {
-        width = 128,
-        height = 40,
-    },
-    usb_settings = {
-        vendor_id = '0x1038',
-        product_id = '0x1618',
-        interface = '0x01',
-        endpoint = '0x00',
-        request_type = '0x21',
-        request = '0x09',
-        value = '0x0300',
-        index = '0x01',
-    },
-    transform = function(buffer)
-        local bytes = buffer:bytes()
-        table.insert(bytes, 1, 0x61)
-        table.insert(bytes, 0x00)
-        return bytes
-    end,
-    memory_representation = 'BitPerPixel',
-}
-```
-
-### Add New Emulator
-
-To quickly prototype new layouts you can set up a emulator which will open a window on your screen.
-
-Add `emulator` entry with the following parameters:  
-Required:
-
-- `name` - unique name that will identify your device when registering it for events
-- `screen_size` - width and height of the screen in pixels
-
-**Example**
-
-```lua
-emulator {
-    name = 'Steelseries Apex 7 TKL',
-    screen_size = {
-        width = 128,
-        height = 40,
-    },
-}
-```
+> Example `devices.lua` file:
+> ```lua
+> emulator {
+>     name = 'SteelSeries Apex 7 TKL',
+>     screen_size = {
+>         width = 128,
+>         height = 40,
+>     },
+> }
+> ```
+> In the above example a single emulator config was added for "SteelSeries Apex 7 TKL".
 
 ## Find USB Settings For Your Device
 

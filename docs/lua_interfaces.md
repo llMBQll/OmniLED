@@ -107,6 +107,19 @@
 
 ## Enums
 
+> ### `MemoryRepresentation`
+>
+> Memory representation strategy for data sent to devices via USB.
+>
+> > `BytePerPixel`
+> >
+> > Represent information about each pixel in a separate byte.
+>
+> > `BitPerPixel`
+> >
+> > Pack information about 8 pixels into each byte, making the update data smaller. This will also add padding bits at
+> > the end of each row if the row length is not a multiple of 8.
+
 > ### `Repeat`
 >
 > Repeat strategy for a widget. Currently, this only applies to scrolling text.
@@ -123,11 +136,11 @@
 
 ## Functions
 
-> ### `load_app`
+> ### `emulator`
 >
-> Type: `fn(path: string, args: [string])`
+> Type: `fn(config: EmulatorConfig)`
 >
-> Starts an application at `path` and passes the `args` as command line arguments.
+> Registers emulator with a given configuration.
 
 > ### `get_default_path`
 >
@@ -139,6 +152,24 @@
 > Examples:
 > - `C:\Users\<USERNAME>\AppData\Roaming\OmniLED\bin\<NAME>.exe` on Windows
 > - `/home/<USERNAME>/.config/OmniLED/bin/<NAME>` on Linux
+
+> ### `load_app`
+>
+> Type: `fn(path: string, args: [string])`
+>
+> Starts an application at `path` and passes the `args` as command line arguments.
+
+> ### `steelseries_engine_device`
+>
+> Type: `fn(config: SteelSeriesEngineDeviceConfig)`
+>
+> Registers SteelSeries device with a given configuration.
+
+> ### `usb_device`
+>
+> Type: `fn(config: USBDeviceConfig)`
+>
+> Registers USB device with a given configuration.
 
 ## Objects
 
@@ -189,6 +220,34 @@
 > > Register a key combination and an action that will be executed when the combination is pressed.
 
 ## Types
+
+> ### `Buffer`
+>
+> Byte buffer that contains the rendered data.
+>
+> > `bytes`: `fn() -> [byte]`
+> >
+> > Get a flat array of bytes in a row-major format.
+>
+> > `rows`: `fn() -> [[byte]]`
+> >
+> > Get an array of arrays of bytes split by row.
+
+---
+
+> ### `EmulatorConfig`
+>
+> Configuration for a device emulator.
+>
+> > `name: string`
+> >
+> > Unique name that identifies this configuration.
+>
+> > `screen_size: Size`
+> >
+> > Screen size to use for emulator display.
+
+---
 
 > ### `Layout`
 >
@@ -330,6 +389,89 @@
 > > `width`: `integer`
 > >
 > > Width in pixels.
+
+---
+
+> ### `SteelSeriesEngineDeviceConfig`
+>
+> Configuration for a device managed via SteelSeriesEngine.
+>
+> > `name: string`
+> >
+> > Unique name that identifies this configuration.
+>
+> > `screen_size: Size`
+> >
+> > Screen size of the SteelSeries device display.
+
+---
+
+> ### `USBDeviceConfig`
+>
+> Configuration for a USB device.
+>
+> > `name: string`
+> >
+> > Unique name that identifies this configuration.
+>
+> > `screen_size: Size`
+> >
+> > Screen size of the USB device display.
+>
+> > `memory_representation: MemoryRepresentation`
+> >
+> > Choose memory representation of the renderer output.
+>
+> > `transform: fn(buffer: Buffer) -> [byte]`
+> >
+> > _Optional_. Default: No transformation of rendered data.
+> >
+> > Function that will transform rendered `buffer` into the final representation expected by the device.
+> > Data inside `buffer` is in a format specified by `memory_representation` field.
+>
+> > `usb_settings: USBSettings`
+> >
+> > Information to identify the USB device and settings for the device's screen USB interface.
+
+---
+
+>     usb_settings = {
+>         vendor_id = '0x1038',
+>         product_id = '0x1618',
+>         interface = '0x01',
+>         endpoint = '0x00',
+>         request_type = '0x21',
+>         request = '0x09',
+>         value = '0x0300',
+>         index = '0x01',
+>     },
+
+> ### `USBSettings`
+>
+> Configuration for a USB device.
+>
+> > `name: string`
+> >
+> > Unique name that identifies this configuration.
+>
+> > `screen_size: Size`
+> >
+> > Screen size of the USB device display.
+>
+> > `memory_representation: MemoryRepresentation`
+> >
+> > Choose memory representation of the renderer output.
+>
+> > `transform: fn(buffer: Buffer) -> [byte]`
+> >
+> > _Optional_. Default: No transformation of rendered data.
+> >
+> > Function that will transform rendered `buffer` into the final representation expected by the device.
+> > Data inside `buffer` is in a format specified by `memory_representation` field.
+>
+> > `usb_settings: USBSettings`
+> >
+> > Information to identify the USB device and settings for the device's screen USB interface.
 
 ## Widgets
 
