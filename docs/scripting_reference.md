@@ -1,4 +1,4 @@
-# Script Reference
+# Scripting Reference
 
 ## Constants
 
@@ -137,6 +137,24 @@
 
 ---
 
+> ### `FontSelector`
+>
+> Different strategies for selecting fonts.
+>
+> > `Default`
+> >
+> > Load default font.
+> >
+> > `Filesystem: FilesystemSelector`
+> >
+> > Load a font using a file system path.
+> >
+> > `System: SystemSelector`
+> >
+> > Load for a system-installed font.
+
+--- 
+
 > ### `FontStretch`
 >
 > Font stretch, from most condensed to most stretched.
@@ -194,6 +212,37 @@
 > > `ExtraBold`
 >
 > > `Black`
+
+---
+
+> ### `LogLevel`
+> 
+> Log level filter, selecting one value will also activate all values above it, e.g. enabling
+> `Info`, will also enable `Warn` and `Error`.
+> 
+> > `Off`
+> > 
+> > Disables all logging.
+>
+> > `Error`
+> > 
+> > Allow logging errors and above.
+>
+> > `Warn`
+> > 
+> > Allow logging warnings and above.
+>
+> > `Info`
+> > 
+> > Allow info logging and above.
+>
+> > `Debug`
+> > 
+> > Allow debug logging and above.
+>
+> > `Trace`
+> > 
+> > Allow tracing and above.
 
 ---
 
@@ -369,6 +418,22 @@
 
 ---
 
+> ### `FilesystemSelector`
+>
+> Load a font using a file system path.
+>
+> > `path: string`
+> >
+> > Full path pointing to the font file.
+>
+> > `font_index: integer`
+> >
+> > _Optional_. Default: `0`.
+> >
+> > If the file contains multiple faces, you may need to provide the index to select the proper one.
+
+---
+
 > ### `Layout`
 >
 > Represents a user-defined script that runs on specific events and creates a layout to be rendered.
@@ -515,6 +580,32 @@
 > > `screen_size: Size`
 > >
 > > Screen size of the SteelSeries device display.
+
+---
+
+> ### `SystemSelector`
+>
+> > `names: [FontName]`
+> >
+> > List of font names in decreasing priority.
+>
+> > `style: FontStyle`
+> >
+> > _Optional_. Default: `"Normal"`.
+> >
+> > Font style to search for.
+>
+> > `weight: FontWeight`
+> > 
+> > _Optional_. Default: `"Normal"`.
+> >
+> > Font weight to search for.
+>
+> > `streatch: FontStretch`
+> > 
+> > _Optional_. Default: `"Normal"`.
+> >
+> > Font stretch to search for.
 
 ---
 

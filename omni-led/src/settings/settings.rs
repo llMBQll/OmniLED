@@ -51,7 +51,10 @@ impl Settings {
             .unwrap();
 
         let filename = get_full_path(PATH);
-        let env = create_table!(lua, {Settings = $load_settings_fn});
+        let env = create_table!(lua, {
+            PLATFORM = PLATFORM,
+            Settings = $load_settings_fn,
+        });
 
         if let Err(err) = exec_file(lua, &filename, env) {
             error!(
