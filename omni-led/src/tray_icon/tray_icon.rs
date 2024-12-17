@@ -13,8 +13,8 @@ impl TrayIcon {
     pub fn new(running: &'static AtomicBool) -> Self {
         let mut tray = TrayItem::new("OmniLED", Self::load_icon()).unwrap();
 
-        tray.add_menu_item("Settings", || {
-            if let Err(err) = opener::reveal(Constants::config_dir().join("settings.lua")) {
+        tray.add_menu_item("Config", || {
+            if let Err(err) = opener::reveal(Constants::config_dir()) {
                 error!("Failed to reveal config directory: {}", err);
             }
         })

@@ -142,6 +142,8 @@
 >
 > Registers emulator with a given configuration.
 
+---
+
 > ### `get_default_path`
 >
 > Type: `fn(name: string) -> string`
@@ -153,17 +155,23 @@
 > - `C:\Users\<USERNAME>\AppData\Roaming\OmniLED\bin\<NAME>.exe` on Windows
 > - `/home/<USERNAME>/.config/OmniLED/bin/<NAME>` on Linux
 
+---
+
 > ### `load_app`
 >
 > Type: `fn(path: string, args: [string])`
 >
 > Starts an application at `path` and passes the `args` as command line arguments.
 
+---
+
 > ### `steelseries_engine_device`
 >
 > Type: `fn(config: SteelSeriesEngineDeviceConfig)`
 >
 > Registers SteelSeries device with a given configuration.
+
+---
 
 > ### `usb_device`
 >
@@ -434,17 +442,6 @@
 > > Information to identify the USB device and settings for the device's screen USB interface.
 
 ---
-
->     usb_settings = {
->         vendor_id = '0x1038',
->         product_id = '0x1618',
->         interface = '0x01',
->         endpoint = '0x00',
->         request_type = '0x21',
->         request = '0x09',
->         value = '0x0300',
->         index = '0x01',
->     },
 
 > ### `USBSettings`
 >
