@@ -1,55 +1,66 @@
-#![feature(concat_idents)]
-
-use clap::Parser;
+use clap::{ArgAction, Args, Parser, Subcommand};
 use convert_case::{Case, Casing};
-use std::path::PathBuf;
+use std::fs::File;
+use std::io::Write;
 use std::process::Command;
 use std::{env, fs};
 
 use crate::util::{
-    ask_user, get_app_exe_path, get_bin_dir, get_config_dir, get_data_dir, get_root_dir,
-    read_user_input,
+    ask_user, get_app_exe_path, get_app_name, get_bin_dir, get_config_dir, get_data_dir,
+    get_root_dir, read_user_input,
 };
 
 mod bytes;
 mod util;
 
-#[derive(clap::Parser, Debug)]
+#[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Options {
     #[clap(subcommand)]
     selector: Selector,
 }
 
-#[derive(clap::Subcommand, Debug)]
+#[derive(Subcommand, Debug)]
 enum Selector {
     Install(InstallOptions),
     Uninstall(UninstallOptions),
 }
 
-#[derive(clap::Args, Debug)]
+#[derive(Args, Debug)]
 struct InstallOptions {
-    /// Your configuration will not be overridden by default, you can reset config to default using
-    /// this flag
-    #[clap(short, long)]
-    override_config: bool,
-
-    #[clap(short, long)]
-    enable_autostart: bool,
-
+    /// Run in interactive mode. Installer will prompt user for
+    /// responses instead of getting settings from CLI options.
     #[clap(short, long)]
     interactive: bool,
+
+    /// Override your config files with defaults. Required in non-interactive mode.
+    #[clap(
+        short, long, action = ArgAction::Set,
+        conflicts_with = "interactive", required_unless_present = "interactive"
+    )]
+    override_config: Option<bool>,
+
+    /// Control if installer should make program start on login. Required in non-interactive mode.
+    #[clap(
+        short, long, action = ArgAction::Set,
+        conflicts_with = "interactive", required_unless_present = "interactive"
+    )]
+    enable_autostart: Option<bool>,
 }
 
-#[derive(clap::Args, Debug)]
+#[derive(Args, Debug)]
 struct UninstallOptions {
-    /// By default, uninstaller will remove the entire install directory and autostart entry
-    /// By enabling this flag you can keep your configuration files untouched
-    #[clap(short, long)]
-    keep_config: bool,
-
+    /// Run in interactive mode. Installer will prompt user for
+    /// responses instead of getting settings from CLI options.
     #[clap(short, long)]
     interactive: bool,
+
+    /// Override your config files with defaults. Required in non-interactive mode.
+    #[clap(
+        short, long, action = ArgAction::Set,
+        conflicts_with = "interactive", required_unless_present = "interactive"
+    )]
+    keep_config: Option<bool>,
 }
 
 fn main() {
@@ -61,12 +72,15 @@ fn main() {
     };
 }
 
-fn install_binary_impl(name: &str, bytes: &[u8]) {
+fn install_binary_impl(name: &str, bytes: &[u8]) -> std::io::Result<()> {
     let target = get_bin_dir()
         .join(name)
         .with_extension(env::consts::EXE_EXTENSION);
     println!("Copying binary: {}", target.display());
-    fs::write(&target, bytes).unwrap();
+
+    let mut file = File::create(target)?;
+    file.write_all(bytes)?;
+    os::set_exe_permissions(&mut file)
 }
 
 fn install_config_impl(name: &str, bytes: &[u8], override_config: bool) {
@@ -85,7 +99,7 @@ fn install_config_impl(name: &str, bytes: &[u8], override_config: bool) {
 
 macro_rules! install_binary {
     ($name:expr) => {
-        install_binary_impl(&stringify!($name).to_case(Case::Snake), $name)
+        install_binary_impl(&stringify!($name).to_case(Case::Snake), $name).unwrap()
     };
 }
 
@@ -108,16 +122,16 @@ fn install(options: InstallOptions) {
         get_config_dir(),
         get_data_dir(),
     ] {
-        create_dir(directory);
+        fs::create_dir_all(directory).unwrap();
     }
 
-    install_binary!(STEELSERIES_OLED);
+    install_binary!(OMNI_LED);
     install_binary!(AUDIO);
     install_binary!(CLOCK);
     install_binary!(MEDIA);
     install_binary!(WEATHER);
 
-    let override_config = options.override_config
+    let override_config = options.override_config == Some(true)
         || (options.interactive && ask_user("Do you wish to override your config?"));
 
     install_config!(APPLICATIONS, override_config);
@@ -125,12 +139,12 @@ fn install(options: InstallOptions) {
     install_config!(SCRIPTS, override_config);
     install_config!(SETTINGS, override_config);
 
-    let autostart = options.enable_autostart
+    let autostart = options.enable_autostart == Some(true)
         || (options.interactive
             && ask_user("Do you wish for application to start automatically when logging in?"));
 
     if autostart {
-        autostart_enable();
+        os::autostart_enable();
     }
 
     run();
@@ -140,10 +154,10 @@ fn install(options: InstallOptions) {
 }
 
 fn uninstall(options: UninstallOptions) {
-    let keep_config =
-        options.keep_config || (options.interactive && ask_user("Do you wish to keep config?"));
+    let keep_config = options.keep_config == Some(true)
+        || (options.interactive && ask_user("Do you wish to keep config?"));
 
-    autostart_disable();
+    os::autostart_disable();
 
     let paths = if keep_config {
         vec![get_bin_dir(), get_data_dir()]
@@ -157,30 +171,14 @@ fn uninstall(options: UninstallOptions) {
     }
 }
 
-fn create_dir(path: &PathBuf) {
-    if path.exists() {
-        println!("Directory {:?} already exists", path);
-    } else {
-        println!("Creating directory {:?}", path);
-        fs::create_dir_all(path).unwrap();
-    }
-}
-
-fn autostart_enable() {
-    os::autostart_enable();
-}
-
-fn autostart_disable() {
-    os::autostart_disable();
-}
-
 fn run() {
-    println!("Running 'Steelseries OLED'");
+    println!("Running '{}'", get_app_name());
     Command::new(get_app_exe_path()).spawn().unwrap();
 }
 
 #[cfg(target_os = "windows")]
 mod os {
+    use std::fs::File;
     use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
     use winreg::RegKey;
 
@@ -201,9 +199,10 @@ mod os {
 
         let path = get_app_exe_path();
         match registry_entry.set_value(get_app_name(), &path.to_str().unwrap()) {
-            Ok(_) => println!("Added 'Steelseries OLED' as an autostart program"),
+            Ok(_) => println!("Added '{}' as an autostart program", get_app_name()),
             Err(err) => println!(
-                "Failed to add 'Steelseries OLED' as an autostart program: {}",
+                "Failed to add '{}' as an autostart program: {}",
+                get_app_name(),
                 err
             ),
         }
@@ -213,22 +212,37 @@ mod os {
         let registry_entry = get_registry_entry();
 
         match registry_entry.delete_value(get_app_name()) {
-            Ok(_) => println!("Removed 'Steelseries OLED' from autostart programs"),
+            Ok(_) => println!("Removed '{}' from autostart programs", get_app_name()),
             Err(err) => println!(
-                "Failed to remove 'Steelseries OLED' from autostart programs: {}",
+                "Failed to remove '{}' from autostart programs: {}",
+                get_app_name(),
                 err
             ),
         };
+    }
+
+    pub fn set_exe_permissions(_file: &mut File) -> std::io::Result<()> {
+        // No special handling required
+        Ok(())
     }
 }
 
 #[cfg(target_os = "linux")]
 mod os {
+    use std::fs::File;
+    use std::os::unix::fs::PermissionsExt;
+
     pub fn autostart_enable() {
         println!("Autostart setup is not yet available on Linux");
     }
 
     pub fn autostart_disable() {
         // Nothing to disable yet
+    }
+
+    pub fn set_exe_permissions(file: &mut File) -> std::io::Result<()> {
+        let mut permissions = file.metadata()?.permissions();
+        permissions.set_mode(0o775);
+        file.set_permissions(permissions)
     }
 }

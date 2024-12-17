@@ -1,31 +1,37 @@
-# Steelseries OLED
+# OmniLED
 
-## Linux Dependencies
+Control your SteelSeries OLED devices (and more) on Windows and Linux.
 
-Pkg Config
-sudo apt install pkg-config -y
+## Features
 
-D-Bus
-sudo apt install libdbus-1-dev -y
+- Display on any SteelSeries device via the SteelSeries GG
+- Display on virtually any device via USB
 
-Protobuf compiler
-Download latest from protobuf #TODO determine minimal supported version
+- Show current time and date
+- Show current weather
+- Show currently played media
+- Show current audio device and volume level
 
-Font Config
-sudo apt install libfontconfig-dev -y
+- Add custom data by implementing the gRPC client interface
 
-X11 
-sudo apt install libx11-dev -y
+## Install
 
-## Allow access to usb device
+See the [installation steps](docs/install.md)
 
-Add rules file
-```
-❯ cat /etc/udev/rules.d/69-steelseries-oled.rules
-SUBSYSTEM=="usb", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1618", MODE="0666", GROUP="plugdev"
-```
+## Customize
 
-Reload rules (additionally may need to unplug and plug the device or restart system)
-```
-sudo udevadm control --reload-rules
-```
+OmniLED provides extensive customization options to cater to many requirements.
+Start customizing [here](docs/customization.md).
+
+## Extend
+
+[//]: # (OmniLED aims to create a bigger ecosystem. That's why it provides an easy way to extend the functionality via)
+
+[//]: # (adding new plugins. See how can you create your own plugin [here]&#40;docs/&#41;)
+
+## Roadmap
+
+- [ ] GIF support
+- [ ] Loading custom images (Load images and GIFs from disk)
+- [ ] Getting events from discord (Mic status, currently speaking user etc.)
+- [ ] Graphical interface for installer and settings

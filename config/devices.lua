@@ -23,8 +23,8 @@ usb_device {
     memory_representation = 'BitPerPixel',
 }
 
-simulator {
-    name = 'Simulator',
+emulator {
+    name = 'Emulator',
     screen_size = {
         width = 128,
         height = 40,

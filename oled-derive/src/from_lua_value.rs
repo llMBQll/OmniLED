@@ -2,18 +2,31 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput};
 
-use crate::common::{get_content, get_optional_content, is_attribute};
+use crate::common::{get_attribute, get_attribute_with_default_value, parse_attributes};
 
 pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
     let (_impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let struct_attrs = get_struct_attributes(&input.attrs);
     let initializer = generate_initializer(&name, &input.data);
 
-    // TODO handle generics of deriving type, for now only lifetime "'a" is allowed
+    let validate = match struct_attrs.validate {
+        Some(validate) => quote! {
+            match result {
+                Ok(value) => match #validate(&value) {
+                    Ok(_) => Ok(value),
+                    Err(err) => Err(err),
+                },
+                Err(err) => Err(err),
+            }
+        },
+        None => quote! { result },
+    };
+
     let expanded = quote! {
         impl FromLua for #name #ty_generics {
             fn from_lua(value: mlua::Value, lua: &mlua::Lua) -> mlua::Result<#name #ty_generics #where_clause> {
-                match value {
+                let result = match value {
                     #initializer,
                     mlua::Value::UserData(user_data) => {
                         let data = user_data.borrow::<#name>()?;
@@ -21,13 +34,15 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
                     },
                     other => Err(mlua::Error::FromLuaConversionError {
                         from: other.type_name(),
-                        to: stringify!(#name),
+                        to: String::from(stringify!(#name)),
                         message: None,
                     }),
-                }
+                };
+                #validate
             }
         }
     };
+
     proc_macro::TokenStream::from(expanded)
 }
 
@@ -38,7 +53,7 @@ fn generate_initializer(name: &Ident, data: &Data) -> TokenStream {
                 let names = fields.named.iter().map(|f| {
                     let field = &f.ident;
 
-                    let attrs = parse_attributes(&f.attrs);
+                    let attrs = get_field_attributes(&f.attrs);
 
                     let initializer = quote! {
                         table.get(stringify!(#field))
@@ -167,38 +182,32 @@ enum FieldType {
     Unit,
 }
 
-struct LuaAttributes {
+struct StructAttributes {
+    validate: Option<TokenStream>,
+}
+
+fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
+    let mut attributes = parse_attributes("mlua", attributes);
+
+    StructAttributes {
+        validate: get_attribute(&mut attributes, "validate"),
+    }
+}
+
+struct FieldAttributes {
     default: Option<TokenStream>,
     transform: Option<TokenStream>,
 }
 
-fn parse_attributes(attributes: &Vec<Attribute>) -> LuaAttributes {
-    let mut default: Option<TokenStream> = None;
-    let mut transform: Option<TokenStream> = None;
+fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
+    let mut attributes = parse_attributes("mlua", attributes);
 
-    for attr in attributes {
-        if !attr.path().is_ident("mlua") {
-            continue;
-        }
-
-        attr.parse_nested_meta(|meta| {
-            if is_attribute(&meta, "default") {
-                default = match get_optional_content(&meta)? {
-                    Some(content) => Some(content),
-                    None => Some(quote!(Default::default())),
-                };
-                return Ok(());
-            }
-
-            if is_attribute(&meta, "transform") {
-                transform = Some(get_content(&meta)?);
-                return Ok(());
-            }
-
-            Ok(())
-        })
-        .unwrap();
+    FieldAttributes {
+        default: get_attribute_with_default_value(
+            &mut attributes,
+            "default",
+            quote!(Default::default()),
+        ),
+        transform: get_attribute(&mut attributes, "transform"),
     }
-
-    LuaAttributes { default, transform }
 }

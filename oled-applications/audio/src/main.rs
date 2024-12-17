@@ -1,7 +1,8 @@
 use audio::Audio;
-use oled_api::Plugin;
+use clap::Parser;
+use log::debug;
+use oled_api::plugin::Plugin;
 use oled_derive::IntoProto;
-use std::env;
 use std::error::Error;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
@@ -13,12 +14,8 @@ const NAME: &str = "AUDIO";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let args: Vec<String> = env::args().collect();
-    let address = args[1].as_str();
-    let mut plugin = Plugin::new(NAME, address).await?;
-
-    let path = plugin.get_data_dir().await.unwrap();
-    oled_log::init(path.join("logging.log"));
+    let options = Options::parse();
+    let mut plugin = Plugin::new(NAME, &options.address).await?;
 
     let (tx, mut rx): (Sender<AudioData>, Receiver<AudioData>) = mpsc::channel(256);
 
@@ -26,6 +23,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let _audio = Audio::new(tx, handle);
 
     while let Some(data) = rx.recv().await {
+        if let Some(name) = &data.name {
+            debug!(
+                "New default device: {}, volume: {}%, muted: {}",
+                name, data.volume, data.is_muted
+            );
+        }
+
         plugin.update(data.into()).await.unwrap();
     }
 
@@ -33,6 +37,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 #[derive(IntoProto)]
+#[proto(rename_all(PascalCase))]
 struct AudioData {
     is_muted: bool,
     volume: i32,
@@ -47,4 +52,11 @@ impl AudioData {
             name,
         }
     }
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about)]
+struct Options {
+    #[clap(short, long)]
+    address: String,
 }

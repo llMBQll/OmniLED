@@ -1,0 +1,47 @@
+[config]
+default_to_workspace = false
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+# Tasks for creating and running the setup binary
+[tasks.build-setup-dependencies]
+description = "Build binaries that will be included in the setup binary"
+command = "cargo"
+args = ["build", "--release", "--package=omni-led", "--package=audio", "--package=clock", "--package=media", "--package=weather"]
+
+[tasks.build-setup]
+description = "Build the setup binary"
+command = "cargo"
+args = ["build", "--release", "--package=setup"]
+dependencies = ["build-setup-dependencies"]
+
+[tasks.run-setup]
+description = "Run setup"
+command = "cargo"
+args = ["run", "--release", "--bin=setup", "--", "install", "--interactive"]
+dependencies = ["build-setup"]
+
+# Tasks for building and running locally using cargo run
+[tasks.build]
+description = "Build development binaries in debug mode"
+command = "cargo"
+args = ["build", "--features=dev", "--package=omni-led", "--package=audio", "--package=clock", "--package=media", "--package=weather"]
+
+[tasks.build-release]
+description = "Build development binaries in release mode"
+command = "cargo"
+args = ["build", "--release", "--features=dev", "--package=omni-led", "--package=audio", "--package=clock", "--package=media", "--package=weather"]
+
+[tasks.run]
+description = "Run development binaries in debug mode"
+command = "cargo"
+args = ["run", "--features=dev"]
+dependencies = ["build"]
+
+[tasks.run-release]
+description = "Run development binaries in release mode"
+command = "cargo"
+args = ["run", "--release", "--features=dev"]
+dependencies = ["build-release"]

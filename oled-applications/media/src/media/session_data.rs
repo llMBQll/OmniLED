@@ -2,6 +2,7 @@ use oled_derive::IntoProto;
 use std::time::Duration;
 
 #[derive(Clone, IntoProto)]
+#[proto(rename_all(PascalCase))]
 pub struct SessionData {
     pub artist: String,
     pub title: String,

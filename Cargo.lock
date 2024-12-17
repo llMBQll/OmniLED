@@ -200,11 +200,11 @@ dependencies = [
 name = "audio"
 version = "0.1.0"
 dependencies = [
+ "clap 4.5.17",
  "libpulse-binding",
  "log",
  "oled-api",
  "oled-derive",
- "oled-log",
  "tokio",
  "windows 0.58.0",
  "windows-core 0.58.0",
@@ -485,6 +485,7 @@ name = "clock"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "clap 4.5.17",
  "oled-api",
  "oled-derive",
  "tokio",
@@ -1761,7 +1762,6 @@ dependencies = [
  "mpris",
  "oled-api",
  "oled-derive",
- "oled-log",
  "tokio",
  "windows 0.58.0",
 ]
@@ -1852,11 +1852,12 @@ dependencies = [
 
 [[package]]
 name = "mlua"
-version = "0.10.0-beta.2"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "200dd4c8e5f81416d43a023b9921c3cbf01d828094b23a90b26826c3840ba4f3"
+checksum = "0f6ddbd668297c46be4bdea6c599dcc1f001a129586272d53170b7ac0a62961e"
 dependencies = [
  "bstr",
+ "either",
  "mlua-sys",
  "mlua_derive",
  "num-traits",
@@ -1866,9 +1867,9 @@ dependencies = [
 
 [[package]]
 name = "mlua-sys"
-version = "0.6.3"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebe026d6bd1583a9cf9080e189030ddaea7e6f5f0deb366a8e26f8a26c4135b8"
+checksum = "e9eebac25c35a13285456c88ee2fde93d9aee8bcfdaf03f9d6d12be3391351ec"
 dependencies = [
  "cc",
  "cfg-if",
@@ -1879,9 +1880,9 @@ dependencies = [
 
 [[package]]
 name = "mlua_derive"
-version = "0.10.0-beta.1"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13e6f40fa1fd8426285688f4a37b56beac69284743d057ee6db352b543f4b621"
+checksum = "2cfc5faa2e0d044b3f5f0879be2920e0a711c97744c42cf1c295cb183668933e"
 dependencies = [
  "itertools 0.13.0",
  "once_cell",
@@ -2062,6 +2063,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tokio-stream",
  "tonic",
  "tonic-build",
  "ureq",
@@ -2078,11 +2080,35 @@ dependencies = [
 ]
 
 [[package]]
-name = "oled-log"
+name = "omni-led"
 version = "0.1.0"
 dependencies = [
+ "convert_case",
+ "device_query",
+ "dirs-next",
+ "font-kit",
+ "freetype-rs",
+ "image",
+ "lazy_static",
  "log",
  "log4rs",
+ "minifb",
+ "mlua",
+ "num-traits",
+ "oled-api",
+ "oled-derive",
+ "opener",
+ "prost",
+ "regex",
+ "rusb",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tray-item",
+ "ureq",
+ "windres",
 ]
 
 [[package]]
@@ -2811,14 +2837,9 @@ dependencies = [
 name = "setup"
 version = "0.1.0"
 dependencies = [
- "audio",
  "clap 4.5.17",
- "clock",
  "convert_case",
  "dirs-next",
- "media",
- "steelseries_oled",
- "weather",
  "winreg 0.52.0",
 ]
 
@@ -2884,38 +2905,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 dependencies = [
  "lock_api",
-]
-
-[[package]]
-name = "steelseries_oled"
-version = "0.1.0"
-dependencies = [
- "convert_case",
- "device_query",
- "dirs-next",
- "font-kit",
- "freetype-rs",
- "image",
- "lazy_static",
- "log",
- "log4rs",
- "minifb",
- "mlua",
- "num-traits",
- "oled-api",
- "oled-derive",
- "oled-log",
- "opener",
- "prost",
- "regex",
- "rusb",
- "serde",
- "serde_json",
- "tokio",
- "tonic",
- "tray-item",
- "ureq",
- "windres",
 ]
 
 [[package]]
@@ -3629,7 +3618,6 @@ dependencies = [
  "log",
  "oled-api",
  "oled-derive",
- "oled-log",
  "serde",
  "serde_json",
  "tokio",
