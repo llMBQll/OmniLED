@@ -7,11 +7,15 @@
 
 ### Linux
 
-- pkg-config - `apt install pkg-config`
-- libdbus - `apt install libdbus-1-dev`
-- protoc - `apt install protoc`
-- libfontconfig - `apt install libfontconfig-dev`
-- libx11 - `apt install libx11-dev`
+- `gcc` - `apt install gcc`
+- `g++` - `apt install g++`
+- `libdbus` - `apt install libdbus-1-dev`
+- `libfontconfig` - `apt install libfontconfig-dev`
+- `libx11` - `apt install libx11-dev`
+- `pkg-config` - `apt install pkg-config`
+- `protobuf-compiler` - `apt install protobuf-compiler`
+
+> _Note: Tested on Ubuntu 24.04 LTS_
 
 ### Windows
 
