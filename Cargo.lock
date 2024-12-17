@@ -205,7 +205,6 @@ dependencies = [
  "log",
  "oled-api",
  "oled-derive",
- "oled-log",
  "tokio",
  "windows 0.58.0",
  "windows-core 0.58.0",
@@ -1763,7 +1762,6 @@ dependencies = [
  "mpris",
  "oled-api",
  "oled-derive",
- "oled-log",
  "tokio",
  "windows 0.58.0",
 ]
@@ -2065,6 +2063,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tokio-stream",
  "tonic",
  "tonic-build",
  "ureq",
@@ -2081,11 +2080,35 @@ dependencies = [
 ]
 
 [[package]]
-name = "oled-log"
+name = "omni-led"
 version = "0.1.0"
 dependencies = [
+ "convert_case",
+ "device_query",
+ "dirs-next",
+ "font-kit",
+ "freetype-rs",
+ "image",
+ "lazy_static",
  "log",
  "log4rs",
+ "minifb",
+ "mlua",
+ "num-traits",
+ "oled-api",
+ "oled-derive",
+ "opener",
+ "prost",
+ "regex",
+ "rusb",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tray-item",
+ "ureq",
+ "windres",
 ]
 
 [[package]]
@@ -2885,39 +2908,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "steelseries_oled"
-version = "0.1.0"
-dependencies = [
- "convert_case",
- "device_query",
- "dirs-next",
- "font-kit",
- "freetype-rs",
- "image",
- "lazy_static",
- "log",
- "log4rs",
- "minifb",
- "mlua",
- "num-traits",
- "oled-api",
- "oled-derive",
- "oled-log",
- "opener",
- "prost",
- "regex",
- "rusb",
- "serde",
- "serde_json",
- "tokio",
- "tokio-stream",
- "tonic",
- "tray-item",
- "ureq",
- "windres",
-]
-
-[[package]]
 name = "strsim"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3628,7 +3618,6 @@ dependencies = [
  "log",
  "oled-api",
  "oled-derive",
- "oled-log",
  "serde",
  "serde_json",
  "tokio",

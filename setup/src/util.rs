@@ -2,11 +2,11 @@ use std::env;
 use std::path::PathBuf;
 
 pub fn get_app_name() -> &'static str {
-    "SteelseriesOLED"
+    "OmniLED"
 }
 
 fn get_exe_name() -> &'static str {
-    "steelseries_oled"
+    "omni_led"
 }
 
 pub fn get_root_dir() -> PathBuf {

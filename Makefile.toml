@@ -9,7 +9,7 @@ args = ["clean"]
 [tasks.build-setup-dependencies]
 description = "Build binaries that will be included in the setup binary"
 command = "cargo"
-args = ["build", "--release", "--package=steelseries_oled", "--package=audio", "--package=clock", "--package=media", "--package=weather"]
+args = ["build", "--release", "--package=omni-led", "--package=audio", "--package=clock", "--package=media", "--package=weather"]
 
 [tasks.build-setup]
 description = "Build the setup binary"
@@ -27,12 +27,12 @@ dependencies = ["build-setup"]
 [tasks.build]
 description = "Build development binaries in debug mode"
 command = "cargo"
-args = ["build", "--features=dev", "--package=steelseries_oled", "--package=audio", "--package=clock", "--package=media", "--package=weather"]
+args = ["build", "--features=dev", "--package=omni-led", "--package=audio", "--package=clock", "--package=media", "--package=weather"]
 
 [tasks.build-release]
 description = "Build development binaries in release mode"
 command = "cargo"
-args = ["build", "--release", "--features=dev", "--package=steelseries_oled", "--package=audio", "--package=clock", "--package=media", "--package=weather"]
+args = ["build", "--release", "--features=dev", "--package=omni-led", "--package=audio", "--package=clock", "--package=media", "--package=weather"]
 
 [tasks.run]
 description = "Run development binaries in debug mode"
@@ -43,5 +43,5 @@ dependencies = ["build"]
 [tasks.run-release]
 description = "Run development binaries in release mode"
 command = "cargo"
-args = ["run", "--features=dev"]
+args = ["run", "--release", "--features=dev"]
 dependencies = ["build-release"]

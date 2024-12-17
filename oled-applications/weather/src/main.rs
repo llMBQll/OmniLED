@@ -1,6 +1,7 @@
 use clap::Parser;
 use log::debug;
-use oled_api::{Plugin, Table};
+use oled_api::plugin::Plugin;
+use oled_api::types::Table;
 use oled_derive::IntoProto;
 use std::{collections::HashMap, time};
 use ureq::Agent;
@@ -13,9 +14,6 @@ const NAME: &str = "WEATHER";
 async fn main() {
     let options = Options::parse();
     let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
-
-    let path = plugin.get_data_dir().await.unwrap();
-    oled_log::init(path.join("logging.log"));
 
     debug!("{:?}", options);
 

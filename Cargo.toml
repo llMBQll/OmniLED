@@ -1,14 +1,13 @@
 [workspace]
 
 members = [
-    "steelseries_oled",
+    "omni-led",
     "oled-applications/audio",
     "oled-applications/clock",
     "oled-applications/media",
     "oled-applications/weather",
     "oled-api",
     "oled-derive",
-    "oled-log",
     "setup",
 ]
 

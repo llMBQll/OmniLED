@@ -1,17 +1,18 @@
 local function volume()
     return {
-        data = {
+        widgets = {
             Text {
                 text = AUDIO.IsMuted and 'Muted' or AUDIO.Volume,
+                font_size = 24,
+                text_offset = 'AutoUpper',
                 position = { x = 0, y = 0 },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
-                modifiers = { font_size = 27 },
             },
             Text {
                 text = AUDIO.Name,
+                scrolling = true,
                 position = { x = 0, y = SCREEN.Height / 2 },
-                size = { width = SCREEN.Width, height = SCREEN.Height / 2 - 4 },
-                modifiers = { scrolling = true, clear_background = true, negative = true },
+                size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
             },
         },
         duration = 2000,
@@ -23,7 +24,7 @@ end
 local SPOTIFY_DURATION = PLATFORM.Os == 'windows' and 5000 or 1000
 local function spotify()
     return {
-        data = {
+        widgets = {
             Bar {
                 value = SPOTIFY.Progress,
                 range = { min = 0, max = SPOTIFY.Duration },
@@ -32,21 +33,19 @@ local function spotify()
             },
             Text {
                 text = string.format("%s - %s", SPOTIFY.Artist, SPOTIFY.Title),
-                position = { x = 0, y = 1 },
-                size = { width = SCREEN.Width, height = 16 },
-                modifiers = { scrolling = true, clear_background = true, negative = true },
+                scrolling = true,
+                position = { x = 0, y = 2 },
+                size = { width = SCREEN.Width, height = 20 },
             },
             Text {
                 text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),
-                position = { x = 0, y = SCREEN.Height - 16 },
-                size = { width = 50, height = 12 },
-                modifiers = { font_size = 16 },
+                position = { x = 0, y = SCREEN.Height - 18 },
+                size = { width = 50, height = 18 },
             },
             Text {
                 text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month], CLOCK.MonthDay),
-                position = { x = SCREEN.Width - 50, y = SCREEN.Height - 16 },
-                size = { width = 50, height = 12 },
-                modifiers = { font_size = 16 },
+                position = { x = SCREEN.Width - 50, y = SCREEN.Height - 18 },
+                size = { width = 50, height = 18 },
             },
             Bar {
                 value = CLOCK.Seconds,
@@ -56,30 +55,31 @@ local function spotify()
             },
         },
         duration = SPOTIFY_DURATION,
-        repeats = 'ToFit',
+        repeats = 'ForDuration',
     }
 end
 
 local function clock()
     return {
-        data = {
+        widgets = {
             Text {
                 text = string.format("%02d", CLOCK.Hours),
-                position = { x = 10, y = 1 },
-                size = { width = 54, height = 35 },
-                modifiers = { font_size = 47 },
+                font_size = 50,
+                text_offset = 'AutoUpper',
+                position = { x = 10, y = 0 },
+                size = { width = SCREEN.Width / 2, height = SCREEN.Height - 3 },
             },
             Text {
                 text = string.format("%02d", CLOCK.Minutes),
-                position = { x = 64, y = 0 },
+                font_size = 37,
+                text_offset = 'AutoUpper',
+                position = { x = SCREEN.Width / 2 + 3, y = 0 },
                 size = { width = 54, height = 26 },
-                modifiers = { font_size = 36 },
             },
             Text {
                 text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month], CLOCK.MonthDay),
-                position = { x = 66, y = 27 },
-                size = { width = 54, height = 10 },
-                modifiers = { font_size = 14 },
+                position = { x = SCREEN.Width / 2 + 6, y = 26 },
+                size = { width = 54, height = 14 },
             },
             Bar {
                 value = CLOCK.Seconds,
@@ -97,14 +97,14 @@ local function weather()
     local unit
     if CLOCK.Seconds % 10 < 5 then
         value = string.format("% 3d", math.round(WEATHER.Temperature))
-        unit = '°C'
+        unit = '°' .. WEATHER.TemperatureUnit
     else
         value = string.format("% 3d", math.round(WEATHER.WindSpeed))
-        unit = 'km/h'
+        unit = WEATHER.WindSpeedUnit
     end
 
     return {
-        data = {
+        widgets = {
             Image {
                 image = WEATHER[WEATHER.ImageKey],
                 position = { x = 0, y = 0 },
@@ -112,20 +112,20 @@ local function weather()
             },
             Text {
                 text = value,
-                position = { x = SCREEN.Height + 4, y = 0 },
-                size = { width = SCREEN.Height * 2, height = 25 },
-                modifiers = { font_size = 30 },
+                font_size = 30,
+                text_offset = 'AutoUpper',
+                position = { x = SCREEN.Height, y = 0 },
+                size = { width = SCREEN.Height * 2, height = SCREEN.Height * 2 / 3 },
             },
             Text {
                 text = unit,
-                position = { x = 98, y = 0 },
-                size = { width = 30, height = 11 },
+                position = { x = 96, y = 0 },
+                size = { width = 30, height = 13 },
             },
             Text {
                 text = string.format("%.3s %02d:%02d", CLOCK.DayNames[CLOCK.WeekDay], CLOCK.Hours, CLOCK.Minutes),
-                position = { x = SCREEN.Height + 4, y = SCREEN.Height / 2 - 2 },
-                size = { width = SCREEN.Height * 2, height = SCREEN.Height / 2 - 2 },
-                modifiers = { font_size = 14 },
+                position = { x = SCREEN.Height + 4, y = SCREEN.Height / 2 + 4 },
+                size = { width = SCREEN.Height * 2, height = SCREEN.Height / 2 - 4 },
             },
             Bar {
                 value = CLOCK.Seconds,
@@ -139,26 +139,26 @@ local function weather()
 end
 
 SCREEN_BUILDER
-    :new('Steelseries Apex 7 TKL')
-    :with_screen({
-        {
-            layout = volume,
-            run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
-        },
-        {
-            layout = spotify,
-            run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
-        },
-        {
-            layout = clock,
-            run_on = { 'CLOCK.Seconds' },
-        },
-    })
-    :with_screen({
-        {
-            layout = weather,
-            run_on = { 'CLOCK.Seconds' },
-        }
-    })
-    :with_screen_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
-    :register()
+        :new('Steelseries Apex 7 TKL')
+        :with_layout_group({
+    {
+        layout = volume,
+        run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
+    },
+    {
+        layout = spotify,
+        run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
+    },
+    {
+        layout = clock,
+        run_on = { 'CLOCK.Seconds' },
+    },
+})
+        :with_layout_group({
+    {
+        layout = weather,
+        run_on = { 'CLOCK.Seconds' },
+    }
+})
+        :with_layout_group_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
+        :register()

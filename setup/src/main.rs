@@ -6,8 +6,8 @@ use std::process::Command;
 use std::{env, fs};
 
 use crate::util::{
-    ask_user, get_app_exe_path, get_bin_dir, get_config_dir, get_data_dir, get_root_dir,
-    read_user_input,
+    ask_user, get_app_exe_path, get_app_name, get_bin_dir, get_config_dir, get_data_dir,
+    get_root_dir, read_user_input,
 };
 
 mod bytes;
@@ -125,7 +125,7 @@ fn install(options: InstallOptions) {
         fs::create_dir_all(directory).unwrap();
     }
 
-    install_binary!(STEELSERIES_OLED);
+    install_binary!(OMNI_LED);
     install_binary!(AUDIO);
     install_binary!(CLOCK);
     install_binary!(MEDIA);
@@ -172,7 +172,7 @@ fn uninstall(options: UninstallOptions) {
 }
 
 fn run() {
-    println!("Running 'Steelseries OLED'");
+    println!("Running '{}'", get_app_name());
     Command::new(get_app_exe_path()).spawn().unwrap();
 }
 
@@ -199,9 +199,10 @@ mod os {
 
         let path = get_app_exe_path();
         match registry_entry.set_value(get_app_name(), &path.to_str().unwrap()) {
-            Ok(_) => println!("Added 'Steelseries OLED' as an autostart program"),
+            Ok(_) => println!("Added '{}' as an autostart program", get_app_name()),
             Err(err) => println!(
-                "Failed to add 'Steelseries OLED' as an autostart program: {}",
+                "Failed to add '{}' as an autostart program: {}",
+                get_app_name(),
                 err
             ),
         }
@@ -211,9 +212,10 @@ mod os {
         let registry_entry = get_registry_entry();
 
         match registry_entry.delete_value(get_app_name()) {
-            Ok(_) => println!("Removed 'Steelseries OLED' from autostart programs"),
+            Ok(_) => println!("Removed '{}' from autostart programs", get_app_name()),
             Err(err) => println!(
-                "Failed to remove 'Steelseries OLED' from autostart programs: {}",
+                "Failed to remove '{}' from autostart programs: {}",
+                get_app_name(),
                 err
             ),
         };
