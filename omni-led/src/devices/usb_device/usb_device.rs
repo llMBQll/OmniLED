@@ -53,14 +53,13 @@ impl Device for USBDevice {
             }
         };
 
-        #[allow(unused_mut)]
-        let mut handle = match device.open() {
+        let handle = match device.open() {
             Ok(handle) => handle,
             Err(err) => return Err(mlua::Error::runtime(format!("{err}"))),
         };
 
         let interface = settings.usb_settings.interface;
-        let endpoint = settings.usb_settings.endpoint;
+        let alternate_setting = settings.usb_settings.alternate_setting;
 
         match handle.kernel_driver_active(interface) {
             Ok(true) => handle.detach_kernel_driver(interface).unwrap(),
@@ -68,7 +67,9 @@ impl Device for USBDevice {
         };
 
         handle.claim_interface(interface).unwrap();
-        handle.set_alternate_setting(interface, endpoint).unwrap();
+        handle
+            .set_alternate_setting(interface, alternate_setting)
+            .unwrap();
 
         Ok(Self {
             name: settings.name,

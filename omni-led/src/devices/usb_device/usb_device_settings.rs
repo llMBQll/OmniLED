@@ -30,7 +30,7 @@ pub struct USBSettings {
     #[mlua(transform(from_hex))]
     pub interface: u8,
     #[mlua(transform(from_hex))]
-    pub endpoint: u8,
+    pub alternate_setting: u8,
     #[mlua(transform(from_hex))]
     pub request_type: u8,
     #[mlua(transform(from_hex))]

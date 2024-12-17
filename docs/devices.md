@@ -32,7 +32,7 @@ script to match the format expected by the device.
 >         vendor_id = '0x1038',
 >         product_id = '0x1618',
 >         interface = '0x01',
->         endpoint = '0x00',
+>         alternate_setting = '0x00',
 >         request_type = '0x21',
 >         request = '0x09',
 >         value = '0x0300',
@@ -55,12 +55,16 @@ script to match the format expected by the device.
 > is set to `BitPerPixel`.  
 > Additionally, the final rendered byte array is prefixed with byte `0x61` and suffixed with byte
 > `0x00` to match the device's usb protocol.
+>
+> Finding this data as well as the data format needed for the `tranform` function, requires
+> having the device documentation, or reverse engineering the USB protocol. If you have a
+> SteelSeries device there is a chance, however that only difference will be the `product_id` field.
 
 ### SteelSeries Devices (Windows Only)
 
 > _Note: This approach requires SteelSeries GG software to be installed and running._
 
-Register a SteelSeries device using 
+Register a SteelSeries device using
 [`steelseries_engine_device`](scripting_reference.md#steelseries_engine_device) function. This
 option is the easiest as it only requires knowing the device's screen size, and SteelSeries Engine
 will take the rendered data and send it to the device.
@@ -101,7 +105,3 @@ available, or you just want to test on a bigger screen.
 > }
 > ```
 > In the above example a single emulator config was added for "SteelSeries Apex 7 TKL".
-
-## Find USB Settings For Your Device
-
-TODO

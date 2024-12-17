@@ -108,7 +108,7 @@
 ## Enums
 
 > ### `FontName`
-> 
+>
 > Font name to search for.
 >
 > > `Cursive`
@@ -186,7 +186,7 @@
 > > `Normal`
 >
 > > `Italic`
-> 
+>
 > > `Oblique`
 
 ---
@@ -216,32 +216,32 @@
 ---
 
 > ### `LogLevel`
-> 
+>
 > Log level filter, selecting one value will also activate all values above it, e.g. enabling
 > `Info`, will also enable `Warn` and `Error`.
-> 
+>
 > > `Off`
-> > 
+> >
 > > Disables all logging.
 >
 > > `Error`
-> > 
+> >
 > > Allow logging errors and above.
 >
 > > `Warn`
-> > 
+> >
 > > Allow logging warnings and above.
 >
 > > `Info`
-> > 
+> >
 > > Allow info logging and above.
 >
 > > `Debug`
-> > 
+> >
 > > Allow debug logging and above.
 >
 > > `Trace`
-> > 
+> >
 > > Allow tracing and above.
 
 ---
@@ -270,12 +270,12 @@
 > > Calculate offset to fit any text in the widget's height.
 >
 > > `AutoUpper`
-> > 
+> >
 > > Calculate offset to fit any text that doesn't have any "descendants". Useful for text that
 > > consists only of uppercase characters or numbers.
 >
 > > `n: integer`
-> > 
+> >
 > > Offset exactly by `n` pixels, regardless of font size.
 
 ---
@@ -596,13 +596,13 @@
 > > Font style to search for.
 >
 > > `weight: FontWeight`
-> > 
+> >
 > > _Optional_. Default: `"Normal"`.
 > >
 > > Font weight to search for.
 >
 > > `streatch: FontStretch`
-> > 
+> >
 > > _Optional_. Default: `"Normal"`.
 > >
 > > Font stretch to search for.
@@ -638,32 +638,58 @@
 
 ---
 
+    #[mlua(transform(from_hex))]
+    pub vendor_id: u16,
+    #[mlua(transform(from_hex))]
+    pub product_id: u16,
+    #[mlua(transform(from_hex))]
+    pub interface: u8,
+    #[mlua(transform(from_hex))]
+    pub alternate_setting: u8,
+    #[mlua(transform(from_hex))]
+    pub request_type: u8,
+    #[mlua(transform(from_hex))]
+    pub request: u8,
+    #[mlua(transform(from_hex))]
+    pub value: u16,
+    #[mlua(transform(from_hex))]
+    pub index: u16,
+
 > ### `USBSettings`
 >
-> Configuration for a USB device.
+> Configuration for a USB device. All fields relate to the USB configuration.
 >
-> > `name: string`
+> > `vendor_id: integer`
 > >
-> > Unique name that identifies this configuration.
+> > Device vendor ID, used to find the USB device.
 >
-> > `screen_size: Size`
+> > `product_id: integer`
 > >
-> > Screen size of the USB device display.
+> > Device product ID, used to find the USB device.
 >
-> > `memory_representation: MemoryRepresentation`
+> > `interface: integer`
 > >
-> > Choose memory representation of the renderer output.
+> > USB interface on which the OLED device will receive data.
 >
-> > `transform: fn(buffer: Buffer) -> [byte]`
+> > `alternate_setting: integer`
 > >
-> > _Optional_. Default: No transformation of rendered data.
-> >
-> > Function that will transform rendered `buffer` into the final representation expected by the
-> >  device. Data inside `buffer` is in a format specified by `memory_representation` field.
+> > Alternate setting of the interface, used for displaying data on screen.
 >
-> > `usb_settings: USBSettings`
+> > `request_type: integer`
 > >
-> > Information to identify the USB device and settings for the device's screen USB interface.
+> > Request type used to send data to the interface on the device.
+>
+> > `request: integer`
+> >
+> > Request sent to the interface on the device.
+>
+> > `value: integer`
+> >
+> > USB configuration value.
+>
+> > `index: integer`
+> >
+> > USB configuration index.
 
 ## Widgets
 
