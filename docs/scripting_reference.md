@@ -1,4 +1,4 @@
-# Lua Interfaces
+# Script Reference
 
 ## Constants
 
@@ -107,6 +107,96 @@
 
 ## Enums
 
+> ### `FontName`
+> 
+> Font name to search for.
+>
+> > `Cursive`
+>
+> > Search for the best matching cursive font.
+>
+> > `Fantasy`
+>
+> > Search for the best matching fantasy font.
+>
+> > `Monospace`
+>
+> > Search for the best matching monospace font.
+>
+> > `SansSerif`
+>
+> > Search for the best matching sans serif font.
+>
+> > `Serif`
+>
+> > Search for the best matching serif font.
+>
+> > `title: string`
+>
+> > Search for a font with a specific `title`.
+
+---
+
+> ### `FontStretch`
+>
+> Font stretch, from most condensed to most stretched.
+>
+> > `UltraCondensed`
+>
+> > `ExtraCondensed`
+>
+> > `Condensed`
+>
+> > `SemiCondensed`
+>
+> > `Normal`
+>
+> > `SemiExpanded`
+>
+> > `Expanded`
+>
+> > `ExtraExpanded`
+>
+> > `UltraExpanded`
+
+---
+
+> ### `FontStyle`
+>
+> Font style.
+>
+> > `Normal`
+>
+> > `Italic`
+> 
+> > `Oblique`
+
+---
+
+> ### `FontWeight`
+>
+> Font weight, from thinnest to boldest.
+>
+> > `Thin`
+>
+> > `ExtraLight`
+>
+> > `Light`
+>
+> > `Normal`
+>
+> > `Medium`
+>
+> > `SemiBold`
+>
+> > `Bold`
+>
+> > `ExtraBold`
+>
+> > `Black`
+
+---
+
 > ### `MemoryRepresentation`
 >
 > Memory representation strategy for data sent to devices via USB.
@@ -119,6 +209,27 @@
 > >
 > > Pack information about 8 pixels into each byte, making the update data smaller. This will also
 > > add padding bits at the end of each row if the row length is not a multiple of 8.
+
+---
+
+> ### `Offset`
+>
+> Specifies the text offset from the bottom of a `Text` widget.
+>
+> > `Auto`
+> >
+> > Calculate offset to fit any text in the widget's height.
+>
+> > `AutoUpper`
+> > 
+> > Calculate offset to fit any text that doesn't have any "descendants". Useful for text that
+> > consists only of uppercase characters or numbers.
+>
+> > `n: integer`
+> > 
+> > Offset exactly by `n` pixels, regardless of font size.
+
+---
 
 > ### `Repeat`
 >
@@ -329,18 +440,6 @@
 > > _Optional_. Default: `false`.
 > >
 > > Swaps on and off pixels for a given widget.
-
----
-
-> ### `Offset`
->
-> Specifies the text offset from the bottom of a `Text` widget.
->
-> > Offset is a mixture of an integer and an enum. It can take the following values:
-> > - `n: integer`: Offset by `n` pixels.
-> > - `"Auto"`: Calculate offset to fit any text in the widget's height.
-> > - `"AutoUpper"`: Calculate offset to fit any text that doesn't have any "descendants". Useful
-> >   for text that consists only of uppercase characters or numbers.
 
 ---
 

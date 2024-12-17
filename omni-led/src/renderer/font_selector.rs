@@ -26,25 +26,40 @@ pub struct SystemSelector {
     pub stretch: Stretch,
 }
 
-#[derive(Debug, Clone, FromLuaValue)]
-pub enum FamilyName {
-    Title(String),
-    Serif,
-    SansSerif,
-    Monospace,
-    Cursive,
-    Fantasy,
+#[derive(Debug, Clone)]
+pub struct FamilyName {
+    pub title: String,
+}
+
+impl FromLua for FamilyName {
+    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+        match value {
+            mlua::Value::String(string) => {
+                let title = string.to_string_lossy();
+                Ok(Self { title })
+            }
+            mlua::Value::UserData(user_data) => {
+                let data = user_data.borrow::<FamilyName>()?;
+                Ok(data.clone())
+            }
+            other => Err(mlua::Error::FromLuaConversionError {
+                from: other.type_name(),
+                to: String::from("FamilyName"),
+                message: None,
+            }),
+        }
+    }
 }
 
 impl Into<font_kit::family_name::FamilyName> for FamilyName {
     fn into(self) -> font_kit::family_name::FamilyName {
-        match self {
-            FamilyName::Title(title) => font_kit::family_name::FamilyName::Title(title),
-            FamilyName::Serif => font_kit::family_name::FamilyName::Serif,
-            FamilyName::SansSerif => font_kit::family_name::FamilyName::SansSerif,
-            FamilyName::Monospace => font_kit::family_name::FamilyName::Monospace,
-            FamilyName::Cursive => font_kit::family_name::FamilyName::Cursive,
-            FamilyName::Fantasy => font_kit::family_name::FamilyName::Fantasy,
+        match self.title.as_str() {
+            "Serif" => font_kit::family_name::FamilyName::Serif,
+            "SansSerif" => font_kit::family_name::FamilyName::SansSerif,
+            "Monospace" => font_kit::family_name::FamilyName::Monospace,
+            "Cursive" => font_kit::family_name::FamilyName::Cursive,
+            "Fantasy" => font_kit::family_name::FamilyName::Fantasy,
+            _ => font_kit::family_name::FamilyName::Title(self.title),
         }
     }
 }

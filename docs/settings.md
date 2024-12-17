@@ -16,8 +16,8 @@ All the top-level properties described below are optional and will be set to def
 
 Set font used for rendering text on screen.
 
-> _Note: While it's possible to load any font style - monospace fonts are highly recommended, especially for scrolling
-text._
+> _Note: While it's possible to load any font style - monospace fonts are highly recommended, due
+to the simplistic nature of text rendering implementation._
 
 Property Name: `font`  
 Possible Values:

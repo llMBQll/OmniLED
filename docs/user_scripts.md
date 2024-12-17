@@ -70,13 +70,13 @@ filling them with the desired data received from the applications.
 
 ### Widgets
 
-OmniLED provides a few [widgets](lua_interfaces.md#widgets) that are the building blocks for
+OmniLED provides a few [widgets](scripting_reference.md#widgets) that are the building blocks for
 everything that can be shown on screen.  
 Currently they include:
 
-- [bar](lua_interfaces.md#bar) - Show percentage progress bar
-- [image](lua_interfaces.md#image) - Show image
-- [text](lua_interfaces.md#text) - Show text
+- [bar](scripting_reference.md#bar) - Show percentage progress bar
+- [image](scripting_reference.md#image) - Show image
+- [text](scripting_reference.md#text) - Show text
 - _More widgets are planned and will be coming soon™️._
 
 Each widget's size and position can be changed independently, and they will scale themselves and
@@ -84,11 +84,11 @@ the content to best fit the set size.
 
 ### Layouts
 
-[Layouts](lua_interfaces.md#layout) start to tie the functionalities together. Layout provides a
-function that returns [layout data](lua_interfaces.md#layoutdata), that consists of a widget list,
-display duration and [repeat strategy](lua_interfaces.md#repeat). Layout also registers for events
-that will trigger it, as well as a predicate that will be called if a matching event is found, for
-a more fine-grained control.
+[Layouts](scripting_reference.md#layout) start to tie the functionalities together. Layout provides
+a function that returns [layout data](scripting_reference.md#layoutdata), that consists of a widget
+list, display duration and [repeat strategy](scripting_reference.md#repeat). Layout also registers
+for events that will trigger it, as well as a predicate that will be called if a matching event is
+found, for a more fine-grained control.
 
 > _Note: Widgets are rendered in the order they are provided in the list. This means that later
 > widgets can be drawn over the earlier widgets._
@@ -119,8 +119,8 @@ will be ignored.
 
 ### Putting it all together
 
-[Screen builder](lua_interfaces.md#screen_builder) interface allows to easily create layout groups,
-add group switch shortcut, and register them for a given device.
+[Screen builder](scripting_reference.md#screen_builder) interface allows to easily create layout
+groups, add group switch shortcut, and register them for a given device.
 
 > Example:
 >

@@ -30,7 +30,7 @@ OmniLED process to manage the application's lifetime — starting it when OmniLE
 it when OmniLED shuts down. Additionally, you can define command line arguments that will be passed
 to theapplication.
 
-To load an application use the global [`load_app`](lua_interfaces.md#load_app) function. This
+To load an application use the global [`load_app`](scripting_reference.md#load_app) function. This
 allows for the script to set command line arguments.
 
 > _Note: This is the preferred approach when application is only supposed to provide data to
@@ -52,8 +52,8 @@ provides two ways to get the server address.
 #### Using the Global `SERVER` Variable
 
 If the application is registered in `applications.lua`, it can access the
-[`SERVER`](lua_interfaces.md#server) constant, which contains the server address. This eliminates
-the need for the application to determine the server address manually.
+[`SERVER`](scripting_reference.md#server) constant, which contains the server address. This
+eliminates the need for the application to determine the server address manually.
 
 > Example `applications.lua` file:
 > ``` lua
@@ -80,8 +80,9 @@ the need for the application to determine the server address manually.
 > In the above applications there 2 applications loaded: `my_application` and
 > `my_other_application`.  
 > They both can be found in the default application directory, but for the first one
-> [`get_default_path`](lua_interfaces.md#get_default_path) function was used, and for the other the
-> path was constructed manually using the [`PLATFORM`](lua_interfaces.md#platform) constants.  
+> [`get_default_path`](scripting_reference.md#get_default_path) function was used, and for the
+> other the path was constructed manually using the [`PLATFORM`](scripting_reference.md#platform)
+> constants.  
 > Also the application received different command line arguments, to send exactly what they expect.
 > 
 > For built-in applications' arguments refer to this [paragraph](#built-in-applications).

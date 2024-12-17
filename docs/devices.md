@@ -16,7 +16,7 @@ look exactly the same and only the way the data is delivered to the screen will 
 
 ### USB Device (Recommended)
 
-Register any USB device using [`usb_device`](lua_interfaces.md#usb_device). This is the most
+Register any USB device using [`usb_device`](scripting_reference.md#usb_device). This is the most
 flexible approach as it should work for any device. Rendered data can also be transformed via a
 script to match the format expected by the device.
 
@@ -61,9 +61,9 @@ script to match the format expected by the device.
 > _Note: This approach requires SteelSeries GG software to be installed and running._
 
 Register a SteelSeries device using 
-[`steelseries_engine_device`](lua_interfaces.md#steelseries_engine_device) function. This option is
-the easiest as it only requires knowing the device's screen size, and SteelSeries Engine will take
-the rendered data and send it to the device.
+[`steelseries_engine_device`](scripting_reference.md#steelseries_engine_device) function. This
+option is the easiest as it only requires knowing the device's screen size, and SteelSeries Engine
+will take the rendered data and send it to the device.
 
 > Example `devices.lua` file:
 > ```lua
@@ -85,8 +85,8 @@ the rendered data and send it to the device.
 
 ### Emulator
 
-Register an emulator using [`emulator`](lua_interfaces.md#emulator) function. This will not send
-data to any physical device, rather it will create a new window on your desktop and show the
+Register an emulator using [`emulator`](scripting_reference.md#emulator) function. This will not
+send data to any physical device, rather it will create a new window on your desktop and show the
 rendered data there. This is particularly useful for prototyping, when your device is currently not
 available, or you just want to test on a bigger screen.
 
