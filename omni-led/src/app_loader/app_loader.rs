@@ -42,8 +42,9 @@ impl AppLoader {
         let env = create_table_with_defaults!(lua, {
             load_app = $load_app_fn,
             get_default_path = $get_default_path_fn,
-            SERVER = SERVER,
+            LOG = LOG,
             PLATFORM = PLATFORM,
+            SERVER = SERVER,
         });
 
         exec_file(lua, &get_full_path("applications.lua"), env).unwrap();

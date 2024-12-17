@@ -7,7 +7,7 @@ use std::time::Duration;
 use crate::common::common::exec_file;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::constants::Constants;
-use crate::create_table;
+use crate::create_table_with_defaults;
 use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
 
@@ -51,7 +51,7 @@ impl Settings {
             .unwrap();
 
         let filename = get_full_path(PATH);
-        let env = create_table!(lua, {
+        let env = create_table_with_defaults!(lua, {
             LOG = LOG,
             PLATFORM = PLATFORM,
             Settings = $load_settings_fn,

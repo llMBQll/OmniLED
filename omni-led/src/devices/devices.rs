@@ -80,6 +80,7 @@ impl Devices {
     fn create_loaders(lua: &Lua) -> (HashMap<String, Constructor>, Table) {
         let mut constructors = HashMap::new();
         let env = create_table_with_defaults!(lua, {
+            LOG = LOG,
             PLATFORM = PLATFORM,
         });
 
