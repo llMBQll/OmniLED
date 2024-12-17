@@ -175,9 +175,9 @@ impl Renderer {
                     let y = cursor_y + bitmap_y - bitmap.offset_y - text_offset;
 
                     if x < 0
-                        || y < 0
-                        || x >= rect.size.width as isize
-                        || y >= rect.size.height as isize
+                    || y < 0
+                    || x >= rect.size.width as isize
+                    || y >= rect.size.height as isize
                     {
                         continue;
                     }
