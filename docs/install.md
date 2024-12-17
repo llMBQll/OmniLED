@@ -31,9 +31,9 @@
 ## Build from Source
 
 1. Open Terminal
-2. Download repository and go into the directory  
-   `git clone TODO: URL`  
-   `cd TODO: name`
+2. Download repository and go into the directory
+   > `git clone https://github.com/llMBQll/omni-led`  
+   > `cd omni-led`
 3. Build & Install
    If you have installed cargo make (see [dependencies](#install-dependencies)) you may execute a
    single command to build binaries and run setup utility.
