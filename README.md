@@ -1,33 +1,38 @@
 # OmniLED
 
-Control your SteelSeries OLED devices (and more) on Windows and Linux.
+OmniLED is a program allowing you to control devices with an OLED screen. It's designed to work
+on both Linux and Windows, while supporting virtually any USB device and allowing for in depth
+customization.
+
+![Time and date](images/clock.gif "Time and date")
+![Currently playing media](images/music.gif "Currently playing media")
+![Changing volume](images/volume.gif "Changing volume")
+![Current Weather](images/weather.gif "Current weather")
+
+![Emulator](images/emulator.png "Emulator")
 
 ## Features
 
-- Display on any SteelSeries device via the SteelSeries GG
-- Display on virtually any device via USB
+- Show relevant data via the built-in applications. OmniLED provides:
+    - Time and date,
+    - Information about currently playing media,
+    - Audio devices' volume,
+    - Current weather
+- Customization. Set what happens on the screen, where it happens and how it happens. Enabled by
+  Lua scripting that allows control over your devices.
+- Extensibility.
+    - OmniLED provides a gRPC interface that can be implemented to provide extra data.
+    - Support is ready for many different USB devices, thanks to comprehensive USB device
+      configuration, and ability to transform rendered data to any format.
 
-- Show current time and date
-- Show current weather
-- Show currently played media
-- Show current audio device and volume level
+## Installation
 
-- Add custom data by implementing the gRPC client interface
+See the [installation steps](docs/install.md) for both Linux and Windows.
 
-## Install
+## Customization
 
-See the [installation steps](docs/install.md)
-
-## Customize
-
-OmniLED provides extensive customization options to cater to many requirements.
-Start customizing [here](docs/customization.md).
-
-## Extend
-
-[//]: # (OmniLED aims to create a bigger ecosystem. That's why it provides an easy way to extend the functionality via)
-
-[//]: # (adding new plugins. See how can you create your own plugin [here]&#40;docs/&#41;)
+OmniLED provides extensive customization options, see all the details
+described [here](docs/customization.md).
 
 ## Roadmap
 
