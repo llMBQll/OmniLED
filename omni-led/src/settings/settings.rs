@@ -52,6 +52,7 @@ impl Settings {
 
         let filename = get_full_path(PATH);
         let env = create_table!(lua, {
+            LOG = LOG,
             PLATFORM = PLATFORM,
             Settings = $load_settings_fn,
         });
