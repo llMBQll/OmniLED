@@ -16,13 +16,13 @@
 ### Windows
 
 - [SteelSeries Engine](https://steelseries.com/gg/engine) - Optional. All devices can be controlled
-via raw USB calls, routing via SSE is optional.
+  via raw USB calls, routing via SSE is optional.
 
 ### Common
 
 - [Rust](https://rustup.rs/) - Optional. Only required when building from source.
-- [Cargo Make](https://crates.io/crates/cargo-make#installation) - Optional. This is convenient 
-when building from source, though the commands may also be written by hand.
+- [Cargo Make](https://crates.io/crates/cargo-make#installation) - Optional. This is convenient
+  when building from source, though the commands may also be written by hand.
 
 ## Build from Source
 
@@ -35,7 +35,8 @@ when building from source, though the commands may also be written by hand.
    single command to build binaries and run setup utility.
    > `cargo make run-setup`
 
-   Else you need to compile the targets manually. This requires 2 build steps due to package dependencies.
+   Else you need to compile the targets manually. This requires 2 build steps due to package
+   dependencies.
    > `cargo build --release -p omni-led -p audio -p clock -p media -p weather`  
    > `cargo build --release -p setup`  
    > `cargo run --release --bin setup -- install --interactive`
@@ -62,4 +63,5 @@ You are now ready to proceed to [customization](customization).
 
 ## Prebuilt Binaries
 
-Soon™️
+You can find prebuilt binaries for Windows in the
+[releases](https://github.com/llMBQll/omni-led/releases) section on GitHub.

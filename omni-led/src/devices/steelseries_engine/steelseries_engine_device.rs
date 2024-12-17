@@ -34,13 +34,13 @@ impl Device for SteelseriesEngineDevice {
             Ok(_) => Ok(()),
             Err(Error::Disconnected(message)) => {
                 error!(
-                    "Steelseries Engine is temporarily not available. {}",
+                    "SteelSeries Engine is temporarily not available. {}",
                     message
                 );
                 Ok(())
             }
             Err(Error::NotAvailable(message)) => Err(mlua::Error::runtime(format!(
-                "Steelseries Engine is not available. {}",
+                "SteelSeries Engine is not available. {}",
                 message
             ))),
             Err(Error::BadRequest(status, response)) => Err(mlua::Error::runtime(format!(
