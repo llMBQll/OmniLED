@@ -6,8 +6,8 @@
 >
 > Type: `table`
 >
-> This table contains platform specific constants useful for constructing paths that work regardless of the
-> operating system that OmniLED is currently running on.
+> This table contains platform specific constants useful for constructing paths that work
+> regardless of the operating system that OmniLED is currently running on.
 >
 > > `ApplicationsDir: string`
 > >
@@ -117,8 +117,8 @@
 >
 > > `BitPerPixel`
 > >
-> > Pack information about 8 pixels into each byte, making the update data smaller. This will also add padding bits at
-> > the end of each row if the row length is not a multiple of 8.
+> > Pack information about 8 pixels into each byte, making the update data smaller. This will also
+> > add padding bits at the end of each row if the row length is not a multiple of 8.
 
 > ### `Repeat`
 >
@@ -126,13 +126,13 @@
 >
 > > `Once`
 > >
-> > Repeats the script until the text is fully scrolled, even if it takes longer than the duration specified for layout.
-> > This way the entire text is displayed exactly once.
+> > Repeats the script until the text is fully scrolled, even if it takes longer than the duration
+> > specified for layout. This way the entire text is displayed exactly once.
 >
 > > `ForDuation`
 > >
-> > Repeats the script for the time of its duration. This will scroll text for an exact duration, but can cut off mid
-> > scrolling if the time runs out.
+> > Repeats the script for the time of its duration. This will scroll text for an exact duration,
+> > but can cut off mid scrolling if the time runs out.
 
 ## Functions
 
@@ -148,8 +148,8 @@
 >
 > Type: `fn(name: string) -> string`
 >
-> Return the full, system-specific path for a given application name. This assumes the application is in the default
-> installation directory.
+> Return the full, system-specific path for a given application name. This assumes the application
+> is in the default installation directory.
 >
 > Examples:
 > - `C:\Users\<USERNAME>\AppData\Roaming\OmniLED\bin\<NAME>.exe` on Windows
@@ -183,18 +183,18 @@
 
 > ### `SCREEN_BUILDER`
 >
-> Screen builder allows to put together layouts and screen setups for devices. This has to be repeated for every device
-> individually.
+> Screen builder allows to put together layouts and screen setups for devices. This has to be
+> repeated for every device individually.
 >
 > > `new: fn(self, name: string)`
 > >
-> > Begin a builder to register screen layouts for a given device. `name` must be a device with an existing config
-> > entry.
+> > Begin a builder to register screen layouts for a given device. `name` must be a device with an
+> > existing config entry.
 >
 > > `register: fn(self)`
 > >
-> > Finalize the builder and register all provided scripts and shortcuts for the provided device. Without this call, no
-> > scripts will be registered.
+> > Finalize the builder and register all provided scripts and shortcuts for the provided device.
+> > Without this call, no scripts will be registered.
 >
 > > `with_layout: fn(self, layout: Layout)`
 > >
@@ -204,15 +204,16 @@
 >
 > > `with_layout_group: fn(self, layouts: [Layout])`
 > >
-> > Add a screen with an array of user scripts, sorted in order of decreasing priority - first entry has the highest
-> > priority. This function can be called multiple times to register many screens for a single device.
+> > Add a screen with an array of user scripts, sorted in order of decreasing priority - first
+> > entry has the highest priority. This function can be called multiple times to register many
+> > screens for a single device.
 > >
 > > _Not compatible with `with_layout`._
 >
 > > `with_layout_group_toggle: fn(self, shortcut: [string])`
 > >
-> > Set a shortcut to toggle between screens. It will go sequentially through each screen, and wrap around to the first
-> > at the end. Required if there is more then one screen being registered.
+> > Set a shortcut to toggle between screens. It will go sequentially through each screen, and wrap
+> > around to the first at the end. Required if there is more then one screen being registered.
 > >
 > > _Not compatible with `with_layout`._
 
@@ -220,8 +221,8 @@
 
 > ### `SHORTCUTS`
 >
-> Register shortcuts to perform custom actions. This, combined with script predicates, is useful when the screen builder
-> with default screen management doesn't quite cut it.
+> Register shortcuts to perform custom actions. This, combined with script predicates, is useful
+> when the screen builder with default screen management doesn't quite cut it.
 >
 > > `register: fn(self, keys: [string], action: fn())`
 > >
@@ -273,8 +274,8 @@
 > >
 > > _Optional_. Default: `PREDICATE.Always`.
 > >
-> > Additional predicate to assert if a script should be run. If it returns `false`, the user script will not be run
-> > despite receiving an event specified in the `run_on` array.
+> > Additional predicate to assert if a script should be run. If it returns `false`, the user
+> > script will not be run despite receiving an event specified in the `run_on` array.
 
 ---
 
@@ -284,12 +285,14 @@
 >
 > > `widgets: [Widget]`
 > >
-> > Array of widgets that compose the layout. Widgets are rendered in the order they are in the array.
+> > Array of widgets that compose the layout. Widgets are rendered in the order they are in the
+> > array.
 >
 > > `duration: integer`
 > >
-> > How many milliseconds can the layout be shown on the screen before it's allowed to be overridden. Higher priority
-> > layouts can always override lower priority, regardless of the remaining duration.
+> > How many milliseconds can the layout be shown on the screen before it's allowed to be
+> > overridden. Higher priority layouts can always override lower priority, regardless of the
+> > remaining duration.
 >
 > > `repeats: Repeat`
 > >
@@ -336,8 +339,8 @@
 > > Offset is a mixture of an integer and an enum. It can take the following values:
 > > - `n: integer`: Offset by `n` pixels.
 > > - `"Auto"`: Calculate offset to fit any text in the widget's height.
-> > - `"AutoUpper"`: Calculate offset to fit any text that doesn't have any "descendants". Useful for text that consists
-      only of uppercase characters or numbers.
+> > - `"AutoUpper"`: Calculate offset to fit any text that doesn't have any "descendants". Useful
+> >   for text that consists only of uppercase characters or numbers.
 
 ---
 
@@ -347,19 +350,21 @@
 >
 > > `size`: `Size`
 > >
-> > Source image size. To adjust image size on screen, set the appropriate widget size to the desired value.
+> > Source image size. To adjust image size on screen, set the appropriate widget size to the
+> > desired value.
 >
 > > `bytes`: `[byte]`
 > >
-> > Row-major black-and-white image data with one byte per pixel. All non-zero values will result in the pixels being
-> > on.
+> > Row-major black-and-white image data with one byte per pixel. All non-zero values will result
+> > in the pixels being on.
 > > `size.width * size.height` must equal the length of the `bytes` array.
 
 ---
 
 > ### `Point`
 >
-> Represents a coordinate in a 2D space with an origin `(0, 0)` in the top left corner of the screen.
+> Represents a coordinate in a 2D space with an origin `(0, 0)` in the top left corner of the
+> screen.
 >
 > > `x`: `integer`
 > >
@@ -434,8 +439,8 @@
 > >
 > > _Optional_. Default: No transformation of rendered data.
 > >
-> > Function that will transform rendered `buffer` into the final representation expected by the device.
-> > Data inside `buffer` is in a format specified by `memory_representation` field.
+> > Function that will transform rendered `buffer` into the final representation expected by the
+> > device. Data inside `buffer` is in a format specified by `memory_representation` field.
 >
 > > `usb_settings: USBSettings`
 > >
@@ -463,8 +468,8 @@
 > >
 > > _Optional_. Default: No transformation of rendered data.
 > >
-> > Function that will transform rendered `buffer` into the final representation expected by the device.
-> > Data inside `buffer` is in a format specified by `memory_representation` field.
+> > Function that will transform rendered `buffer` into the final representation expected by the
+> >  device. Data inside `buffer` is in a format specified by `memory_representation` field.
 >
 > > `usb_settings: USBSettings`
 > >
