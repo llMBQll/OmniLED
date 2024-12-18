@@ -1,6 +1,6 @@
 use log::{debug, error, warn};
 use mlua::{chunk, Lua, UserData};
-use oled_derive::UniqueUserData;
+use omni_led_derive::UniqueUserData;
 
 use crate::app_loader::process::{Config, Process};
 use crate::common::common::exec_file;

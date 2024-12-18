@@ -1,6 +1,6 @@
 use mlua::{ErrorContext, FromLua, Function, Lua, UserData, Value};
 use num_traits::Unsigned;
-use oled_derive::FromLuaValue;
+use omni_led_derive::FromLuaValue;
 
 use crate::devices::device::{MemoryRepresentation, Settings, Size};
 

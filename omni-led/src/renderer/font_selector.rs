@@ -1,5 +1,5 @@
 use mlua::{ErrorContext, FromLua};
-use oled_derive::FromLuaValue;
+use omni_led_derive::FromLuaValue;
 
 #[derive(Debug, Clone, FromLuaValue)]
 pub enum FontSelector {

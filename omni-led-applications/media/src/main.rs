@@ -1,6 +1,6 @@
 use clap::Parser;
 use log::info;
-use oled_api::plugin::Plugin;
+use omni_led_api::plugin::Plugin;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};

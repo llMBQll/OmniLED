@@ -1,7 +1,7 @@
 use chrono::prelude::*;
 use clap::Parser;
-use oled_api::plugin::Plugin;
-use oled_derive::IntoProto;
+use omni_led_api::plugin::Plugin;
+use omni_led_derive::IntoProto;
 use std::time;
 
 #[derive(IntoProto)]

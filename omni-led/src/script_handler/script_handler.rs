@@ -1,6 +1,6 @@
 use log::warn;
 use mlua::{chunk, ErrorContext, FromLua, Function, Lua, Table, UserData, UserDataMethods, Value};
-use oled_derive::{FromLuaValue, UniqueUserData};
+use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;

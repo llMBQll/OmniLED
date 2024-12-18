@@ -4,7 +4,7 @@ use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::{Config, Handle};
 use mlua::{FromLua, Lua, UserData, UserDataMethods};
-use oled_derive::{FromLuaValue, UniqueUserData};
+use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::path::{Path, PathBuf};
 
 use crate::common::user_data::UniqueUserData;

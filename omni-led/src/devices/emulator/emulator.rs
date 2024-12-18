@@ -1,6 +1,6 @@
 use minifb::{Window, WindowOptions};
 use mlua::{ErrorContext, FromLua, Lua, Value};
-use oled_derive::FromLuaValue;
+use omni_led_derive::FromLuaValue;
 use std::cmp::max;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};

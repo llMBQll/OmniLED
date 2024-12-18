@@ -1,7 +1,7 @@
 use log::{debug, error, log};
 use mlua::{Lua, UserData, UserDataFields};
-use oled_api::plugin::Plugin;
-use oled_api::types::{EventData, EventResponse, LogData, LogLevel, LogResponse};
+use omni_led_api::plugin::Plugin;
+use omni_led_api::types::{EventData, EventResponse, LogData, LogLevel, LogResponse};
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -38,7 +38,7 @@ impl PluginServer {
 
         tokio::task::spawn(
             Server::builder()
-                .add_service(oled_api::types::plugin_server::PluginServer::new(
+                .add_service(omni_led_api::types::plugin_server::PluginServer::new(
                     Self::new(log_level_filter),
                 ))
                 .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener)),
@@ -94,7 +94,7 @@ impl UserData for ServerInfo {
 }
 
 #[tonic::async_trait]
-impl oled_api::types::plugin_server::Plugin for PluginServer {
+impl omni_led_api::types::plugin_server::Plugin for PluginServer {
     async fn event(
         &self,
         mut request: Request<EventData>,

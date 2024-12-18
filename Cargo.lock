@@ -203,8 +203,8 @@ dependencies = [
  "clap 4.5.17",
  "libpulse-binding",
  "log",
- "oled-api",
- "oled-derive",
+ "omni-led-api",
+ "omni-led-derive",
  "tokio",
  "windows 0.58.0",
  "windows-core 0.58.0",
@@ -486,8 +486,8 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "clap 4.5.17",
- "oled-api",
- "oled-derive",
+ "omni-led-api",
+ "omni-led-derive",
  "tokio",
 ]
 
@@ -1760,8 +1760,8 @@ dependencies = [
  "clap 4.5.17",
  "log",
  "mpris",
- "oled-api",
- "oled-derive",
+ "omni-led-api",
+ "omni-led-derive",
  "tokio",
  "windows 0.58.0",
 ]
@@ -2055,31 +2055,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oled-api"
-version = "0.1.0"
-dependencies = [
- "log",
- "prost",
- "serde",
- "serde_json",
- "tokio",
- "tokio-stream",
- "tonic",
- "tonic-build",
- "ureq",
-]
-
-[[package]]
-name = "oled-derive"
-version = "0.1.0"
-dependencies = [
- "convert_case",
- "proc-macro2",
- "quote 1.0.37",
- "syn 2.0.77",
-]
-
-[[package]]
 name = "omni-led"
 version = "0.1.0"
 dependencies = [
@@ -2095,8 +2070,8 @@ dependencies = [
  "minifb",
  "mlua",
  "num-traits",
- "oled-api",
- "oled-derive",
+ "omni-led-api",
+ "omni-led-derive",
  "opener",
  "prost",
  "regex",
@@ -2109,6 +2084,41 @@ dependencies = [
  "tray-item",
  "ureq",
  "windres",
+]
+
+[[package]]
+name = "omni-led-api"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "prost",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-build",
+ "ureq",
+]
+
+[[package]]
+name = "omni-led-derive"
+version = "0.1.0"
+dependencies = [
+ "convert_case",
+ "proc-macro2",
+ "quote 1.0.37",
+ "syn 2.0.77",
+]
+
+[[package]]
+name = "omni-led-setup"
+version = "0.1.0"
+dependencies = [
+ "clap 4.5.17",
+ "convert_case",
+ "dirs-next",
+ "winreg 0.52.0",
 ]
 
 [[package]]
@@ -2831,16 +2841,6 @@ dependencies = [
  "ryu",
  "serde",
  "unsafe-libyaml",
-]
-
-[[package]]
-name = "setup"
-version = "0.1.0"
-dependencies = [
- "clap 4.5.17",
- "convert_case",
- "dirs-next",
- "winreg 0.52.0",
 ]
 
 [[package]]
@@ -3616,8 +3616,8 @@ dependencies = [
  "clap 4.5.17",
  "image",
  "log",
- "oled-api",
- "oled-derive",
+ "omni-led-api",
+ "omni-led-derive",
  "serde",
  "serde_json",
  "tokio",

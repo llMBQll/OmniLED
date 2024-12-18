@@ -1,4 +1,4 @@
-use oled_derive::IntoProto;
+use omni_led_derive::IntoProto;
 use std::time::Duration;
 
 #[derive(Clone, IntoProto)]

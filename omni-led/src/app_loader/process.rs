@@ -1,6 +1,6 @@
 use log::error;
 use mlua::{ErrorContext, FromLua, UserData};
-use oled_derive::FromLuaValue;
+use omni_led_derive::FromLuaValue;
 use std::process::{Child, Command, Stdio};
 
 pub struct Process {

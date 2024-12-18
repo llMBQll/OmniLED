@@ -8,8 +8,8 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
 log = "0.4"
-oled-api = { path = "../../oled-api" }
-oled-derive = { path = "../../oled-derive", features = ["into-proto"] }
+omni-led-api = { path = "../../omni-led-api" }
+omni-led-derive = { path = "../../omni-led-derive", features = ["into-proto"] }
 tokio = { version = "1.38", features = ["full"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]

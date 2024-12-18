@@ -1,5 +1,5 @@
 [package]
-name = "oled-derive"
+name = "omni-led-derive"
 version = "0.1.0"
 authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
 license = "GPL-3.0-only"

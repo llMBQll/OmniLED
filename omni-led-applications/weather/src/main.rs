@@ -1,8 +1,8 @@
 use clap::Parser;
 use log::debug;
-use oled_api::plugin::Plugin;
-use oled_api::types::Table;
-use oled_derive::IntoProto;
+use omni_led_api::plugin::Plugin;
+use omni_led_api::types::Table;
+use omni_led_derive::IntoProto;
 use std::{collections::HashMap, time};
 use ureq::Agent;
 

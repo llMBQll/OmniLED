@@ -2,13 +2,13 @@
 
 members = [
     "omni-led",
-    "oled-applications/audio",
-    "oled-applications/clock",
-    "oled-applications/media",
-    "oled-applications/weather",
-    "oled-api",
-    "oled-derive",
-    "setup",
+    "omni-led-api",
+    "omni-led-derive",
+    "omni-led-setup",
+    "omni-led-applications/audio",
+    "omni-led-applications/clock",
+    "omni-led-applications/media",
+    "omni-led-applications/weather",
 ]
 
 resolver = "2"

@@ -1,7 +1,7 @@
 use device_query::Keycode;
 use log::{error, warn};
 use mlua::{Function, Lua, UserData, UserDataMethods};
-use oled_derive::UniqueUserData;
+use omni_led_derive::UniqueUserData;
 use regex::Regex;
 use std::str::FromStr;
 

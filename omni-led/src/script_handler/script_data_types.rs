@@ -1,5 +1,5 @@
 use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields, Value};
-use oled_derive::FromLuaValue;
+use omni_led_derive::FromLuaValue;
 
 #[derive(Debug, Clone, Copy, FromLuaValue)]
 pub struct Point {

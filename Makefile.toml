@@ -14,13 +14,13 @@ args = ["build", "--release", "--package=omni-led", "--package=audio", "--packag
 [tasks.build-setup]
 description = "Build the setup binary"
 command = "cargo"
-args = ["build", "--release", "--package=setup"]
+args = ["build", "--release", "--package=omni-led-setup"]
 dependencies = ["build-setup-dependencies"]
 
 [tasks.run-setup]
 description = "Run setup"
 command = "cargo"
-args = ["run", "--release", "--bin=setup", "--", "install", "--interactive"]
+args = ["run", "--release", "--bin=omni-led-setup", "--", "install", "--interactive"]
 dependencies = ["build-setup"]
 
 # Tasks for building and running locally using cargo run

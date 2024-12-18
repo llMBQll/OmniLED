@@ -1,5 +1,5 @@
 use mlua::{ErrorContext, FromLua, Lua, Value};
-use oled_derive::FromLuaValue;
+use omni_led_derive::FromLuaValue;
 
 use crate::devices::device::{Settings, Size};
 

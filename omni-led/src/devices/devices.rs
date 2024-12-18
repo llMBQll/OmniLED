@@ -1,7 +1,7 @@
 use convert_case::{Case, Casing};
 use log::{debug, error, log_enabled};
 use mlua::{chunk, Function, Lua, Table, UserData, Value};
-use oled_derive::UniqueUserData;
+use omni_led_derive::UniqueUserData;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
