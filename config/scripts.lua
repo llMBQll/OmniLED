@@ -139,26 +139,26 @@ local function weather()
 end
 
 SCREEN_BUILDER
-        :new('Steelseries Apex 7 TKL')
-        :with_layout_group({
-    {
-        layout = volume,
-        run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
-    },
-    {
-        layout = spotify,
-        run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
-    },
-    {
-        layout = clock,
-        run_on = { 'CLOCK.Seconds' },
-    },
-})
-        :with_layout_group({
-    {
-        layout = weather,
-        run_on = { 'CLOCK.Seconds' },
-    }
-})
-        :with_layout_group_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
-        :register()
+    :new('Emulator')
+    :with_layout_group({
+        {
+            layout = volume,
+            run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
+        },
+        {
+            layout = spotify,
+            run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
+        },
+        {
+            layout = clock,
+            run_on = { 'CLOCK.Seconds' },
+        },
+    })
+    :with_layout_group({
+        {
+            layout = weather,
+            run_on = { 'CLOCK.Seconds' },
+        }
+    })
+    :with_layout_group_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
+    :register()
