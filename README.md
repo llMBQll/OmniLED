@@ -4,12 +4,12 @@ OmniLED is a program allowing you to control devices with an OLED screen. It's d
 on both Linux and Windows, while supporting virtually any USB device and allowing for in depth
 customization.
 
-![Time and date](images/clock.gif "Time and date")
-![Currently playing media](images/music.gif "Currently playing media")
-![Changing volume](images/volume.gif "Changing volume")
-![Current Weather](images/weather.gif "Current weather")
+![Time and date](docs/images/clock.gif "Time and date")
+![Currently playing media](docs/images/music.gif "Currently playing media")
+![Changing volume](docs/images/volume.gif "Changing volume")
+![Current Weather](docs/images/weather.gif "Current weather")
 
-![Emulator](images/emulator.png "Emulator")
+![Emulator](docs/images/emulator.png "Emulator")
 
 ## Features
 
