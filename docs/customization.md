@@ -5,6 +5,9 @@ directory. This should be `~/.config/OmniLED/config` on Linux, or
 `C:\Users\<USER>\AppData\Roaming\OmniLED\config` on Windows.  
 It can also be accessed by pressing the `Config` menu on the tray icon after the application is running.
 
+> You may find an example configuration in the [`config`](../config/). This will also be the
+> default installed config, so make sure to adjust the user scripts work with your device.
+
 The configuration is split into 4 categories.
 
 ## Applications

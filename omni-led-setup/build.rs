@@ -42,6 +42,11 @@ fn binary_path(name: &str) -> String {
 }
 
 fn main() {
+    #[cfg(target_os = "windows")]
+    windres::Build::new()
+        .compile("../assets/tray_icon.rc")
+        .unwrap();
+
     let out_dir = env::var_os("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join("binaries.rs");
     let mut file = File::create(&dest_path).unwrap();

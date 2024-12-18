@@ -24,8 +24,8 @@ load_app {
         '--interval', 10,
         '--wind-speed-unit', 'm/s',
         '--temperature-unit', 'Celsius',
-        'in', 'Katowice',
+        'in', 'Warsaw',
         '--country-code', 'PL',
-        '--administrative', 'Silesia',
+        '--administrative', 'Masovian',
     }
 }

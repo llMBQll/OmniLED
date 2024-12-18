@@ -30,10 +30,10 @@
 
 ## Build from Source
 
-1. Open Terminal
-2. Download repository and go into the directory
-   > `git clone https://github.com/llMBQll/omni-led`  
-   > `cd omni-led`
+1. Open Terminal.
+2. Download repository and go into the directory.
+   > `git clone https://github.com/llMBQll/OmniLED`  
+   > `cd OmniLED`
 3. Build & Install
    If you have installed cargo make (see [dependencies](#install-dependencies)) you may execute a
    single command to build binaries and run setup utility.
@@ -43,7 +43,7 @@
    dependencies.
    > `cargo build --release -p omni-led -p audio -p clock -p media -p weather`  
    > `cargo build --release -p setup`  
-   > `cargo run --release --bin setup -- install --interactive`
+   > `cargo run --release --bin omni-led-setup -- install --interactive`
 
 ## Post installation steps
 
@@ -53,12 +53,12 @@
 
 To allow this program to access your device, it needs an entry in udev rules.
 
-1. Create udev rules entry  
+1. Create udev rules entry.  
    `touch /etc/udev/rules.d/69-omni-led.rules`
-2. Using your favourite text editor add the following line and adapt it for your device  
+2. Using your favourite text editor add the following line and adapt it for your device.  
    `SUBSYSTEM=="usb", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1618", MODE="0666", GROUP="plugdev"`
 3. Reload udev rules (this may not be sufficient so you may need to unplug and plug the device or
-   restart the system)  
+   restart the system).  
    `sudo udevadm control --reload-rules`
 
 ### Common
@@ -68,4 +68,4 @@ You are now ready to proceed to [customization](customization).
 ## Prebuilt Binaries
 
 You can find prebuilt binaries for Windows in the
-[releases](https://github.com/llMBQll/omni-led/releases) section on GitHub.
+[releases](https://github.com/llMBQll/OmniLED/releases) section on GitHub.
