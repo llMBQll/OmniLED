@@ -1,3 +1,21 @@
+/*
+ * OmniLED is a software for displaying data on various OLED devices.
+ * Copyright (C) 2024  Michał Bałabanow <m.balabanow@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 use clap::{ArgAction, Args, Parser, Subcommand};
 use convert_case::{Case, Casing};
 use std::fs::File;
@@ -72,6 +90,12 @@ fn main() {
     };
 }
 
+fn install_license() {
+    let target = get_root_dir().join("LICENSE");
+    println!("Copying license file: {}", target.display());
+    fs::write(&target, bytes::LICENSE).unwrap();
+}
+
 fn install_binary_impl(name: &str, bytes: &[u8]) -> std::io::Result<()> {
     let target = get_bin_dir()
         .join(name)
@@ -124,6 +148,8 @@ fn install(options: InstallOptions) {
     ] {
         fs::create_dir_all(directory).unwrap();
     }
+
+    install_license();
 
     install_binary!(OMNI_LED);
     install_binary!(AUDIO);
