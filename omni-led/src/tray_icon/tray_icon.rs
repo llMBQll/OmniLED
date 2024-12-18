@@ -29,7 +29,13 @@ pub struct TrayIcon {
 impl TrayIcon {
     #[must_use]
     pub fn new(running: &'static AtomicBool) -> Self {
-        let mut tray = TrayItem::new("OmniLED", Self::load_icon()).unwrap();
+        #[cfg(feature = "dev")]
+        const TITLE: &str = "OmniLED (dev)";
+
+        #[cfg(not(feature = "dev"))]
+        const TITLE: &str = "OmniLED";
+
+        let mut tray = TrayItem::new(TITLE, Self::load_icon()).unwrap();
 
         tray.add_menu_item("Config", || {
             if let Err(err) = opener::reveal(Constants::config_dir()) {
