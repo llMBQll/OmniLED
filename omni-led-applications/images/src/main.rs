@@ -17,7 +17,7 @@
  */
 
 use clap::{ArgAction, Parser};
-use image::ImageFormat;
+use image::{ImageBuffer, ImageFormat, Luma};
 use log::error;
 use omni_led_api::plugin::Plugin;
 use omni_led_api::types::{Image, Table};
@@ -39,7 +39,7 @@ fn load_images(image_options: Vec<ImageOptions>) -> Table {
     let mut table = Table::default();
 
     for option in image_options {
-        let image = match load_image(&option.path, option.format) {
+        let image = match load_image(&option.path, option.threshold, option.format) {
             Ok(image) => image,
             Err(err) => {
                 error!("Failed to load {:?}: {}", option, err);
@@ -54,14 +54,28 @@ fn load_images(image_options: Vec<ImageOptions>) -> Table {
 
 fn load_image(
     path: &Path,
+    threshold: u8,
     format: Option<ImageFormat>,
 ) -> Result<Image, Box<dyn std::error::Error>> {
     let bytes = std::fs::read(path)?;
+
     let image = match format {
         Some(format) => image::load_from_memory_with_format(&bytes, format)?,
         None => image::load_from_memory(&bytes)?,
     };
+
     let image = image.into_luma8();
+
+    let image: ImageBuffer<Luma<u8>, Vec<u8>> =
+        ImageBuffer::from_fn(image.width(), image.height(), |x, y| {
+            let pixel = image.get_pixel(x, y);
+            if pixel[0] > threshold {
+                Luma([255])
+            } else {
+                Luma([0])
+            }
+        });
+
     let image = Image {
         width: image.width() as i64,
         height: image.height() as i64,
@@ -84,29 +98,33 @@ struct Options {
 struct ImageOptions {
     name: String,
     path: PathBuf,
+    threshold: u8,
     format: Option<ImageFormat>,
 }
 
 fn parse_image_options(
     s: &str,
 ) -> Result<ImageOptions, Box<dyn std::error::Error + Send + Sync + 'static>> {
+    // TODO better option format
+
     let args = match shlex::split(s) {
         Some(args) => args,
         None => return Err("Failed to parse arguments".into()),
     };
 
-    if args.len() < 2 || args.len() > 3 {
-        return Err("Expected options: NAME PATH [FORMAT]".into());
+    if args.len() < 3 || args.len() > 4 {
+        return Err("Expected options: NAME PATH THRESHOLD [FORMAT]".into());
     }
 
     let name = args[0].clone();
     let path = PathBuf::from(&args[1]);
-    let format = if args.len() == 3 {
-        let format = ImageFormat::from_extension(&args[2]);
+    let threshold = args[2].parse::<u8>()?;
+    let format = if args.len() == 4 {
+        let format = ImageFormat::from_extension(&args[3]);
         if let None = format {
             error!(
                 "Failed to parse image format from '{}', continuing anyways",
-                args[2]
+                args[3]
             );
         }
         format
@@ -114,5 +132,5 @@ fn parse_image_options(
         None
     };
 
-    Ok(ImageOptions { name, path, format })
+    Ok(ImageOptions { name, path, threshold, format })
 }
