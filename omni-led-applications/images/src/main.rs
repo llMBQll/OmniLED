@@ -72,7 +72,7 @@ fn load_image(
     let image: ImageBuffer<Luma<u8>, Vec<u8>> =
         ImageBuffer::from_fn(image.width(), image.height(), |x, y| {
             let pixel = image.get_pixel(x, y);
-            if pixel[0] > threshold {
+            if pixel[0] >= threshold {
                 Luma([255])
             } else {
                 Luma([0])
