@@ -9,10 +9,11 @@ to load any  [custom application](#custom-applications) that provides the data y
 OmniLED comes some applications pre-installed. Each one comes with its own README file that
 describes their usage and purpose.
 
-- [audio](../oled-applications/audio/README.md)
-- [clock](../oled-applications/clock/README.md)
-- [media](../oled-applications/media/README.md)
-- [weather](../oled-applications/weather/README.md)
+- [audio](../omni-led-applications/audio/README.md)
+- [clock](../omni-led-applications/clock/README.md)
+- [images](../omni-led-applications/images/README.md)
+- [media](../omni-led-applications/media/README.md)
+- [weather](../omni-led-applications/weather/README.md)
 
 ## Custom Applications
 
@@ -76,7 +77,7 @@ eliminates the need for the application to determine the server address manually
 >   }
 > }
 > ```
-> 
+>
 > In the above applications there 2 applications loaded: `my_application` and
 > `my_other_application`.  
 > They both can be found in the default application directory, but for the first one
@@ -84,7 +85,7 @@ eliminates the need for the application to determine the server address manually
 > other the path was constructed manually using the [`PLATFORM`](scripting_reference.md#platform)
 > constants.  
 > Also the application received different command line arguments, to send exactly what they expect.
-> 
+>
 > For built-in applications' arguments refer to this [paragraph](#built-in-applications).
 
 #### Reading `server.json`

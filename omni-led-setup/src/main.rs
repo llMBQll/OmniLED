@@ -154,6 +154,7 @@ fn install(options: InstallOptions) {
     install_binary!(OMNI_LED);
     install_binary!(AUDIO);
     install_binary!(CLOCK);
+    install_binary!(IMAGES);
     install_binary!(MEDIA);
     install_binary!(WEATHER);
 
