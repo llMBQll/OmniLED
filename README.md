@@ -37,10 +37,11 @@ described [here](docs/customization.md).
 ## Roadmap
 
 - [ ] GIF support
-- [ ] Loading custom images (Load images and GIFs from disk)
+- [x] Loading custom images (Load images and GIFs from disk)
 - [ ] Getting events from discord (Mic status, currently speaking user etc.)
 - [ ] Graphical interface for installer and settings
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0, see [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0, see [LICENSE](LICENSE) file for
+details.
