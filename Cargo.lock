@@ -1526,6 +1526,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "images"
+version = "0.1.0"
+dependencies = [
+ "clap 4.5.23",
+ "image",
+ "log",
+ "omni-led-api",
+ "shlex",
+ "tokio",
+]
+
+[[package]]
 name = "imgref"
 version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2160,7 +2172,7 @@ dependencies = [
 
 [[package]]
 name = "omni-led"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "convert_case",
  "device_query",
@@ -2217,7 +2229,7 @@ dependencies = [
 
 [[package]]
 name = "omni-led-setup"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap 4.5.23",
  "convert_case",
