@@ -24,8 +24,10 @@ use std::collections::HashMap;
 use std::vec::IntoIter;
 
 use crate::common::user_data::UserDataRef;
-use crate::renderer::buffer::{BitBuffer, Buffer, ByteBuffer};
+use crate::renderer::buffer::{BitBuffer, Buffer, BufferTrait, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
+use crate::renderer::images;
+use crate::renderer::images::ImageCache;
 use crate::script_handler::script_data_types::{
     Bar, Image, MemoryRepresentation, Modifiers, Point, Text, Widget,
 };
@@ -34,6 +36,7 @@ use crate::settings::settings::Settings;
 
 pub struct Renderer {
     font_manager: FontManager,
+    image_cache: ImageCache,
     scrolling_text_data: ScrollingTextData,
     scrolling_text_settings: ScrollingTextSettings,
 }
@@ -45,6 +48,7 @@ impl Renderer {
 
         Self {
             font_manager: FontManager::new(font_selector),
+            image_cache: ImageCache::new(),
             scrolling_text_data: ScrollingTextData::new(),
             scrolling_text_settings: ScrollingTextSettings::new(lua),
         }
@@ -61,13 +65,15 @@ impl Renderer {
             MemoryRepresentation::BitPerPixel => Buffer::new(BitBuffer::new(size)),
             MemoryRepresentation::BytePerPixel => Buffer::new(ByteBuffer::new(size)),
         };
-        let (end_auto_repeat, text_offsets) = self.precalculate_text(ctx, &widgets);
+        let (end_auto_repeat, text_offsets) = self.precalculate_text(&ctx, &widgets);
         let mut text_offsets = text_offsets.into_iter();
 
         for operation in widgets {
             match operation {
                 Widget::Bar(bar) => Self::render_bar(&mut buffer, bar),
-                Widget::Image(image) => Self::render_image(&mut buffer, image),
+                Widget::Image(image) => {
+                    Self::render_image(&mut buffer, image, &mut self.image_cache)
+                }
                 Widget::Text(text) => self.render_text(&mut buffer, text, &mut text_offsets),
             }
         }
@@ -114,37 +120,30 @@ impl Renderer {
         }
     }
 
-    fn render_image(buffer: &mut Buffer, widget: Image) {
+    fn render_image(buffer: &mut Buffer, widget: Image, image_cache: &mut ImageCache) {
         if widget.size.width == 0 || widget.size.height == 0 {
             return;
         }
 
+        let image = images::render_image(image_cache, &widget.image, widget.size, widget.threshold);
+
+        Self::render_image_impl(buffer, &widget, image);
+    }
+
+    fn render_image_impl(buffer: &mut Buffer, widget: &Image, rendered: &mut BitBuffer) {
         if widget.modifiers.clear_background {
             Self::clear_background(buffer, widget.position, widget.size, &widget.modifiers);
         }
-
-        let x_factor = widget.image.size.width as f64 / widget.size.width as f64;
-        let y_factor = widget.image.size.height as f64 / widget.size.height as f64;
 
         let rect = Rectangle {
             position: widget.position,
             size: widget.size,
         };
-        for y in 0..widget.size.height as isize {
-            for x in 0..widget.size.width as isize {
-                // Use nearest neighbour interpolation for now as it's the quickest to implement
-                // TODO allow specifying scaling algorithm as modifier
-                // TODO potentially cache scaled images
 
-                let image_x = (x as f64 * x_factor).round() as usize;
-                let image_x = image_x.clamp(0, widget.image.size.width - 1);
-
-                let image_y = (y as f64 * y_factor).round() as usize;
-                let image_y = image_y.clamp(0, widget.image.size.height - 1);
-
-                let index = image_y * widget.image.size.width + image_x;
-                if widget.image.bytes[index] != 0 {
-                    buffer.set(x, y, &rect, &widget.modifiers);
+        for y in 0..rendered.height() {
+            for x in 0..rendered.width() {
+                if rendered.get(x, y).unwrap() {
+                    buffer.set(x as isize, y as isize, &rect, &widget.modifiers);
                 }
             }
         }
@@ -213,8 +212,8 @@ impl Renderer {
         }
     }
 
-    fn precalculate_text(&mut self, ctx: ContextKey, widgets: &Vec<Widget>) -> (bool, Vec<usize>) {
-        let mut ctx = self.scrolling_text_data.get_context(ctx);
+    fn precalculate_text(&mut self, ctx: &ContextKey, widgets: &Vec<Widget>) -> (bool, Vec<usize>) {
+        let mut ctx = self.scrolling_text_data.get_context(&ctx);
 
         let offsets: Vec<usize> = widgets
             .iter()
@@ -309,8 +308,8 @@ impl ScrollingTextData {
         }
     }
 
-    pub fn get_context(&mut self, ctx: ContextKey) -> Context {
-        let text_data = self.contexts.entry(ctx).or_insert(HashMap::new());
+    pub fn get_context(&mut self, ctx: &ContextKey) -> Context {
+        let text_data = self.contexts.entry(ctx.clone()).or_insert(HashMap::new());
         Context::new(text_data)
     }
 }
@@ -386,7 +385,7 @@ impl<'a> Drop for Context<'a> {
     }
 }
 
-#[derive(Eq, Hash, PartialEq)]
+#[derive(Eq, Hash, PartialEq, Clone)]
 pub struct ContextKey {
     pub script: usize,
     pub device: usize,

@@ -22,3 +22,4 @@ pub mod renderer;
 
 mod bit;
 mod font_manager;
+mod images;

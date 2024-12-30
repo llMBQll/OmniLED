@@ -18,6 +18,7 @@
 
 use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields, Value};
 use omni_led_derive::FromLuaValue;
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, Copy, FromLuaValue)]
 pub struct Point {
@@ -50,12 +51,30 @@ pub struct Rectangle {
 impl UserData for Rectangle {}
 
 #[derive(Debug, Clone, FromLuaValue)]
-pub struct OledImage {
-    pub size: Size,
+pub struct ImageData {
+    #[mlua(transform(Self::parse_format))]
+    pub format: image::ImageFormat,
     pub bytes: Vec<u8>,
+    pub hash: Option<u64>,
 }
 
-impl UserData for OledImage {}
+impl Hash for ImageData {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.bytes.hash(state);
+    }
+}
+
+impl ImageData {
+    pub fn parse_format(format: String, _: &Lua) -> mlua::Result<image::ImageFormat> {
+        // TODO use an enum with #[derive(FromLuaValue)], but this is good enough for now
+        image::ImageFormat::from_extension(&format).ok_or(mlua::Error::RuntimeError(format!(
+            "Unknown image format: {}",
+            format
+        )))
+    }
+}
+
+impl UserData for ImageData {}
 
 #[derive(Clone, Debug, FromLua)]
 pub enum Widget {
@@ -106,9 +125,11 @@ impl UserData for Bar {}
 
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Image {
-    pub image: OledImage,
+    pub image: ImageData,
     pub position: Point,
     pub size: Size,
+    #[mlua(default(128))]
+    pub threshold: u8,
 
     #[mlua(default)]
     pub modifiers: Modifiers,

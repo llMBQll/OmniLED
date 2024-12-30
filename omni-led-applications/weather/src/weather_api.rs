@@ -17,7 +17,9 @@
  */
 
 use chrono::Timelike;
-use omni_led_api::types::Image;
+use image::codecs::png::PngEncoder;
+use image::{ExtendedColorType, ImageEncoder};
+use omni_led_api::types::{Image, ImageFormat};
 use serde::de;
 use std::collections::HashMap;
 use ureq::Agent;
@@ -293,12 +295,20 @@ pub fn load_images() -> Vec<(&'static str, Image)> {
             let mut image =
                 image::load_from_memory_with_format(bytes, image::ImageFormat::Png).unwrap();
             image.invert();
-            let grayscale = image.into_luma8();
+
+            let mut buffer = Vec::new();
+            PngEncoder::new(&mut buffer)
+                .write_image(
+                    image.as_bytes(),
+                    image.width(),
+                    image.height(),
+                    ExtendedColorType::Rgba8,
+                )
+                .unwrap();
 
             let image = Image {
-                width: grayscale.width() as i64,
-                height: grayscale.height() as i64,
-                data: grayscale.into_raw(),
+                data: buffer,
+                format: ImageFormat::Png as i32,
             };
             (*name, image)
         })
