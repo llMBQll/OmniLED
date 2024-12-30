@@ -19,8 +19,9 @@
 use mlua::{chunk, ErrorContext, Lua, ObjectLike, Table, Value};
 use omni_led_api::types::field::Field as FieldEntry;
 use omni_led_api::types::Field;
+use std::hash::{DefaultHasher, Hash, Hasher};
 
-use crate::script_handler::script_data_types::{OledImage, Size};
+use crate::script_handler::script_data_types::ImageData;
 
 #[macro_export]
 macro_rules! create_table {
@@ -144,15 +145,22 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
             Ok(Value::Table(table))
         }
         Some(FieldEntry::FImage(image)) => {
-            let oled_image = OledImage {
-                size: Size {
-                    width: image.width as usize,
-                    height: image.height as usize,
-                },
+            let mut image_data = ImageData {
+                format: image.format().into(),
                 bytes: image.data,
+                hash: None,
             };
-            let user_data = lua.create_any_userdata(oled_image)?;
+            let hash = hash(&image_data);
+            image_data.hash = Some(hash);
+
+            let user_data = lua.create_any_userdata(image_data)?;
             Ok(Value::UserData(user_data))
         }
     }
+}
+
+pub fn hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
 }

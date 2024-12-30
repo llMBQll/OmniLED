@@ -56,9 +56,13 @@ impl PluginServer {
 
         tokio::task::spawn(
             Server::builder()
-                .add_service(omni_led_api::types::plugin_server::PluginServer::new(
-                    Self::new(log_level_filter),
-                ))
+                .add_service(
+                    omni_led_api::types::plugin_server::PluginServer::new(Self::new(
+                        log_level_filter,
+                    ))
+                    .max_decoding_message_size(64 * 1024 * 1024)
+                    .max_encoding_message_size(64 * 1024 * 1024),
+                )
                 .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener)),
         );
 
