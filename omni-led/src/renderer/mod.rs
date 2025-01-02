@@ -20,6 +20,7 @@ pub mod buffer;
 pub mod font_selector;
 pub mod renderer;
 
+mod animation;
 mod bit;
 mod font_manager;
 mod images;
