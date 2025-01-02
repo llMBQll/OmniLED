@@ -30,7 +30,7 @@ pub fn render_image<'a>(
     image: &ImageData,
     size: Size,
     threshold: u8,
-) -> &'a mut BitBuffer {
+) -> &'a BitBuffer {
     cache
         .entry((image.hash.unwrap(), size, threshold))
         .or_insert_with(|| render_image_impl(image, size, threshold))

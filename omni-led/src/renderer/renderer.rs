@@ -130,7 +130,7 @@ impl Renderer {
         Self::render_image_impl(buffer, &widget, image);
     }
 
-    fn render_image_impl(buffer: &mut Buffer, widget: &Image, rendered: &mut BitBuffer) {
+    fn render_image_impl(buffer: &mut Buffer, widget: &Image, rendered: &BitBuffer) {
         if widget.modifiers.clear_background {
             Self::clear_background(buffer, widget.position, widget.size, &widget.modifiers);
         }
