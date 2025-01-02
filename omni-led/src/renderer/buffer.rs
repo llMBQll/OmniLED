@@ -18,7 +18,7 @@
 
 use mlua::{UserData, UserDataMethods};
 
-use crate::renderer::bit::Bit;
+use crate::renderer::bit::{Bit, BitMut};
 use crate::script_handler::script_data_types::Modifiers;
 use crate::script_handler::script_data_types::{Rectangle, Size};
 
@@ -120,7 +120,7 @@ pub trait BufferTrait {
     fn bytes(&self) -> &Vec<u8>;
     fn row_stride(&self) -> usize;
     #[allow(unused)]
-    fn get(&mut self, x: usize, y: usize) -> Option<bool>;
+    fn get(&self, x: usize, y: usize) -> Option<bool>;
     fn set(&mut self, x: usize, y: usize);
     fn reset(&mut self, x: usize, y: usize);
 }
@@ -140,13 +140,23 @@ impl ByteBuffer {
         }
     }
 
-    fn bit_at(&mut self, x: usize, y: usize) -> Option<&mut u8> {
+    fn byte_position(&self, x: usize, y: usize) -> Option<usize> {
         if x >= self.width || y >= self.height {
             return None;
         }
 
         let index = y * self.width + x;
-        Some(&mut self.data[index])
+        Some(index)
+    }
+
+    fn get_byte(&self, x: usize, y: usize) -> Option<&u8> {
+        self.byte_position(x, y)
+            .and_then(|index| Some(&self.data[index]))
+    }
+
+    fn get_byte_mut(&mut self, x: usize, y: usize) -> Option<&mut u8> {
+        self.byte_position(x, y)
+            .and_then(|index| Some(&mut self.data[index]))
     }
 }
 
@@ -167,18 +177,18 @@ impl BufferTrait for ByteBuffer {
         self.width
     }
 
-    fn get(&mut self, x: usize, y: usize) -> Option<bool> {
-        self.bit_at(x, y).and_then(|value| Some(*value > 0))
+    fn get(&self, x: usize, y: usize) -> Option<bool> {
+        self.get_byte(x, y).and_then(|value| Some(*value > 0))
     }
 
     fn set(&mut self, x: usize, y: usize) {
-        if let Some(value) = self.bit_at(x, y) {
+        if let Some(value) = self.get_byte_mut(x, y) {
             *value = 0xFF;
         }
     }
 
     fn reset(&mut self, x: usize, y: usize) {
-        if let Some(value) = self.bit_at(x, y) {
+        if let Some(value) = self.get_byte_mut(x, y) {
             *value = 0x00;
         }
     }
@@ -204,13 +214,25 @@ impl BitBuffer {
         }
     }
 
-    fn bit_at(&mut self, x: usize, y: usize) -> Option<Bit> {
+    fn bit_position(&self, x: usize, y: usize) -> Option<(usize, usize)> {
         if x >= self.width || y >= self.height {
             return None;
         }
 
         let index = (y * self.padded_width + x) / 8;
-        Some(Bit::new(&mut self.data[index], 7 - x % 8))
+        let offset = 7 - x % 8;
+
+        Some((index, offset))
+    }
+
+    fn get_bit(&self, x: usize, y: usize) -> Option<Bit> {
+        self.bit_position(x, y)
+            .and_then(|(index, offset)| Some(Bit::new(&self.data[index], offset)))
+    }
+
+    fn get_bit_mut(&mut self, x: usize, y: usize) -> Option<BitMut> {
+        self.bit_position(x, y)
+            .and_then(|(index, offset)| Some(BitMut::new(&mut self.data[index], offset)))
     }
 }
 
@@ -230,18 +252,18 @@ impl BufferTrait for BitBuffer {
         self.padded_width / 8
     }
 
-    fn get(&mut self, x: usize, y: usize) -> Option<bool> {
-        self.bit_at(x, y).and_then(|bit| Some(bit.get()))
+    fn get(&self, x: usize, y: usize) -> Option<bool> {
+        self.get_bit(x, y).and_then(|bit| Some(bit.get()))
     }
 
     fn set(&mut self, x: usize, y: usize) {
-        if let Some(mut bit) = self.bit_at(x, y) {
+        if let Some(mut bit) = self.get_bit_mut(x, y) {
             bit.set();
         }
     }
 
     fn reset(&mut self, x: usize, y: usize) {
-        if let Some(mut bit) = self.bit_at(x, y) {
+        if let Some(mut bit) = self.get_bit_mut(x, y) {
             bit.reset();
         }
     }
