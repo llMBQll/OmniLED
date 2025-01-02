@@ -18,7 +18,7 @@ describes their usage and purpose.
 ## Custom Applications
 
 Custom applications may be written in any language as long as they implement
-the [gRPC interface](../oled-api/proto/plugin.proto).
+the [gRPC interface](../omni-led-api/proto/plugin.proto).
 
 ## Loading Applications
 
@@ -29,7 +29,7 @@ There are 2 ways for applications to be started.
 The first way is to register applications inside the `applications.lua` file. This allows the
 OmniLED process to manage the application's lifetime — starting it when OmniLED starts and stopping
 it when OmniLED shuts down. Additionally, you can define command line arguments that will be passed
-to theapplication.
+to the application.
 
 To load an application use the global [`load_app`](scripting_reference.md#load_app) function. This
 allows for the script to set command line arguments.

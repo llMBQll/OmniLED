@@ -64,7 +64,7 @@ impl TrayIcon {
 
     #[cfg(target_os = "linux")]
     fn load_icon() -> IconSource {
-        const IMAGE: &[u8] = include_bytes!("../../assets/icons/white.png");
+        const IMAGE: &[u8] = include_bytes!("../../../assets/icons/white.png");
 
         let image = image::load_from_memory(&IMAGE)
             .expect("Failed to load icon data")
