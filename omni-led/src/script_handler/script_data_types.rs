@@ -128,6 +128,8 @@ pub struct Image {
     pub image: ImageData,
     pub position: Point,
     pub size: Size,
+    #[mlua(default(false))]
+    pub animated: bool,
     #[mlua(default(128))]
     pub threshold: u8,
 

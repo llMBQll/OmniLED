@@ -125,9 +125,22 @@ impl Renderer {
             return;
         }
 
-        let image = images::render_image(image_cache, &widget.image, widget.size, widget.threshold);
+        let image = images::render_image(
+            image_cache,
+            &widget.image,
+            widget.size,
+            widget.threshold,
+            widget.animated,
+        );
 
-        Self::render_image_impl(buffer, &widget, image);
+        let frame = if widget.animated {
+            // TODO calculate current frame
+            &image[0]
+        } else {
+            &image[0]
+        };
+
+        Self::render_image_impl(buffer, &widget, frame);
     }
 
     fn render_image_impl(buffer: &mut Buffer, widget: &Image, rendered: &BitBuffer) {
