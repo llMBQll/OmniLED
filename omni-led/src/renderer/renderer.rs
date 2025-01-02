@@ -16,14 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use mlua::Lua;
-use num_traits::clamp;
-use std::cmp::max;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::vec::IntoIter;
-
 use crate::common::user_data::UserDataRef;
+use crate::renderer::animation::{Animation, Step};
 use crate::renderer::buffer::{BitBuffer, Buffer, BufferTrait, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
 use crate::renderer::images;
@@ -33,12 +27,18 @@ use crate::script_handler::script_data_types::{
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
+use log::debug;
+use mlua::Lua;
+use num_traits::clamp;
+use std::cmp::max;
+use std::collections::HashMap;
 
 pub struct Renderer {
     font_manager: FontManager,
     image_cache: ImageCache,
-    scrolling_text_data: ScrollingTextData,
+    animation_data: AnimationData,
     scrolling_text_settings: ScrollingTextSettings,
+    counter: usize,
 }
 
 impl Renderer {
@@ -49,32 +49,32 @@ impl Renderer {
         Self {
             font_manager: FontManager::new(font_selector),
             image_cache: ImageCache::new(),
-            scrolling_text_data: ScrollingTextData::new(),
+            animation_data: AnimationData::new(),
             scrolling_text_settings: ScrollingTextSettings::new(lua),
+            counter: 0,
         }
     }
 
     pub fn render(
         &mut self,
-        ctx: ContextKey,
+        key: ContextKey,
         size: Size,
         widgets: Vec<Widget>,
         memory_representation: MemoryRepresentation,
     ) -> (bool, Buffer) {
+        self.counter += 1;
+
         let mut buffer = match memory_representation {
             MemoryRepresentation::BitPerPixel => Buffer::new(BitBuffer::new(size)),
             MemoryRepresentation::BytePerPixel => Buffer::new(ByteBuffer::new(size)),
         };
-        let (end_auto_repeat, text_offsets) = self.precalculate_text(&ctx, &widgets);
-        let mut text_offsets = text_offsets.into_iter();
+        let end_auto_repeat = self.precalculate_text(&key, &widgets);
 
         for operation in widgets {
             match operation {
                 Widget::Bar(bar) => Self::render_bar(&mut buffer, bar),
-                Widget::Image(image) => {
-                    Self::render_image(&mut buffer, image, &mut self.image_cache)
-                }
-                Widget::Text(text) => self.render_text(&mut buffer, text, &mut text_offsets),
+                Widget::Image(image) => self.render_image(&mut buffer, image, &key),
+                Widget::Text(text) => self.render_text(&mut buffer, text, &key),
             }
         }
 
@@ -120,13 +120,13 @@ impl Renderer {
         }
     }
 
-    fn render_image(buffer: &mut Buffer, widget: Image, image_cache: &mut ImageCache) {
+    fn render_image(&mut self, buffer: &mut Buffer, widget: Image, key: &ContextKey) {
         if widget.size.width == 0 || widget.size.height == 0 {
             return;
         }
 
         let image = images::render_image(
-            image_cache,
+            &mut self.image_cache,
             &widget.image,
             widget.size,
             widget.threshold,
@@ -134,8 +134,18 @@ impl Renderer {
         );
 
         let frame = if widget.animated {
-            // TODO calculate current frame
-            &image[0]
+            let animation = self
+                .animation_data
+                .get_image_context(key)
+                .entry(widget.image.hash.unwrap())
+                .or_insert_with(|| Animation::new(1, 1, image.len() - 1, self.counter));
+
+            let step = animation.step(self.counter);
+            if step.can_wrap {
+                animation.reset();
+            }
+
+            &image[step.offset]
         } else {
             &image[0]
         };
@@ -162,7 +172,7 @@ impl Renderer {
         }
     }
 
-    fn render_text(&mut self, buffer: &mut Buffer, widget: Text, offsets: &mut IntoIter<usize>) {
+    fn render_text(&mut self, buffer: &mut Buffer, widget: Text, key: &ContextKey) {
         if widget.modifiers.clear_background {
             Self::clear_background(buffer, widget.position, widget.size, &widget.modifiers);
         }
@@ -170,10 +180,19 @@ impl Renderer {
         let mut cursor_x = 0;
         let cursor_y = widget.size.height as isize;
 
-        let offset = offsets.next().expect("Each 'Text' shall have its offset");
         let mut characters = widget.text.chars();
-        for _ in 0..offset {
-            _ = characters.next();
+
+        if widget.scrolling {
+            let mut animation = self
+                .animation_data
+                .get_text_context(key)
+                .get(&widget.text)
+                .expect(&format!("No animation found for text {}", widget.text))
+                .clone();
+
+            for _ in 0..animation.step(self.counter).offset {
+                _ = characters.next();
+            }
         }
 
         let rect = Rectangle {
@@ -225,67 +244,95 @@ impl Renderer {
         }
     }
 
-    fn precalculate_text(&mut self, ctx: &ContextKey, widgets: &Vec<Widget>) -> (bool, Vec<usize>) {
-        let mut ctx = self.scrolling_text_data.get_context(&ctx);
+    fn precalculate_text(&mut self, key: &ContextKey, widgets: &Vec<Widget>) -> bool {
+        let ctx = self.animation_data.get_text_context(&key);
 
-        let offsets: Vec<usize> = widgets
-            .iter()
-            .filter_map(|widget| match widget {
-                Widget::Text(text) => Some(Self::precalculate_single(
-                    &mut ctx,
+        let mut all_can_wrap: bool = true;
+        let mut any_new_data: bool = false;
+
+        widgets.iter().for_each(|widget| match widget {
+            Widget::Text(text) => {
+                Self::precalculate_single(
+                    ctx,
                     &mut self.font_manager,
                     &self.scrolling_text_settings,
                     text,
-                )),
-                _ => None,
+                    self.counter,
+                )
+                .and_then(|(new_data, step)| {
+                    if new_data {
+                        any_new_data = true;
+                    }
+                    if !step.can_wrap {
+                        all_can_wrap = false;
+                    }
+                    Some(())
+                });
+            }
+            _ => {}
+        });
+
+        *ctx = ctx
+            .iter()
+            .filter_map(|(text, animation)| {
+                if animation.last_update_time() == self.counter {
+                    let text = text.clone();
+                    let mut animation = animation.clone();
+                    if any_new_data || all_can_wrap {
+                        animation.reset();
+                    }
+                    Some((text, animation))
+                } else {
+                    None
+                }
             })
             .collect();
 
-        match ctx.has_new_data() {
-            true => (false, vec![0; offsets.len()]),
-            false => (ctx.can_wrap(), offsets),
+        if any_new_data {
+            false
+        } else {
+            all_can_wrap
         }
     }
 
     fn precalculate_single(
-        ctx: &mut Context,
+        ctx: &mut HashMap<String, Animation>,
         font_manager: &mut FontManager,
         settings: &ScrollingTextSettings,
         text: &Text,
-    ) -> usize {
+        counter: usize,
+    ) -> Option<(bool, Step)> {
         if !text.scrolling {
-            return 0;
+            return None;
         }
 
-        let font_size = match (text.font_size, text.text_offset) {
-            (Some(font_size), _) => font_size,
-            (None, offset_type) => font_manager.get_font_size(text.size.height, &offset_type),
-        };
-        let text_width = text.size.width;
-        let character = font_manager.get_character('a', font_size);
-        let char_width = character.metrics.advance as usize;
-        let max_characters = text_width / max(char_width, 1);
-        let len = text.text.chars().count();
-        let tick = ctx.get_tick(&text.text);
+        let mut new_data = false;
+        let animation = ctx.entry(text.text.to_string()).or_insert_with(|| {
+            new_data = true;
 
-        if len <= max_characters {
-            ctx.set_wrap(&text.text);
-            return 0;
-        }
+            let font_size = match (text.font_size, text.text_offset) {
+                (Some(font_size), _) => font_size,
+                (None, offset_type) => font_manager.get_font_size(text.size.height, &offset_type),
+            };
+            let text_width = text.size.width;
+            let character = font_manager.get_character('a', font_size);
+            let char_width = character.metrics.advance as usize;
+            let max_characters = text_width / max(char_width, 1);
+            let len = text.text.chars().count();
 
-        let max_shifts = len - max_characters;
-        let max_ticks = 2 * settings.ticks_at_edge + max_shifts * settings.ticks_per_move;
-        if tick >= max_ticks {
-            ctx.set_wrap(&text.text);
-        }
+            if len <= max_characters {
+                Animation::new(0, 0, 1, counter)
+            } else {
+                Animation::new(
+                    settings.ticks_at_edge,
+                    settings.ticks_per_move,
+                    len - max_characters,
+                    counter,
+                )
+            }
+        });
 
-        if tick <= settings.ticks_at_edge {
-            0
-        } else if tick >= settings.ticks_at_edge + max_shifts * settings.ticks_per_move {
-            max_shifts
-        } else {
-            (tick - settings.ticks_at_edge) / settings.ticks_per_move
-        }
+        Some((new_data, animation.step(counter)))
     }
 }
 
@@ -304,97 +351,29 @@ impl ScrollingTextSettings {
     }
 }
 
-struct TextData {
-    tick: usize,
-    can_wrap: bool,
-    updated: bool,
+struct AnimationData {
+    text_contexts: HashMap<ContextKey, HashMap<String, Animation>>,
+    image_contexts: HashMap<ContextKey, HashMap<u64, Animation>>,
 }
 
-struct ScrollingTextData {
-    contexts: HashMap<ContextKey, HashMap<String, TextData>>,
-}
-
-impl ScrollingTextData {
+impl AnimationData {
     pub fn new() -> Self {
         Self {
-            contexts: HashMap::new(),
+            text_contexts: HashMap::new(),
+            image_contexts: HashMap::new(),
         }
     }
 
-    pub fn get_context(&mut self, ctx: &ContextKey) -> Context {
-        let text_data = self.contexts.entry(ctx.clone()).or_insert(HashMap::new());
-        Context::new(text_data)
-    }
-}
-
-struct Context<'a> {
-    text_data: &'a mut HashMap<String, TextData>,
-    new_data: bool,
-}
-
-impl<'a> Context<'a> {
-    pub fn new(text_data: &'a mut HashMap<String, TextData>) -> Self {
-        Self {
-            text_data,
-            new_data: false,
-        }
+    pub fn get_text_context(&mut self, ctx: &ContextKey) -> &mut HashMap<String, Animation> {
+        self.text_contexts
+            .entry(ctx.clone())
+            .or_insert(HashMap::new())
     }
 
-    pub fn get_tick(&mut self, key: &String) -> usize {
-        match self.text_data.entry(key.clone()) {
-            Entry::Occupied(mut data) => {
-                let data = data.get_mut();
-                if !data.updated {
-                    data.tick += 1;
-                    data.updated = true;
-                }
-                data.tick
-            }
-            Entry::Vacant(data) => {
-                self.new_data = true;
-
-                let tick = 0;
-                data.insert(TextData {
-                    tick,
-                    can_wrap: false,
-                    updated: true,
-                });
-                tick
-            }
-        }
-    }
-
-    pub fn set_wrap(&mut self, key: &String) {
-        if let Some(data) = self.text_data.get_mut(key) {
-            data.can_wrap = true;
-        };
-    }
-
-    pub fn can_wrap(&self) -> bool {
-        self.new_data || self.text_data.iter().all(|(_, data)| data.can_wrap)
-    }
-
-    pub fn has_new_data(&self) -> bool {
-        self.new_data
-    }
-}
-
-impl<'a> Drop for Context<'a> {
-    fn drop(&mut self) {
-        if self.new_data {
-            self.text_data.retain(|_, data| data.updated);
-        }
-
-        if self.can_wrap() {
-            for (_, data) in &mut *self.text_data {
-                data.tick = 0;
-            }
-        }
-
-        for (_, data) in &mut *self.text_data {
-            data.can_wrap = false;
-            data.updated = false;
-        }
+    pub fn get_image_context(&mut self, ctx: &ContextKey) -> &mut HashMap<u64, Animation> {
+        self.image_contexts
+            .entry(ctx.clone())
+            .or_insert(HashMap::new())
     }
 }
 
