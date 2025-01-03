@@ -16,6 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use mlua::Lua;
+use num_traits::clamp;
+use std::cmp::max;
+use std::collections::HashMap;
+
 use crate::common::user_data::UserDataRef;
 use crate::renderer::animation::{Animation, Step};
 use crate::renderer::buffer::{BitBuffer, Buffer, BufferTrait, ByteBuffer};
@@ -27,11 +32,6 @@ use crate::script_handler::script_data_types::{
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
-use log::debug;
-use mlua::Lua;
-use num_traits::clamp;
-use std::cmp::max;
-use std::collections::HashMap;
 
 pub struct Renderer {
     font_manager: FontManager,
@@ -68,13 +68,13 @@ impl Renderer {
             MemoryRepresentation::BitPerPixel => Buffer::new(BitBuffer::new(size)),
             MemoryRepresentation::BytePerPixel => Buffer::new(ByteBuffer::new(size)),
         };
-        let end_auto_repeat = self.precalculate_text(&key, &widgets);
+        let (end_auto_repeat, steps) = self.precalculate_text(&key, &widgets);
 
         for operation in widgets {
             match operation {
                 Widget::Bar(bar) => Self::render_bar(&mut buffer, bar),
                 Widget::Image(image) => self.render_image(&mut buffer, image, &key),
-                Widget::Text(text) => self.render_text(&mut buffer, text, &key),
+                Widget::Text(text) => self.render_text(&mut buffer, text, &steps),
             }
         }
 
@@ -138,7 +138,7 @@ impl Renderer {
                 .animation_data
                 .get_image_context(key)
                 .entry(widget.image.hash.unwrap())
-                .or_insert_with(|| Animation::new(1, 1, image.len() - 1, self.counter));
+                .or_insert_with(|| Animation::new(1, 1, image.len(), self.counter));
 
             let step = animation.step(self.counter);
             if step.can_wrap {
@@ -172,7 +172,7 @@ impl Renderer {
         }
     }
 
-    fn render_text(&mut self, buffer: &mut Buffer, widget: Text, key: &ContextKey) {
+    fn render_text(&mut self, buffer: &mut Buffer, widget: Text, steps: &HashMap<String, Step>) {
         if widget.modifiers.clear_background {
             Self::clear_background(buffer, widget.position, widget.size, &widget.modifiers);
         }
@@ -183,14 +183,12 @@ impl Renderer {
         let mut characters = widget.text.chars();
 
         if widget.scrolling {
-            let mut animation = self
-                .animation_data
-                .get_text_context(key)
+            let offset = steps
                 .get(&widget.text)
-                .expect(&format!("No animation found for text {}", widget.text))
-                .clone();
+                .and_then(|step| Some(step.offset))
+                .unwrap_or(0);
 
-            for _ in 0..animation.step(self.counter).offset {
+            for _ in 0..offset {
                 _ = characters.next();
             }
         }
@@ -244,15 +242,20 @@ impl Renderer {
         }
     }
 
-    fn precalculate_text(&mut self, key: &ContextKey, widgets: &Vec<Widget>) -> bool {
+    fn precalculate_text(
+        &mut self,
+        key: &ContextKey,
+        widgets: &Vec<Widget>,
+    ) -> (bool, HashMap<String, Step>) {
         let ctx = self.animation_data.get_text_context(&key);
 
         let mut all_can_wrap: bool = true;
         let mut any_new_data: bool = false;
 
-        widgets.iter().for_each(|widget| match widget {
-            Widget::Text(text) => {
-                Self::precalculate_single(
+        let steps = widgets
+            .iter()
+            .filter_map(|widget| match widget {
+                Widget::Text(text) => Self::precalculate_single(
                     ctx,
                     &mut self.font_manager,
                     &self.scrolling_text_settings,
@@ -266,11 +269,11 @@ impl Renderer {
                     if !step.can_wrap {
                         all_can_wrap = false;
                     }
-                    Some(())
-                });
-            }
-            _ => {}
-        });
+                    Some((text.text.clone(), step))
+                }),
+                _ => None,
+            })
+            .collect();
 
         *ctx = ctx
             .iter()
@@ -289,9 +292,9 @@ impl Renderer {
             .collect();
 
         if any_new_data {
-            false
+            (false, HashMap::new())
         } else {
-            all_can_wrap
+            (all_can_wrap, steps)
         }
     }
 
@@ -326,7 +329,7 @@ impl Renderer {
                 Animation::new(
                     settings.ticks_at_edge,
                     settings.ticks_per_move,
-                    len - max_characters,
+                    len - max_characters + 1,
                     counter,
                 )
             }
