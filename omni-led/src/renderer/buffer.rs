@@ -79,12 +79,12 @@ impl Buffer {
         modifiers: &Modifiers,
     ) -> Option<(usize, usize)> {
         let (x, y) = match modifiers.flip_vertical {
-            true => (x, area.size.height as isize - y),
+            true => (x, area.size.height as isize - y - 1),
             false => (x, y),
         };
 
         let (x, y) = match modifiers.flip_horizontal {
-            true => (area.size.width as isize - x, y),
+            true => (area.size.width as isize - x - 1, y),
             false => (x, y),
         };
 
