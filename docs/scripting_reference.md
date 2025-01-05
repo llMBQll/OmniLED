@@ -215,6 +215,44 @@
 
 ---
 
+> ### `ImageFormat`
+>
+> Image format.
+>
+> > `Avif`
+>
+> > `Bmp`
+>
+> > `Dds`
+>
+> > `Farbfeld`
+>
+> > `Gif`
+>
+> > `Hdr`
+>
+> > `Ico`
+>
+> > `Jpeg`
+>
+> > `OpenExr`
+>
+> > `Pcx`
+>
+> > `Png`
+>
+> > `Pnm`
+>
+> > `Qoi`
+>
+> > `Tga`
+>
+> > `Tiff`
+>
+> > `Webp`
+
+---
+
 > ### `LogLevel`
 >
 > Log level filter, selecting one value will also activate all values above it, e.g. enabling
@@ -442,6 +480,20 @@
 
 ---
 
+> ### `ImageData`
+>
+> Contains image bytes and format
+>
+> > `format`: `ImageFormat`
+> >
+> > Image format, required to properly load image bytes.
+>
+> > `bytes`: `[byte]`
+> >
+> > Image bytes stored in format specified by the `format` property.
+
+---
+
 > ### `Layout`
 >
 > Represents a user-defined script that runs on specific events and creates a layout to be rendered.
@@ -513,23 +565,6 @@
 > > _Optional_. Default: `false`.
 > >
 > > Swaps on and off pixels for a given widget.
-
----
-
-> ### `OledImage`
->
-> Represents a black-and-white image.
->
-> > `size`: `Size`
-> >
-> > Source image size. To adjust image size on screen, set the appropriate widget size to the
-> > desired value.
->
-> > `bytes`: `[byte]`
-> >
-> > Row-major black-and-white image data with one byte per pixel. All non-zero values will result
-> > in the pixels being on.
-> > `size.width * size.height` must equal the length of the `bytes` array.
 
 ---
 
@@ -747,10 +782,25 @@ All widgets have the following common attributes in addition to widget-specific 
 >
 > A widget that displays an image.
 >
-> > `image`: `OledImage`
+> > `image`: `ImageData`
 > >
 > > The image data to display on the screen.  
 > > This image will be scaled from its original size to the dimensions of the widget.
+>
+> > `animated`: `bool`
+> >
+> > _Optional_. Default: `false`
+> >
+> > Specifies if the image should be animated. Unless set to `true`, event with supported image
+> > formats, only a static image will be rendered.
+>
+> > `threshold`: `integer`
+> >
+> > _Optional_. Default: `128`
+> >
+> > Specifies the threshold from range `[0, 255]` used to convert image to a black and white image.
+> > Light values below the threshold will be converted to black, and values above the threshold will
+> > be converted to white.
 
 ---
 

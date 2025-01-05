@@ -64,13 +64,49 @@ impl Hash for ImageData {
     }
 }
 
+/// This is a private enum used just to facilitate easier parsing into image::ImageFormat type
+#[derive(Clone, Debug, FromLuaValue)]
+enum ImageFormatEnum {
+    Avif,
+    Bmp,
+    Dds,
+    Farbfeld,
+    Gif,
+    Hdr,
+    Ico,
+    Jpeg,
+    OpenExr,
+    Pcx,
+    Png,
+    Pnm,
+    Qoi,
+    Tga,
+    Tiff,
+    WebP,
+}
+
+impl UserData for ImageFormatEnum {}
+
 impl ImageData {
-    pub fn parse_format(format: String, _: &Lua) -> mlua::Result<image::ImageFormat> {
-        // TODO use an enum with #[derive(FromLuaValue)], but this is good enough for now
-        image::ImageFormat::from_extension(&format).ok_or(mlua::Error::RuntimeError(format!(
-            "Unknown image format: {}",
-            format
-        )))
+    fn parse_format(format: ImageFormatEnum, _: &Lua) -> mlua::Result<image::ImageFormat> {
+        match format {
+            ImageFormatEnum::Avif => Ok(image::ImageFormat::Avif),
+            ImageFormatEnum::Bmp => Ok(image::ImageFormat::Bmp),
+            ImageFormatEnum::Dds => Ok(image::ImageFormat::Dds),
+            ImageFormatEnum::Farbfeld => Ok(image::ImageFormat::Farbfeld),
+            ImageFormatEnum::Gif => Ok(image::ImageFormat::Gif),
+            ImageFormatEnum::Hdr => Ok(image::ImageFormat::Hdr),
+            ImageFormatEnum::Ico => Ok(image::ImageFormat::Ico),
+            ImageFormatEnum::Jpeg => Ok(image::ImageFormat::Jpeg),
+            ImageFormatEnum::OpenExr => Ok(image::ImageFormat::OpenExr),
+            ImageFormatEnum::Pcx => Ok(image::ImageFormat::Pcx),
+            ImageFormatEnum::Png => Ok(image::ImageFormat::Png),
+            ImageFormatEnum::Pnm => Ok(image::ImageFormat::Pnm),
+            ImageFormatEnum::Qoi => Ok(image::ImageFormat::Qoi),
+            ImageFormatEnum::Tga => Ok(image::ImageFormat::Tga),
+            ImageFormatEnum::Tiff => Ok(image::ImageFormat::Tiff),
+            ImageFormatEnum::WebP => Ok(image::ImageFormat::WebP),
+        }
     }
 }
 
