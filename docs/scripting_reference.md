@@ -292,15 +292,31 @@
 > > `ForDuation`
 > >
 > > Repeats the script for the time of its duration. This will scroll text for an exact duration,
-> > but can cut off mid scrolling if the time runs out.
+> > but can cut off mid-scrolling if the time runs out.
 
 ## Functions
+
+> ### `dump`
+>
+> Type: `fn(value: any) -> string`
+>
+> Pretty print any lua value into a string.
+
+---
 
 > ### `emulator`
 >
 > Type: `fn(config: EmulatorConfig)`
 >
 > Registers emulator with a given configuration.
+
+---
+
+> ### `env`
+>
+> Type: `fn(key: string) -> string`
+>
+> Reads an environment variable `key` and returns its value as string.
 
 ---
 
