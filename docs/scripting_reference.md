@@ -794,6 +794,24 @@ All widgets have the following common attributes in addition to widget-specific 
 > > Specifies if the image should be animated. Unless set to `true`, event with supported image
 > > formats, only a static image will be rendered.
 >
+> > `animation_ticks_delay`: `integer`
+> >
+> > _Optional_. Default: No value
+> >
+> > Overrides [global animation setting](settings.md#animation) for this widget. Applies only for
+> > `animated` images.
+> >
+> > **Changing this value after initially setting it for a given widget is undefined behaviour.**
+>
+> > `animation_ticks_rate`: `integer`
+> >
+> > _Optional_. Default: No value
+> >
+> > Overrides [global animation setting](settings.md#animation) for this widget. Applies only for
+> > `animated` images.
+> >
+> > **Changing this value after initially setting it for a given widget is undefined behaviour.**
+>
 > > `threshold`: `integer`
 > >
 > > _Optional_. Default: `128`
@@ -817,6 +835,24 @@ All widgets have the following common attributes in addition to widget-specific 
 > > _Optional_. Default: `false`
 > >
 > > Specifies if the text should scroll if it is too long to fit within the widget's width.
+>
+> > `animation_ticks_delay`: `integer`
+> >
+> > _Optional_. Default: No value
+> >
+> > Overrides [global animation setting](settings.md#animation) for this widget. Applies only for
+> > `scrolling` text.
+> >
+> > **Changing this value after initially setting it for a given widget is undefined behaviour.**
+>
+> > `animation_ticks_rate`: `integer`
+> >
+> > _Optional_. Default: No value
+> >
+> > Overrides [global animation setting](settings.md#animation) for this widget. Applies only for
+> > `scrolling` text.
+> >
+> > **Changing this value after initially setting it for a given widget is undefined behaviour.**
 >
 > > `font_size`: `integer`
 > >
