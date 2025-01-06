@@ -33,11 +33,24 @@ use crate::script_handler::script_data_types::{
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
 
+macro_rules! get_animation_settings {
+    ($default:expr, $widget:expr) => {
+        AnimationSettings {
+            ticks_at_edge: $widget
+                .animation_ticks_delay
+                .unwrap_or($default.ticks_at_edge),
+            ticks_per_move: $widget
+                .animation_ticks_rate
+                .unwrap_or($default.ticks_per_move),
+        }
+    };
+}
+
 pub struct Renderer {
     font_manager: FontManager,
     image_cache: ImageCache,
     animation_data: AnimationData,
-    scrolling_text_settings: ScrollingTextSettings,
+    animation_settings: AnimationSettings,
     counter: usize,
 }
 
@@ -50,7 +63,7 @@ impl Renderer {
             font_manager: FontManager::new(font_selector),
             image_cache: ImageCache::new(),
             animation_data: AnimationData::new(),
-            scrolling_text_settings: ScrollingTextSettings::new(lua),
+            animation_settings: AnimationSettings::new(lua),
             counter: 0,
         }
     }
@@ -138,7 +151,16 @@ impl Renderer {
                 .animation_data
                 .get_image_context(key)
                 .entry(widget.image.hash.unwrap())
-                .or_insert_with(|| Animation::new(1, 1, image.len(), self.counter));
+                .or_insert_with(|| {
+                    let settings = get_animation_settings!(self.animation_settings, widget);
+
+                    Animation::new(
+                        settings.ticks_at_edge,
+                        settings.ticks_per_move,
+                        image.len(),
+                        self.counter,
+                    )
+                });
 
             let step = animation.step(self.counter);
             if step.can_wrap {
@@ -258,7 +280,7 @@ impl Renderer {
                 Widget::Text(text) => Self::precalculate_single(
                     ctx,
                     &mut self.font_manager,
-                    &self.scrolling_text_settings,
+                    &self.animation_settings,
                     text,
                     self.counter,
                 )
@@ -301,7 +323,7 @@ impl Renderer {
     fn precalculate_single(
         ctx: &mut HashMap<String, Animation>,
         font_manager: &mut FontManager,
-        settings: &ScrollingTextSettings,
+        settings: &AnimationSettings,
         text: &Text,
         counter: usize,
     ) -> Option<(bool, Step)> {
@@ -326,6 +348,8 @@ impl Renderer {
             if len <= max_characters {
                 Animation::new(0, 0, 1, counter)
             } else {
+                let settings = get_animation_settings!(settings, text);
+
                 Animation::new(
                     settings.ticks_at_edge,
                     settings.ticks_per_move,
@@ -339,17 +363,17 @@ impl Renderer {
     }
 }
 
-struct ScrollingTextSettings {
+struct AnimationSettings {
     ticks_at_edge: usize,
     ticks_per_move: usize,
 }
 
-impl ScrollingTextSettings {
+impl AnimationSettings {
     pub fn new(lua: &Lua) -> Self {
         let settings = UserDataRef::<Settings>::load(lua);
         Self {
-            ticks_at_edge: settings.get().text_ticks_scroll_delay,
-            ticks_per_move: settings.get().text_ticks_scroll_rate,
+            ticks_at_edge: settings.get().animation_ticks_delay,
+            ticks_per_move: settings.get().animation_ticks_rate,
         }
     }
 }

@@ -162,12 +162,14 @@ impl UserData for Bar {}
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Image {
     pub image: ImageData,
-    pub position: Point,
-    pub size: Size,
     #[mlua(default(false))]
     pub animated: bool,
     #[mlua(default(128))]
     pub threshold: u8,
+    pub animation_ticks_delay: Option<usize>,
+    pub animation_ticks_rate: Option<usize>,
+    pub position: Point,
+    pub size: Size,
 
     #[mlua(default)]
     pub modifiers: Modifiers,
@@ -183,6 +185,8 @@ pub struct Text {
     pub font_size: Option<usize>,
     #[mlua(default(false))]
     pub scrolling: bool,
+    pub animation_ticks_delay: Option<usize>,
+    pub animation_ticks_rate: Option<usize>,
     pub position: Point,
     pub size: Size,
 

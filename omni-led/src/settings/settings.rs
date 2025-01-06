@@ -31,6 +31,12 @@ use crate::renderer::font_selector::FontSelector;
 
 #[derive(Debug, Clone, UniqueUserData, FromLuaValue)]
 pub struct Settings {
+    #[mlua(default(8))]
+    pub animation_ticks_delay: usize,
+
+    #[mlua(default(2))]
+    pub animation_ticks_rate: usize,
+
     #[mlua(default(FontSelector::Default))]
     pub font: FontSelector,
 
@@ -42,12 +48,6 @@ pub struct Settings {
 
     #[mlua(default(2))]
     pub keyboard_ticks_repeat_rate: usize,
-
-    #[mlua(default(8))]
-    pub text_ticks_scroll_delay: usize,
-
-    #[mlua(default(2))]
-    pub text_ticks_scroll_rate: usize,
 
     #[mlua(default(0))]
     pub server_port: u16,
