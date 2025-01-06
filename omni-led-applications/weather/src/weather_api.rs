@@ -19,7 +19,7 @@
 use chrono::Timelike;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
-use omni_led_api::types::{Image, ImageFormat};
+use omni_led_api::types::{ImageData, ImageFormat};
 use serde::de;
 use std::collections::HashMap;
 use ureq::Agent;
@@ -276,7 +276,7 @@ fn get_image_key(weather: Weather, is_day: bool) -> &'static str {
     }
 }
 
-pub fn load_images() -> Vec<(&'static str, Image)> {
+pub fn load_images() -> Vec<(&'static str, ImageData)> {
     const IMAGES: &[(&str, &[u8])] = &[
         ("DAY_CLEAR", include_bytes!("../assets/day_clear.png")),
         ("NIGHT_CLEAR", include_bytes!("../assets/night_clear.png")),
@@ -306,7 +306,7 @@ pub fn load_images() -> Vec<(&'static str, Image)> {
                 )
                 .unwrap();
 
-            let image = Image {
+            let image = ImageData {
                 data: buffer,
                 format: ImageFormat::Png as i32,
             };

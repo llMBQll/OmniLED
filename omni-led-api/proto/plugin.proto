@@ -22,7 +22,7 @@ message Field {
     string f_string = 4;
     Array f_array = 5;
     Table f_table = 6;
-    Image f_image = 7;
+    ImageData f_image_data = 7;
   }
 }
 
@@ -34,7 +34,7 @@ message Table {
   map<string, Field> items = 1;
 }
 
-message Image {
+message ImageData {
   ImageFormat format = 1;
   bytes data = 2;
 }

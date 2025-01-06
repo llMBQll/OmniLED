@@ -20,7 +20,7 @@ use clap::{ArgAction, Parser};
 use image::guess_format;
 use log::{debug, error};
 use omni_led_api::plugin::Plugin;
-use omni_led_api::types::{Image, ImageFormat, Table};
+use omni_led_api::types::{ImageData, ImageFormat, Table};
 
 const NAME: &str = "IMAGES";
 
@@ -55,7 +55,7 @@ fn load_images(image_options: Vec<ImageOptions>) -> Table {
 
         table.items.insert(
             option.name,
-            Image {
+            ImageData {
                 format: format as i32,
                 data: bytes,
             }

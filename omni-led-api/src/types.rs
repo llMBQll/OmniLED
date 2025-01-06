@@ -142,7 +142,7 @@ impl<T: Into<Field>> Into<Field> for Vec<T> {
 }
 
 // Image values
-into_field!(Image, field::Field::FImage);
+into_field!(ImageData, field::Field::FImageData);
 
 impl From<image::ImageFormat> for ImageFormat {
     fn from(value: image::ImageFormat) -> Self {

@@ -144,7 +144,7 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
             }
             Ok(Value::Table(table))
         }
-        Some(FieldEntry::FImage(image)) => {
+        Some(FieldEntry::FImageData(image)) => {
             let mut image_data = ImageData {
                 format: image.format().into(),
                 bytes: image.data,
