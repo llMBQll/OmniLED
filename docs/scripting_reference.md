@@ -312,14 +312,6 @@
 
 ---
 
-> ### `env`
->
-> Type: `fn(key: string) -> string`
->
-> Reads an environment variable `key` and returns its value as string.
-
----
-
 > ### `get_default_path`
 >
 > Type: `fn(name: string) -> string`
