@@ -20,9 +20,11 @@ use mlua::Lua;
 use num_traits::clamp;
 use std::cmp::max;
 use std::collections::HashMap;
+use std::hash::{DefaultHasher, Hash, Hasher};
 
 use crate::common::user_data::UserDataRef;
-use crate::renderer::animation::{Animation, Step};
+use crate::renderer::animation::{Animation, State};
+use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::buffer::{BitBuffer, Buffer, BufferTrait, ByteBuffer};
 use crate::renderer::font_manager::FontManager;
 use crate::renderer::images;
@@ -49,9 +51,7 @@ macro_rules! get_animation_settings {
 pub struct Renderer {
     font_manager: FontManager,
     image_cache: ImageCache,
-    animation_data: AnimationData,
     animation_settings: AnimationSettings,
-    counter: usize,
 }
 
 impl Renderer {
@@ -62,36 +62,54 @@ impl Renderer {
         Self {
             font_manager: FontManager::new(font_selector),
             image_cache: ImageCache::new(),
-            animation_data: AnimationData::new(),
             animation_settings: AnimationSettings::new(lua),
-            counter: 0,
         }
     }
 
     pub fn render(
         &mut self,
-        key: ContextKey,
+        animation_groups: &mut HashMap<usize, AnimationGroup>,
         size: Size,
-        widgets: Vec<Widget>,
+        mut widgets: Vec<Widget>,
         memory_representation: MemoryRepresentation,
-    ) -> (bool, Buffer) {
-        self.counter += 1;
-
+    ) -> (State, Buffer) {
         let mut buffer = match memory_representation {
             MemoryRepresentation::BitPerPixel => Buffer::new(BitBuffer::new(size)),
             MemoryRepresentation::BytePerPixel => Buffer::new(ByteBuffer::new(size)),
         };
-        let (end_auto_repeat, steps) = self.precalculate_text(&key, &widgets);
+
+        self.calculate_animations(animation_groups, &mut widgets);
 
         for operation in widgets {
             match operation {
                 Widget::Bar(bar) => Self::render_bar(&mut buffer, bar),
-                Widget::Image(image) => self.render_image(&mut buffer, image, &key),
-                Widget::Text(text) => self.render_text(&mut buffer, text, &steps),
+                Widget::Image(image) => self.render_image(&mut buffer, image, animation_groups),
+                Widget::Text(text) => self.render_text(&mut buffer, text, animation_groups),
             }
         }
 
-        (end_auto_repeat, buffer)
+        animation_groups
+            .iter_mut()
+            .for_each(|(_, group)| group.sync());
+
+        let states = animation_groups
+            .iter()
+            .map(|(_, group)| group.states())
+            .flatten()
+            .collect::<Vec<_>>();
+
+        let all_finished = states.iter().all(|state| *state == State::Finished);
+        let any_in_progress = states.iter().any(|state| *state == State::InProgress);
+
+        let state = if all_finished {
+            State::Finished
+        } else if any_in_progress {
+            State::InProgress
+        } else {
+            State::CanFinish
+        };
+
+        (state, buffer)
     }
 
     fn clear_background(buffer: &mut Buffer, position: Point, size: Size, modifiers: &Modifiers) {
@@ -133,7 +151,12 @@ impl Renderer {
         }
     }
 
-    fn render_image(&mut self, buffer: &mut Buffer, widget: Image, key: &ContextKey) {
+    fn render_image(
+        &mut self,
+        buffer: &mut Buffer,
+        widget: Image,
+        animation_groups: &mut HashMap<usize, AnimationGroup>,
+    ) {
         if widget.size.width == 0 || widget.size.height == 0 {
             return;
         }
@@ -147,27 +170,11 @@ impl Renderer {
         );
 
         let frame = if widget.animated {
-            let animation = self
-                .animation_data
-                .get_image_context(key)
-                .entry(widget.image.hash.unwrap())
-                .or_insert_with(|| {
-                    let settings = get_animation_settings!(self.animation_settings, widget);
-
-                    Animation::new(
-                        settings.ticks_at_edge,
-                        settings.ticks_per_move,
-                        image.len(),
-                        self.counter,
-                    )
-                });
-
-            let step = animation.step(self.counter);
-            if step.can_wrap {
-                animation.reset();
-            }
-
-            &image[step.offset]
+            let hash = widget.image.hash.unwrap();
+            let group = Self::get_animation_group(animation_groups, widget.animation_group);
+            let animation = group.entry(hash).unwrap();
+            let step = animation.step();
+            &image[step]
         } else {
             &image[0]
         };
@@ -194,7 +201,12 @@ impl Renderer {
         }
     }
 
-    fn render_text(&mut self, buffer: &mut Buffer, widget: Text, steps: &HashMap<String, Step>) {
+    fn render_text(
+        &mut self,
+        buffer: &mut Buffer,
+        widget: Text,
+        animation_groups: &mut HashMap<usize, AnimationGroup>,
+    ) {
         if widget.modifiers.clear_background {
             Self::clear_background(buffer, widget.position, widget.size, &widget.modifiers);
         }
@@ -205,12 +217,12 @@ impl Renderer {
         let mut characters = widget.text.chars();
 
         if widget.scrolling {
-            let offset = steps
-                .get(&widget.text)
-                .and_then(|step| Some(step.offset))
-                .unwrap_or(0);
+            let hash = widget.hash.unwrap();
+            let group = Self::get_animation_group(animation_groups, widget.animation_group);
+            let animation = group.entry(hash).unwrap();
+            let step = animation.step();
 
-            for _ in 0..offset {
+            for _ in 0..step {
                 _ = characters.next();
             }
         }
@@ -264,102 +276,107 @@ impl Renderer {
         }
     }
 
-    fn precalculate_text(
+    fn calculate_animations(
         &mut self,
-        key: &ContextKey,
-        widgets: &Vec<Widget>,
-    ) -> (bool, HashMap<String, Step>) {
-        let ctx = self.animation_data.get_text_context(&key);
-
-        let mut all_can_wrap: bool = true;
-        let mut any_new_data: bool = false;
-
-        let steps = widgets
-            .iter()
-            .filter_map(|widget| match widget {
-                Widget::Text(text) => Self::precalculate_single(
-                    ctx,
-                    &mut self.font_manager,
-                    &self.animation_settings,
-                    text,
-                    self.counter,
-                )
-                .and_then(|(new_data, step)| {
-                    if new_data {
-                        any_new_data = true;
+        animation_groups: &mut HashMap<usize, AnimationGroup>,
+        widgets: &mut Vec<Widget>,
+    ) {
+        for widget in widgets {
+            match widget {
+                Widget::Bar(_) => continue,
+                Widget::Image(image) => {
+                    if !image.animated {
+                        continue;
                     }
-                    if !step.can_wrap {
-                        all_can_wrap = false;
-                    }
-                    Some((text.text.clone(), step))
-                }),
-                _ => None,
-            })
-            .collect();
 
-        *ctx = ctx
-            .iter()
-            .filter_map(|(text, animation)| {
-                if animation.last_update_time() == self.counter {
-                    let text = text.clone();
-                    let mut animation = animation.clone();
-                    if any_new_data || all_can_wrap {
-                        animation.reset();
-                    }
-                    Some((text, animation))
-                } else {
-                    None
+                    Self::calculate_animation_hash(&image.image.bytes, &mut image.image.hash);
+
+                    let group = Self::get_animation_group(animation_groups, image.animation_group);
+                    group.entry(image.image.hash.unwrap()).or_insert_with(|| {
+                        let settings = get_animation_settings!(self.animation_settings, image);
+                        let rendered = images::render_image(
+                            &mut self.image_cache,
+                            &image.image,
+                            image.size,
+                            image.threshold,
+                            image.animated,
+                        );
+                        Animation::new(
+                            settings.ticks_at_edge,
+                            settings.ticks_per_move,
+                            rendered.len(),
+                            image.repeats,
+                        )
+                    });
                 }
-            })
-            .collect();
+                Widget::Text(text) => {
+                    if !text.scrolling {
+                        continue;
+                    }
 
-        if any_new_data {
-            (false, HashMap::new())
-        } else {
-            (all_can_wrap, steps)
+                    Self::calculate_animation_hash(&text.text, &mut text.hash);
+
+                    let group = Self::get_animation_group(animation_groups, text.animation_group);
+                    group.entry(text.hash.unwrap()).or_insert_with(|| {
+                        let settings = get_animation_settings!(self.animation_settings, text);
+                        let steps = Self::pre_render_text(&mut self.font_manager, text);
+                        Animation::new(
+                            settings.ticks_at_edge,
+                            settings.ticks_per_move,
+                            steps,
+                            text.repeats,
+                        )
+                    });
+                }
+            };
+        }
+
+        for (_, group) in animation_groups {
+            group.pre_sync();
         }
     }
 
-    fn precalculate_single(
-        ctx: &mut HashMap<String, Animation>,
-        font_manager: &mut FontManager,
-        settings: &AnimationSettings,
-        text: &Text,
-        counter: usize,
-    ) -> Option<(bool, Step)> {
-        if !text.scrolling {
-            return None;
-        }
+    fn get_animation_group(
+        animation_groups: &mut HashMap<usize, AnimationGroup>,
+        number: Option<usize>,
+    ) -> &mut AnimationGroup {
+        let (number, synced) = match number {
+            Some(usize::MAX) | None => (usize::MAX, false),
+            Some(number) => (number, true),
+        };
 
-        let mut new_data = false;
-        let animation = ctx.entry(text.text.to_string()).or_insert_with(|| {
-            new_data = true;
+        animation_groups
+            .entry(number)
+            .or_insert(AnimationGroup::new(synced))
+    }
 
-            let font_size = match (text.font_size, text.text_offset) {
-                (Some(font_size), _) => font_size,
-                (None, offset_type) => font_manager.get_font_size(text.size.height, &offset_type),
-            };
-            let text_width = text.size.width;
-            let character = font_manager.get_character('a', font_size);
-            let char_width = character.metrics.advance as usize;
-            let max_characters = text_width / max(char_width, 1);
-            let len = text.text.chars().count();
-
-            if len <= max_characters {
-                Animation::new(0, 0, 1, counter)
-            } else {
-                let settings = get_animation_settings!(settings, text);
-
-                Animation::new(
-                    settings.ticks_at_edge,
-                    settings.ticks_per_move,
-                    len - max_characters + 1,
-                    counter,
-                )
+    fn calculate_animation_hash<H: Hash>(value: &H, hash: &mut Option<u64>) {
+        *hash = match hash {
+            Some(hash) => Some(*hash),
+            None => {
+                let mut s = DefaultHasher::new();
+                value.hash(&mut s);
+                Some(s.finish())
             }
-        });
+        }
+    }
 
-        Some((new_data, animation.step(counter)))
+    fn pre_render_text(font_manager: &mut FontManager, text: &Text) -> usize {
+        let font_size = match (text.font_size, text.text_offset) {
+            (Some(font_size), _) => font_size,
+            (None, offset_type) => font_manager.get_font_size(text.size.height, &offset_type),
+        };
+        let text_width = text.size.width;
+        let character = font_manager.get_character('a', font_size);
+        let char_width = character.metrics.advance as usize;
+        let max_characters = text_width / max(char_width, 1);
+        let len = text.text.chars().count();
+
+        if len <= max_characters {
+            1
+        } else {
+            len - max_characters + 1
+        }
     }
 }
 
@@ -376,36 +393,4 @@ impl AnimationSettings {
             ticks_per_move: settings.get().animation_ticks_rate,
         }
     }
-}
-
-struct AnimationData {
-    text_contexts: HashMap<ContextKey, HashMap<String, Animation>>,
-    image_contexts: HashMap<ContextKey, HashMap<u64, Animation>>,
-}
-
-impl AnimationData {
-    pub fn new() -> Self {
-        Self {
-            text_contexts: HashMap::new(),
-            image_contexts: HashMap::new(),
-        }
-    }
-
-    pub fn get_text_context(&mut self, ctx: &ContextKey) -> &mut HashMap<String, Animation> {
-        self.text_contexts
-            .entry(ctx.clone())
-            .or_insert(HashMap::new())
-    }
-
-    pub fn get_image_context(&mut self, ctx: &ContextKey) -> &mut HashMap<u64, Animation> {
-        self.image_contexts
-            .entry(ctx.clone())
-            .or_insert(HashMap::new())
-    }
-}
-
-#[derive(Eq, Hash, PartialEq, Clone)]
-pub struct ContextKey {
-    pub script: usize,
-    pub device: usize,
 }

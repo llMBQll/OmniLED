@@ -11,12 +11,12 @@ local function volume()
             Text {
                 text = AUDIO.Name,
                 scrolling = true,
+                repeats = 'Once',
                 position = { x = 0, y = SCREEN.Height / 2 },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
             },
         },
         duration = 2000,
-        repeats = 'Once',
     }
 end
 
@@ -55,7 +55,6 @@ local function spotify()
             },
         },
         duration = SPOTIFY_DURATION,
-        repeats = 'ForDuration',
     }
 end
 

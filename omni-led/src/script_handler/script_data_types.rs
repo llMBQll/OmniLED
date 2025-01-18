@@ -18,7 +18,7 @@
 
 use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields, Value};
 use omni_led_derive::FromLuaValue;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
 #[derive(Debug, Clone, Copy, FromLuaValue)]
 pub struct Point {
@@ -56,12 +56,6 @@ pub struct ImageData {
     pub format: image::ImageFormat,
     pub bytes: Vec<u8>,
     pub hash: Option<u64>,
-}
-
-impl Hash for ImageData {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.bytes.hash(state);
-    }
 }
 
 /// This is a private enum used just to facilitate easier parsing into image::ImageFormat type
@@ -159,6 +153,12 @@ pub struct Bar {
 
 impl UserData for Bar {}
 
+#[derive(FromLuaValue, Debug, PartialEq, Copy, Clone)]
+pub enum Repeat {
+    Once,
+    ForDuration,
+}
+
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Image {
     pub image: ImageData,
@@ -166,6 +166,9 @@ pub struct Image {
     pub animated: bool,
     #[mlua(default(128))]
     pub threshold: u8,
+    #[mlua(default(Repeat::ForDuration))]
+    pub repeats: Repeat,
+    pub animation_group: Option<usize>,
     pub animation_ticks_delay: Option<usize>,
     pub animation_ticks_rate: Option<usize>,
     pub position: Point,
@@ -185,10 +188,15 @@ pub struct Text {
     pub font_size: Option<usize>,
     #[mlua(default(false))]
     pub scrolling: bool,
+    #[mlua(default(Repeat::ForDuration))]
+    pub repeats: Repeat,
+    pub animation_group: Option<usize>,
     pub animation_ticks_delay: Option<usize>,
     pub animation_ticks_rate: Option<usize>,
     pub position: Point,
     pub size: Size,
+    #[mlua(default(None))]
+    pub hash: Option<u64>,
 
     #[mlua(default)]
     pub modifiers: Modifiers,

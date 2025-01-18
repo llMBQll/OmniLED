@@ -16,24 +16,28 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#[derive(Clone)]
+use crate::script_handler::script_data_types::Repeat;
+
+#[derive(Clone, Debug)]
 pub struct Animation {
     edge_step_time: usize,
     step_time: usize,
     steps: usize,
-    last_update_tick: usize,
     total_time: usize,
+    repeat: Repeat,
     current_tick: usize,
+    can_wrap: bool,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Step {
-    pub offset: usize,
-    pub can_wrap: bool,
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum State {
+    InProgress,
+    Finished,
+    CanFinish,
 }
 
 impl Animation {
-    pub fn new(edge_step_time: usize, step_time: usize, steps: usize, tick: usize) -> Self {
+    pub fn new(edge_step_time: usize, step_time: usize, steps: usize, repeat: Repeat) -> Self {
         let total_time = match steps {
             1 => 0,
             _ => edge_step_time * 2 + (steps - 2) * step_time,
@@ -43,13 +47,14 @@ impl Animation {
             edge_step_time,
             step_time,
             steps,
-            last_update_tick: tick,
             total_time,
+            repeat,
             current_tick: 1,
+            can_wrap: false,
         }
     }
 
-    pub fn step(&mut self, tick: usize) -> Step {
+    pub fn step(&mut self) -> usize {
         let (step, can_wrap) = if self.current_tick >= self.total_time {
             (self.steps - 1, true)
         } else if self.current_tick > self.total_time - self.edge_step_time {
@@ -63,19 +68,22 @@ impl Animation {
             )
         };
 
-        if tick != self.last_update_tick {
-            self.current_tick += 1;
-            self.last_update_tick = tick;
-        }
+        self.current_tick += 1;
+        self.can_wrap = can_wrap;
 
-        Step {
-            offset: step,
-            can_wrap,
+        step
+    }
+
+    pub fn state(&self) -> State {
+        match (self.repeat, self.can_wrap) {
+            (Repeat::Once, false) => State::InProgress,
+            (Repeat::Once, true) => State::Finished,
+            (Repeat::ForDuration, _) => State::CanFinish,
         }
     }
 
-    pub fn last_update_time(&self) -> usize {
-        self.last_update_tick
+    pub fn can_wrap(&self) -> bool {
+        self.can_wrap
     }
 
     pub fn reset(&mut self) {
@@ -88,21 +96,15 @@ mod tests {
     use super::*;
 
     macro_rules! step_and_assert_eq {
-        ($tick:ident, $anim:ident, $step:expr, $can_wrap:expr) => {
-            $tick += 1;
-            assert_eq!(
-                $anim.step($tick),
-                Step {
-                    offset: $step,
-                    can_wrap: $can_wrap
-                }
-            );
+        ($anim:ident, $step:expr, $can_wrap:expr, $state:expr) => {
+            assert_eq!($anim.step(), $step);
+            assert_eq!($anim.can_wrap(), $can_wrap);
+            assert_eq!($anim.state(), $state);
         };
     }
 
     fn run_test(edge_time: usize, step_time: usize, steps: usize) {
-        let mut tick = 0;
-        let mut animation = Animation::new(edge_time, step_time, steps, 0);
+        let mut animation = Animation::new(edge_time, step_time, steps, Repeat::Once);
 
         let total_time = if steps == 1 {
             0
@@ -113,19 +115,19 @@ mod tests {
         assert_eq!(animation.total_time, total_time);
 
         for _ in 0..edge_time {
-            step_and_assert_eq!(tick, animation, 0, false);
+            step_and_assert_eq!(animation, 0, false, State::InProgress);
         }
 
         for step in 0..steps - 2 {
             for _ in 0..step_time {
-                step_and_assert_eq!(tick, animation, step + 1, false);
+                step_and_assert_eq!(animation, step + 1, false, State::InProgress);
             }
         }
 
         for _ in 0..edge_time - 1 {
-            step_and_assert_eq!(tick, animation, steps - 1, false);
+            step_and_assert_eq!(animation, steps - 1, false, State::InProgress);
         }
-        step_and_assert_eq!(tick, animation, steps - 1, true);
+        step_and_assert_eq!(animation, steps - 1, true, State::Finished);
     }
 
     #[test]
@@ -161,11 +163,10 @@ mod tests {
         const STEP_TIME: usize = 5;
         const STEPS: usize = 1;
 
-        let mut tick = 0;
-        let mut animation = Animation::new(EDGE_TIME, STEP_TIME, STEPS, 0);
+        let mut animation = Animation::new(EDGE_TIME, STEP_TIME, STEPS, Repeat::Once);
 
         assert_eq!(animation.total_time, 0);
 
-        step_and_assert_eq!(tick, animation, 0, true);
+        step_and_assert_eq!(animation, 0, true, State::Finished);
     }
 }

@@ -145,14 +145,12 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
             Ok(Value::Table(table))
         }
         Some(FieldEntry::FImageData(image)) => {
-            let mut image_data = ImageData {
+            let hash = hash(&image.data);
+            let image_data = ImageData {
                 format: image.format().into(),
                 bytes: image.data,
-                hash: None,
+                hash: Some(hash),
             };
-            let hash = hash(&image_data);
-            image_data.hash = Some(hash);
-
             let user_data = lua.create_any_userdata(image_data)?;
             Ok(Value::UserData(user_data))
         }
