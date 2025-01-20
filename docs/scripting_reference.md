@@ -153,6 +153,25 @@
 > >
 > > Load for a system-installed font.
 
+---
+
+> ### `FontSize`
+>
+> Specifies the text font size inside of `Text` widget.
+>
+> > `Auto`
+> >
+> > Calculate font size to fit any text in the widget's height.
+>
+> > `AutoUpper`
+> >
+> > Calculate font size to fit any text that doesn't have any "descendants". Useful for text that
+> > consists only of uppercase characters or numbers.
+>
+> > `n: integer`
+> >
+> > Set font size to be exactly `n`, regardless of widget size.
+
 --- 
 
 > ### `FontStretch`
@@ -299,25 +318,6 @@
 
 ---
 
-> ### `Offset`
->
-> Specifies the text offset from the bottom of a `Text` widget.
->
-> > `Auto`
-> >
-> > Calculate offset to fit any text in the widget's height.
->
-> > `AutoUpper`
-> >
-> > Calculate offset to fit any text that doesn't have any "descendants". Useful for text that
-> > consists only of uppercase characters or numbers.
->
-> > `n: integer`
-> >
-> > Offset exactly by `n` pixels, regardless of font size.
-
----
-
 > ### `Repeat`
 >
 > Repeat strategy for a widget. Applies to scrolling text and animated images.
@@ -329,7 +329,8 @@
 >
 > > `ForDuation`
 > >
-> > Repeats the script for the time of its duration. This will run the animation for an exact duration,
+> > Repeats the script for the time of its duration. This will run the animation for an exact
+> > duration,
 > > but can cut off mid-animation if the time runs out.
 
 ## Functions
@@ -775,7 +776,8 @@ All widgets have the following common attributes in addition to widget-specific 
 > >
 > > _Optional_. Default: `0`
 > >
-> > Sets the animation group for the widget. All animations within a single animation group are synced,
+> > Sets the animation group for the widget. All animations within a single animation group are
+> > synced,
 > > except for the default group `0`, where all animations are independent.
 >
 > > `animation_ticks_delay`: `integer`
@@ -830,7 +832,8 @@ All widgets have the following common attributes in addition to widget-specific 
 > >
 > > _Optional_. Default: `0`
 > >
-> > Sets the animation group for the widget. All animations within a single animation group are synced,
+> > Sets the animation group for the widget. All animations within a single animation group are
+> > synced,
 > > except for the default group `0`, where all animations are independent.
 >
 > > `animation_ticks_delay`: `integer`
@@ -851,9 +854,9 @@ All widgets have the following common attributes in addition to widget-specific 
 > >
 > > **Changing this value after initially setting it for a given widget is undefined behaviour.**
 >
-> > `font_size`: `integer`
+> > `font_size`: `FontSize`
 > >
-> > _Optional_. Default: Calculated to fit within the widget's height.
+> > _Optional_. Default: `"Auto"`.
 > >
 > > Sets the font size of the text.
 >
@@ -863,8 +866,8 @@ All widgets have the following common attributes in addition to widget-specific 
 > >
 > > Specifies the repeat strategy, applies only for scrolling text.
 >
-> > `text_offset`: `Offset`
+> > `text_offset`: `integer`
 > >
-> > _Optional_. Default: `"Auto"`.
+> > _Optional_. Default: Calculated automatically based on the `font_size`.
 > >
 > > Determines the offset of the text from the bottom of the widget.

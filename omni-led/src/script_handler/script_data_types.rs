@@ -183,9 +183,9 @@ impl UserData for Image {}
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Text {
     pub text: String,
-    #[mlua(default(Offset::Auto))]
-    pub text_offset: Offset,
-    pub font_size: Option<usize>,
+    pub text_offset: Option<isize>,
+    #[mlua(default(FontSize::Auto))]
+    pub font_size: FontSize,
     #[mlua(default(false))]
     pub scrolling: bool,
     #[mlua(default(Repeat::ForDuration))]
@@ -205,23 +205,23 @@ pub struct Text {
 impl UserData for Text {}
 
 #[derive(Copy, Clone, Debug)]
-pub enum Offset {
-    Value(isize),
+pub enum FontSize {
+    Value(usize),
     Auto,
     AutoUpper,
 }
 
-impl UserData for Offset {}
+impl UserData for FontSize {}
 
-impl FromLua for Offset {
+impl FromLua for FontSize {
     fn from_lua(value: Value, _lua: &Lua) -> mlua::Result<Self> {
         match value {
-            Value::Integer(value) => Ok(Offset::Value(value as isize)),
+            Value::Integer(value) => Ok(FontSize::Value(value as usize)),
             Value::String(value) => {
                 let value = value.to_string_lossy();
                 match value.as_str() {
-                    "Auto" => Ok(Offset::Auto),
-                    "AutoUpper" => Ok(Offset::AutoUpper),
+                    "Auto" => Ok(FontSize::Auto),
+                    "AutoUpper" => Ok(FontSize::AutoUpper),
                     _ => Err(mlua::Error::runtime(format!(
                         "Expected one of ['Auto', 'AutoUpper'], got '{}'",
                         value

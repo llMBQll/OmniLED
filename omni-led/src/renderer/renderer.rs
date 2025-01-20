@@ -228,17 +228,10 @@ impl Renderer {
             size: widget.size,
         };
 
-        let (font_size, text_offset) = match (widget.font_size, widget.text_offset) {
-            (Some(font_size), offset_type) => {
-                let offset = font_manager.get_offset(font_size, &offset_type);
-                (font_size, offset)
-            }
-            (None, offset_type) => {
-                let font_size = font_manager.get_font_size(rect.size.height, &offset_type);
-                let offset = font_manager.get_offset(font_size, &offset_type);
-                (font_size, offset)
-            }
-        };
+        let font_size = font_manager.get_font_size(widget.font_size, widget.size.height);
+        let text_offset = widget
+            .text_offset
+            .unwrap_or_else(|| font_manager.get_offset(widget.font_size, font_size));
 
         let mut cursor_x = 0;
         let cursor_y = widget.size.height as isize;
@@ -378,10 +371,7 @@ impl Renderer {
     }
 
     fn pre_render_text(font_manager: &mut FontManager, text: &Text) -> usize {
-        let font_size = match (text.font_size, text.text_offset) {
-            (Some(font_size), _) => font_size,
-            (None, offset_type) => font_manager.get_font_size(text.size.height, &offset_type),
-        };
+        let font_size = font_manager.get_font_size(text.font_size, text.size.height);
         let text_width = text.size.width;
         let character = font_manager.get_character('a', font_size);
         let char_width = character.metrics.advance as usize;
