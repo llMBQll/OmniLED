@@ -2206,15 +2206,13 @@ dependencies = [
 name = "omni-led-api"
 version = "0.1.0"
 dependencies = [
+ "image",
  "log",
  "prost",
- "serde",
- "serde_json",
  "tokio",
  "tokio-stream",
  "tonic",
  "tonic-build",
- "ureq",
 ]
 
 [[package]]

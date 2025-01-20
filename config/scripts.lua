@@ -4,19 +4,19 @@ local function volume()
             Text {
                 text = AUDIO.IsMuted and 'Muted' or AUDIO.Volume,
                 font_size = 24,
-                text_offset = 'AutoUpper',
+                text_offset = 1,
                 position = { x = 0, y = 0 },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
             },
             Text {
                 text = AUDIO.Name,
                 scrolling = true,
+                repeats = 'Once',
                 position = { x = 0, y = SCREEN.Height / 2 },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
             },
         },
         duration = 2000,
-        repeats = 'Once',
     }
 end
 
@@ -55,7 +55,6 @@ local function spotify()
             },
         },
         duration = SPOTIFY_DURATION,
-        repeats = 'ForDuration',
     }
 end
 
@@ -65,14 +64,14 @@ local function clock()
             Text {
                 text = string.format("%02d", CLOCK.Hours),
                 font_size = 50,
-                text_offset = 'AutoUpper',
+                text_offset = 1,
                 position = { x = 10, y = 0 },
                 size = { width = SCREEN.Width / 2, height = SCREEN.Height - 3 },
             },
             Text {
                 text = string.format("%02d", CLOCK.Minutes),
                 font_size = 37,
-                text_offset = 'AutoUpper',
+                text_offset = 1,
                 position = { x = SCREEN.Width / 2 + 3, y = 0 },
                 size = { width = 54, height = 26 },
             },
@@ -113,7 +112,7 @@ local function weather()
             Text {
                 text = value,
                 font_size = 30,
-                text_offset = 'AutoUpper',
+                text_offset = 1,
                 position = { x = SCREEN.Height, y = 0 },
                 size = { width = SCREEN.Height * 2, height = SCREEN.Height * 2 / 3 },
             },

@@ -1,16 +1,42 @@
 # Settings
 
 You can fine tune behaviour of the program using the [settings file](../config/settings.lua).
-All the top-level properties described below are optional and will be set to default, should any of them be missing.
+All the top-level properties described below are optional and will be set to default, should any of
+them be missing.
 
 ## Available Settings
 
+- [Animation](#animation)
 - [Font](#font)
 - [Log Level](#log-level)
 - [Keyboard](#keyboard)
-- [Text Scrolling](#text-scrolling)
 - [Server Port](#server-port)
 - [Update Interval](#update-interval-tick-duration)
+
+> ### Animation
+>
+> Animation settings apply to scrolling text or animated images.
+>
+> > `animation_ticks_delay`: `integer`
+> >
+> > Number of [ticks](#update-interval-tick-duration) after which the animation will start to
+> > advance.
+> >
+> > _Optional_. Default: `8`
+>
+> > `animation_ticks_rate`: `integer`
+> >
+> > Number of [ticks](#update-interval-tick-duration) between consecutive animation steps.
+> >
+> > _Optional_. Default: `2`
+>
+> > Example `settings.lua` that sets scroll delay and repeat delay.
+> > ```lua
+> > Settings {
+> >   animation_ticks_delay = 4,
+> >   animation_ticks_rate = 1,
+> > }
+> > ```
 
 > ### Font
 >
@@ -46,7 +72,7 @@ All the top-level properties described below are optional and will be set to def
 > > Settings {
 > >   font = {
 > >     System = {
-> >       names = ['FiraMono', 'Monospace'],
+> >       names = {'FiraMono', 'Monospace'},
 > >       style = 'Normal',
 > >       weight = 'Bold',
 > >       stretch = 'Condensed',
@@ -93,29 +119,6 @@ All the top-level properties described below are optional and will be set to def
 > > }
 > > ```
 
-> ### Text Scrolling
->
-> > `text_ticks_scroll_delay`: `integer`
-> >
-> > Number of [ticks](#update-interval-tick-duration) after which text will start scrolling if it
-> > does not fit the screen.
-> >
-> > _Optional_. Default: `8`
->
-> > `text_ticks_repeat_delay`: `integer`
-> >
-> > Number of [ticks](#update-interval-tick-duration) between consecutive text scrolls.
-> >
-> > _Optional_. Default: `2`
->
-> > Example `settings.lua` that sets scroll delay and repeat delay.
-> > ```lua
-> > Settings {
-> >   text_ticks_scroll_delay = 4,
-> >   text_ticks_repeat_delay = 1,
-> > }
-> > ```
-
 > ### Server Port
 >
 > > `server_port`: `integer`
@@ -141,7 +144,7 @@ All the top-level properties described below are optional and will be set to def
 > > ```
 
 > ### Update interval (Tick Duration)
-> 
+>
 > > `update_interval`: `integer`
 > >
 > > This setting will define how ofter the server will process events and render updates on the

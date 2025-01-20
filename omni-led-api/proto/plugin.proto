@@ -22,7 +22,7 @@ message Field {
     string f_string = 4;
     Array f_array = 5;
     Table f_table = 6;
-    Image f_image = 7;
+    ImageData f_image_data = 7;
   }
 }
 
@@ -34,10 +34,29 @@ message Table {
   map<string, Field> items = 1;
 }
 
-message Image {
-  int64 width = 1;
-  int64 height = 2;
-  bytes data = 3;
+message ImageData {
+  ImageFormat format = 1;
+  bytes data = 2;
+}
+
+enum ImageFormat {
+  IMAGE_FORMAT_UNKNOWN = 0;
+  IMAGE_FORMAT_PNG = 1;
+  IMAGE_FORMAT_JPEG = 2;
+  IMAGE_FORMAT_GIF = 3;
+  IMAGE_FORMAT_WEBP = 4;
+  IMAGE_FORMAT_PNM = 5;
+  IMAGE_FORMAT_TIFF = 6;
+  IMAGE_FORMAT_TGA = 7;
+  IMAGE_FORMAT_DDS = 8;
+  IMAGE_FORMAT_BMP = 9;
+  IMAGE_FORMAT_ICO = 10;
+  IMAGE_FORMAT_HDR = 11;
+  IMAGE_FORMAT_OPEN_EXR = 12;
+  IMAGE_FORMAT_FARBFELD = 13;
+  IMAGE_FORMAT_AVIF = 14;
+  IMAGE_FORMAT_QOI = 15;
+  IMAGE_FORMAT_PCX = 16;
 }
 
 message LogData {

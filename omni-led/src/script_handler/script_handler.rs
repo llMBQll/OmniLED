@@ -20,6 +20,7 @@ use log::warn;
 use mlua::{chunk, ErrorContext, FromLua, Function, Lua, Table, UserData, UserDataMethods, Value};
 use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -29,7 +30,9 @@ use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
 use crate::events::shortcuts::Shortcuts;
-use crate::renderer::renderer::{ContextKey, Renderer};
+use crate::renderer::animation::State;
+use crate::renderer::animation_group::AnimationGroup;
+use crate::renderer::renderer::Renderer;
 use crate::script_handler::script_data_types::{load_script_data_types, Widget};
 use crate::settings::settings::get_full_path;
 
@@ -44,11 +47,11 @@ struct DeviceContext {
     device: Box<dyn Device>,
     name: String,
     layouts: Vec<Layout>,
+    animation_groups: Vec<HashMap<usize, AnimationGroup>>,
     marked_for_update: Vec<bool>,
     time_remaining: Duration,
     last_priority: usize,
-    repeats: Option<Repeat>,
-    index: usize,
+    state: State,
 }
 
 const DEFAULT_UPDATE_TIME: Duration = Duration::from_millis(1000);
@@ -112,7 +115,7 @@ impl ScriptHandler {
                 ctx.marked_for_update = vec![false; ctx.marked_for_update.len()];
                 ctx.time_remaining = Duration::ZERO;
                 ctx.last_priority = 0;
-                ctx.repeats = None;
+                ctx.state = State::Finished;
             }
             None => {
                 warn!("Device {} not found", device_name);
@@ -129,18 +132,17 @@ impl ScriptHandler {
         let mut devices = UserDataRef::<Devices>::load(lua);
         let device = devices.get_mut().load_device(lua, device_name.clone())?;
 
-        let device_count = self.devices.len();
         let layout_count = layouts.len();
 
         let context = DeviceContext {
             device,
             name: device_name,
             layouts,
+            animation_groups: vec![HashMap::new(); layout_count],
             marked_for_update: vec![false; layout_count],
             time_remaining: Default::default(),
             last_priority: 0,
-            repeats: None,
-            index: device_count,
+            state: State::Finished,
         };
         self.devices.push(context);
 
@@ -168,25 +170,21 @@ impl ScriptHandler {
         std::mem::swap(&mut ctx.marked_for_update, &mut marked_for_update);
 
         let mut to_update = None;
-        let mut update_modifier = None;
+        let mut new_update = false;
         for (priority, marked_for_update) in marked_for_update.into_iter().enumerate() {
-            if !ctx.time_remaining.is_zero() && ctx.last_priority < priority {
-                if let Some(Repeat::ForDuration) = ctx.repeats {
-                    to_update = Some(ctx.last_priority);
-                    update_modifier = Some(Repeat::ForDuration);
-                }
-                break;
-            }
+            let can_finish = !ctx.time_remaining.is_zero()
+                && ctx.last_priority < priority
+                && ctx.state == State::CanFinish;
+            let in_progress = ctx.last_priority == priority && ctx.state == State::InProgress;
 
-            if ctx.last_priority == priority && ctx.repeats == Some(Repeat::Once) {
+            if can_finish || in_progress {
                 to_update = Some(ctx.last_priority);
-                update_modifier = Some(Repeat::Once);
                 break;
             }
 
             if marked_for_update && Self::test_predicate(&ctx.layouts[priority].predicate)? {
                 to_update = Some(priority);
-                update_modifier = None;
+                new_update = true;
                 break;
             }
         }
@@ -201,11 +199,8 @@ impl ScriptHandler {
         env.set("SCREEN", size)?;
 
         let output: LayoutData = ctx.layouts[to_update].layout.call(())?;
-        let (end_auto_repeat, image) = renderer.render(
-            ContextKey {
-                script: to_update,
-                device: ctx.index,
-            },
+        let (animation_state, image) = renderer.render(
+            &mut ctx.animation_groups[to_update],
             size,
             output.widgets,
             memory_representation,
@@ -213,16 +208,12 @@ impl ScriptHandler {
 
         ctx.device.update(lua, image)?;
 
-        ctx.repeats = match (output.repeats, end_auto_repeat) {
-            (Repeat::ForDuration, _) => Some(Repeat::ForDuration),
-            (Repeat::Once, false) => Some(Repeat::Once),
-            (_, _) => None,
-        };
-        ctx.time_remaining = match update_modifier {
-            Some(Repeat::ForDuration) => ctx.time_remaining,
+        ctx.time_remaining = match (new_update, animation_state) {
+            (false, State::CanFinish) => ctx.time_remaining,
             _ => output.duration,
         };
         ctx.last_priority = to_update;
+        ctx.state = animation_state;
 
         Ok(())
     }
@@ -283,21 +274,12 @@ struct Layout {
     run_on: Vec<String>,
 }
 
-#[derive(FromLuaValue, Debug, PartialEq, Copy, Clone)]
-enum Repeat {
-    Once,
-    ForDuration,
-}
-
 #[derive(FromLuaValue, Clone)]
 struct LayoutData {
     widgets: Vec<Widget>,
 
     #[mlua(transform(Self::transform_duration))]
     duration: Duration,
-
-    #[mlua(default(Repeat::Once))]
-    repeats: Repeat,
 }
 
 impl LayoutData {
