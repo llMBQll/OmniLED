@@ -21,6 +21,7 @@ use num_traits::clamp;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::str::Chars;
 
 use crate::common::user_data::UserDataRef;
 use crate::renderer::animation::{Animation, State};
@@ -92,22 +93,7 @@ impl Renderer {
             .iter_mut()
             .for_each(|(_, group)| group.sync());
 
-        let states = animation_groups
-            .iter()
-            .map(|(_, group)| group.states())
-            .flatten()
-            .collect::<Vec<_>>();
-
-        let all_finished = states.iter().all(|state| *state == State::Finished);
-        let any_in_progress = states.iter().any(|state| *state == State::InProgress);
-
-        let state = if all_finished {
-            State::Finished
-        } else if any_in_progress {
-            State::InProgress
-        } else {
-            State::CanFinish
-        };
+        let state = Self::animation_state(animation_groups);
 
         (state, buffer)
     }
@@ -207,12 +193,13 @@ impl Renderer {
         widget: Text,
         animation_groups: &mut HashMap<usize, AnimationGroup>,
     ) {
+        if widget.size.width == 0 || widget.size.height == 0 {
+            return;
+        }
+
         if widget.modifiers.clear_background {
             Self::clear_background(buffer, widget.position, widget.size, &widget.modifiers);
         }
-
-        let mut cursor_x = 0;
-        let cursor_y = widget.size.height as isize;
 
         let mut characters = widget.text.chars();
 
@@ -227,6 +214,15 @@ impl Renderer {
             }
         }
 
+        Self::render_text_impl(buffer, &mut self.font_manager, &widget, characters);
+    }
+
+    fn render_text_impl(
+        buffer: &mut Buffer,
+        font_manager: &mut FontManager,
+        widget: &Text,
+        characters: Chars,
+    ) {
         let rect = Rectangle {
             position: widget.position,
             size: widget.size,
@@ -234,20 +230,21 @@ impl Renderer {
 
         let (font_size, text_offset) = match (widget.font_size, widget.text_offset) {
             (Some(font_size), offset_type) => {
-                let offset = self.font_manager.get_offset(font_size, &offset_type);
+                let offset = font_manager.get_offset(font_size, &offset_type);
                 (font_size, offset)
             }
             (None, offset_type) => {
-                let font_size = self
-                    .font_manager
-                    .get_font_size(rect.size.height, &offset_type);
-                let offset = self.font_manager.get_offset(font_size, &offset_type);
+                let font_size = font_manager.get_font_size(rect.size.height, &offset_type);
+                let offset = font_manager.get_offset(font_size, &offset_type);
                 (font_size, offset)
             }
         };
 
+        let mut cursor_x = 0;
+        let cursor_y = widget.size.height as isize;
+
         for character in characters {
-            let character = self.font_manager.get_character(character, font_size);
+            let character = font_manager.get_character(character, font_size);
             let bitmap = &character.bitmap;
 
             for bitmap_y in 0..bitmap.rows as isize {
@@ -358,6 +355,25 @@ impl Renderer {
                 value.hash(&mut s);
                 Some(s.finish())
             }
+        }
+    }
+
+    fn animation_state(animation_groups: &HashMap<usize, AnimationGroup>) -> State {
+        let states = animation_groups
+            .iter()
+            .map(|(_, group)| group.states())
+            .flatten()
+            .collect::<Vec<_>>();
+
+        let all_finished = states.iter().all(|state| *state == State::Finished);
+        let any_in_progress = states.iter().any(|state| *state == State::InProgress);
+
+        if all_finished {
+            State::Finished
+        } else if any_in_progress {
+            State::InProgress
+        } else {
+            State::CanFinish
         }
     }
 
