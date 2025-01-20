@@ -280,8 +280,6 @@ struct LayoutData {
 
     #[mlua(transform(Self::transform_duration))]
     duration: Duration,
-    // #[mlua(default(Repeat::Once))]
-    // repeats: Repeat,
 }
 
 impl LayoutData {

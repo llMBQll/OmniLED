@@ -320,17 +320,17 @@
 
 > ### `Repeat`
 >
-> Repeat strategy for a widget. Currently, this only applies to scrolling text.
+> Repeat strategy for a widget. Applies to scrolling text and animated images.
 >
 > > `Once`
 > >
-> > Repeats the script until the text is fully scrolled, even if it takes longer than the duration
-> > specified for layout. This way the entire text is displayed exactly once.
+> > Repeats the script until the animation is finished, even if it takes longer than the duration
+> > specified for layout. This way the entire animation is displayed exactly once.
 >
 > > `ForDuation`
 > >
-> > Repeats the script for the time of its duration. This will scroll text for an exact duration,
-> > but can cut off mid-scrolling if the time runs out.
+> > Repeats the script for the time of its duration. This will run the animation for an exact duration,
+> > but can cut off mid-animation if the time runs out.
 
 ## Functions
 
@@ -529,12 +529,6 @@
 > > How many milliseconds can the layout be shown on the screen before it's allowed to be
 > > overridden. Higher priority layouts can always override lower priority, regardless of the
 > > remaining duration.
->
-> > `repeats: Repeat`
-> >
-> > _Optional_. Default: `Once`.
-> >
-> > Specifies the repeat strategy, which is only applicable to scrolling text for now.
 
 ---
 
@@ -681,23 +675,6 @@
 
 ---
 
-    #[mlua(transform(from_hex))]
-    pub vendor_id: u16,
-    #[mlua(transform(from_hex))]
-    pub product_id: u16,
-    #[mlua(transform(from_hex))]
-    pub interface: u8,
-    #[mlua(transform(from_hex))]
-    pub alternate_setting: u8,
-    #[mlua(transform(from_hex))]
-    pub request_type: u8,
-    #[mlua(transform(from_hex))]
-    pub request: u8,
-    #[mlua(transform(from_hex))]
-    pub value: u16,
-    #[mlua(transform(from_hex))]
-    pub index: u16,
-
 > ### `USBSettings`
 >
 > Configuration for a USB device. All fields relate to the USB configuration.
@@ -794,6 +771,13 @@ All widgets have the following common attributes in addition to widget-specific 
 > > Specifies if the image should be animated. Unless set to `true`, event with supported image
 > > formats, only a static image will be rendered.
 >
+> > `animation_group`: `integer`
+> >
+> > _Optional_. Default: `0`
+> >
+> > Sets the animation group for the widget. All animations within a single animation group are synced,
+> > except for the default group `0`, where all animations are independent.
+>
 > > `animation_ticks_delay`: `integer`
 > >
 > > _Optional_. Default: No value
@@ -811,6 +795,12 @@ All widgets have the following common attributes in addition to widget-specific 
 > > `animated` images.
 > >
 > > **Changing this value after initially setting it for a given widget is undefined behaviour.**
+>
+> > `repeats: Repeat`
+> >
+> > _Optional_. Default: `ForDuration`.
+> >
+> > Specifies the repeat strategy, applies only for animated images.
 >
 > > `threshold`: `integer`
 > >
@@ -836,6 +826,13 @@ All widgets have the following common attributes in addition to widget-specific 
 > >
 > > Specifies if the text should scroll if it is too long to fit within the widget's width.
 >
+> > `animation_group`: `integer`
+> >
+> > _Optional_. Default: `0`
+> >
+> > Sets the animation group for the widget. All animations within a single animation group are synced,
+> > except for the default group `0`, where all animations are independent.
+>
 > > `animation_ticks_delay`: `integer`
 > >
 > > _Optional_. Default: No value
@@ -859,6 +856,12 @@ All widgets have the following common attributes in addition to widget-specific 
 > > _Optional_. Default: Calculated to fit within the widget's height.
 > >
 > > Sets the font size of the text.
+>
+> > `repeats: Repeat`
+> >
+> > _Optional_. Default: `ForDuration`.
+> >
+> > Specifies the repeat strategy, applies only for scrolling text.
 >
 > > `text_offset`: `Offset`
 > >

@@ -341,7 +341,7 @@ impl Renderer {
         number: Option<usize>,
     ) -> &mut AnimationGroup {
         let (number, synced) = match number {
-            Some(usize::MAX) | None => (usize::MAX, false),
+            Some(0) | None => (0, false),
             Some(number) => (number, true),
         };
 
