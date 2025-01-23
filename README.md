@@ -36,7 +36,7 @@ described [here](docs/customization.md).
 
 ## Roadmap
 
-- [ ] GIF support
+- [x] GIF support
 - [x] Loading custom images (Load images and GIFs from disk)
 - [ ] Getting events from discord (Mic status, currently speaking user etc.)
 - [ ] Graphical interface for installer and settings
