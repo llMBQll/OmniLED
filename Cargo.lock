@@ -192,7 +192,7 @@ dependencies = [
 
 [[package]]
 name = "audio"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "clap 4.5.23",
  "libpulse-binding",
@@ -476,7 +476,7 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
 name = "clock"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "clap 4.5.23",
@@ -1536,7 +1536,7 @@ dependencies = [
 
 [[package]]
 name = "images"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "clap 4.5.23",
  "image",
@@ -1890,7 +1890,7 @@ dependencies = [
 
 [[package]]
 name = "media"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "clap 4.5.23",
  "log",
@@ -2184,7 +2184,7 @@ dependencies = [
 
 [[package]]
 name = "omni-led"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "convert_case",
  "device_query",
@@ -2216,7 +2216,7 @@ dependencies = [
 
 [[package]]
 name = "omni-led-api"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "image",
  "log",
@@ -2229,7 +2229,7 @@ dependencies = [
 
 [[package]]
 name = "omni-led-derive"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -2239,7 +2239,7 @@ dependencies = [
 
 [[package]]
 name = "omni-led-setup"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "clap 4.5.23",
  "convert_case",
@@ -3734,7 +3734,7 @@ dependencies = [
 
 [[package]]
 name = "weather"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "clap 4.5.23",
