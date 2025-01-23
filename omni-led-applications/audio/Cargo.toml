@@ -13,8 +13,9 @@ omni-led-derive = { path = "../../omni-led-derive", features = ["into-proto"] }
 tokio = { version = "1.38", features = ["full"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.58", features = ["implement", "Win32_Devices_FunctionDiscovery", "Win32_Foundation", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_UI_Shell_PropertiesSystem"] }
-windows-core = "0.58"
+windows = { version = "0.59", features = ["Win32_Devices_FunctionDiscovery", "Win32_Foundation", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_UI_Shell_PropertiesSystem"] }
+windows-core = "0.59"
+windows-implement = "0.59"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 pulse = { version = "2.0", package = "libpulse-binding" }

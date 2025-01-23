@@ -18,7 +18,7 @@
 
 use tokio::runtime::Handle;
 use tokio::sync::mpsc::Sender;
-use windows::core::{implement, GUID};
+use windows::core::{implement, Ref, GUID};
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Foundation::BOOL;
 use windows::Win32::Media::Audio::Endpoints::{
@@ -115,14 +115,14 @@ impl EmptyAudioEndpointVolume {
 impl IAudioEndpointVolume_Impl for EmptyAudioEndpointVolume_Impl {
     fn RegisterControlChangeNotify(
         &self,
-        _: Option<&IAudioEndpointVolumeCallback>,
+        _: Ref<'_, IAudioEndpointVolumeCallback>,
     ) -> windows::core::Result<()> {
         Ok(())
     }
 
     fn UnregisterControlChangeNotify(
         &self,
-        _: Option<&IAudioEndpointVolumeCallback>,
+        _: Ref<'_, IAudioEndpointVolumeCallback>,
     ) -> windows::core::Result<()> {
         Ok(())
     }

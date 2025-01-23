@@ -13,7 +13,7 @@ omni-led-derive = { path = "../../omni-led-derive", features = ["into-proto"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [target.'cfg(target_os = "windows")'.dependencies.windows]
-version = "0.58"
+version = "0.59"
 features = [
     "Foundation",
     "Foundation_Collections",

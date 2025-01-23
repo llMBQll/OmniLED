@@ -17,11 +17,11 @@
  */
 
 use windows::core::{implement, Result, PCWSTR};
+use windows::Win32::Foundation::PROPERTYKEY;
 use windows::Win32::Media::Audio::{
     eMultimedia, eRender, EDataFlow, ERole, IMMNotificationClient, IMMNotificationClient_Impl,
     DEVICE_STATE,
 };
-use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
 
 #[implement(IMMNotificationClient)]
 pub struct NotificationClient<T>
