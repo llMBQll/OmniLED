@@ -23,7 +23,7 @@ use std::io::Write;
 use std::path::Path;
 
 fn name_upper(name: &str) -> String {
-    name.to_case(Case::ScreamingSnake)
+    name.to_case(Case::UpperSnake)
 }
 
 fn binary_path(name: &str) -> String {

@@ -7,8 +7,8 @@ edition = "2021"
 default-run = "omni-led"
 
 [dependencies]
-convert_case = "0.6"
-device_query = "2.0"
+convert_case = "0.7"
+device_query = "3.0"
 dirs-next = "2.0"
 font-kit = "0.14"
 freetype-rs = "*"
@@ -17,7 +17,7 @@ lazy_static = "1.4"
 log = "0.4"
 log4rs = "1.3"
 mlua = { version = "0.10", features = ["lua54", "vendored", "macros"] }
-minifb = "0.27"
+minifb = "0.28"
 num-traits = "0.2"
 prost = "0.13"
 opener = { version = "0.7", features = ["reveal"] }
