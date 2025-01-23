@@ -26,7 +26,7 @@ pub fn expand_into_unique_user_data_derive(input: DeriveInput) -> proc_macro::To
     // TODO handle generics of deriving type
 
     let identifier = format!("{}", name);
-    let identifier = identifier.to_case(Case::ScreamingSnake);
+    let identifier = identifier.to_case(Case::UpperSnake);
     let expanded = quote! {
         impl UniqueUserData for #name {
             fn identifier() -> &'static str {

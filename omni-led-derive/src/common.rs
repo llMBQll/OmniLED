@@ -86,7 +86,7 @@ pub fn get_case(rename_strategy: &TokenStream) -> Case {
         "PascalCase" => Case::Pascal,
         "camelCase" => Case::Camel,
         "snake_case" => Case::Snake,
-        "SCREAMING_SNAKE_CASE" => Case::ScreamingSnake,
+        "SCREAMING_SNAKE_CASE" => Case::UpperSnake,
         "kebab-case" => Case::Kebab,
         "SCREAMING-KEBAB-CASE" => Case::UpperKebab,
         convention => panic!("Unknown case convention '{}'", convention),

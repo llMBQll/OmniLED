@@ -21,6 +21,8 @@
 
 - [SteelSeries Engine](https://steelseries.com/gg/engine) - Optional. All devices can be controlled
   via raw USB calls, routing via SSE is optional.
+- [Protobuf Compiler](https://github.com/protocolbuffers/protobuf/releases/latest) - Optional. Only
+  required when building from source.
 
 ### Common
 

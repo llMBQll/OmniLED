@@ -24,7 +24,7 @@ use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 
 use crate::app_loader::app_loader::AppLoader;
-use crate::common::common::proto_to_lua_value;
+use crate::common::common::{load_internal_functions, proto_to_lua_value};
 use crate::common::user_data::UserDataRef;
 use crate::constants::constants::Constants;
 use crate::devices::devices::Devices;
@@ -59,6 +59,7 @@ async fn main() {
 
     let lua = Lua::new();
 
+    load_internal_functions(&lua);
     Log::load(&lua);
     Constants::load(&lua);
     Settings::load(&lua);

@@ -1,6 +1,6 @@
 [package]
 name = "omni-led-derive"
-version = "0.1.0"
+version = "0.3.0"
 authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
 license = "GPL-3.0-only"
 edition = "2021"
@@ -9,7 +9,7 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-convert_case = "0.6"
+convert_case = "0.7"
 proc-macro2 = "1"
 syn = "2.0"
 quote = "1.0"

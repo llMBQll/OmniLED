@@ -1,7 +1,7 @@
 # Images
 
-Images application reads images from disk and converts them to a black and white image before
-sending it to OmniLED server.
+Images application reads images from disk and sends them to OmniLED. It supports both static and
+animated images.
 
 ## Running
 
@@ -21,13 +21,8 @@ Images expects two arguments
           _This is a positional argument and shall always be specified as a first argument._
         - `<PATH>` - Path to an image file on disk.  
           _This is a positional argument and shall always be specified as a second argument._
-        - `-f`/`--format` - Image extension used as a hint for loading images when path doesn't
-          contain an extension.
-        - `-t`/`--threshold` - Threshold that will be used when converting the image to black and
-          white. Values with brightness lower than threshold will be black, and above or equal to
-          threshold will be white.  
-          Range: [0, 255].  
-          Default: 128
+        - `-f`/`--format` - Image extension used as a hint for loading images when the format cannot
+          automatically be deduced from the file contents.
 
 ### Example
 
@@ -38,8 +33,8 @@ load_app {
     path = get_default_path('images'),
     args = {
         '--address', SERVER.Address,
-        '--image', 'MyImage /path/to/my_image --format jpg --threshold 77',
-        '--image', 'MyOtherImage "C:\\path\\to\\other image.png" --threshold 159',
+        '--image', 'MyImage /path/to/my_gif --format gif',
+        '--image', 'MyOtherImage "C:\\path\\to\\other image.png"',
     }
 }
 ```
@@ -51,6 +46,6 @@ arguments.
 
 `IMAGES`: table
 
-- `<NAME_1>`: `OLEDImage`,  
+- `<NAME_1>`: `Image`,  
   ...
-- `<NAME_N>`: `OLEDImage`,
+- `<NAME_N>`: `Image`,

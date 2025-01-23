@@ -153,6 +153,25 @@
 > >
 > > Load for a system-installed font.
 
+---
+
+> ### `FontSize`
+>
+> Specifies the text font size inside of `Text` widget.
+>
+> > `Auto`
+> >
+> > Calculate font size to fit any text in the widget's height.
+>
+> > `AutoUpper`
+> >
+> > Calculate font size to fit any text that doesn't have any "descendants". Useful for text that
+> > consists only of uppercase characters or numbers.
+>
+> > `n: integer`
+> >
+> > Set font size to be exactly `n`, regardless of widget size.
+
 --- 
 
 > ### `FontStretch`
@@ -215,6 +234,44 @@
 
 ---
 
+> ### `ImageFormat`
+>
+> Image format.
+>
+> > `Avif`
+>
+> > `Bmp`
+>
+> > `Dds`
+>
+> > `Farbfeld`
+>
+> > `Gif`
+>
+> > `Hdr`
+>
+> > `Ico`
+>
+> > `Jpeg`
+>
+> > `OpenExr`
+>
+> > `Pcx`
+>
+> > `Png`
+>
+> > `Pnm`
+>
+> > `Qoi`
+>
+> > `Tga`
+>
+> > `Tiff`
+>
+> > `Webp`
+
+---
+
 > ### `LogLevel`
 >
 > Log level filter, selecting one value will also activate all values above it, e.g. enabling
@@ -261,40 +318,30 @@
 
 ---
 
-> ### `Offset`
->
-> Specifies the text offset from the bottom of a `Text` widget.
->
-> > `Auto`
-> >
-> > Calculate offset to fit any text in the widget's height.
->
-> > `AutoUpper`
-> >
-> > Calculate offset to fit any text that doesn't have any "descendants". Useful for text that
-> > consists only of uppercase characters or numbers.
->
-> > `n: integer`
-> >
-> > Offset exactly by `n` pixels, regardless of font size.
-
----
-
 > ### `Repeat`
 >
-> Repeat strategy for a widget. Currently, this only applies to scrolling text.
+> Repeat strategy for a widget. Applies to scrolling text and animated images.
 >
 > > `Once`
 > >
-> > Repeats the script until the text is fully scrolled, even if it takes longer than the duration
-> > specified for layout. This way the entire text is displayed exactly once.
+> > Repeats the script until the animation is finished, even if it takes longer than the duration
+> > specified for layout. This way the entire animation is displayed exactly once.
 >
 > > `ForDuation`
 > >
-> > Repeats the script for the time of its duration. This will scroll text for an exact duration,
-> > but can cut off mid scrolling if the time runs out.
+> > Repeats the script for the time of its duration. This will run the animation for an exact
+> > duration,
+> > but can cut off mid-animation if the time runs out.
 
 ## Functions
+
+> ### `dump`
+>
+> Type: `fn(value: any) -> string`
+>
+> Pretty print any lua value into a string.
+
+---
 
 > ### `emulator`
 >
@@ -434,6 +481,20 @@
 
 ---
 
+> ### `ImageData`
+>
+> Contains image bytes and format
+>
+> > `format`: `ImageFormat`
+> >
+> > Image format, required to properly load image bytes.
+>
+> > `bytes`: `[byte]`
+> >
+> > Image bytes stored in format specified by the `format` property.
+
+---
+
 > ### `Layout`
 >
 > Represents a user-defined script that runs on specific events and creates a layout to be rendered.
@@ -469,12 +530,6 @@
 > > How many milliseconds can the layout be shown on the screen before it's allowed to be
 > > overridden. Higher priority layouts can always override lower priority, regardless of the
 > > remaining duration.
->
-> > `repeats: Repeat`
-> >
-> > _Optional_. Default: `Once`.
-> >
-> > Specifies the repeat strategy, which is only applicable to scrolling text for now.
 
 ---
 
@@ -505,23 +560,6 @@
 > > _Optional_. Default: `false`.
 > >
 > > Swaps on and off pixels for a given widget.
-
----
-
-> ### `OledImage`
->
-> Represents a black-and-white image.
->
-> > `size`: `Size`
-> >
-> > Source image size. To adjust image size on screen, set the appropriate widget size to the
-> > desired value.
->
-> > `bytes`: `[byte]`
-> >
-> > Row-major black-and-white image data with one byte per pixel. All non-zero values will result
-> > in the pixels being on.
-> > `size.width * size.height` must equal the length of the `bytes` array.
 
 ---
 
@@ -638,23 +676,6 @@
 
 ---
 
-    #[mlua(transform(from_hex))]
-    pub vendor_id: u16,
-    #[mlua(transform(from_hex))]
-    pub product_id: u16,
-    #[mlua(transform(from_hex))]
-    pub interface: u8,
-    #[mlua(transform(from_hex))]
-    pub alternate_setting: u8,
-    #[mlua(transform(from_hex))]
-    pub request_type: u8,
-    #[mlua(transform(from_hex))]
-    pub request: u8,
-    #[mlua(transform(from_hex))]
-    pub value: u16,
-    #[mlua(transform(from_hex))]
-    pub index: u16,
-
 > ### `USBSettings`
 >
 > Configuration for a USB device. All fields relate to the USB configuration.
@@ -739,10 +760,57 @@ All widgets have the following common attributes in addition to widget-specific 
 >
 > A widget that displays an image.
 >
-> > `image`: `OledImage`
+> > `image`: `ImageData`
 > >
 > > The image data to display on the screen.  
 > > This image will be scaled from its original size to the dimensions of the widget.
+>
+> > `animated`: `bool`
+> >
+> > _Optional_. Default: `false`
+> >
+> > Specifies if the image should be animated. Unless set to `true`, event with supported image
+> > formats, only a static image will be rendered.
+>
+> > `animation_group`: `integer`
+> >
+> > _Optional_. Default: `0`
+> >
+> > Sets the animation group for the widget. All animations within a single animation group are
+> > synced,
+> > except for the default group `0`, where all animations are independent.
+>
+> > `animation_ticks_delay`: `integer`
+> >
+> > _Optional_. Default: No value
+> >
+> > Overrides [global animation setting](settings.md#animation) for this widget. Applies only for
+> > `animated` images.
+> >
+> > **Changing this value after initially setting it for a given widget is undefined behaviour.**
+>
+> > `animation_ticks_rate`: `integer`
+> >
+> > _Optional_. Default: No value
+> >
+> > Overrides [global animation setting](settings.md#animation) for this widget. Applies only for
+> > `animated` images.
+> >
+> > **Changing this value after initially setting it for a given widget is undefined behaviour.**
+>
+> > `repeats: Repeat`
+> >
+> > _Optional_. Default: `ForDuration`.
+> >
+> > Specifies the repeat strategy, applies only for animated images.
+>
+> > `threshold`: `integer`
+> >
+> > _Optional_. Default: `128`
+> >
+> > Specifies the threshold from range `[0, 255]` used to convert image to a black and white image.
+> > Light values below the threshold will be converted to black, and values above the threshold will
+> > be converted to white.
 
 ---
 
@@ -760,14 +828,46 @@ All widgets have the following common attributes in addition to widget-specific 
 > >
 > > Specifies if the text should scroll if it is too long to fit within the widget's width.
 >
-> > `font_size`: `integer`
+> > `animation_group`: `integer`
 > >
-> > _Optional_. Default: Calculated to fit within the widget's height.
+> > _Optional_. Default: `0`
+> >
+> > Sets the animation group for the widget. All animations within a single animation group are
+> > synced,
+> > except for the default group `0`, where all animations are independent.
+>
+> > `animation_ticks_delay`: `integer`
+> >
+> > _Optional_. Default: No value
+> >
+> > Overrides [global animation setting](settings.md#animation) for this widget. Applies only for
+> > `scrolling` text.
+> >
+> > **Changing this value after initially setting it for a given widget is undefined behaviour.**
+>
+> > `animation_ticks_rate`: `integer`
+> >
+> > _Optional_. Default: No value
+> >
+> > Overrides [global animation setting](settings.md#animation) for this widget. Applies only for
+> > `scrolling` text.
+> >
+> > **Changing this value after initially setting it for a given widget is undefined behaviour.**
+>
+> > `font_size`: `FontSize`
+> >
+> > _Optional_. Default: `"Auto"`.
 > >
 > > Sets the font size of the text.
 >
-> > `text_offset`: `Offset`
+> > `repeats: Repeat`
 > >
-> > _Optional_. Default: `"Auto"`.
+> > _Optional_. Default: `ForDuration`.
+> >
+> > Specifies the repeat strategy, applies only for scrolling text.
+>
+> > `text_offset`: `integer`
+> >
+> > _Optional_. Default: Calculated automatically based on the `font_size`.
 > >
 > > Determines the offset of the text from the bottom of the widget.
