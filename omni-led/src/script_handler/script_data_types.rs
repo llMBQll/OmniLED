@@ -52,7 +52,7 @@ impl UserData for Rectangle {}
 
 #[derive(Debug, Clone, FromLuaValue)]
 pub struct ImageData {
-    #[mlua(transform(Self::parse_format))]
+    #[mlua(transform = Self::parse_format)]
     pub format: image::ImageFormat,
     pub bytes: Vec<u8>,
     pub hash: Option<u64>,
@@ -116,7 +116,7 @@ pub enum Widget {
 impl UserData for Widget {}
 
 #[derive(Clone, Debug, FromLuaValue)]
-#[mlua(validate(Self::validate_range))]
+#[mlua(validate = Self::validate_range)]
 pub struct Range {
     pub min: f32,
     pub max: f32,
@@ -140,9 +140,9 @@ impl UserData for Range {}
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Bar {
     pub value: f32,
-    #[mlua(default(Range {min: 0.0, max: 100.0}))]
+    #[mlua(default = Range {min: 0.0, max: 100.0})]
     pub range: Range,
-    #[mlua(default(false))]
+    #[mlua(default = false)]
     pub vertical: bool,
     pub position: Point,
     pub size: Size,
@@ -162,11 +162,11 @@ pub enum Repeat {
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Image {
     pub image: ImageData,
-    #[mlua(default(false))]
+    #[mlua(default = false)]
     pub animated: bool,
-    #[mlua(default(128))]
+    #[mlua(default = 128)]
     pub threshold: u8,
-    #[mlua(default(Repeat::ForDuration))]
+    #[mlua(default = Repeat::ForDuration)]
     pub repeats: Repeat,
     pub animation_group: Option<usize>,
     pub animation_ticks_delay: Option<usize>,
@@ -184,18 +184,18 @@ impl UserData for Image {}
 pub struct Text {
     pub text: String,
     pub text_offset: Option<isize>,
-    #[mlua(default(FontSize::Auto))]
+    #[mlua(default= FontSize::Auto)]
     pub font_size: FontSize,
-    #[mlua(default(false))]
+    #[mlua(default = false)]
     pub scrolling: bool,
-    #[mlua(default(Repeat::ForDuration))]
+    #[mlua(default = Repeat::ForDuration)]
     pub repeats: Repeat,
     pub animation_group: Option<usize>,
     pub animation_ticks_delay: Option<usize>,
     pub animation_ticks_rate: Option<usize>,
     pub position: Point,
     pub size: Size,
-    #[mlua(default(None))]
+    #[mlua(default = None)]
     pub hash: Option<u64>,
 
     #[mlua(default)]
@@ -238,16 +238,16 @@ impl FromLua for FontSize {
 
 #[derive(Clone, Copy, Debug, Default, FromLuaValue)]
 pub struct Modifiers {
-    #[mlua(default(false))]
+    #[mlua(default = false)]
     pub clear_background: bool,
 
-    #[mlua(default(false))]
+    #[mlua(default = false)]
     pub flip_horizontal: bool,
 
-    #[mlua(default(false))]
+    #[mlua(default = false)]
     pub flip_vertical: bool,
 
-    #[mlua(default(false))]
+    #[mlua(default = false)]
     pub negative: bool,
 }
 

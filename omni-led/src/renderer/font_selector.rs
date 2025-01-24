@@ -29,18 +29,18 @@ pub enum FontSelector {
 #[derive(Debug, Clone, FromLuaValue)]
 pub struct FilesystemSelector {
     pub path: String,
-    #[mlua(default(0))]
+    #[mlua(default = 0)]
     pub font_index: u32,
 }
 
 #[derive(Debug, Clone, FromLuaValue)]
 pub struct SystemSelector {
     pub names: Vec<FamilyName>,
-    #[mlua(default(Style::Normal))]
+    #[mlua(default = Style::Normal)]
     pub style: Style,
-    #[mlua(default(Weight::Normal))]
+    #[mlua(default = Weight::Normal)]
     pub weight: Weight,
-    #[mlua(default(Stretch::Normal))]
+    #[mlua(default = Stretch::Normal)]
     pub stretch: Stretch,
 }
 

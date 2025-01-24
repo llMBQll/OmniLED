@@ -31,29 +31,29 @@ use crate::renderer::font_selector::FontSelector;
 
 #[derive(Debug, Clone, UniqueUserData, FromLuaValue)]
 pub struct Settings {
-    #[mlua(default(8))]
+    #[mlua(default = 8)]
     pub animation_ticks_delay: usize,
 
-    #[mlua(default(2))]
+    #[mlua(default = 2)]
     pub animation_ticks_rate: usize,
 
-    #[mlua(default(FontSelector::Default))]
+    #[mlua(default = FontSelector::Default)]
     pub font: FontSelector,
 
-    #[mlua(default(LevelFilter::Info))]
+    #[mlua(default = LevelFilter::Info)]
     pub log_level: LevelFilter,
 
-    #[mlua(default(2))]
+    #[mlua(default = 2)]
     pub keyboard_ticks_repeat_delay: usize,
 
-    #[mlua(default(2))]
+    #[mlua(default = 2)]
     pub keyboard_ticks_repeat_rate: usize,
 
-    #[mlua(default(0))]
+    #[mlua(default = 0)]
     pub server_port: u16,
 
-    #[mlua(transform(Self::from_millis))]
-    #[mlua(default(Duration::from_millis(100)))]
+    #[mlua(transform = Self::from_millis)]
+    #[mlua(default = Duration::from_millis(100))]
     pub update_interval: Duration,
 }
 

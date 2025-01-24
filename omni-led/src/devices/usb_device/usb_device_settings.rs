@@ -41,21 +41,21 @@ impl UserData for USBDeviceSettings {}
 
 #[derive(FromLuaValue, Clone)]
 pub struct USBSettings {
-    #[mlua(transform(from_hex))]
+    #[mlua(transform = from_hex)]
     pub vendor_id: u16,
-    #[mlua(transform(from_hex))]
+    #[mlua(transform = from_hex)]
     pub product_id: u16,
-    #[mlua(transform(from_hex))]
+    #[mlua(transform = from_hex)]
     pub interface: u8,
-    #[mlua(transform(from_hex))]
+    #[mlua(transform = from_hex)]
     pub alternate_setting: u8,
-    #[mlua(transform(from_hex))]
+    #[mlua(transform = from_hex)]
     pub request_type: u8,
-    #[mlua(transform(from_hex))]
+    #[mlua(transform = from_hex)]
     pub request: u8,
-    #[mlua(transform(from_hex))]
+    #[mlua(transform = from_hex)]
     pub value: u16,
-    #[mlua(transform(from_hex))]
+    #[mlua(transform = from_hex)]
     pub index: u16,
 }
 

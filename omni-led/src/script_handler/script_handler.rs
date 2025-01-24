@@ -278,7 +278,7 @@ struct Layout {
 struct LayoutData {
     widgets: Vec<Widget>,
 
-    #[mlua(transform(Self::transform_duration))]
+    #[mlua(transform = Self::transform_duration)]
     duration: Duration,
 }
 

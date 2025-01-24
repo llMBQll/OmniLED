@@ -102,7 +102,7 @@ fn get_coordinates_from_name(name: &Name) -> Coordinates {
 }
 
 #[derive(IntoProto)]
-#[proto(rename_all(PascalCase))]
+#[proto(rename_all = PascalCase)]
 struct WeatherData {
     city: String,
     image_key: &'static str,

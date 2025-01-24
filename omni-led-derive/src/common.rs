@@ -19,7 +19,7 @@
 use convert_case::Case;
 use proc_macro2::TokenStream;
 use std::collections::HashMap;
-use syn::{parenthesized, token, Attribute};
+use syn::{Attribute, Token};
 
 pub fn get_attribute_with_default_value(
     attributes: &mut HashMap<String, Option<TokenStream>>,
@@ -62,10 +62,8 @@ pub fn parse_attributes(
                 .parse_nested_meta(|meta| {
                     attribute_name = meta.path.get_ident().unwrap().to_string();
 
-                    if meta.input.peek(token::Paren) {
-                        let content;
-                        parenthesized!(content in meta.input);
-                        let stream = content.parse()?;
+                    if meta.input.peek(Token![=]) {
+                        let stream = meta.value()?.parse()?;
                         attribute_value = Some(stream);
                     }
 

@@ -23,7 +23,7 @@ use omni_led_derive::IntoProto;
 use std::time;
 
 #[derive(IntoProto)]
-#[proto(rename_all(PascalCase))]
+#[proto(rename_all = PascalCase)]
 struct Names {
     day_names: Vec<&'static str>,
     month_names: Vec<&'static str>,
@@ -60,7 +60,7 @@ impl Names {
 }
 
 #[derive(Clone, IntoProto)]
-#[proto(rename_all(PascalCase))]
+#[proto(rename_all = PascalCase)]
 struct Time {
     hours: u32,
     minutes: u32,
