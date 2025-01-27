@@ -20,7 +20,7 @@ use chrono::prelude::*;
 use clap::Parser;
 use omni_led_api::plugin::Plugin;
 use omni_led_derive::IntoProto;
-use std::time;
+use tokio::time::{Duration, Instant};
 
 #[derive(IntoProto)]
 #[proto(rename_all = PascalCase)]
@@ -59,7 +59,7 @@ impl Names {
     }
 }
 
-#[derive(Clone, IntoProto)]
+#[derive(IntoProto)]
 #[proto(rename_all = PascalCase)]
 struct Time {
     hours: u32,
@@ -81,31 +81,23 @@ async fn main() {
     // Send initial data that will not be updated
     plugin.update(Names::new().into()).await.unwrap();
 
-    let mut time = Time {
-        hours: 0,
-        minutes: 0,
-        seconds: 0,
-        month_day: 0,
-        week_day: 0,
-        month: 0,
-        year: 0,
-    };
-
+    let mut expected_update_time = Instant::now() + Duration::from_secs(1);
     loop {
         let local = Local::now();
-        if local.second() == time.seconds {
-            tokio::time::sleep(time::Duration::from_millis(10)).await;
-            continue;
-        }
-        time.seconds = local.second();
-        time.minutes = local.minute();
-        time.hours = local.hour();
-        time.month_day = local.day();
-        time.week_day = local.weekday().number_from_monday();
-        time.month = local.month();
-        time.year = local.year();
-        plugin.update(time.clone().into()).await.unwrap();
-        tokio::time::sleep(time::Duration::from_millis(500)).await;
+        let time = Time {
+            hours: local.hour(),
+            minutes: local.minute(),
+            seconds: local.second(),
+            month_day: local.day(),
+            week_day: local.weekday().number_from_monday(),
+            month: local.month(),
+            year: local.year(),
+        };
+
+        plugin.update(time.into()).await.unwrap();
+
+        tokio::time::sleep_until(expected_update_time).await;
+        expected_update_time += Duration::from_secs(1);
     }
 }
 
