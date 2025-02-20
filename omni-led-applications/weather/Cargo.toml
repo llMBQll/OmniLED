@@ -3,7 +3,7 @@ name = "weather"
 version = "0.3.0"
 authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
 license = "GPL-3.0-only"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 chrono = { version = "0.4" }

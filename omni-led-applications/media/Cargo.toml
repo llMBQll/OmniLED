@@ -3,7 +3,7 @@ name = "media"
 version = "0.3.0"
 authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
 license = "GPL-3.0-only"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }

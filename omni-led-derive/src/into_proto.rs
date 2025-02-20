@@ -59,10 +59,11 @@ fn generate_assignments(data: &Data, struct_attrs: &StructAttributes) -> TokenSt
                     };
 
                     // TODO find a better way of checking whether type is an Option<_> or not
-                    let is_option = if let Type::Path(type_path) = &field.ty {
-                        type_path.path.segments[0].ident.to_string() == "Option"
-                    } else {
-                        false
+                    let is_option = match &field.ty {
+                        Type::Path(type_path) => {
+                            type_path.path.segments[0].ident.to_string() == "Option"
+                        }
+                        _ => false,
                     };
 
                     let attrs = get_field_attributes(&field.attrs);

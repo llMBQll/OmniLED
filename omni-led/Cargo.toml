@@ -3,7 +3,7 @@ name = "omni-led"
 version = "0.3.0"
 authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
 license = "GPL-3.0-only"
-edition = "2021"
+edition = "2024"
 default-run = "omni-led"
 
 [dependencies]
