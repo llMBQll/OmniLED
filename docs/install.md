@@ -1,4 +1,4 @@
-# Installing on Windows
+# Installing
 
 1. [Install dependencies](#install-dependencies)
 2. [Build from source](#build-from-source) or install using [prebuilt binaries](#prebuilt-binaries).
@@ -43,7 +43,7 @@
 
    Else you need to compile the targets manually. This requires 2 build steps due to package
    dependencies.
-   > `cargo build --release -p omni-led -p audio -p clock -p media -p weather`  
+   > `cargo build --release -p omni-led -p audio -p clock -p images -p media -p weather`  
    > `cargo build --release -p setup`  
    > `cargo run --release --bin omni-led-setup -- install --interactive`
 
