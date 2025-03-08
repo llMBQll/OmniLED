@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use mlua::{chunk, ErrorContext, Lua, ObjectLike, Table, Value};
-use omni_led_api::types::field::Field as FieldEntry;
+use mlua::{ErrorContext, Lua, ObjectLike, Table, Value, chunk};
 use omni_led_api::types::Field;
+use omni_led_api::types::field::Field as FieldEntry;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use crate::script_handler::script_data_types::ImageData;

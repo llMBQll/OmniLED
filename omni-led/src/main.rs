@@ -31,7 +31,7 @@ use crate::devices::devices::Devices;
 use crate::events::event_loop::EventLoop;
 use crate::events::event_queue::Event;
 use crate::events::shortcuts::Shortcuts;
-use crate::keyboard::keyboard::{process_events, KeyboardEventEventType};
+use crate::keyboard::keyboard::{KeyboardEventEventType, process_events};
 use crate::logging::logger::Log;
 use crate::script_handler::script_handler::ScriptHandler;
 use crate::server::server::PluginServer;

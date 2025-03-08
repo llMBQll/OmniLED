@@ -19,7 +19,7 @@
 use pulse::context::subscribe::{Facility, InterestMaskSet};
 use pulse::context::{Context, FlagSet};
 use pulse::mainloop::threaded::Mainloop;
-use pulse::proplist::{properties, Proplist};
+use pulse::proplist::{Proplist, properties};
 use pulse::volume::Volume;
 use std::cell::RefCell;
 use std::ops::Deref;

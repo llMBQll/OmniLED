@@ -17,7 +17,7 @@
  */
 
 use log::{debug, error};
-use mlua::{chunk, ErrorContext, FromLua, Lua, UserData};
+use mlua::{ErrorContext, FromLua, Lua, UserData, chunk};
 use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::path::PathBuf;
 use std::time::Duration;

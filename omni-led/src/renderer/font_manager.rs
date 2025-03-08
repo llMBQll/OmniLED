@@ -19,8 +19,8 @@
 use font_kit::font::Font;
 use font_kit::properties::Properties;
 use font_kit::source::SystemSource;
-use freetype::face::LoadFlag;
 use freetype::RenderMode;
+use freetype::face::LoadFlag;
 use log::{debug, error};
 use std::collections::HashMap;
 use std::error::Error;

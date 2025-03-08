@@ -206,8 +206,8 @@ fn run() {
 #[cfg(target_os = "windows")]
 mod os {
     use std::fs::File;
-    use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
     use winreg::RegKey;
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
 
     use crate::util::{get_app_exe_path, get_app_name};
 

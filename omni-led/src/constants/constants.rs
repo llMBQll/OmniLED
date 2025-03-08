@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use mlua::{chunk, Lua};
+use mlua::{Lua, chunk};
 use std::path::PathBuf;
 use std::{
     env::consts::{EXE_EXTENSION, EXE_SUFFIX, OS},

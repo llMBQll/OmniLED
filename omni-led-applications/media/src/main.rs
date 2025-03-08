@@ -23,9 +23,9 @@ use std::collections::HashMap;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::media::session_data::SessionData;
-use crate::media::Media;
 use crate::Mode::{Both, Focused, Individual};
+use crate::media::Media;
+use crate::media::session_data::SessionData;
 
 mod media;
 

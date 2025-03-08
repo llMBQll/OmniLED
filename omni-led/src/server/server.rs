@@ -135,7 +135,9 @@ impl omni_led_api::types::plugin_server::Plugin for PluginServer {
 
         let fields = match fields {
             Some(fields) => fields,
-            None => std::unreachable!("This has type Option<Table> due the code generator, field is required in proto definition")
+            None => std::unreachable!(
+                "This has type Option<Table> due the code generator, field is required in proto definition"
+            ),
         };
 
         self.event_queue

@@ -178,7 +178,7 @@ impl Api {
             None => {
                 return Err(Error::Disconnected(
                     "Couldn't read server address".to_string(),
-                ))
+                ));
             }
         };
 
@@ -218,7 +218,7 @@ impl Api {
                 return Err(Error::NotAvailable(format!(
                     "Couldn't open '{}'. {}",
                     path, error
-                )))
+                )));
             }
         };
 
@@ -229,7 +229,7 @@ impl Api {
                 return Err(Error::NotAvailable(format!(
                     "Couldn't parse properties json. {}",
                     error
-                )))
+                )));
             }
         };
 

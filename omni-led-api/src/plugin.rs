@@ -21,7 +21,7 @@ use tokio::sync::mpsc::channel;
 use tokio_stream::wrappers::ReceiverStream;
 
 use crate::logging;
-use crate::types::{plugin_client, EventData, Table};
+use crate::types::{EventData, Table, plugin_client};
 
 #[derive(Debug)]
 pub struct Plugin {

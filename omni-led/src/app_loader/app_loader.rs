@@ -17,7 +17,7 @@
  */
 
 use log::{debug, error, warn};
-use mlua::{chunk, Lua, UserData};
+use mlua::{Lua, UserData, chunk};
 use omni_led_derive::UniqueUserData;
 
 use crate::app_loader::process::{Config, Process};

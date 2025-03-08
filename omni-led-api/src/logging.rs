@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use log::{error, LevelFilter, Log, Metadata, Record};
+use log::{LevelFilter, Log, Metadata, Record, error};
 use tokio::runtime::Handle;
 use tokio::sync::mpsc::Sender;
 

@@ -16,12 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use windows::core::{implement, Result, PCWSTR};
 use windows::Win32::Foundation::PROPERTYKEY;
 use windows::Win32::Media::Audio::{
-    eMultimedia, eRender, EDataFlow, ERole, IMMNotificationClient, IMMNotificationClient_Impl,
-    DEVICE_STATE,
+    DEVICE_STATE, EDataFlow, ERole, IMMNotificationClient, IMMNotificationClient_Impl, eMultimedia,
+    eRender,
 };
+use windows::core::{PCWSTR, Result, implement};
 
 #[implement(IMMNotificationClient)]
 pub struct NotificationClient<T>

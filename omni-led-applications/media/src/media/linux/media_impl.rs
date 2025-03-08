@@ -22,8 +22,8 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::media::session_data::SessionData;
 use crate::Data;
+use crate::media::session_data::SessionData;
 
 pub struct MediaImpl {
     tx: Sender<Data>,

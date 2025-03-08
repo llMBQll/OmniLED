@@ -26,9 +26,9 @@ use windows::Media::Control::{
     GlobalSystemMediaTransportControlsSessionPlaybackStatus,
 };
 
+use crate::Data;
 use crate::media::session_data::SessionData;
 use crate::media::windows::global_system_media::{GlobalSystemMedia, Message};
-use crate::Data;
 
 pub struct MediaImpl {
     tx: Sender<Data>,

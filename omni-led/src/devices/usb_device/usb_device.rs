@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::renderer::buffer::Buffer;
 use log::{debug, warn};
 use mlua::{Function, Lua, Value};
 use rusb::{DeviceHandle, GlobalContext};
@@ -24,6 +23,7 @@ use std::time::Duration;
 
 use crate::devices::device::{Device, MemoryRepresentation, Settings, Size};
 use crate::devices::usb_device::usb_device_settings::{USBDeviceSettings, USBSettings};
+use crate::renderer::buffer::Buffer;
 
 pub struct USBDevice {
     name: String,
@@ -67,7 +67,7 @@ impl Device for USBDevice {
                 return Err(mlua::Error::runtime(format!(
                     "Failed to match vendor_id {:#06x} and product_id {:#06x}",
                     vendor_id, product_id
-                )))
+                )));
             }
         };
 

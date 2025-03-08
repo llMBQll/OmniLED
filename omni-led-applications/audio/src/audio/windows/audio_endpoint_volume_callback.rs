@@ -18,11 +18,11 @@
 
 use tokio::runtime::Handle;
 use tokio::sync::mpsc::Sender;
-use windows::core::implement;
+use windows::Win32::Media::Audio::AUDIO_VOLUME_NOTIFICATION_DATA;
 use windows::Win32::Media::Audio::Endpoints::{
     IAudioEndpointVolumeCallback, IAudioEndpointVolumeCallback_Impl,
 };
-use windows::Win32::Media::Audio::AUDIO_VOLUME_NOTIFICATION_DATA;
+use windows::core::implement;
 
 use crate::AudioData;
 

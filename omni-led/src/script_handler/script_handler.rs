@@ -17,7 +17,7 @@
  */
 
 use log::warn;
-use mlua::{chunk, ErrorContext, FromLua, Function, Lua, Table, UserData, UserDataMethods, Value};
+use mlua::{ErrorContext, FromLua, Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
 use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -33,7 +33,7 @@ use crate::events::shortcuts::Shortcuts;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::renderer::Renderer;
-use crate::script_handler::script_data_types::{load_script_data_types, Widget};
+use crate::script_handler::script_data_types::{Widget, load_script_data_types};
 use crate::settings::settings::get_full_path;
 
 #[derive(UniqueUserData)]

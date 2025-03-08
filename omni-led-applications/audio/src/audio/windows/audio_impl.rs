@@ -22,11 +22,11 @@ use tokio::sync::mpsc::Sender;
 use windows::Win32::Media::Audio::{
     IMMDeviceEnumerator, IMMNotificationClient, MMDeviceEnumerator,
 };
-use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER};
+use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance};
 
+use crate::AudioData;
 use crate::audio::windows::endpoint_volume::EndpointVolume;
 use crate::audio::windows::notification_client::NotificationClient;
-use crate::AudioData;
 
 pub struct AudioImpl {
     _endpoint_volume: Arc<Mutex<EndpointVolume>>,
