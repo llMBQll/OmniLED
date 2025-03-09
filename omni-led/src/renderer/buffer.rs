@@ -268,3 +268,78 @@ impl BufferTrait for BitBuffer {
         }
     }
 }
+
+pub struct MagicBuffer {
+    width: usize,
+    height: usize,
+    padded_height: usize,
+    data: Vec<u8>,
+}
+
+impl MagicBuffer {
+    pub fn new(size: Size) -> Self {
+        let oversize = size.height % 8;
+        let padding = if oversize == 0 { 0 } else { 8 - oversize };
+        let padded_height = size.height + padding;
+        Self {
+            width: size.width,
+            height: size.height,
+            padded_height,
+            data: vec![0; size.width * padded_height / 8],
+        }
+    }
+
+    fn bit_position(&self, x: usize, y: usize) -> Option<(usize, usize)> {
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+
+        let index = y / 8 * self.width + x;
+        let offset = y % 8;
+
+        Some((index, offset))
+    }
+
+    fn get_bit(&self, x: usize, y: usize) -> Option<Bit> {
+        self.bit_position(x, y)
+            .and_then(|(index, offset)| Some(Bit::new(&self.data[index], offset)))
+    }
+
+    fn get_bit_mut(&mut self, x: usize, y: usize) -> Option<BitMut> {
+        self.bit_position(x, y)
+            .and_then(|(index, offset)| Some(BitMut::new(&mut self.data[index], offset)))
+    }
+}
+
+impl BufferTrait for MagicBuffer {
+    fn width(&self) -> usize {
+        self.width
+    }
+
+    fn height(&self) -> usize {
+        self.height
+    }
+
+    fn bytes(&self) -> &Vec<u8> {
+        &self.data
+    }
+    fn row_stride(&self) -> usize {
+        self.width / 8
+    }
+
+    fn get(&self, x: usize, y: usize) -> Option<bool> {
+        self.get_bit(x, y).and_then(|bit| Some(bit.get()))
+    }
+
+    fn set(&mut self, x: usize, y: usize) {
+        if let Some(mut bit) = self.get_bit_mut(x, y) {
+            bit.set();
+        }
+    }
+
+    fn reset(&mut self, x: usize, y: usize) {
+        if let Some(mut bit) = self.get_bit_mut(x, y) {
+            bit.reset();
+        }
+    }
+}
