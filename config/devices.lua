@@ -69,7 +69,7 @@ usb_device {
         table.insert(bytes, 1, 0x0a)
         return bytes
     end,
-    memory_representation = 'BitPerPixel',
+    memory_representation = 'Magic',
 }
 
 emulator {

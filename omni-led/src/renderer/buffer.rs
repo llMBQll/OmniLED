@@ -18,6 +18,7 @@
 
 use mlua::{UserData, UserDataMethods};
 
+use crate::devices::device::MemoryRepresentation;
 use crate::renderer::bit::{Bit, BitMut};
 use crate::script_handler::script_data_types::Modifiers;
 use crate::script_handler::script_data_types::{Rectangle, Size};
@@ -27,10 +28,14 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    pub fn new<T: BufferTrait + 'static>(buffer: T) -> Self {
-        Self {
-            buffer: Box::new(buffer),
-        }
+    pub fn new(size: Size, memory_representation: MemoryRepresentation) -> Self {
+        let buffer: Box<dyn BufferTrait> = match memory_representation {
+            MemoryRepresentation::BitPerPixel => Box::new(BitBuffer::new(size)),
+            MemoryRepresentation::BytePerPixel => Box::new(ByteBuffer::new(size)),
+            MemoryRepresentation::Magic => Box::new(MagicBuffer::new(size)),
+        };
+
+        Self { buffer }
     }
 
     pub fn set(&mut self, x: isize, y: isize, area: &Rectangle, modifiers: &Modifiers) {
@@ -248,6 +253,7 @@ impl BufferTrait for BitBuffer {
     fn bytes(&self) -> &Vec<u8> {
         &self.data
     }
+
     fn row_stride(&self) -> usize {
         self.padded_width / 8
     }
@@ -318,6 +324,7 @@ impl BufferTrait for MagicBuffer {
     fn bytes(&self) -> &Vec<u8> {
         &self.data
     }
+
     fn row_stride(&self) -> usize {
         self.width / 8
     }
