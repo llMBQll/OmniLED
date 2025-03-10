@@ -272,20 +272,15 @@ impl BufferTrait for BitBuffer {
 pub struct MagicBuffer {
     width: usize,
     height: usize,
-    padded_height: usize,
     data: Vec<u8>,
 }
 
 impl MagicBuffer {
     pub fn new(size: Size) -> Self {
-        let oversize = size.height % 8;
-        let padding = if oversize == 0 { 0 } else { 8 - oversize };
-        let padded_height = size.height + padding;
         Self {
             width: size.width,
             height: size.height,
-            padded_height,
-            data: vec![0; size.width * padded_height / 8],
+            data: vec![0; size.width * size.height / 8],
         }
     }
 
