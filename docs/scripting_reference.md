@@ -313,8 +313,15 @@
 >
 > > `BitPerPixel`
 > >
-> > Pack information about 8 pixels into each byte, making the update data smaller. This will also
-> > add padding bits at the end of each row if the row length is not a multiple of 8.
+> > Pack information about 8 pixels into each byte in a way byte represents 8 consecutive pixels in
+> > a row. This will also add padding bits at the end of each row if the row length is not a
+> > multiple of 8.
+>
+> > `BitPerPixelVertical`
+> >
+> > Pack information about 8 pixels into each byte in a way byte represents 8 consecutive pixels in
+> > a column. This will also add padding bits at the end of each column if the column length is not
+> > a multiple of 8.
 
 ---
 
@@ -443,11 +450,7 @@
 >
 > > `bytes`: `fn() -> [byte]`
 > >
-> > Get a flat array of bytes in a row-major format.
->
-> > `rows`: `fn() -> [[byte]]`
-> >
-> > Get an array of arrays of bytes split by row.
+> > Get a flat array of bytes in a device-specific memory layout.
 
 ---
 
