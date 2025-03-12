@@ -1,5 +1,5 @@
 usb_device {
-    name = 'Steelseries Apex 7 TKL',
+    name = 'SteelSeries Apex 7 TKL',
     screen_size = {
         width = 128,
         height = 40,
@@ -24,7 +24,7 @@ usb_device {
 }
 
 usb_device {
-    name = 'Steelseries Apex Pro',
+    name = 'SteelSeries Apex Pro',
     screen_size = {
         width = 128,
         height = 40,
