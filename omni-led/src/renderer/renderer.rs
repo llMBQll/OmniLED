@@ -26,7 +26,7 @@ use std::str::Chars;
 use crate::common::user_data::UserDataRef;
 use crate::renderer::animation::{Animation, State};
 use crate::renderer::animation_group::AnimationGroup;
-use crate::renderer::buffer::{BitBuffer, Buffer, BufferTrait, ByteBuffer};
+use crate::renderer::buffer::{BitBuffer, Buffer, BufferTrait};
 use crate::renderer::font_manager::FontManager;
 use crate::renderer::images;
 use crate::renderer::images::ImageCache;
@@ -74,10 +74,7 @@ impl Renderer {
         mut widgets: Vec<Widget>,
         memory_representation: MemoryRepresentation,
     ) -> (State, Buffer) {
-        let mut buffer = match memory_representation {
-            MemoryRepresentation::BitPerPixel => Buffer::new(BitBuffer::new(size)),
-            MemoryRepresentation::BytePerPixel => Buffer::new(ByteBuffer::new(size)),
-        };
+        let mut buffer = Buffer::new(size, memory_representation);
 
         self.calculate_animations(animation_groups, &mut widgets);
 

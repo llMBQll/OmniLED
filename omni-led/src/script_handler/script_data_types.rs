@@ -257,6 +257,7 @@ impl UserData for Modifiers {}
 pub enum MemoryRepresentation {
     BitPerPixel,
     BytePerPixel,
+    BitPerPixelVertical,
 }
 
 pub fn load_script_data_types(lua: &Lua, env: &Table) {

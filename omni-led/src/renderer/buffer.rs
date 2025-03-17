@@ -18,6 +18,7 @@
 
 use mlua::{UserData, UserDataMethods};
 
+use crate::devices::device::MemoryRepresentation;
 use crate::renderer::bit::{Bit, BitMut};
 use crate::script_handler::script_data_types::Modifiers;
 use crate::script_handler::script_data_types::{Rectangle, Size};
@@ -27,10 +28,14 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    pub fn new<T: BufferTrait + 'static>(buffer: T) -> Self {
-        Self {
-            buffer: Box::new(buffer),
-        }
+    pub fn new(size: Size, memory_representation: MemoryRepresentation) -> Self {
+        let buffer: Box<dyn BufferTrait> = match memory_representation {
+            MemoryRepresentation::BitPerPixel => Box::new(BitBuffer::new(size)),
+            MemoryRepresentation::BytePerPixel => Box::new(ByteBuffer::new(size)),
+            MemoryRepresentation::BitPerPixelVertical => Box::new(VerticalBitBuffer::new(size)),
+        };
+
+        Self { buffer }
     }
 
     pub fn set(&mut self, x: isize, y: isize, area: &Rectangle, modifiers: &Modifiers) {
@@ -43,11 +48,6 @@ impl Buffer {
 
     pub fn bytes(&self) -> &[u8] {
         self.buffer.bytes().as_slice()
-    }
-
-    pub fn rows(&self) -> Vec<&[u8]> {
-        let chunk_size = self.buffer.row_stride();
-        self.buffer.bytes().chunks(chunk_size).collect()
     }
 
     fn set_value(
@@ -103,14 +103,6 @@ impl Buffer {
 impl UserData for Buffer {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("bytes", |_lua, buffer, _: ()| Ok(buffer.bytes().to_vec()));
-
-        methods.add_method("rows", |_lua, buffer, _: ()| {
-            Ok(buffer
-                .rows()
-                .into_iter()
-                .map(|row| row.to_vec())
-                .collect::<Vec<_>>())
-        });
     }
 }
 
@@ -118,7 +110,6 @@ pub trait BufferTrait {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
     fn bytes(&self) -> &Vec<u8>;
-    fn row_stride(&self) -> usize;
     #[allow(unused)]
     fn get(&self, x: usize, y: usize) -> Option<bool>;
     fn set(&mut self, x: usize, y: usize);
@@ -126,26 +117,26 @@ pub trait BufferTrait {
 }
 
 pub struct ByteBuffer {
-    width: usize,
-    height: usize,
+    width_px: usize,
+    height_px: usize,
     data: Vec<u8>,
 }
 
 impl ByteBuffer {
     pub fn new(size: Size) -> Self {
         Self {
-            width: size.width,
-            height: size.height,
+            width_px: size.width,
+            height_px: size.height,
             data: vec![0; size.height * size.width],
         }
     }
 
     fn byte_position(&self, x: usize, y: usize) -> Option<usize> {
-        if x >= self.width || y >= self.height {
+        if x >= self.width_px || y >= self.height_px {
             return None;
         }
 
-        let index = y * self.width + x;
+        let index = y * self.width_px + x;
         Some(index)
     }
 
@@ -162,19 +153,15 @@ impl ByteBuffer {
 
 impl BufferTrait for ByteBuffer {
     fn width(&self) -> usize {
-        self.width
+        self.width_px
     }
 
     fn height(&self) -> usize {
-        self.height
+        self.height_px
     }
 
     fn bytes(&self) -> &Vec<u8> {
         &self.data
-    }
-
-    fn row_stride(&self) -> usize {
-        self.width
     }
 
     fn get(&self, x: usize, y: usize) -> Option<bool> {
@@ -195,31 +182,29 @@ impl BufferTrait for ByteBuffer {
 }
 
 pub struct BitBuffer {
-    width: usize,
-    height: usize,
-    padded_width: usize,
+    width_px: usize,
+    height_px: usize,
+    width_bytes: usize,
     data: Vec<u8>,
 }
 
 impl BitBuffer {
     pub fn new(size: Size) -> Self {
-        let oversize = size.width % 8;
-        let padding = if oversize == 0 { 0 } else { 8 - oversize };
-        let padded_width = size.width + padding;
+        let width_bytes = (size.width + 7) / 8;
         Self {
-            width: size.width,
-            height: size.height,
-            padded_width,
-            data: vec![0; size.height * padded_width / 8],
+            width_px: size.width,
+            height_px: size.height,
+            width_bytes,
+            data: vec![0; size.height * width_bytes],
         }
     }
 
     fn bit_position(&self, x: usize, y: usize) -> Option<(usize, usize)> {
-        if x >= self.width || y >= self.height {
+        if x >= self.width_px || y >= self.height_px {
             return None;
         }
 
-        let index = (y * self.padded_width + x) / 8;
+        let index = y * self.width_bytes + x / 8;
         let offset = 7 - x % 8;
 
         Some((index, offset))
@@ -238,18 +223,85 @@ impl BitBuffer {
 
 impl BufferTrait for BitBuffer {
     fn width(&self) -> usize {
-        self.width
+        self.width_px
     }
 
     fn height(&self) -> usize {
-        self.height
+        self.height_px
     }
 
     fn bytes(&self) -> &Vec<u8> {
         &self.data
     }
-    fn row_stride(&self) -> usize {
-        self.padded_width / 8
+
+    fn get(&self, x: usize, y: usize) -> Option<bool> {
+        self.get_bit(x, y).and_then(|bit| Some(bit.get()))
+    }
+
+    fn set(&mut self, x: usize, y: usize) {
+        if let Some(mut bit) = self.get_bit_mut(x, y) {
+            bit.set();
+        }
+    }
+
+    fn reset(&mut self, x: usize, y: usize) {
+        if let Some(mut bit) = self.get_bit_mut(x, y) {
+            bit.reset();
+        }
+    }
+}
+
+pub struct VerticalBitBuffer {
+    width_px: usize,
+    height_px: usize,
+    _height_bytes: usize,
+    data: Vec<u8>,
+}
+
+impl VerticalBitBuffer {
+    pub fn new(size: Size) -> Self {
+        let height_bytes = (size.height + 7) / 8;
+        Self {
+            width_px: size.width,
+            height_px: size.height,
+            _height_bytes: height_bytes,
+            data: vec![0; size.width * height_bytes],
+        }
+    }
+
+    fn bit_position(&self, x: usize, y: usize) -> Option<(usize, usize)> {
+        if x >= self.width_px || y >= self.height_px {
+            return None;
+        }
+
+        let index = y / 8 * self.width_px + x;
+        let offset = y % 8;
+
+        Some((index, offset))
+    }
+
+    fn get_bit(&self, x: usize, y: usize) -> Option<Bit> {
+        self.bit_position(x, y)
+            .and_then(|(index, offset)| Some(Bit::new(&self.data[index], offset)))
+    }
+
+    fn get_bit_mut(&mut self, x: usize, y: usize) -> Option<BitMut> {
+        self.bit_position(x, y)
+            .and_then(|(index, offset)| Some(BitMut::new(&mut self.data[index], offset)))
+    }
+}
+
+impl BufferTrait for VerticalBitBuffer {
+    fn width(&self) -> usize {
+        self.width_px
+    }
+
+    fn height(&self) -> usize {
+        self.height_px
+    }
+
+    fn bytes(&self) -> &Vec<u8> {
+        &self.data
     }
 
     fn get(&self, x: usize, y: usize) -> Option<bool> {
