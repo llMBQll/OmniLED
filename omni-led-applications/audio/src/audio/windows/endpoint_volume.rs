@@ -24,15 +24,15 @@ use windows::Win32::Media::Audio::Endpoints::{
     IAudioEndpointVolume, IAudioEndpointVolume_Impl, IAudioEndpointVolumeCallback,
 };
 use windows::Win32::Media::Audio::{
-    IMMDevice, IMMDeviceEnumerator, MMDeviceEnumerator, eConsole, eRender,
+    EDataFlow, IMMDevice, IMMDeviceEnumerator, MMDeviceEnumerator, eCapture, eConsole, eRender,
 };
 use windows::Win32::System::Com::StructuredStorage::PropVariantToStringAlloc;
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance, STGM_READ};
 use windows::core::{GUID, Ref, implement};
 
-use crate::AudioData;
 use crate::audio::windows::audio_endpoint_volume_callback::AudioEndpointVolumeCallback;
 use crate::audio::windows::com_guard::ComGuard;
+use crate::{DeviceData, DeviceType};
 
 pub struct EndpointVolume {
     _com_guard: ComGuard,
@@ -41,14 +41,19 @@ pub struct EndpointVolume {
 }
 
 impl EndpointVolume {
-    pub fn new(tx: Sender<AudioData>, handle: Handle) -> Self {
+    pub fn new(
+        tx: Sender<(DeviceData, DeviceType)>,
+        handle: Handle,
+        device_type: DeviceType,
+    ) -> Self {
         let com_guard = ComGuard::new();
-        let endpoint_volume_callback = AudioEndpointVolumeCallback::new(tx.clone(), handle.clone());
+        let endpoint_volume_callback =
+            AudioEndpointVolumeCallback::new(tx.clone(), handle.clone(), device_type);
         let endpoint_volume = unsafe {
             let enumerator: IMMDeviceEnumerator =
                 CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_INPROC_SERVER).unwrap();
             let device: IMMDevice = enumerator
-                .GetDefaultAudioEndpoint(eRender, eConsole)
+                .GetDefaultAudioEndpoint(Self::device_type_to_data_flow(device_type), eConsole)
                 .unwrap();
             let endpoint_volume: IAudioEndpointVolume =
                 device.Activate(CLSCTX_INPROC_SERVER, None).unwrap();
@@ -67,7 +72,7 @@ impl EndpointVolume {
             let name = name.to_string().unwrap();
 
             handle.spawn(async move {
-                tx.send(AudioData::new(mute, volume, Some(name)))
+                tx.send((DeviceData::new(mute, volume, Some(name)), device_type))
                     .await
                     .unwrap()
             });
@@ -79,6 +84,13 @@ impl EndpointVolume {
             _com_guard: com_guard,
             endpoint_volume,
             endpoint_volume_callback,
+        }
+    }
+
+    fn device_type_to_data_flow(device_type: DeviceType) -> EDataFlow {
+        match device_type {
+            DeviceType::Input => eCapture,
+            DeviceType::Output => eRender,
         }
     }
 }

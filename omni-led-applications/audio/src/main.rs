@@ -35,20 +35,42 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let options = Options::parse();
     let mut plugin = Plugin::new(NAME, &options.address).await?;
 
-    let (tx, mut rx): (Sender<AudioData>, Receiver<AudioData>) = mpsc::channel(256);
+    let (tx, mut rx): (
+        Sender<(DeviceData, DeviceType)>,
+        Receiver<(DeviceData, DeviceType)>,
+    ) = mpsc::channel(256);
 
     let handle = Handle::current();
     let _audio = Audio::new(tx, handle);
 
-    while let Some(data) = rx.recv().await {
+    while let Some((data, device_type)) = rx.recv().await {
         if let Some(name) = &data.name {
             debug!(
-                "New default device: {}, volume: {}%, muted: {}",
-                name, data.volume, data.is_muted
+                "{:?} device: '{}', volume: {}%, muted: {}",
+                device_type, name, data.volume, data.is_muted
             );
         }
 
-        plugin.update(data.into()).await.unwrap();
+        let event = match device_type {
+            DeviceType::Input => AudioEvent {
+                input_is_muted: Some(data.is_muted),
+                input_volume: Some(data.volume),
+                input_name: data.name,
+                output_is_muted: None,
+                output_volume: None,
+                output_name: None,
+            },
+            DeviceType::Output => AudioEvent {
+                input_is_muted: None,
+                input_volume: None,
+                input_name: None,
+                output_is_muted: Some(data.is_muted),
+                output_volume: Some(data.volume),
+                output_name: data.name,
+            },
+        };
+
+        plugin.update(event.into()).await.unwrap();
     }
 
     Ok(())
@@ -56,13 +78,28 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 #[derive(IntoProto)]
 #[proto(rename_all = PascalCase)]
-struct AudioData {
+struct AudioEvent {
+    input_is_muted: Option<bool>,
+    input_volume: Option<i32>,
+    input_name: Option<String>,
+    output_is_muted: Option<bool>,
+    output_volume: Option<i32>,
+    output_name: Option<String>,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum DeviceType {
+    Input,
+    Output,
+}
+
+struct DeviceData {
     is_muted: bool,
     volume: i32,
     name: Option<String>,
 }
 
-impl AudioData {
+impl DeviceData {
     pub fn new(is_muted: bool, volume: i32, name: Option<String>) -> Self {
         Self {
             is_muted,

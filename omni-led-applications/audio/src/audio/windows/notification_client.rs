@@ -16,22 +16,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::DeviceType;
 use windows::Win32::Foundation::PROPERTYKEY;
 use windows::Win32::Media::Audio::{
-    DEVICE_STATE, EDataFlow, ERole, IMMNotificationClient, IMMNotificationClient_Impl, eMultimedia,
-    eRender,
+    DEVICE_STATE, EDataFlow, ERole, IMMNotificationClient, IMMNotificationClient_Impl, eCapture,
+    eMultimedia, eRender,
 };
 use windows::core::{PCWSTR, Result, implement};
 
 #[implement(IMMNotificationClient)]
 pub struct NotificationClient<T>
 where
-    T: Fn(&PCWSTR) + 'static,
+    T: Fn(DeviceType) + 'static,
 {
     callback: T,
 }
 
-impl<T: Fn(&PCWSTR)> NotificationClient<T> {
+impl<T: Fn(DeviceType)> NotificationClient<T> {
     pub fn new(callback: T) -> IMMNotificationClient {
         let this = Self { callback };
 
@@ -40,7 +41,7 @@ impl<T: Fn(&PCWSTR)> NotificationClient<T> {
 }
 
 #[allow(non_snake_case)]
-impl<T: Fn(&PCWSTR)> IMMNotificationClient_Impl for NotificationClient_Impl<T> {
+impl<T: Fn(DeviceType)> IMMNotificationClient_Impl for NotificationClient_Impl<T> {
     fn OnDeviceStateChanged(&self, _device_id: &PCWSTR, _new_state: DEVICE_STATE) -> Result<()> {
         Ok(())
     }
@@ -57,12 +58,14 @@ impl<T: Fn(&PCWSTR)> IMMNotificationClient_Impl for NotificationClient_Impl<T> {
         &self,
         flow: EDataFlow,
         role: ERole,
-        default_device_id: &PCWSTR,
+        _device_id: &PCWSTR,
     ) -> Result<()> {
-        if flow != eRender || role != eMultimedia {
-            return Ok(());
+        if role == eMultimedia && flow == eCapture {
+            (self.callback)(DeviceType::Input);
+        } else if role == eMultimedia && flow == eRender {
+            (self.callback)(DeviceType::Output);
         }
-        (self.callback)(default_device_id);
+
         Ok(())
     }
 

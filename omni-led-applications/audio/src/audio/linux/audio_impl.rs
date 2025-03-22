@@ -27,7 +27,7 @@ use std::rc::Rc;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc::Sender;
 
-use crate::AudioData;
+use crate::DeviceData;
 
 pub struct AudioImpl {
     _main_loop: Mainloop,
@@ -35,7 +35,7 @@ pub struct AudioImpl {
 }
 
 impl AudioImpl {
-    pub fn new(tx: Sender<AudioData>, handle: Handle) -> Self {
+    pub fn new(tx: Sender<DeviceData>, handle: Handle) -> Self {
         /**********************|
         | Create the main loop |
         |**********************/
@@ -165,7 +165,7 @@ impl AudioImpl {
     fn update_state(
         current_state: Rc<RefCell<(bool, i32)>>,
         state: (bool, i32),
-        tx: Sender<AudioData>,
+        tx: Sender<DeviceData>,
         handle: Handle,
     ) {
         let mut current_state = current_state.borrow_mut();
@@ -176,7 +176,7 @@ impl AudioImpl {
 
         let (muted, volume) = state;
         handle.spawn(async move {
-            tx.send(AudioData::new(muted, volume, None)).await.unwrap();
+            tx.send(DeviceData::new(muted, volume, None)).await.unwrap();
         });
     }
 
@@ -184,7 +184,7 @@ impl AudioImpl {
         ctx: Rc<RefCell<Context>>,
         current_index: Rc<RefCell<Option<u32>>>,
         current_state: Rc<RefCell<(bool, i32)>>,
-        tx: Sender<AudioData>,
+        tx: Sender<DeviceData>,
         handle: Handle,
     ) {
         let introspector = ctx.borrow_mut().introspect();
@@ -211,7 +211,7 @@ impl AudioImpl {
                         *current_index.borrow_mut() = Some(info.index);
                         *current_state.borrow_mut() = (muted, volume);
                         handle.spawn(async move {
-                            tx.send(AudioData::new(muted, volume, Some(name)))
+                            tx.send(DeviceData::new(muted, volume, Some(name)))
                                 .await
                                 .unwrap();
                         });

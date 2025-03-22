@@ -1,21 +1,38 @@
 local function volume()
-    return {
-        widgets = {
-            Text {
-                text = AUDIO.IsMuted and 'Muted' or AUDIO.Volume,
-                font_size = 24,
-                text_offset = 1,
-                position = { x = 0, y = 0 },
-                size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
-            },
-            Text {
-                text = AUDIO.Name,
+    local function display_device(widgets, offset, device_name, device_is_muted, device_volume, device_type)
+        if device_name then
+            table.insert(widgets, Text {
+                text = device_name,
                 scrolling = true,
                 repeats = 'Once',
-                position = { x = 0, y = SCREEN.Height / 2 },
+                position = { x = 0, y = offset },
+                size = { width = SCREEN.Width * 2 / 3, height = SCREEN.Height / 2 },
+                animation_group = 1,
+            })
+            table.insert(widgets, Text {
+                text = device_is_muted and ' M ' or string.format("% 3d", device_volume),
+                font_size = 24,
+                text_offset = 1,
+                position = { x = SCREEN.Width * 2 / 3, y = offset },
+                size = { width = SCREEN.Width / 3, height = SCREEN.Height / 2 },
+            })
+        else
+            table.insert(widgets, Text {
+                text = string.format('No %s device', device_type),
+                scrolling = true,
+                repeats = 'Once',
+                position = { x = 0, y = offset },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
-            },
-        },
+                animation_group = 1,
+            })
+        end
+    end
+
+    local widgets = {}
+    display_device(widgets, 0, AUDIO.OutputName, AUDIO.OutputIsMuted, AUDIO.OutputVolume, 'output')
+    display_device(widgets, SCREEN.Height / 2, AUDIO.InputName, AUDIO.InputIsMuted, AUDIO.InputVolume, 'input')
+    return {
+        widgets = widgets,
         duration = 2000,
     }
 end
@@ -142,7 +159,7 @@ SCREEN_BUILDER
     :with_layout_group({
         {
             layout = volume,
-            run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
+            run_on = { 'AUDIO.InputVolume', 'AUDIO.OutputVolume' },
         },
         {
             layout = spotify,

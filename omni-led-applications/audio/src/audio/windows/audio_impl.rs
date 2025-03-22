@@ -24,24 +24,42 @@ use windows::Win32::Media::Audio::{
 };
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance};
 
-use crate::AudioData;
 use crate::audio::windows::endpoint_volume::EndpointVolume;
 use crate::audio::windows::notification_client::NotificationClient;
+use crate::{DeviceData, DeviceType};
 
 pub struct AudioImpl {
-    _endpoint_volume: Arc<Mutex<EndpointVolume>>,
+    _input_endpoint_volume: Arc<Mutex<EndpointVolume>>,
+    _output_endpoint_volume: Arc<Mutex<EndpointVolume>>,
     _enumerator: IMMDeviceEnumerator,
     _notification_client: IMMNotificationClient,
 }
 
 impl AudioImpl {
-    pub fn new(tx: Sender<AudioData>, handle: Handle) -> Self {
-        let endpoint_volume = Arc::new(Mutex::new(EndpointVolume::new(tx.clone(), handle.clone())));
+    pub fn new(tx: Sender<(DeviceData, DeviceType)>, handle: Handle) -> Self {
+        let input_endpoint_volume = Arc::new(Mutex::new(EndpointVolume::new(
+            tx.clone(),
+            handle.clone(),
+            DeviceType::Input,
+        )));
+        let output_endpoint_volume = Arc::new(Mutex::new(EndpointVolume::new(
+            tx.clone(),
+            handle.clone(),
+            DeviceType::Output,
+        )));
 
         let notification_client = NotificationClient::new({
-            let endpoint_volume = Arc::clone(&endpoint_volume);
-            move |_device_id| {
-                *endpoint_volume.lock().unwrap() = EndpointVolume::new(tx.clone(), handle.clone());
+            let input_endpoint_volume = Arc::clone(&input_endpoint_volume);
+            let output_endpoint_volume = Arc::clone(&output_endpoint_volume);
+            move |device_type| match device_type {
+                DeviceType::Input => {
+                    *input_endpoint_volume.lock().unwrap() =
+                        EndpointVolume::new(tx.clone(), handle.clone(), DeviceType::Input);
+                }
+                DeviceType::Output => {
+                    *output_endpoint_volume.lock().unwrap() =
+                        EndpointVolume::new(tx.clone(), handle.clone(), DeviceType::Output);
+                }
             }
         });
 
@@ -54,7 +72,8 @@ impl AudioImpl {
         }
 
         Self {
-            _endpoint_volume: endpoint_volume,
+            _input_endpoint_volume: input_endpoint_volume,
+            _output_endpoint_volume: output_endpoint_volume,
             _enumerator: enumerator,
             _notification_client: notification_client,
         }
