@@ -38,6 +38,15 @@ pub fn expand_into_proto_derive(input: DeriveInput) -> proc_macro::TokenStream {
                 table
             }
         }
+
+        impl Into<omni_led_api::types::Field> for #name {
+            fn into(self) -> omni_led_api::types::Field {
+                let table = self.into();
+                omni_led_api::types::Field {
+                    field: Some(omni_led_api::types::field::Field::FTable(table)),
+                }
+            }
+        }
     };
     proc_macro::TokenStream::from(expanded)
 }

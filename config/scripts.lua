@@ -1,8 +1,8 @@
 local function volume()
-    local function display_device(widgets, offset, device_name, device_is_muted, device_volume, device_type)
-        if device_name then
+    local function display_device(widgets, offset, device, device_type)
+        if device then
             table.insert(widgets, Text {
-                text = device_name,
+                text = device.Name,
                 scrolling = true,
                 repeats = 'Once',
                 position = { x = 0, y = offset },
@@ -10,7 +10,7 @@ local function volume()
                 animation_group = 1,
             })
             table.insert(widgets, Text {
-                text = device_is_muted and ' M ' or string.format("% 3d", device_volume),
+                text = device.IsMuted and ' M ' or string.format("%3d", device.Volume),
                 font_size = 24,
                 text_offset = 1,
                 position = { x = SCREEN.Width * 2 / 3, y = offset },
@@ -29,8 +29,8 @@ local function volume()
     end
 
     local widgets = {}
-    display_device(widgets, 0, AUDIO.OutputName, AUDIO.OutputIsMuted, AUDIO.OutputVolume, 'output')
-    display_device(widgets, SCREEN.Height / 2, AUDIO.InputName, AUDIO.InputIsMuted, AUDIO.InputVolume, 'input')
+    display_device(widgets, 0, AUDIO.Output, 'output')
+    display_device(widgets, SCREEN.Height / 2, AUDIO.Input, 'input')
     return {
         widgets = widgets,
         duration = 2000,
@@ -112,10 +112,10 @@ local function weather()
     local value
     local unit
     if CLOCK.Seconds % 10 < 5 then
-        value = string.format("% 3d", math.round(WEATHER.Temperature))
+        value = string.format("%3d", math.round(WEATHER.Temperature))
         unit = '°' .. WEATHER.TemperatureUnit
     else
-        value = string.format("% 3d", math.round(WEATHER.WindSpeed))
+        value = string.format("%3d", math.round(WEATHER.WindSpeed))
         unit = WEATHER.WindSpeedUnit
     end
 
@@ -159,7 +159,7 @@ SCREEN_BUILDER
     :with_layout_group({
         {
             layout = volume,
-            run_on = { 'AUDIO.InputVolume', 'AUDIO.OutputVolume' },
+            run_on = { 'AUDIO.Input', 'AUDIO.Output' },
         },
         {
             layout = spotify,

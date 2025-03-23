@@ -66,6 +66,8 @@ macro_rules! create_table_with_defaults {
     }};
 }
 
+pub const KEY_VAL_TABLE: &str = "key-val-table";
+
 pub fn load_internal_functions(lua: &Lua) {
     let dump = lua
         .create_function(|_, value: Value| {
@@ -142,6 +144,11 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
             for (key, value) in map.items {
                 table.set(key, proto_to_lua_value(lua, value)?)?;
             }
+
+            let meta = lua.create_table_with_capacity(0, 1)?;
+            meta.set(KEY_VAL_TABLE, true)?;
+            table.set_metatable(Some(meta));
+
             Ok(Value::Table(table))
         }
         Some(FieldEntry::FImageData(image)) => {

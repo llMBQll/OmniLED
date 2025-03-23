@@ -143,10 +143,7 @@ impl omni_led_api::types::plugin_server::Plugin for PluginServer {
         self.event_queue
             .lock()
             .unwrap()
-            .push(events::event_queue::Event::Application((
-                name,
-                fields.items,
-            )));
+            .push(events::event_queue::Event::Application((name, fields)));
 
         Ok(Response::new(EventResponse {}))
     }

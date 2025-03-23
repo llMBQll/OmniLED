@@ -53,20 +53,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         let event = match device_type {
             DeviceType::Input => AudioEvent {
-                input_is_muted: Some(data.is_muted),
-                input_volume: Some(data.volume),
-                input_name: data.name,
-                output_is_muted: None,
-                output_volume: None,
-                output_name: None,
+                input: Some(data),
+                output: None,
             },
             DeviceType::Output => AudioEvent {
-                input_is_muted: None,
-                input_volume: None,
-                input_name: None,
-                output_is_muted: Some(data.is_muted),
-                output_volume: Some(data.volume),
-                output_name: data.name,
+                input: None,
+                output: Some(data),
             },
         };
 
@@ -76,23 +68,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
-struct AudioEvent {
-    input_is_muted: Option<bool>,
-    input_volume: Option<i32>,
-    input_name: Option<String>,
-    output_is_muted: Option<bool>,
-    output_volume: Option<i32>,
-    output_name: Option<String>,
-}
-
 #[derive(Copy, Clone, Debug)]
 pub enum DeviceType {
     Input,
     Output,
 }
 
+#[derive(IntoProto)]
+#[proto(rename_all = PascalCase)]
+struct AudioEvent {
+    input: Option<DeviceData>,
+    output: Option<DeviceData>,
+}
+
+#[derive(IntoProto)]
+#[proto(rename_all = PascalCase)]
 struct DeviceData {
     is_muted: bool,
     volume: i32,

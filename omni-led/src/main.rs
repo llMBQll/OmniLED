@@ -18,11 +18,6 @@
 
 #![windows_subsystem = "windows"]
 
-use log::{debug, error};
-use mlua::Lua;
-use std::sync::atomic::AtomicBool;
-use std::time::Instant;
-
 use crate::app_loader::app_loader::AppLoader;
 use crate::common::common::{load_internal_functions, proto_to_lua_value};
 use crate::common::user_data::UserDataRef;
@@ -37,6 +32,11 @@ use crate::script_handler::script_handler::ScriptHandler;
 use crate::server::server::PluginServer;
 use crate::settings::settings::Settings;
 use crate::tray_icon::tray_icon::TrayIcon;
+use log::{debug, error};
+use mlua::Lua;
+use omni_led_api::types::{Field, field};
+use std::sync::atomic::AtomicBool;
+use std::time::Instant;
 
 mod app_loader;
 mod common;
@@ -86,23 +86,22 @@ async fn main() {
 
             for event in events {
                 match event {
-                    Event::Application(event) => {
-                        let (application, values) = event;
+                    Event::Application((application, value)) => {
+                        let value = Field {
+                            field: Some(field::Field::FTable(value)),
+                        };
+                        let value = match proto_to_lua_value(&lua, value) {
+                            Ok(value) => value,
+                            Err(err) => {
+                                error!("Failed to convert protobuf value: {}", err);
+                                continue;
+                            }
+                        };
 
-                        for (name, value) in values {
-                            let value = match proto_to_lua_value(&lua, value) {
-                                Ok(value) => value,
-                                Err(err) => {
-                                    error!("Failed to convert protobuf value: {}", err);
-                                    continue;
-                                }
-                            };
-
-                            script_handler
-                                .get_mut()
-                                .set_value(&lua, application.clone(), name, value)
-                                .unwrap();
-                        }
+                        script_handler
+                            .get_mut()
+                            .set_value(&lua, application, value)
+                            .unwrap();
                     }
                     Event::Keyboard(event) => {
                         let key_name = format!("KEY({})", event.key);
