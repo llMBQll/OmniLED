@@ -124,7 +124,7 @@ them be missing.
 > > `server_port`: `integer`
 > >
 > > Select on which port the server will receive events from applications. When setting port `0`,
-> > OS will select any availabe port. For any other value, server will try to bind to the specified
+> > OS will select any available port. For any other value, server will try to bind to the specified
 > > port and exit the application if it's not available.
 > >
 > > _Optional_. Default: `0`

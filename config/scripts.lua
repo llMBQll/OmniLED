@@ -1,21 +1,38 @@
 local function volume()
-    return {
-        widgets = {
-            Text {
-                text = AUDIO.IsMuted and 'Muted' or AUDIO.Volume,
-                font_size = 24,
-                text_offset = 1,
-                position = { x = 0, y = 0 },
-                size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
-            },
-            Text {
-                text = AUDIO.Name,
+    local function display_device(widgets, offset, device, device_type)
+        if device then
+            table.insert(widgets, Text {
+                text = device.Name,
                 scrolling = true,
                 repeats = 'Once',
-                position = { x = 0, y = SCREEN.Height / 2 },
+                position = { x = 0, y = offset },
+                size = { width = SCREEN.Width * 2 / 3, height = SCREEN.Height / 2 },
+                animation_group = 1,
+            })
+            table.insert(widgets, Text {
+                text = device.IsMuted and ' M ' or string.format("%3d", device.Volume),
+                font_size = 24,
+                text_offset = 1,
+                position = { x = SCREEN.Width * 2 / 3, y = offset },
+                size = { width = SCREEN.Width / 3, height = SCREEN.Height / 2 },
+            })
+        else
+            table.insert(widgets, Text {
+                text = string.format('No %s device', device_type),
+                scrolling = true,
+                repeats = 'Once',
+                position = { x = 0, y = offset },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
-            },
-        },
+                animation_group = 1,
+            })
+        end
+    end
+
+    local widgets = {}
+    display_device(widgets, 0, AUDIO.Output, 'output')
+    display_device(widgets, SCREEN.Height / 2, AUDIO.Input, 'input')
+    return {
+        widgets = widgets,
         duration = 2000,
     }
 end
@@ -95,10 +112,10 @@ local function weather()
     local value
     local unit
     if CLOCK.Seconds % 10 < 5 then
-        value = string.format("% 3d", math.round(WEATHER.Temperature))
+        value = string.format("%3d", math.round(WEATHER.Temperature))
         unit = '°' .. WEATHER.TemperatureUnit
     else
-        value = string.format("% 3d", math.round(WEATHER.WindSpeed))
+        value = string.format("%3d", math.round(WEATHER.WindSpeed))
         unit = WEATHER.WindSpeedUnit
     end
 
@@ -142,7 +159,7 @@ SCREEN_BUILDER
     :with_layout_group({
         {
             layout = volume,
-            run_on = { 'AUDIO.IsMuted', 'AUDIO.Name', 'AUDIO.Volume' },
+            run_on = { 'AUDIO.Input', 'AUDIO.Output' },
         },
         {
             layout = spotify,

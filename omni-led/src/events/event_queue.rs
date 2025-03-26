@@ -17,13 +17,12 @@
  */
 
 use lazy_static::lazy_static;
-use omni_led_api::types::Field;
-use std::collections::HashMap;
+use omni_led_api::types::Table;
 use std::sync::{Arc, Mutex};
 
 use crate::keyboard::keyboard::KeyboardEvent;
 
-type ApplicationEvent = (String, HashMap<String, Field>);
+type ApplicationEvent = (String, Table);
 
 pub enum Event {
     Application(ApplicationEvent),
@@ -60,10 +59,12 @@ impl EventQueue {
     fn get_default_event_queue(&mut self) -> Vec<Event> {
         // TODO find a better way to register meta events
 
-        let mut map = HashMap::new();
-        map.insert("Update".to_string(), self.counter.into());
+        let mut table = Table::default();
+        table
+            .items
+            .insert("Update".to_string(), self.counter.into());
         self.counter += 1;
 
-        vec![Event::Application(("OMNILED".to_string(), map))]
+        vec![Event::Application(("OMNILED".to_string(), table))]
     }
 }

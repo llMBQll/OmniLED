@@ -24,17 +24,26 @@ use windows::Win32::Media::Audio::Endpoints::{
 };
 use windows::core::implement;
 
-use crate::AudioData;
+use crate::{DeviceData, DeviceType};
 
 #[implement(IAudioEndpointVolumeCallback)]
 pub struct AudioEndpointVolumeCallback {
-    tx: Sender<AudioData>,
+    tx: Sender<(DeviceData, DeviceType)>,
     handle: Handle,
+    device_type: DeviceType,
 }
 
 impl AudioEndpointVolumeCallback {
-    pub(crate) fn new(tx: Sender<AudioData>, handle: Handle) -> IAudioEndpointVolumeCallback {
-        let this = Self { tx, handle };
+    pub(crate) fn new(
+        tx: Sender<(DeviceData, DeviceType)>,
+        handle: Handle,
+        device_type: DeviceType,
+    ) -> IAudioEndpointVolumeCallback {
+        let this = Self {
+            tx,
+            handle,
+            device_type,
+        };
 
         this.into()
     }
@@ -43,14 +52,21 @@ impl AudioEndpointVolumeCallback {
 #[allow(non_snake_case)]
 impl IAudioEndpointVolumeCallback_Impl for AudioEndpointVolumeCallback_Impl {
     fn OnNotify(&self, pnotify: *mut AUDIO_VOLUME_NOTIFICATION_DATA) -> windows::core::Result<()> {
-        let data = unsafe { &*pnotify };
+        if pnotify.is_null() {
+            return Ok(());
+        }
+
+        let data = &unsafe { *pnotify };
 
         let muted = data.bMuted.into();
         let volume = (data.fMasterVolume * 100.0).round() as i32;
 
         let tx = self.tx.clone();
+        let device_type = self.device_type;
         self.handle.spawn(async move {
-            tx.send(AudioData::new(muted, volume, None)).await.unwrap();
+            tx.send((DeviceData::new(muted, volume, None), device_type))
+                .await
+                .unwrap();
         });
 
         Ok(())

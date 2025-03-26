@@ -35,34 +35,61 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let options = Options::parse();
     let mut plugin = Plugin::new(NAME, &options.address).await?;
 
-    let (tx, mut rx): (Sender<AudioData>, Receiver<AudioData>) = mpsc::channel(256);
+    let (tx, mut rx): (
+        Sender<(DeviceData, DeviceType)>,
+        Receiver<(DeviceData, DeviceType)>,
+    ) = mpsc::channel(256);
 
     let handle = Handle::current();
     let _audio = Audio::new(tx, handle);
 
-    while let Some(data) = rx.recv().await {
+    while let Some((data, device_type)) = rx.recv().await {
         if let Some(name) = &data.name {
             debug!(
-                "New default device: {}, volume: {}%, muted: {}",
-                name, data.volume, data.is_muted
+                "{:?} device: '{}', volume: {}%, muted: {}",
+                device_type, name, data.volume, data.is_muted
             );
         }
 
-        plugin.update(data.into()).await.unwrap();
+        let event = match device_type {
+            DeviceType::Input => AudioEvent {
+                input: Some(data),
+                output: None,
+            },
+            DeviceType::Output => AudioEvent {
+                input: None,
+                output: Some(data),
+            },
+        };
+
+        plugin.update(event.into()).await.unwrap();
     }
 
     Ok(())
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum DeviceType {
+    Input,
+    Output,
+}
+
 #[derive(IntoProto)]
 #[proto(rename_all = PascalCase)]
-struct AudioData {
+struct AudioEvent {
+    input: Option<DeviceData>,
+    output: Option<DeviceData>,
+}
+
+#[derive(IntoProto)]
+#[proto(rename_all = PascalCase)]
+struct DeviceData {
     is_muted: bool,
     volume: i32,
     name: Option<String>,
 }
 
-impl AudioData {
+impl DeviceData {
     pub fn new(is_muted: bool, volume: i32, name: Option<String>) -> Self {
         Self {
             is_muted,

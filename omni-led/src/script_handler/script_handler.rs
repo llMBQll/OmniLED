@@ -24,7 +24,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
-use crate::common::common::exec_file;
+use crate::common::common::{KEY_VAL_TABLE, exec_file};
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
@@ -72,33 +72,60 @@ impl ScriptHandler {
         exec_file(lua, &get_full_path("scripts.lua"), environment).unwrap();
     }
 
-    pub fn set_value(
-        &mut self,
-        lua: &Lua,
-        application_name: String,
-        event: String,
-        data: Value,
-    ) -> mlua::Result<()> {
+    pub fn set_value(&mut self, lua: &Lua, value_name: String, value: Value) -> mlua::Result<()> {
+        let devices = &mut self.devices;
         let env = &self.environment;
+        Self::set_value_impl(lua, devices, env, &value_name, value, None)
+    }
 
-        if !env.contains_key(application_name.clone())? {
-            let empty = lua.create_table()?;
-            env.set(application_name.clone(), empty)?;
+    fn set_value_impl(
+        lua: &Lua,
+        devices: &mut Vec<DeviceContext>,
+        parent: &Table,
+        value_name: &str,
+        value: Value,
+        current_key: Option<&str>,
+    ) -> mlua::Result<()> {
+        let current_key = match current_key {
+            Some(current_key) => format!("{}.{}", current_key, value_name),
+            None => value_name.to_string(),
+        };
+        Self::send_update_event(devices, &current_key);
+
+        match value {
+            Value::Table(table) => match table.metatable() {
+                Some(metatable) => {
+                    if !metatable.contains_key(KEY_VAL_TABLE)? {
+                        unreachable!("Only key-value tables should have a metatable")
+                    }
+
+                    if !parent.contains_key(value_name)? {
+                        let empty = lua.create_table()?;
+                        parent.set(value_name, empty)?;
+                    }
+                    let entry: Table = parent.get(value_name)?;
+
+                    table.for_each(|key: String, val: Value| {
+                        Self::set_value_impl(lua, devices, &entry, &key, val, Some(&current_key))
+                    })
+                }
+                None => {
+                    // This path is for tables that are just arrays
+                    parent.set(value_name, Value::Table(table))
+                }
+            },
+            value => parent.set(value_name, value),
         }
+    }
 
-        let entry: Table = env.get(application_name.clone())?;
-        entry.set(event.clone(), data.clone())?;
-
-        let key = format!("{}.{}", application_name, event);
-        for device in &mut self.devices {
+    fn send_update_event(devices: &mut Vec<DeviceContext>, key: &String) {
+        for device in devices {
             for (index, layout) in device.layouts.iter().enumerate() {
-                if layout.run_on.contains(&key) {
+                if layout.run_on.contains(key) {
                     device.marked_for_update[index] = true;
                 }
             }
         }
-
-        Ok(())
     }
 
     pub fn update(&mut self, lua: &Lua, time_passed: Duration) -> mlua::Result<()> {
