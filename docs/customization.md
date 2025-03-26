@@ -3,7 +3,8 @@
 All files with custom settings can be found in the `config` directory in the installation
 directory. This should be `~/.config/OmniLED/config` on Linux, or
 `C:\Users\<USER>\AppData\Roaming\OmniLED\config` on Windows.  
-It can also be accessed by pressing the `Config` menu on the tray icon after the application is running.
+It can also be accessed by pressing the `Config` menu on the tray icon after the application is
+running.
 
 > You may find an example configuration in the [`config`](../config/). This will also be the
 > default installed config, so make sure to adjust the user scripts work with your device.
@@ -40,7 +41,7 @@ See [settings](settings.md).
 > File `config/user_scripts.lua`
 
 Last, but not least, the biggest customization point of OmniLED. With user scripts you can set what
-happens on the screeen of any device at any time.
+happens on the screen of any device at any time.
 
 See [user scripts](user_scripts.md).
 

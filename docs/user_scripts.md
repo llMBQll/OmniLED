@@ -25,8 +25,8 @@ script was executed, the returned layout is then rendered and send to the device
 > best to keep the current convention of using PascalCase for data field names.
 
 Application update events are generated when any application sends an update to the server. OmniLED
-will then generate an update event for every top level field in the update data. It will also
-convert this data to a global variable that is accessible from user scripts.
+will then generate an update event for every named field in the update data. It will also convert
+this data to a global variable that is accessible from user scripts.
 
 Additionally, for each update cycle there will be special event called `OMNILED.Update`, so that an
 action can be run on each event loop update, rather than relying on receiving application updates
@@ -41,27 +41,33 @@ that regularly.
 >   Name = "OmniLED",
 >   HoursToComplete = "TooMany",
 >   SomeExampleData = {
->       a = 0,
->       b = 1,
+>       FieldOne = 0,
+>       FieldTwo = 1,
 >   },
 > }
 > ```
 >
-> This message will result in three application update events: `MY_APPLICATION.Name`,
-> `MY_APPLICATION.HoursToComplete`, `MY_APPLICATION.SomeExampleData`.  
-> It will also make `MY_APPLICATION` a global variable that can be accessed by all user scripts.
+> This message will result in the following update events:
+> - `MY_APPLICATION`
+> - `MY_APPLICATION.Name`
+> - `MY_APPLICATION.HoursToComplete`
+> - `MY_APPLICATION.SomeExampleData`
+> - `MY_APPLICATION.SomeExampleData.FieldOne`
+> - `MY_APPLICATION.SomeExampleData.FieldTwo`
+>
+> It will also create a global `MY_APPLICATION` variable that can be accessed by all user scripts.
 
 ### Keyboards Events
 
 > _Note: Keyboard events can currently only be used to register for shortcuts, and cannot be used
 to trigger user scripts._
 
-When you press a key on the keyboard a new event is generated with a following name 
+When you press a key on the keyboard a new event is generated with a following name
 `"KEY(<key_name>)"`. This event will be generated again under 2 circumstances:
 
 1) You let go of the key, and then press it again
 2) You continue to press the key for multiple durations of the update interval (Initial and repeat
-delay can be adjusted in [settings](settings.md#keyboard)).
+   delay can be adjusted in [settings](settings.md#keyboard)).
 
 ## Drawing on The Screen
 
@@ -105,7 +111,8 @@ see different data.
 
 ### Layout Priorities
 
-How does OmniLED decide which layout to show on the screen if multiple layouts registered for the same event?
+How does OmniLED decide which layout to show on the screen if multiple layouts registered for the
+same event?
 
 First it checks the priority and remaining display time of the previously rendered layout. Then it
 goes from the first layout in the list (highest priority) to the last one (lowest priority) and see
