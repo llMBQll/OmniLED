@@ -29,6 +29,7 @@ use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
+use crate::events::events::Events;
 use crate::events::shortcuts::Shortcuts;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
@@ -90,7 +91,7 @@ impl ScriptHandler {
             Some(current_key) => format!("{}.{}", current_key, value_name),
             None => value_name.to_string(),
         };
-        Self::send_update_event(devices, &current_key);
+        Self::send_update_event(lua, devices, &current_key, &value)?;
 
         match value {
             Value::Table(table) => match table.metatable() {
@@ -118,7 +119,15 @@ impl ScriptHandler {
         }
     }
 
-    fn send_update_event(devices: &mut Vec<DeviceContext>, key: &String) {
+    fn send_update_event(
+        lua: &Lua,
+        devices: &mut Vec<DeviceContext>,
+        key: &String,
+        value: &Value,
+    ) -> mlua::Result<()> {
+        let mut events = UserDataRef::<Events>::load(lua);
+        events.get_mut().process_event(lua, key, value)?;
+
         for device in devices {
             for (index, layout) in device.layouts.iter().enumerate() {
                 if layout.run_on.contains(key) {
@@ -126,6 +135,8 @@ impl ScriptHandler {
                 }
             }
         }
+
+        Ok(())
     }
 
     pub fn update(&mut self, lua: &Lua, time_passed: Duration) -> mlua::Result<()> {

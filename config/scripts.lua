@@ -154,6 +154,10 @@ local function weather()
     }
 end
 
+EVENTS:register({'OMNILED.Update'}, function(value)
+    LOG:debug(value)
+end)
+
 SCREEN_BUILDER
     :new('Emulator')
     :with_layout_group({

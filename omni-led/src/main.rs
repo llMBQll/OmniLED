@@ -25,6 +25,7 @@ use crate::constants::constants::Constants;
 use crate::devices::devices::Devices;
 use crate::events::event_loop::EventLoop;
 use crate::events::event_queue::Event;
+use crate::events::events::Events;
 use crate::events::shortcuts::Shortcuts;
 use crate::keyboard::keyboard::{KeyboardEventEventType, process_events};
 use crate::logging::logger::Log;
@@ -64,6 +65,7 @@ async fn main() {
     Constants::load(&lua);
     Settings::load(&lua);
     PluginServer::load(&lua).await;
+    Events::load(&lua);
     Shortcuts::load(&lua);
     Devices::load(&lua);
     ScriptHandler::load(&lua);
@@ -81,6 +83,7 @@ async fn main() {
     let event_loop = EventLoop::new();
     event_loop
         .run(interval, &RUNNING, |events| {
+            let mut event_dispatcher = UserDataRef::<Events>::load(&lua);
             let mut shortcuts = UserDataRef::<Shortcuts>::load(&lua);
             let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
 
@@ -118,6 +121,7 @@ async fn main() {
                 }
             }
 
+            event_dispatcher.get_mut().update();
             shortcuts.get_mut().update();
             script_handler.get_mut().update(&lua, interval).unwrap();
         })
