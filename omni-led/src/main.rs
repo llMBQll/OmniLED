@@ -18,22 +18,20 @@
 
 #![windows_subsystem = "windows"]
 
-use log::{debug, error};
-use mlua::{Lua, Value};
-use omni_led_api::types::{Field, field};
+use log::debug;
+use mlua::Lua;
 use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 
 use crate::app_loader::app_loader::AppLoader;
-use crate::common::common::{load_internal_functions, proto_to_lua_value};
+use crate::common::common::load_internal_functions;
 use crate::common::user_data::UserDataRef;
 use crate::constants::constants::Constants;
 use crate::devices::devices::Devices;
 use crate::events::event_loop::EventLoop;
-use crate::events::event_queue::Event;
 use crate::events::events::Events;
 use crate::events::shortcuts::Shortcuts;
-use crate::keyboard::keyboard::{KeyboardEventEventType, process_events};
+use crate::keyboard::keyboard::process_events;
 use crate::logging::logger::Log;
 use crate::script_handler::script_handler::ScriptHandler;
 use crate::server::server::PluginServer;
@@ -88,35 +86,7 @@ async fn main() {
             let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
 
             for event in events {
-                match event {
-                    Event::Application((application, value)) => {
-                        let value = Field {
-                            field: Some(field::Field::FTable(value)),
-                        };
-                        let value = match proto_to_lua_value(&lua, value) {
-                            Ok(value) => value,
-                            Err(err) => {
-                                error!("Failed to convert protobuf value: {}", err);
-                                continue;
-                            }
-                        };
-
-                        script_handler
-                            .get_mut()
-                            .set_value(&lua, application, value)
-                            .unwrap();
-                    }
-                    Event::Keyboard(event) => {
-                        let key_name = format!("KEY({})", event.key);
-                        let action = match event.event_type {
-                            KeyboardEventEventType::Press => "Pressed",
-                            KeyboardEventEventType::Release => "Released",
-                        };
-                        let action = Value::String(lua.create_string(action).unwrap());
-
-                        dispatcher.get().dispatch(&key_name, &action).unwrap();
-                    }
-                }
+                dispatcher.get().dispatch(&lua, event).unwrap();
             }
 
             dispatcher.get_mut().update();

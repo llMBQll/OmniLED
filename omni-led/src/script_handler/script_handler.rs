@@ -18,6 +18,7 @@
 
 use log::warn;
 use mlua::{ErrorContext, FromLua, Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
+use omni_led_api::plugin::Plugin;
 use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -70,29 +71,40 @@ impl ScriptHandler {
             },
         );
 
+        let event_handler = lua
+            .create_function(|lua, (event, value): (String, Value)| {
+                let mut this = UserDataRef::<ScriptHandler>::load(lua);
+                this.get_mut().mark_for_update(&event);
+
+                if Plugin::is_valid_identifier(&event) {
+                    // Set values recursively only from top level application events
+                    this.get().set_value(lua, event, value)?;
+                }
+
+                Ok(())
+            })
+            .unwrap();
+
+        let mut events = UserDataRef::<Events>::load(lua);
+        events
+            .get_mut()
+            .register("*".to_string(), event_handler)
+            .unwrap();
+
         exec_file(lua, &get_full_path("scripts.lua"), environment).unwrap();
     }
 
-    pub fn set_value(&mut self, lua: &Lua, value_name: String, value: Value) -> mlua::Result<()> {
-        let devices = &mut self.devices;
+    pub fn set_value(&self, lua: &Lua, value_name: String, value: Value) -> mlua::Result<()> {
         let env = &self.environment;
-        Self::set_value_impl(lua, devices, env, &value_name, value, None)
+        Self::set_value_impl(lua, env, &value_name, value)
     }
 
     fn set_value_impl(
         lua: &Lua,
-        devices: &mut Vec<DeviceContext>,
         parent: &Table,
         value_name: &str,
         value: Value,
-        current_key: Option<&str>,
     ) -> mlua::Result<()> {
-        let current_key = match current_key {
-            Some(current_key) => format!("{}.{}", current_key, value_name),
-            None => value_name.to_string(),
-        };
-        Self::send_update_event(lua, devices, &current_key, &value)?;
-
         match value {
             Value::Table(table) => match table.metatable() {
                 Some(metatable) => {
@@ -107,7 +119,7 @@ impl ScriptHandler {
                     let entry: Table = parent.get(value_name)?;
 
                     table.for_each(|key: String, val: Value| {
-                        Self::set_value_impl(lua, devices, &entry, &key, val, Some(&current_key))
+                        Self::set_value_impl(lua, &entry, &key, val)
                     })
                 }
                 None => {
@@ -119,24 +131,14 @@ impl ScriptHandler {
         }
     }
 
-    fn send_update_event(
-        lua: &Lua,
-        devices: &mut Vec<DeviceContext>,
-        key: &String,
-        value: &Value,
-    ) -> mlua::Result<()> {
-        let events = UserDataRef::<Events>::load(lua);
-        events.get().dispatch(key, value)?;
-
-        for device in devices {
+    fn mark_for_update(&mut self, key: &String) {
+        for device in &mut self.devices {
             for (index, layout) in device.layouts.iter().enumerate() {
                 if layout.run_on.contains(key) {
                     device.marked_for_update[index] = true;
                 }
             }
         }
-
-        Ok(())
     }
 
     pub fn update(&mut self, lua: &Lua, time_passed: Duration) -> mlua::Result<()> {
