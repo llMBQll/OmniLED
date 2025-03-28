@@ -154,7 +154,7 @@ local function weather()
     }
 end
 
-EVENTS:register({'OMNILED.Update'}, function(value)
+EVENTS:register('OMNILED.Update', function(value)
     LOG:debug(value)
 end)
 

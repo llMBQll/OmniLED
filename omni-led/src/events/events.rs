@@ -38,55 +38,25 @@ impl Events {
         );
     }
 
-    pub fn process_event(&mut self, _lua: &Lua, event: &str, value: &Value) -> mlua::Result<()> {
-        for entry in self.entries.iter_mut() {
-            if entry.last_trigger_tick == self.current_tick {
-                continue;
-            }
-
-            match entry.events.iter().position(|e| e.event == event) {
-                Some(position) => entry.events[position].triggered = true,
-                None => continue,
-            };
-
-            let all_triggered = entry.events.iter().all(|x| x.triggered);
-            if all_triggered {
-                entry.last_trigger_tick = self.current_tick;
-                entry.on_match.call::<()>(value.clone())?;
+    pub fn dispatch(&self, event: &str, value: &Value) -> mlua::Result<()> {
+        for entry in &self.entries {
+            if entry.event == event {
+                entry
+                    .on_match
+                    .call::<()>((event.to_string(), value.clone(), self.current_tick))?;
             }
         }
         Ok(())
     }
 
-    pub fn register(&mut self, mut events: Vec<String>, on_match: Function) -> mlua::Result<()> {
-        events.sort();
-        events.dedup();
-
-        let events = events
-            .into_iter()
-            .map(|event| EventState {
-                event,
-                triggered: false,
-            })
-            .collect();
-
-        self.entries.push(EventEntry {
-            events,
-            on_match,
-            last_trigger_tick: 0,
-        });
+    pub fn register(&mut self, event: String, on_match: Function) -> mlua::Result<()> {
+        self.entries.push(EventEntry { event, on_match });
 
         Ok(())
     }
 
     pub fn update(&mut self) {
         self.current_tick += 1;
-
-        for entry in &mut self.entries {
-            for event in &mut entry.events {
-                event.triggered = false;
-            }
-        }
     }
 }
 
@@ -94,20 +64,12 @@ impl UserData for Events {
     fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
-            |_lua, this, (events, on_match): (Vec<String>, Function)| {
-                this.register(events, on_match)
-            },
+            |_lua, this, (event, on_match): (String, Function)| this.register(event, on_match),
         );
     }
 }
 
 struct EventEntry {
-    events: Vec<EventState>,
-    on_match: Function,
-    last_trigger_tick: usize,
-}
-
-struct EventState {
     event: String,
-    triggered: bool,
+    on_match: Function,
 }

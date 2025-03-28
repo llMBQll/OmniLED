@@ -125,8 +125,8 @@ impl ScriptHandler {
         key: &String,
         value: &Value,
     ) -> mlua::Result<()> {
-        let mut events = UserDataRef::<Events>::load(lua);
-        events.get_mut().process_event(lua, key, value)?;
+        let events = UserDataRef::<Events>::load(lua);
+        events.get().dispatch(key, value)?;
 
         for device in devices {
             for (index, layout) in device.layouts.iter().enumerate() {
@@ -485,7 +485,7 @@ impl UserData for ScreenBuilderImpl {
                 let mut shortcuts = UserDataRef::<Shortcuts>::load(lua);
                 shortcuts
                     .get_mut()
-                    .register(builder.shortcut.clone(), toggle_screen)?;
+                    .register(lua, builder.shortcut.clone(), toggle_screen)?;
             }
 
             if builder.screen_count == 0 {

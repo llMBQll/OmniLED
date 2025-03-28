@@ -18,6 +18,12 @@
 
 #![windows_subsystem = "windows"]
 
+use log::{debug, error};
+use mlua::{Lua, Value};
+use omni_led_api::types::{Field, field};
+use std::sync::atomic::AtomicBool;
+use std::time::Instant;
+
 use crate::app_loader::app_loader::AppLoader;
 use crate::common::common::{load_internal_functions, proto_to_lua_value};
 use crate::common::user_data::UserDataRef;
@@ -33,11 +39,6 @@ use crate::script_handler::script_handler::ScriptHandler;
 use crate::server::server::PluginServer;
 use crate::settings::settings::Settings;
 use crate::tray_icon::tray_icon::TrayIcon;
-use log::{debug, error};
-use mlua::Lua;
-use omni_led_api::types::{Field, field};
-use std::sync::atomic::AtomicBool;
-use std::time::Instant;
 
 mod app_loader;
 mod common;
@@ -83,8 +84,7 @@ async fn main() {
     let event_loop = EventLoop::new();
     event_loop
         .run(interval, &RUNNING, |events| {
-            let mut event_dispatcher = UserDataRef::<Events>::load(&lua);
-            let mut shortcuts = UserDataRef::<Shortcuts>::load(&lua);
+            let mut dispatcher = UserDataRef::<Events>::load(&lua);
             let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
 
             for event in events {
@@ -112,17 +112,14 @@ async fn main() {
                             KeyboardEventEventType::Press => "Pressed",
                             KeyboardEventEventType::Release => "Released",
                         };
+                        let action = Value::String(lua.create_string(action).unwrap());
 
-                        shortcuts
-                            .get_mut()
-                            .process_key(&lua, &key_name, action)
-                            .unwrap();
+                        dispatcher.get().dispatch(&key_name, &action).unwrap();
                     }
                 }
             }
 
-            event_dispatcher.get_mut().update();
-            shortcuts.get_mut().update();
+            dispatcher.get_mut().update();
             script_handler.get_mut().update(&lua, interval).unwrap();
         })
         .await;

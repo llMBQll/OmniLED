@@ -24,14 +24,13 @@ use regex::Regex;
 use std::str::FromStr;
 
 use crate::common::user_data::{UniqueUserData, UserDataRef};
+use crate::events::events::Events;
 use crate::settings::settings::Settings;
 
 #[derive(UniqueUserData)]
 pub struct Shortcuts {
-    shortcuts: Vec<ShortcutEntry>,
     delay: usize,
     rate: usize,
-    current_tick: usize,
 }
 
 impl Shortcuts {
@@ -40,64 +39,62 @@ impl Shortcuts {
         let delay = settings.get().keyboard_ticks_repeat_delay;
         let rate = settings.get().keyboard_ticks_repeat_rate;
 
-        Self::set_unique(
-            lua,
-            Self {
-                shortcuts: Vec::new(),
-                delay,
-                rate,
-                current_tick: 0,
-            },
-        );
+        Self::set_unique(lua, Self { delay, rate });
     }
 
-    pub fn process_key(&mut self, _lua: &Lua, key_name: &str, action: &str) -> mlua::Result<()> {
-        for entry in self.shortcuts.iter_mut() {
-            let position = match entry.keys.iter().position(|x| x.key == key_name) {
-                Some(position) => position,
-                None => continue,
-            };
+    fn process_key(
+        entry: &mut ShortcutEntry,
+        key_name: &str,
+        action: &str,
+        current_tick: usize,
+    ) -> mlua::Result<()> {
+        let key_state = entry.keys.iter_mut().find(|s| s.key == key_name).unwrap();
+        key_state.pressed = action == "Pressed";
 
-            entry.keys[position].pressed = action == "Pressed";
-            let all_pressed = entry.keys.iter().all(|x| x.pressed);
+        let all_pressed = entry.keys.iter().all(|x| x.pressed);
 
-            let press = all_pressed && !entry.last_all_pressed;
-            let hold = all_pressed && entry.last_all_pressed;
-            let required_ticks = match entry.hold_updates {
-                0 => self.delay,
-                _ => self.rate,
-            };
-            let delta_ticks = self.current_tick - entry.last_update_tick;
-            let update = (self.current_tick != entry.last_update_tick)
-                && (press || (hold && delta_ticks >= required_ticks));
+        let press = all_pressed && !entry.last_all_pressed;
+        let hold = all_pressed && entry.last_all_pressed;
+        let required_ticks = match entry.hold_updates {
+            0 => entry.delay,
+            _ => entry.rate,
+        };
+        let delta_ticks = current_tick - entry.last_update_tick;
+        let update = (current_tick != entry.last_update_tick)
+            && (press || (hold && delta_ticks >= required_ticks));
 
-            if update {
-                entry.last_update_tick = self.current_tick;
-                entry.on_match.call::<()>(())?;
+        if update {
+            entry.last_update_tick = current_tick;
+            entry.on_match.call::<()>(())?;
 
-                if hold {
-                    entry.hold_updates += 1;
-                }
+            if hold {
+                entry.hold_updates += 1;
             }
-
-            if !hold {
-                entry.hold_updates = 0;
-            }
-
-            entry.last_all_pressed = all_pressed;
         }
+
+        if !hold {
+            entry.hold_updates = 0;
+        }
+
+        entry.last_all_pressed = all_pressed;
+
         Ok(())
     }
 
-    pub fn register(&mut self, mut keys: Vec<String>, on_match: Function) -> mlua::Result<()> {
+    pub fn register(
+        &mut self,
+        lua: &Lua,
+        mut keys: Vec<String>,
+        on_match: Function,
+    ) -> mlua::Result<()> {
         let pattern = Regex::new(r"^KEY\((.*)\)$").unwrap();
 
         keys.sort();
         keys.dedup();
 
         let mut error_found = false;
-        let sorted = keys
-            .into_iter()
+        let key_states = keys
+            .iter()
             .filter_map(|key| match pattern.captures(&key) {
                 Some(captures) => {
                     let content = captures.get(1).unwrap().as_str();
@@ -109,7 +106,7 @@ impl Shortcuts {
                     }
 
                     Some(KeyState {
-                        key,
+                        key: key.clone(),
                         pressed: false,
                     })
                 }
@@ -127,19 +124,28 @@ impl Shortcuts {
             ));
         }
 
-        self.shortcuts.push(ShortcutEntry {
-            keys: sorted,
+        let mut entry = ShortcutEntry {
+            keys: key_states,
             on_match,
             last_all_pressed: false,
             last_update_tick: 0,
             hold_updates: 0,
-        });
+            delay: self.delay,
+            rate: self.rate,
+        };
+
+        let function = lua.create_function_mut(
+            move |_: &Lua, (key, action, current_tick): (String, String, usize)| {
+                Self::process_key(&mut entry, &key, &action, current_tick)
+            },
+        )?;
+
+        let mut events = UserDataRef::<Events>::load(lua);
+        for key in keys {
+            events.get_mut().register(key, function.clone())?;
+        }
 
         Ok(())
-    }
-
-    pub fn update(&mut self) {
-        self.current_tick += 1;
     }
 }
 
@@ -147,7 +153,9 @@ impl UserData for Shortcuts {
     fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
-            |_lua, this, (keys, on_match): (Vec<String>, Function)| this.register(keys, on_match),
+            |lua, this, (keys, on_match): (Vec<String>, Function)| {
+                this.register(lua, keys, on_match)
+            },
         );
     }
 }
@@ -158,6 +166,8 @@ struct ShortcutEntry {
     last_all_pressed: bool,
     last_update_tick: usize,
     hold_updates: usize,
+    delay: usize,
+    rate: usize,
 }
 
 struct KeyState {
