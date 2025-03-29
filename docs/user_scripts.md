@@ -12,12 +12,11 @@ registering keyboard shortcuts and user scripts.
 ### Event Loop
 
 The main event loop is actually synchronous, and it groups events into batches that are processed
-in the interval specified in the [settings](settings.md#update-interval-tick-duration). OmniLED
-will wait for the update interval's duration and put keyboard and application update events into a
-queue. One the wait is done, it will first process the [keyboard events](#keyboards-events),
-triggering the registered shortcuts. Then it will process the
-[application update events](#application-update-events), executing the user scripts. If a user
-script was executed, the returned layout is then rendered and send to the device.
+in the interval specified in the [settings](settings.md#update-interval-tick-duration). OmniLED will
+wait for the update interval's duration and put [keyboard](#keyboards-events)
+and [application update events](#application-update-events) into a queue. One the wait is done, it
+will first execute all activated event and shortcut callbacks. Only then the user scripts
+are executed returning layouts that are then rendered and sent to the device.
 
 ### Application Update Events
 
@@ -59,15 +58,9 @@ that regularly.
 
 ### Keyboards Events
 
-> _Note: Keyboard events can currently only be used to register for shortcuts, and cannot be used
-to trigger user scripts._
-
 When you press a key on the keyboard a new event is generated with a following name
-`"KEY(<key_name>)"`. This event will be generated again under 2 circumstances:
-
-1) You let go of the key, and then press it again
-2) You continue to press the key for multiple durations of the update interval (Initial and repeat
-   delay can be adjusted in [settings](settings.md#keyboard)).
+`"KEY(<key_name>)"` and the value `"Pressed"`. This will be repeated as long as the key is held.
+When the key is released event `"KEY(<key_name>)"` will be sent with the value `"Released"`.
 
 ## Drawing on The Screen
 

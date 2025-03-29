@@ -395,6 +395,18 @@
 
 ## Objects
 
+> ### `EVENTS`
+>
+> Register callbacks for specific events. This, combined with script predicates, is useful when the
+> screen builder with default screen management doesn't quite cut it.
+>
+> > `register: fn(self, event: string, callback: fn(event: string, value: any))`
+> >
+> > Register a callback for any event. When the callback is triggered, the event name and its value
+> > will be passed as callback arguments.
+> >
+> > _Register for `event` `"*"` to match all events._
+
 > ### `SCREEN_BUILDER`
 >
 > Screen builder allows to put together layouts and screen setups for devices. This has to be
@@ -435,8 +447,11 @@
 
 > ### `SHORTCUTS`
 >
-> Register shortcuts to perform custom actions. This, combined with script predicates, is useful
-> when the screen builder with default screen management doesn't quite cut it.
+> Register shortcuts to perform custom actions. This provides a bit of convenience over just using
+> the [`EVENTS`](#events) allowing for listening for a complete combination of keys as well as
+> allowing customizable for auto-repeating behaviour on hold.
+>
+> _See [keyboard settings](settings.md#keyboard)_
 >
 > > `register: fn(self, keys: [string], action: fn())`
 > >
