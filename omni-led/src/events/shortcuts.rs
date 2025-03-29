@@ -18,9 +18,11 @@
 
 use device_query::Keycode;
 use log::{error, warn};
-use mlua::{Function, Lua, UserData, UserDataMethods};
+use mlua::{Function, Lua, UserData, UserDataMethods, Value};
 use omni_led_derive::UniqueUserData;
 use regex::Regex;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::str::FromStr;
 
 use crate::common::user_data::{UniqueUserData, UserDataRef};
@@ -31,6 +33,7 @@ use crate::settings::settings::Settings;
 pub struct Shortcuts {
     delay: usize,
     rate: usize,
+    current_tick: Rc<RefCell<usize>>,
 }
 
 impl Shortcuts {
@@ -38,8 +41,32 @@ impl Shortcuts {
         let settings = UserDataRef::<Settings>::load(lua);
         let delay = settings.get().keyboard_ticks_repeat_delay;
         let rate = settings.get().keyboard_ticks_repeat_rate;
+        let current_tick = Rc::new(RefCell::new(0));
 
-        Self::set_unique(lua, Self { delay, rate });
+        let function = lua
+            .create_function({
+                let current_tick = Rc::clone(&current_tick);
+                move |_: &Lua, (_, tick): (Value, usize)| {
+                    *current_tick.borrow_mut() = tick;
+                    Ok(())
+                }
+            })
+            .unwrap();
+
+        let mut events = UserDataRef::<Events>::load(lua);
+        events
+            .get_mut()
+            .register("OMNILED.Update".to_string(), function)
+            .unwrap();
+
+        Self::set_unique(
+            lua,
+            Self {
+                delay,
+                rate,
+                current_tick,
+            },
+        );
     }
 
     fn process_key(
@@ -134,11 +161,12 @@ impl Shortcuts {
             rate: self.rate,
         };
 
-        let function = lua.create_function_mut(
-            move |_: &Lua, (key, action, current_tick): (String, String, usize)| {
+        let current_tick = Rc::clone(&self.current_tick);
+        let function =
+            lua.create_function_mut(move |_: &Lua, (key, action): (String, String)| {
+                let current_tick = *current_tick.borrow();
                 Self::process_key(&mut entry, &key, &action, current_tick)
-            },
-        )?;
+            })?;
 
         let mut events = UserDataRef::<Events>::load(lua);
         for key in keys {

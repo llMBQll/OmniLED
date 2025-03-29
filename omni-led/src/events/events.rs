@@ -28,7 +28,6 @@ use crate::keyboard::keyboard::{KeyboardEvent, KeyboardEventEventType};
 #[derive(UniqueUserData)]
 pub struct Events {
     entries: Vec<EventEntry>,
-    current_tick: usize,
 }
 
 impl Events {
@@ -37,7 +36,6 @@ impl Events {
             lua,
             Self {
                 entries: Vec::new(),
-                current_tick: 0,
             },
         );
     }
@@ -46,10 +44,6 @@ impl Events {
         self.entries.push(EventEntry { event, on_match });
 
         Ok(())
-    }
-
-    pub fn update(&mut self) {
-        self.current_tick += 1;
     }
 
     pub fn dispatch(&self, lua: &Lua, event: Event) -> mlua::Result<()> {
@@ -113,7 +107,7 @@ impl Events {
             if entry.event == event || entry.event == "*" {
                 entry
                     .on_match
-                    .call::<()>((event.to_string(), value.clone(), self.current_tick))?;
+                    .call::<()>((event.to_string(), value.clone()))?;
             }
         }
         Ok(())

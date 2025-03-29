@@ -82,14 +82,12 @@ async fn main() {
     let event_loop = EventLoop::new();
     event_loop
         .run(interval, &RUNNING, |events| {
-            let mut dispatcher = UserDataRef::<Events>::load(&lua);
-            let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
-
+            let dispatcher = UserDataRef::<Events>::load(&lua);
             for event in events {
                 dispatcher.get().dispatch(&lua, event).unwrap();
             }
 
-            dispatcher.get_mut().update();
+            let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
             script_handler.get_mut().update(&lua, interval).unwrap();
         })
         .await;
