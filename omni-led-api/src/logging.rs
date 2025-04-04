@@ -28,9 +28,10 @@ pub fn init(runtime_handle: Handle, log_sink: Sender<LogData>, log_level_filter:
         .map(|()| log::set_max_level(log_level_filter))
         .unwrap();
 
-    std::panic::set_hook(Box::new(|panic_info| {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
         error!("{panic_info}");
-        println!("{panic_info}");
+        default_hook(panic_info);
     }));
 }
 
