@@ -19,17 +19,15 @@
 use convert_case::Casing;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Attribute, Data, DeriveInput, Type};
+use syn::{Attribute, Data, DeriveInput};
 
-use crate::common::{get_attribute, get_case, parse_attributes};
+use crate::common::{get_attribute, get_case, is_option, parse_attributes};
 
 pub fn expand_into_proto_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
-    // let (_impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let struct_attrs = get_struct_attributes(&input.attrs);
     let assignments = generate_assignments(&input.data, &struct_attrs);
 
-    // TODO handle generics of deriving type
     let expanded = quote! {
         impl Into<omni_led_api::types::Table> for #name {
             fn into(self) -> omni_led_api::types::Table {
@@ -67,13 +65,7 @@ fn generate_assignments(data: &Data, struct_attrs: &StructAttributes) -> TokenSt
                         None => field_name,
                     };
 
-                    // TODO find a better way of checking whether type is an Option<_> or not
-                    let is_option = match &field.ty {
-                        Type::Path(type_path) => {
-                            type_path.path.segments[0].ident.to_string() == "Option"
-                        }
-                        _ => false,
-                    };
+                    let is_option = is_option(&field.ty);
 
                     let attrs = get_field_attributes(&field.attrs);
 

@@ -19,7 +19,7 @@
 use convert_case::Case;
 use proc_macro2::TokenStream;
 use std::collections::HashMap;
-use syn::{Attribute, Token};
+use syn::{Attribute, Token, Type};
 
 pub fn get_attribute_with_default_value(
     attributes: &mut HashMap<String, Option<TokenStream>>,
@@ -88,5 +88,12 @@ pub fn get_case(rename_strategy: &TokenStream) -> Case {
         "kebab-case" => Case::Kebab,
         "SCREAMING-KEBAB-CASE" => Case::UpperKebab,
         convention => panic!("Unknown case convention '{}'", convention),
+    }
+}
+
+pub fn is_option(ty: &Type) -> bool {
+    match ty {
+        Type::Path(type_path) => type_path.path.segments[0].ident.to_string() == "Option",
+        _ => false,
     }
 }
