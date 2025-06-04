@@ -184,7 +184,7 @@ impl UserData for Image {}
 pub struct Text {
     pub text: String,
     pub text_offset: Option<isize>,
-    #[mlua(default= FontSize::Auto)]
+    #[mlua(default = FontSize::Auto)]
     pub font_size: FontSize,
     #[mlua(default = false)]
     pub scrolling: bool,
@@ -195,7 +195,6 @@ pub struct Text {
     pub animation_ticks_rate: Option<usize>,
     pub position: Point,
     pub size: Size,
-    #[mlua(default = None)]
     pub hash: Option<u64>,
 
     #[mlua(default)]
