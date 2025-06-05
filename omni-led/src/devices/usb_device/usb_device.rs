@@ -17,12 +17,13 @@
  */
 
 use log::{debug, warn};
-use mlua::{Function, Lua, Value};
+use mlua::{ErrorContext, FromLua, Function, Lua, UserData, Value};
+use num_traits::Unsigned;
+use omni_led_derive::FromLuaValue;
 use rusb::{DeviceHandle, GlobalContext};
 use std::time::Duration;
 
 use crate::devices::device::{Device, MemoryRepresentation, Settings, Size};
-use crate::devices::usb_device::usb_device_settings::{USBDeviceSettings, USBSettings};
 use crate::renderer::buffer::Buffer;
 
 pub struct USBDevice {
@@ -51,7 +52,7 @@ impl USBDevice {
 
 impl Device for USBDevice {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
-        let settings = USBDeviceSettings::new(lua, settings)?;
+        let settings = USBDeviceSettings::from_lua(settings, lua)?;
 
         let vendor_id = settings.usb_settings.vendor_id;
         let product_id = settings.usb_settings.product_id;
@@ -145,4 +146,59 @@ impl Drop for USBDevice {
             Err(err) => warn!("Failed to release interface for {}: {}", self.name, err),
         }
     }
+}
+
+#[derive(FromLuaValue, Clone)]
+pub struct USBDeviceSettings {
+    pub name: String,
+    pub screen_size: Size,
+    pub usb_settings: USBSettings,
+    pub transform: Option<Function>,
+    pub memory_representation: MemoryRepresentation,
+}
+
+impl Settings for USBDeviceSettings {
+    type DeviceType = USBDevice;
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl UserData for USBDeviceSettings {}
+
+#[derive(FromLuaValue, Clone)]
+pub struct USBSettings {
+    #[mlua(transform = from_hex)]
+    pub vendor_id: u16,
+    #[mlua(transform = from_hex)]
+    pub product_id: u16,
+    #[mlua(transform = from_hex)]
+    pub interface: u8,
+    #[mlua(transform = from_hex)]
+    pub alternate_setting: u8,
+    #[mlua(transform = from_hex)]
+    pub request_type: u8,
+    #[mlua(transform = from_hex)]
+    pub request: u8,
+    #[mlua(transform = from_hex)]
+    pub value: u16,
+    #[mlua(transform = from_hex)]
+    pub index: u16,
+}
+
+impl UserData for USBSettings {}
+
+fn from_hex<T: Unsigned>(hex_value: String, _lua: &Lua) -> mlua::Result<T> {
+    const HEX_PREFIX: &str = "0x";
+
+    if !hex_value.starts_with(HEX_PREFIX) {
+        return Err(mlua::Error::runtime(format!(
+            "Hex number shall have a {HEX_PREFIX} prefix"
+        )));
+    }
+
+    T::from_str_radix(&hex_value[2..], 16).map_err(move |_err| {
+        mlua::Error::runtime(format!("Could not parse {} as hex value", hex_value))
+    })
 }

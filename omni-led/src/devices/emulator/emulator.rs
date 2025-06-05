@@ -27,7 +27,9 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use crate::common::user_data::UserDataRef;
-use crate::devices::device::{Buffer, Device, MemoryRepresentation, Size};
+use crate::devices::device::{
+    Buffer, Device, MemoryRepresentation, Settings as DeviceSettings, Size,
+};
 use crate::settings::settings::Settings;
 
 pub struct Emulator {
@@ -37,12 +39,6 @@ pub struct Emulator {
     should_update: Arc<AtomicBool>,
     running: Arc<AtomicBool>,
     window_thread_handle: Option<JoinHandle<()>>,
-}
-
-#[derive(Clone, FromLuaValue)]
-struct EmulatorSettings {
-    screen_size: Size,
-    name: String,
 }
 
 impl Device for Emulator {
@@ -138,5 +134,19 @@ impl Drop for Emulator {
     fn drop(&mut self) {
         self.running.store(false, Ordering::Relaxed);
         self.window_thread_handle.take().map(JoinHandle::join);
+    }
+}
+
+#[derive(Clone, FromLuaValue)]
+pub struct EmulatorSettings {
+    screen_size: Size,
+    name: String,
+}
+
+impl DeviceSettings for EmulatorSettings {
+    type DeviceType = Emulator;
+
+    fn name(&self) -> String {
+        self.name.clone()
     }
 }

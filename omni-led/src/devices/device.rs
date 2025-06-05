@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use mlua::{Lua, Value};
+use mlua::{FromLua, Lua, Value};
 
 pub use crate::renderer::buffer::Buffer;
 pub use crate::script_handler::script_data_types::{MemoryRepresentation, Size};
@@ -35,8 +35,8 @@ pub trait Device {
     fn memory_representation(&mut self, lua: &Lua) -> mlua::Result<MemoryRepresentation>;
 }
 
-pub trait Settings {
-    fn new(lua: &Lua, value: Value) -> mlua::Result<Self>
-    where
-        Self: Sized;
+pub trait Settings: FromLua {
+    type DeviceType: Device;
+
+    fn name(&self) -> String;
 }
