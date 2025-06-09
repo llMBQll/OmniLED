@@ -253,9 +253,11 @@ pub struct Modifiers {
 impl UserData for Modifiers {}
 
 #[derive(Clone, Copy, FromLuaValue)]
-pub enum MemoryRepresentation {
+pub enum MemoryLayout {
+    #[mlua(alias = "SteelSeries")]
     BitPerPixel,
     BytePerPixel,
+    #[mlua(alias = "SteelSeries2")]
     BitPerPixelVertical,
 }
 

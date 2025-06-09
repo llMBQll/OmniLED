@@ -20,7 +20,7 @@ usb_device {
         table.insert(bytes, 0x00)
         return bytes
     end,
-    memory_representation = 'BitPerPixel',
+    memory_layout = 'SteelSeries',
 }
 
 usb_device {
@@ -45,7 +45,7 @@ usb_device {
         table.insert(bytes, 0x00)
         return bytes
     end,
-    memory_representation = 'BitPerPixel',
+    memory_layout = 'SteelSeries',
 }
 
 usb_device {
@@ -69,7 +69,7 @@ usb_device {
         table.insert(bytes, 1, 0x0a)
         return bytes
     end,
-    memory_representation = 'BitPerPixelVertical',
+    memory_layout = 'SteelSeries2',
 }
 
 emulator {

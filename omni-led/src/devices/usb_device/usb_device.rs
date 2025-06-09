@@ -23,7 +23,7 @@ use omni_led_derive::FromLuaValue;
 use rusb::{DeviceHandle, GlobalContext};
 use std::time::Duration;
 
-use crate::devices::device::{Device, MemoryRepresentation, Settings, Size};
+use crate::devices::device::{Device, MemoryLayout, Settings, Size};
 use crate::renderer::buffer::Buffer;
 
 pub struct USBDevice {
@@ -32,7 +32,7 @@ pub struct USBDevice {
     settings: USBSettings,
     transform: Option<Function>,
     handle: DeviceHandle<GlobalContext>,
-    representation: MemoryRepresentation,
+    layout: MemoryLayout,
 }
 
 impl USBDevice {
@@ -96,7 +96,7 @@ impl Device for USBDevice {
             settings: settings.usb_settings.clone(),
             transform: settings.transform,
             handle,
-            representation: settings.memory_representation,
+            layout: settings.memory_layout.unwrap(),
         })
     }
 
@@ -120,8 +120,8 @@ impl Device for USBDevice {
         Ok(self.name.clone())
     }
 
-    fn memory_representation(&mut self, _lua: &Lua) -> mlua::Result<MemoryRepresentation> {
-        Ok(self.representation)
+    fn memory_layout(&mut self, _lua: &Lua) -> mlua::Result<MemoryLayout> {
+        Ok(self.layout)
     }
 }
 
@@ -154,7 +154,9 @@ pub struct USBDeviceSettings {
     pub screen_size: Size,
     pub usb_settings: USBSettings,
     pub transform: Option<Function>,
-    pub memory_representation: MemoryRepresentation,
+    #[mlua(deprecated = memory_layout)]
+    pub memory_representation: Option<MemoryLayout>,
+    pub memory_layout: Option<MemoryLayout>,
 }
 
 impl Settings for USBDeviceSettings {

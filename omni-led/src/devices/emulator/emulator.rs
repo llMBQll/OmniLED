@@ -27,9 +27,7 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use crate::common::user_data::UserDataRef;
-use crate::devices::device::{
-    Buffer, Device, MemoryRepresentation, Settings as DeviceSettings, Size,
-};
+use crate::devices::device::{Buffer, Device, MemoryLayout, Settings as DeviceSettings, Size};
 use crate::settings::settings::Settings;
 
 pub struct Emulator {
@@ -125,8 +123,8 @@ impl Device for Emulator {
         Ok(self.name.clone())
     }
 
-    fn memory_representation(&mut self, _lua: &Lua) -> mlua::Result<MemoryRepresentation> {
-        Ok(MemoryRepresentation::BytePerPixel)
+    fn memory_layout(&mut self, _lua: &Lua) -> mlua::Result<MemoryLayout> {
+        Ok(MemoryLayout::BytePerPixel)
     }
 }
 

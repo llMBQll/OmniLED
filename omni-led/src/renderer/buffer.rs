@@ -18,7 +18,7 @@
 
 use mlua::{UserData, UserDataMethods};
 
-use crate::devices::device::MemoryRepresentation;
+use crate::devices::device::MemoryLayout;
 use crate::renderer::bit::{Bit, BitMut};
 use crate::script_handler::script_data_types::Modifiers;
 use crate::script_handler::script_data_types::{Rectangle, Size};
@@ -28,11 +28,11 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    pub fn new(size: Size, memory_representation: MemoryRepresentation) -> Self {
-        let buffer: Box<dyn BufferTrait> = match memory_representation {
-            MemoryRepresentation::BitPerPixel => Box::new(BitBuffer::new(size)),
-            MemoryRepresentation::BytePerPixel => Box::new(ByteBuffer::new(size)),
-            MemoryRepresentation::BitPerPixelVertical => Box::new(VerticalBitBuffer::new(size)),
+    pub fn new(size: Size, memory_layout: MemoryLayout) -> Self {
+        let buffer: Box<dyn BufferTrait> = match memory_layout {
+            MemoryLayout::BitPerPixel => Box::new(BitBuffer::new(size)),
+            MemoryLayout::BytePerPixel => Box::new(ByteBuffer::new(size)),
+            MemoryLayout::BitPerPixelVertical => Box::new(VerticalBitBuffer::new(size)),
         };
 
         Self { buffer }
