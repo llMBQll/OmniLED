@@ -235,7 +235,7 @@ impl ScriptHandler {
         };
 
         let size = ctx.device.size(lua)?;
-        let memory_representation = ctx.device.memory_representation(lua)?;
+        let memory_layout = ctx.device.memory_layout(lua)?;
         env.set("SCREEN", size)?;
 
         let output: LayoutData = ctx.layouts[to_update].layout.call(())?;
@@ -243,7 +243,7 @@ impl ScriptHandler {
             &mut ctx.animation_groups[to_update],
             size,
             output.widgets,
-            memory_representation,
+            memory_layout,
         );
 
         ctx.device.update(lua, image)?;

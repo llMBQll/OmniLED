@@ -20,7 +20,7 @@ use log::error;
 use mlua::{ErrorContext, FromLua, Lua, Value};
 use omni_led_derive::FromLuaValue;
 
-use crate::devices::device::{Device, MemoryRepresentation, Settings, Size};
+use crate::devices::device::{Device, MemoryLayout, Settings, Size};
 use crate::devices::steelseries_engine::api;
 use crate::devices::steelseries_engine::api::Error;
 use crate::renderer::buffer::Buffer;
@@ -72,8 +72,8 @@ impl Device for SteelseriesEngineDevice {
         Ok(self.name.clone())
     }
 
-    fn memory_representation(&mut self, _lua: &Lua) -> mlua::Result<MemoryRepresentation> {
-        Ok(MemoryRepresentation::BitPerPixel)
+    fn memory_layout(&mut self, _lua: &Lua) -> mlua::Result<MemoryLayout> {
+        Ok(MemoryLayout::BitPerPixel)
     }
 }
 

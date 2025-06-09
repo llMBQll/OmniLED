@@ -19,7 +19,7 @@
 use mlua::{FromLua, Lua, Value};
 
 pub use crate::renderer::buffer::Buffer;
-pub use crate::script_handler::script_data_types::{MemoryRepresentation, Size};
+pub use crate::script_handler::script_data_types::{MemoryLayout, Size};
 
 pub trait Device {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self>
@@ -32,7 +32,7 @@ pub trait Device {
 
     fn name(&mut self, lua: &Lua) -> mlua::Result<String>;
 
-    fn memory_representation(&mut self, lua: &Lua) -> mlua::Result<MemoryRepresentation>;
+    fn memory_layout(&mut self, lua: &Lua) -> mlua::Result<MemoryLayout>;
 }
 
 pub trait Settings: FromLua {
