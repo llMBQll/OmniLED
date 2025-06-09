@@ -303,9 +303,9 @@
 
 ---
 
-> ### `MemoryRepresentation`
+> ### `MemoryLayout`
 >
-> Memory representation strategy for data sent to devices via USB.
+> Memory layout strategy for data sent to devices via USB.
 >
 > > `BytePerPixel`
 > >
@@ -677,16 +677,16 @@
 > >
 > > Screen size of the USB device display.
 >
-> > `memory_representation: MemoryRepresentation`
+> > `memory_layout: MemoryLayout`
 > >
-> > Choose memory representation of the renderer output.
+> > Choose memory layout of the renderer output.
 >
 > > `transform: fn(buffer: Buffer) -> [byte]`
 > >
 > > _Optional_. Default: No transformation of rendered data.
 > >
 > > Function that will transform rendered `buffer` into the final representation expected by the
-> > device. Data inside `buffer` is in a format specified by `memory_representation` field.
+> > device. Data inside `buffer` is in a format specified by `memory_layout` field.
 >
 > > `usb_settings: USBSettings`
 > >
