@@ -29,6 +29,7 @@ use crate::create_table_with_defaults;
 use crate::devices::device::{Device, Settings};
 use crate::devices::emulator::emulator::EmulatorSettings;
 use crate::devices::steelseries_engine::steelseries_engine_device::SteelseriesEngineDeviceSettings;
+use crate::devices::usb_device;
 use crate::devices::usb_device::usb_device::USBDeviceSettings;
 use crate::settings::settings::get_full_path;
 
@@ -43,6 +44,7 @@ pub struct Devices {
 impl Devices {
     pub fn load(lua: &Lua) {
         let (constructors, env) = Self::create_loaders(lua);
+        usb_device::steelseries::load_common_functions(lua, &env);
         Self::set_unique(lua, Self::new(constructors));
         Self::load_devices(lua, env);
     }
