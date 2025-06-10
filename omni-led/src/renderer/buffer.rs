@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use mlua::{UserData, UserDataMethods};
+use mlua::{FromLua, Lua, UserData, UserDataMethods, Value};
 
 use crate::devices::device::MemoryLayout;
 use crate::renderer::bit::{Bit, BitMut};
@@ -103,6 +103,19 @@ impl Buffer {
 impl UserData for Buffer {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("bytes", |_lua, buffer, _: ()| Ok(buffer.bytes().to_vec()));
+    }
+}
+
+impl FromLua for Buffer {
+    fn from_lua(value: Value, _: &Lua) -> mlua::Result<Self> {
+        match value {
+            Value::UserData(user_data) => user_data.take::<Buffer>(),
+            other => Err(mlua::Error::FromLuaConversionError {
+                from: other.type_name(),
+                to: String::from("Buffer"),
+                message: None,
+            }),
+        }
     }
 }
 
