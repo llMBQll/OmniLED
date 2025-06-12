@@ -4,7 +4,7 @@ members = [
     "omni-led",
     "omni-led-api",
     "omni-led-derive",
-    "omni-led-setup",
+    "omni-led-setup", "omni-led-new-setup",
     "omni-led-applications/audio",
     "omni-led-applications/clock",
     "omni-led-applications/images",
