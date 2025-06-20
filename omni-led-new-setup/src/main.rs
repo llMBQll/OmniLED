@@ -18,7 +18,9 @@
 
 use iced::border::Radius;
 use iced::widget::container::Style;
-use iced::widget::{button, column, container, horizontal_space, radio, row, scrollable, text};
+use iced::widget::{
+    button, column, container, horizontal_space, radio, row, scrollable, text, toggler,
+};
 use iced::{Alignment, Border, Element, Length, Theme};
 use rusb::{Device, DeviceDescriptor, GlobalContext};
 
@@ -28,9 +30,11 @@ pub fn main() -> iced::Result {
         .run()
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct InstallOptions {
     device: Option<DeviceData>,
+    enable_autostart: bool,
+    update_udev_rules: bool,
 }
 
 pub struct Installer {
@@ -45,17 +49,25 @@ enum Message {
     Back,
     Next,
     DeviceSelected(usize),
+    AutostartToggle(bool),
+    UdevToggle(bool),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Screen {
     Welcome,
     DeviceSelect,
+    Settings,
     Finish,
 }
 
 impl Screen {
-    const ALL: &'static [Self] = &[Self::Welcome, Self::DeviceSelect, Self::Finish];
+    const ALL: &'static [Self] = &[
+        Self::Welcome,
+        Self::DeviceSelect,
+        Self::Settings,
+        Self::Finish,
+    ];
 
     pub fn next(self) -> Option<Screen> {
         Self::ALL
@@ -97,11 +109,20 @@ impl Installer {
             }
             Message::Next => {
                 self.screen = self.screen.next().unwrap_or(self.screen);
+                if self.screen == Screen::Finish {
+                    println!("{:#?}", self.install_options);
+                }
             }
             Message::DeviceSelected(index) => {
                 self.selected_device = Some(index);
                 self.install_options.device = Some(self.devices[index].clone());
                 println!("{:?}", self.devices[index]);
+            }
+            Message::AutostartToggle(value) => {
+                self.install_options.enable_autostart = value;
+            }
+            Message::UdevToggle(value) => {
+                self.install_options.update_udev_rules = value;
             }
         }
     }
@@ -110,6 +131,7 @@ impl Installer {
         let screen: Element<Message> = match self.screen {
             Screen::Welcome => self.welcome(),
             Screen::DeviceSelect => self.device_select(),
+            Screen::Settings => self.settings(),
             Screen::Finish => self.finish(),
         };
         let screen = container(scrollable(screen))
@@ -134,6 +156,7 @@ impl Installer {
         match self.screen {
             Screen::Welcome => true,
             Screen::DeviceSelect => self.selected_device.is_some(),
+            Screen::Settings => true,
             Screen::Finish => false,
         }
     }
@@ -158,6 +181,41 @@ impl Installer {
         column![title, device_selector]
             .align_x(Alignment::Center)
             .into()
+    }
+
+    fn settings(&self) -> Element<Message> {
+        let content = column![].align_x(Alignment::Center);
+
+        let content = content.push(text!("Settings").size(30.0));
+
+        let content = content.push(Self::make_card(
+            row![
+                toggler(self.install_options.enable_autostart).on_toggle(Message::AutostartToggle),
+                column![
+                    text("Auto Start").size(20),
+                    text("Start OmniLED on computer start-up").size(12)
+                ]
+            ]
+            .align_y(Alignment::Center)
+            .into(),
+        ));
+
+        let content = content.push_maybe(
+            // TODO allow changing filename
+            cfg!(target_os = "linux").then_some(Self::make_card(
+                row![
+                    toggler(self.install_options.update_udev_rules).on_toggle(Message::UdevToggle),
+                    column![
+                        text("Allow USB Access").size(20),
+                        text("Add udev rule to allow OmniLED access USB devices").size(12)
+                    ]
+                ]
+                .align_y(Alignment::Center)
+                .into(),
+            )),
+        );
+
+        content.into()
     }
 
     fn finish(&self) -> Element<Message> {
@@ -187,8 +245,12 @@ impl Installer {
         )
         .width(Length::Fixed(20.0));
 
-        container(row![button, desc].align_y(Alignment::Center))
-            .padding(5)
+        Self::make_card(row![button, desc].align_y(Alignment::Center).into())
+    }
+
+    fn make_card(element: Element<Message>) -> Element<Message> {
+        container(element)
+            .padding(10)
             .width(Length::Fill)
             .style(Self::card_style)
             .into()
@@ -202,7 +264,7 @@ impl Installer {
             border: Border {
                 color: Default::default(),
                 width: 2.0,
-                radius: Radius::new(5.0),
+                radius: Radius::new(10.0),
             },
             ..Style::default()
         }
