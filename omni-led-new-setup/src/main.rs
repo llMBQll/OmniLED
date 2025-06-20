@@ -18,7 +18,7 @@
 
 use iced::border::Radius;
 use iced::widget::container::Style;
-use iced::widget::{column, container, radio, row, scrollable, text};
+use iced::widget::{button, column, container, horizontal_space, radio, row, scrollable, text};
 use iced::{Alignment, Border, Element, Length, Theme};
 use rusb::{Device, DeviceDescriptor, GlobalContext};
 
@@ -36,12 +36,53 @@ struct InstallOptions {
 pub struct Installer {
     devices: Vec<DeviceData>,
     selected_device: Option<usize>,
+    screen: Screen,
     install_options: InstallOptions,
 }
 
 #[derive(Debug, Clone)]
 enum Message {
+    Back,
+    Next,
     DeviceSelected(usize),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Screen {
+    Welcome,
+    DeviceSelect,
+    Finish,
+}
+
+impl Screen {
+    const ALL: &'static [Self] = &[Self::Welcome, Self::DeviceSelect, Self::Finish];
+
+    pub fn next(self) -> Option<Screen> {
+        Self::ALL
+            .get(
+                Self::ALL
+                    .iter()
+                    .copied()
+                    .position(|screen| screen == self)
+                    .expect("Screen must exist")
+                    + 1,
+            )
+            .copied()
+    }
+
+    pub fn back(self) -> Option<Screen> {
+        let position = Self::ALL
+            .iter()
+            .copied()
+            .position(|screen| screen == self)
+            .expect("Screen must exist");
+
+        if position > 0 {
+            Some(Self::ALL[position - 1])
+        } else {
+            None
+        }
+    }
 }
 
 impl Installer {
@@ -51,6 +92,12 @@ impl Installer {
 
     fn update(&mut self, message: Message) {
         match message {
+            Message::Back => {
+                self.screen = self.screen.back().unwrap_or(self.screen);
+            }
+            Message::Next => {
+                self.screen = self.screen.next().unwrap_or(self.screen);
+            }
             Message::DeviceSelected(index) => {
                 self.selected_device = Some(index);
                 self.install_options.device = Some(self.devices[index].clone());
@@ -60,21 +107,63 @@ impl Installer {
     }
 
     fn view(&self) -> Element<Message> {
+        let screen: Element<Message> = match self.screen {
+            Screen::Welcome => self.welcome(),
+            Screen::DeviceSelect => self.device_select(),
+            Screen::Finish => self.finish(),
+        };
+        let screen = container(scrollable(screen))
+            .center_x(Length::Fill)
+            .center_y(Length::Fill);
+
+        let back = button("Back").on_press(Message::Back);
+        let next = button("Next").on_press(Message::Next);
+        let buttons = row![]
+            .push_maybe(self.screen.back().map(|_| back))
+            .push(horizontal_space())
+            .push_maybe(self.can_advance().then_some(next))
+            .padding(20);
+
+        column![screen, buttons]
+            .align_x(Alignment::Center)
+            .spacing(10)
+            .into()
+    }
+
+    fn can_advance(&self) -> bool {
+        match self.screen {
+            Screen::Welcome => true,
+            Screen::DeviceSelect => self.selected_device.is_some(),
+            Screen::Finish => false,
+        }
+    }
+
+    fn welcome(&self) -> Element<Message> {
+        let title = text!("OmniLED Installer").size(30.0);
+
+        title.into()
+    }
+
+    fn device_select(&self) -> Element<Message> {
         let title = text!("Select Device").size(30.0);
-        let device_selector = scrollable(
-            column(
-                self.devices
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, data)| self.make_device_entry(idx, data)),
-            )
-            .padding(10)
-            .spacing(5),
-        );
+        let device_selector = column(
+            self.devices
+                .iter()
+                .enumerate()
+                .map(|(idx, data)| self.make_device_entry(idx, data)),
+        )
+        .padding(10)
+        .spacing(5);
 
         column![title, device_selector]
             .align_x(Alignment::Center)
             .into()
+    }
+
+    fn finish(&self) -> Element<Message> {
+        let title = text!("Install Finished").size(30.0);
+
+        title.into()
     }
 
     fn make_device_entry(&self, index: usize, data: &DeviceData) -> Element<Message> {
@@ -125,6 +214,7 @@ impl Default for Installer {
         Self {
             devices: load_devices(),
             selected_device: None,
+            screen: Screen::Welcome,
             install_options: Default::default(),
         }
     }
