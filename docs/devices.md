@@ -58,7 +58,8 @@ script to match the format expected by the device.
 >
 > Finding this data as well as the data format needed for the `tranform` function, requires
 > having the device documentation, or reverse engineering the USB protocol. If you have a
-> SteelSeries device there is a chance, however that only difference will be the `product_id` field.
+> SteelSeries device there is a chance the above example will work, with only difference being
+> the `product_id` field.
 
 ### SteelSeries Devices (Windows Only)
 

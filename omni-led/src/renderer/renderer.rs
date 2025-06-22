@@ -31,7 +31,7 @@ use crate::renderer::font_manager::FontManager;
 use crate::renderer::images;
 use crate::renderer::images::ImageCache;
 use crate::script_handler::script_data_types::{
-    Bar, Image, MemoryRepresentation, Modifiers, Point, Text, Widget,
+    Bar, Image, MemoryLayout, Modifiers, Point, Text, Widget,
 };
 use crate::script_handler::script_data_types::{Rectangle, Size};
 use crate::settings::settings::Settings;
@@ -72,9 +72,9 @@ impl Renderer {
         animation_groups: &mut HashMap<usize, AnimationGroup>,
         size: Size,
         mut widgets: Vec<Widget>,
-        memory_representation: MemoryRepresentation,
+        memory_layout: MemoryLayout,
     ) -> (State, Buffer) {
-        let mut buffer = Buffer::new(size, memory_representation);
+        let mut buffer = Buffer::new(size, memory_layout);
 
         self.calculate_animations(animation_groups, &mut widgets);
 

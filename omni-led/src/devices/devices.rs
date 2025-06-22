@@ -26,10 +26,11 @@ use std::collections::hash_map::Entry;
 use crate::common::common::exec_file;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::create_table_with_defaults;
-use crate::devices::device::Device;
-use crate::devices::emulator::emulator::Emulator;
-use crate::devices::steelseries_engine::steelseries_engine_device::SteelseriesEngineDevice;
-use crate::devices::usb_device::usb_device::USBDevice;
+use crate::devices::device::{Device, Settings};
+use crate::devices::emulator::emulator::EmulatorSettings;
+use crate::devices::steelseries_engine::steelseries_engine_device::SteelseriesEngineDeviceSettings;
+use crate::devices::usb_device;
+use crate::devices::usb_device::usb_device::USBDeviceSettings;
 use crate::settings::settings::get_full_path;
 
 type Constructor = fn(&Lua, Value) -> Box<dyn Device>;
@@ -43,6 +44,7 @@ pub struct Devices {
 impl Devices {
     pub fn load(lua: &Lua) {
         let (constructors, env) = Self::create_loaders(lua);
+        usb_device::steelseries::load_common_functions(lua, &env);
         Self::set_unique(lua, Self::new(constructors));
         Self::load_devices(lua, env);
     }
@@ -69,8 +71,7 @@ impl Devices {
         let entry = entry.remove();
         let device = match entry {
             DeviceEntry::Initializer(initializer) => {
-                let value = Value::Table(initializer.settings);
-                let device = (initializer.constructor)(lua, value);
+                let device = (initializer.constructor)(lua, initializer.settings);
                 device
             }
             DeviceEntry::Loaded => {
@@ -103,10 +104,11 @@ impl Devices {
         });
 
         let loaders = [
-            Self::create_loader::<Emulator>(lua),
-            Self::create_loader::<SteelseriesEngineDevice>(lua),
-            Self::create_loader::<USBDevice>(lua),
+            Self::create_loader::<EmulatorSettings>(lua),
+            Self::create_loader::<SteelseriesEngineDeviceSettings>(lua),
+            Self::create_loader::<USBDeviceSettings>(lua),
         ];
+
         for (name, constructor, loader) in loaders {
             constructors.insert(name.clone(), constructor);
             env.set(name, loader).unwrap();
@@ -115,17 +117,19 @@ impl Devices {
         (constructors, env)
     }
 
-    fn get_type_name<T: Device + 'static>() -> String {
+    fn get_type_name<T: Device>() -> String {
         let type_name = std::any::type_name::<T>();
         type_name.split("::").last().unwrap().to_string()
     }
 
-    fn create_loader<T: Device + 'static>(lua: &Lua) -> (String, Constructor, Function) {
-        let constructor: fn(&Lua, Value) -> Box<dyn Device> = |lua, settings| {
-            let mut device = Box::new(T::init(lua, settings).unwrap());
+    fn create_loader<S: Settings + 'static>(lua: &Lua) -> (String, Constructor, Function) {
+        type DeviceType<S> = <S as Settings>::DeviceType;
+
+        let constructor: Constructor = |lua, settings| {
+            let mut device = Box::new(<DeviceType<S>>::init(lua, settings).unwrap());
 
             if log_enabled!(log::Level::Debug) {
-                let type_name = Self::get_type_name::<T>().to_case(Case::Snake);
+                let type_name = Self::get_type_name::<DeviceType<S>>().to_case(Case::Snake);
                 let device_name = device.name(lua).unwrap();
                 debug!("Loaded {} '{}'", type_name, device_name);
             }
@@ -133,11 +137,12 @@ impl Devices {
             device
         };
 
-        let type_name = Self::get_type_name::<T>().to_case(Case::Snake);
+        let type_name = Self::get_type_name::<DeviceType<S>>().to_case(Case::Snake);
         let function_name = type_name.clone();
         let loader = lua
-            .create_function(move |lua, settings: Table| {
-                let device_name: String = settings.get("name")?;
+            .create_function(move |lua, settings: Value| {
+                let settings_obj = S::from_lua(settings.clone(), lua)?;
+                let device_name = settings_obj.name();
                 let function_name = function_name.clone();
 
                 let mut devices = UserDataRef::<Devices>::load(lua);
@@ -154,7 +159,7 @@ impl Devices {
         &mut self,
         name: String,
         kind: String,
-        settings: Table,
+        settings: Value,
     ) -> mlua::Result<()> {
         match self.devices.entry(name) {
             Entry::Occupied(entry) => {
@@ -167,12 +172,13 @@ impl Devices {
             }
             Entry::Vacant(entry) => {
                 let name = entry.key();
+                let constructor = self.constructors[&kind];
+
                 debug!("Added config for {} '{}'", kind, name);
 
-                let loader = self.constructors[&kind];
                 entry.insert(DeviceEntry::Initializer(Initializer {
                     settings,
-                    constructor: loader,
+                    constructor,
                 }));
             }
         }
@@ -189,8 +195,8 @@ enum DeviceEntry {
 }
 
 struct Initializer {
-    settings: Table,
-    constructor: fn(&Lua, Value) -> Box<dyn Device>,
+    settings: Value,
+    constructor: Constructor,
 }
 
 pub enum DeviceStatus {

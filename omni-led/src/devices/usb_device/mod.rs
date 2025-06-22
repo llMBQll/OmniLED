@@ -16,5 +16,5 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+pub mod steelseries;
 pub mod usb_device;
-pub mod usb_device_settings;

@@ -17,12 +17,12 @@
  */
 
 use log::error;
-use mlua::{Lua, Value};
+use mlua::{ErrorContext, FromLua, Lua, Value};
+use omni_led_derive::FromLuaValue;
 
-use crate::devices::device::{Device, MemoryRepresentation, Settings, Size};
+use crate::devices::device::{Device, MemoryLayout, Settings, Size};
 use crate::devices::steelseries_engine::api;
 use crate::devices::steelseries_engine::api::Error;
-use crate::devices::steelseries_engine::steelseries_engine_device_settings::SteelseriesEngineDeviceSettings;
 use crate::renderer::buffer::Buffer;
 
 pub struct SteelseriesEngineDevice {
@@ -32,7 +32,7 @@ pub struct SteelseriesEngineDevice {
 
 impl Device for SteelseriesEngineDevice {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
-        let settings = SteelseriesEngineDeviceSettings::new(lua, settings)?;
+        let settings = SteelseriesEngineDeviceSettings::from_lua(settings, lua)?;
 
         let screen_size = settings.screen_size;
         api::register_size(screen_size);
@@ -72,7 +72,21 @@ impl Device for SteelseriesEngineDevice {
         Ok(self.name.clone())
     }
 
-    fn memory_representation(&mut self, _lua: &Lua) -> mlua::Result<MemoryRepresentation> {
-        Ok(MemoryRepresentation::BitPerPixel)
+    fn memory_layout(&mut self, _lua: &Lua) -> mlua::Result<MemoryLayout> {
+        Ok(MemoryLayout::BitPerPixel)
+    }
+}
+
+#[derive(FromLuaValue, Clone)]
+pub struct SteelseriesEngineDeviceSettings {
+    pub name: String,
+    pub screen_size: Size,
+}
+
+impl Settings for SteelseriesEngineDeviceSettings {
+    type DeviceType = SteelseriesEngineDevice;
+
+    fn name(&self) -> String {
+        self.name.clone()
     }
 }

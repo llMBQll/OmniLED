@@ -14,13 +14,8 @@ usb_device {
         value = '0x0300',
         index = '0x01',
     },
-    transform = function(buffer)
-        local bytes = buffer:bytes()
-        table.insert(bytes, 1, 0x61)
-        table.insert(bytes, 0x00)
-        return bytes
-    end,
-    memory_representation = 'BitPerPixel',
+    transform = transform_steelseries_layout('SteelSeries'),
+    memory_layout = 'SteelSeries',
 }
 
 usb_device {
@@ -39,13 +34,8 @@ usb_device {
         value = '0x0300',
         index = '0x01',
     },
-    transform = function(buffer)
-        local bytes = buffer:bytes()
-        table.insert(bytes, 1, 0x61)
-        table.insert(bytes, 0x00)
-        return bytes
-    end,
-    memory_representation = 'BitPerPixel',
+    transform = transform_steelseries_layout('SteelSeries'),
+    memory_layout = 'SteelSeries',
 }
 
 usb_device {
@@ -64,12 +54,8 @@ usb_device {
         value = '0x0300',
         index = '0x03',
     },
-    transform = function(buffer)
-        local bytes = buffer:bytes()
-        table.insert(bytes, 1, 0x0a)
-        return bytes
-    end,
-    memory_representation = 'BitPerPixelVertical',
+    transform = transform_steelseries_layout('SteelSeries2'),
+    memory_layout = 'SteelSeries2',
 }
 
 emulator {

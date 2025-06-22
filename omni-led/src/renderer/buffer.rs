@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use mlua::{UserData, UserDataMethods};
+use mlua::{FromLua, Lua, UserData, UserDataMethods, Value};
 
-use crate::devices::device::MemoryRepresentation;
+use crate::devices::device::MemoryLayout;
 use crate::renderer::bit::{Bit, BitMut};
 use crate::script_handler::script_data_types::Modifiers;
 use crate::script_handler::script_data_types::{Rectangle, Size};
@@ -28,11 +28,11 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    pub fn new(size: Size, memory_representation: MemoryRepresentation) -> Self {
-        let buffer: Box<dyn BufferTrait> = match memory_representation {
-            MemoryRepresentation::BitPerPixel => Box::new(BitBuffer::new(size)),
-            MemoryRepresentation::BytePerPixel => Box::new(ByteBuffer::new(size)),
-            MemoryRepresentation::BitPerPixelVertical => Box::new(VerticalBitBuffer::new(size)),
+    pub fn new(size: Size, memory_layout: MemoryLayout) -> Self {
+        let buffer: Box<dyn BufferTrait> = match memory_layout {
+            MemoryLayout::BitPerPixel => Box::new(BitBuffer::new(size)),
+            MemoryLayout::BytePerPixel => Box::new(ByteBuffer::new(size)),
+            MemoryLayout::BitPerPixelVertical => Box::new(VerticalBitBuffer::new(size)),
         };
 
         Self { buffer }
@@ -103,6 +103,19 @@ impl Buffer {
 impl UserData for Buffer {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("bytes", |_lua, buffer, _: ()| Ok(buffer.bytes().to_vec()));
+    }
+}
+
+impl FromLua for Buffer {
+    fn from_lua(value: Value, _: &Lua) -> mlua::Result<Self> {
+        match value {
+            Value::UserData(user_data) => user_data.take::<Buffer>(),
+            other => Err(mlua::Error::FromLuaConversionError {
+                from: other.type_name(),
+                to: String::from("Buffer"),
+                message: None,
+            }),
+        }
     }
 }
 
