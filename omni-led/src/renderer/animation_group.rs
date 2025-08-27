@@ -41,7 +41,7 @@ impl AnimationGroup {
         }
     }
 
-    pub fn entry(&mut self, hash: u64) -> Entry {
+    pub fn entry(&mut self, hash: u64) -> Entry<'_> {
         let mut index = None;
         for (i, item) in self.items.iter_mut().enumerate() {
             if item.hash == hash {

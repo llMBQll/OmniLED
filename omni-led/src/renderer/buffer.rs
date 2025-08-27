@@ -223,12 +223,12 @@ impl BitBuffer {
         Some((index, offset))
     }
 
-    fn get_bit(&self, x: usize, y: usize) -> Option<Bit> {
+    fn get_bit(&self, x: usize, y: usize) -> Option<Bit<'_>> {
         self.bit_position(x, y)
             .and_then(|(index, offset)| Some(Bit::new(&self.data[index], offset)))
     }
 
-    fn get_bit_mut(&mut self, x: usize, y: usize) -> Option<BitMut> {
+    fn get_bit_mut(&mut self, x: usize, y: usize) -> Option<BitMut<'_>> {
         self.bit_position(x, y)
             .and_then(|(index, offset)| Some(BitMut::new(&mut self.data[index], offset)))
     }
@@ -293,12 +293,12 @@ impl VerticalBitBuffer {
         Some((index, offset))
     }
 
-    fn get_bit(&self, x: usize, y: usize) -> Option<Bit> {
+    fn get_bit(&self, x: usize, y: usize) -> Option<Bit<'_>> {
         self.bit_position(x, y)
             .and_then(|(index, offset)| Some(Bit::new(&self.data[index], offset)))
     }
 
-    fn get_bit_mut(&mut self, x: usize, y: usize) -> Option<BitMut> {
+    fn get_bit_mut(&mut self, x: usize, y: usize) -> Option<BitMut<'_>> {
         self.bit_position(x, y)
             .and_then(|(index, offset)| Some(BitMut::new(&mut self.data[index], offset)))
     }

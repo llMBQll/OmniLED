@@ -76,7 +76,7 @@ pub fn parse_attributes(
         .collect()
 }
 
-pub fn get_case(rename_strategy: &TokenStream) -> Case {
+pub fn get_case(rename_strategy: &TokenStream) -> Case<'_> {
     let strategy = rename_strategy.to_string();
     match strategy.as_str() {
         "lowercase" => Case::Lower,
