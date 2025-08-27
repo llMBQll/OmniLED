@@ -19,7 +19,6 @@
 use tokio::runtime::Handle;
 use tokio::sync::mpsc::Sender;
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
-use windows::Win32::Foundation::BOOL;
 use windows::Win32::Media::Audio::Endpoints::{
     IAudioEndpointVolume, IAudioEndpointVolume_Impl, IAudioEndpointVolumeCallback,
 };
@@ -28,7 +27,7 @@ use windows::Win32::Media::Audio::{
 };
 use windows::Win32::System::Com::StructuredStorage::PropVariantToStringAlloc;
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance, STGM_READ};
-use windows::core::{GUID, Ref, implement};
+use windows::core::{BOOL, GUID, Ref, implement};
 
 use crate::audio::windows::audio_endpoint_volume_callback::AudioEndpointVolumeCallback;
 use crate::audio::windows::com_guard::ComGuard;

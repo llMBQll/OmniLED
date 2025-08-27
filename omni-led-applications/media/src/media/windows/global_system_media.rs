@@ -27,6 +27,7 @@ use windows::{
         GlobalSystemMediaTransportControlsSessionManager, MediaPropertiesChangedEventArgs,
         PlaybackInfoChangedEventArgs, SessionsChangedEventArgs, TimelinePropertiesChangedEventArgs,
     },
+    core::Ref,
 };
 
 type MediaEventData = GlobalSystemMediaTransportControlsSession;
@@ -81,8 +82,8 @@ impl GlobalSystemMedia {
                 let manager = manager.clone();
                 let tx = tx.clone();
                 let handle = handle.clone();
-                move |_manager: &Option<GlobalSystemMediaTransportControlsSessionManager>,
-                      _args: &Option<CurrentSessionChangedEventArgs>| {
+                move |_manager: Ref<'_, GlobalSystemMediaTransportControlsSessionManager>,
+                      _args: Ref<'_, CurrentSessionChangedEventArgs>| {
                     let session = match manager.GetCurrentSession() {
                         Ok(session) => Some(session),
                         Err(_) => None,
@@ -104,8 +105,8 @@ impl GlobalSystemMedia {
                 let sessions = Arc::clone(&sessions);
                 let tx = tx.clone();
                 let handle = handle.clone();
-                move |_manager: &Option<GlobalSystemMediaTransportControlsSessionManager>,
-                      _args: &Option<SessionsChangedEventArgs>| {
+                move |_manager: Ref<'_, GlobalSystemMediaTransportControlsSessionManager>,
+                      _args: Ref<'_, SessionsChangedEventArgs>| {
                     let mut sessions = sessions.lock().unwrap();
 
                     let incoming_sessions = manager.GetSessions()?;
@@ -174,8 +175,8 @@ impl GlobalSystemMedia {
                 let session = session.clone();
                 let handle = handle.clone();
                 let tx = tx.clone();
-                move |_: &Option<GlobalSystemMediaTransportControlsSession>,
-                      _: &Option<PlaybackInfoChangedEventArgs>| {
+                move |_session: Ref<'_, GlobalSystemMediaTransportControlsSession>,
+                      _args: Ref<'_, PlaybackInfoChangedEventArgs>| {
                     let session = session.clone();
                     let tx = tx.clone();
                     handle.spawn(async move {
@@ -194,8 +195,8 @@ impl GlobalSystemMedia {
                 let session = session.clone();
                 let handle = handle.clone();
                 let tx = tx.clone();
-                move |_: &Option<GlobalSystemMediaTransportControlsSession>,
-                      _: &Option<MediaPropertiesChangedEventArgs>| {
+                move |_session: Ref<'_, GlobalSystemMediaTransportControlsSession>,
+                      _args: Ref<'_, MediaPropertiesChangedEventArgs>| {
                     let session = session.clone();
                     let tx = tx.clone();
                     handle.spawn(async move {
@@ -213,8 +214,8 @@ impl GlobalSystemMedia {
                 let session = session.clone();
                 let handle = handle.clone();
                 let tx = tx.clone();
-                move |_: &Option<GlobalSystemMediaTransportControlsSession>,
-                      _: &Option<TimelinePropertiesChangedEventArgs>| {
+                move |_session: Ref<'_, GlobalSystemMediaTransportControlsSession>,
+                      _args: Ref<'_, TimelinePropertiesChangedEventArgs>| {
                     let session = session.clone();
                     let tx = tx.clone();
                     handle.spawn(async move {

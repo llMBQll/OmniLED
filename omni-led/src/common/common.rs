@@ -147,7 +147,7 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
 
             let meta = lua.create_table_with_capacity(0, 1)?;
             meta.set(KEY_VAL_TABLE, true)?;
-            table.set_metatable(Some(meta));
+            _ = table.set_metatable(Some(meta));
 
             Ok(Value::Table(table))
         }

@@ -10,10 +10,11 @@ edition = "2024"
 [dependencies]
 image = "0.25"
 log = "0.4"
-prost = "0.13"
+prost = "0.14"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tokio-stream = "0.1"
-tonic = "0.12"
+tonic = "0.14"
+tonic-prost = "0.14"
 
 [build-dependencies]
-tonic-build = "0.12"
+tonic-prost-build = "0.14"
