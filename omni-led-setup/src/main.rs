@@ -35,7 +35,7 @@ mod util;
 #[command(author, version, about)]
 struct Options {
     #[clap(subcommand)]
-    selector: Selector,
+    selector: Option<Selector>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -46,7 +46,7 @@ enum Selector {
 
 #[derive(Args, Debug)]
 struct InstallOptions {
-    /// Run in interactive mode. Installer will prompt user for
+    /// Run in interactive mode. Installer will prompt the user for
     /// responses instead of getting settings from CLI options.
     #[clap(short, long)]
     interactive: bool,
@@ -68,7 +68,7 @@ struct InstallOptions {
 
 #[derive(Args, Debug)]
 struct UninstallOptions {
-    /// Run in interactive mode. Installer will prompt user for
+    /// Run in interactive mode. Installer will prompt the user for
     /// responses instead of getting settings from CLI options.
     #[clap(short, long)]
     interactive: bool,
@@ -85,8 +85,9 @@ fn main() {
     let options = Options::parse();
 
     match options.selector {
-        Selector::Install(options) => install(options),
-        Selector::Uninstall(options) => uninstall(options),
+        Some(Selector::Install(options)) => install(options),
+        Some(Selector::Uninstall(options)) => uninstall(options),
+        None => select_action(),
     };
 }
 
@@ -135,6 +136,35 @@ macro_rules! install_config {
             $override_config,
         )
     };
+}
+
+fn select_action() {
+    let action = loop {
+        println!("Select action to perform:");
+        println!("1. Install");
+        println!("2. Uninstall");
+        println!("3. Exit");
+
+        let response = read_user_input();
+        let response = response.trim();
+        match response.parse::<usize>() {
+            Ok(r @ 1..=3) => break r,
+            _ => {}
+        }
+    };
+
+    match action {
+        1 => install(InstallOptions {
+            interactive: true,
+            override_config: None,
+            enable_autostart: None,
+        }),
+        2 => uninstall(UninstallOptions {
+            interactive: true,
+            keep_config: None,
+        }),
+        _ => std::process::exit(0),
+    }
 }
 
 fn install(options: InstallOptions) {
