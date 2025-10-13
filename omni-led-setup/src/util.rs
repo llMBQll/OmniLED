@@ -55,16 +55,18 @@ pub fn get_app_exe_path() -> PathBuf {
 }
 
 pub fn ask_user(message: &str) -> bool {
-    println!("{message} [Y/N]");
+    loop {
+        println!("{message} [Y/N]");
 
-    let response = read_user_input();
-    let response = response.trim().to_lowercase();
-    if response != "y" && response != "n" {
-        println!("Please choose [Y/N]");
-        return ask_user(message);
+        let response = read_user_input();
+        let response = response.trim().to_lowercase();
+
+        if response == "y" || response == "n" {
+            break response == "y";
+        } else {
+            println!("Please choose [Y/N]");
+        }
     }
-
-    response == "y"
 }
 
 pub fn read_user_input() -> String {

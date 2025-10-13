@@ -71,3 +71,7 @@ You are now ready to proceed to [customization](customization).
 
 You can find prebuilt binaries for Windows in the
 [releases](https://github.com/llMBQll/OmniLED/releases) section on GitHub.
+
+To install or uninstall OmniLED, double-click the executable and follow the on-screen instructions.  
+Alternatively, you can run the executable from the command line with the `install` or `uninstall`. Use the `--help` flag
+to see all available options.
