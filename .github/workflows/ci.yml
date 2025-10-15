@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt install gcc g++ libdbus-1-dev libfontconfig-dev libpulse-dev libx11-dev pkg-config protobuf-compiler
+
+      - name: Install Windows dependencies
+        if: matrix.os == 'windows-latest'
+        run: choco install protoc -y
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install cargo-make
+        run: cargo install cargo-make --force
+
+      - name: Build
+        run: cargo make build
