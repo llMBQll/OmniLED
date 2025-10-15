@@ -20,36 +20,16 @@
 
 use log::debug;
 use mlua::Lua;
+use omni_led_lib::{
+    app_loader::app_loader::AppLoader, common::common::load_internal_functions,
+    common::user_data::UserDataRef, constants::constants::Constants, devices::devices::Devices,
+    events::event_loop::EventLoop, events::events::Events, events::shortcuts::Shortcuts,
+    keyboard::keyboard::process_events, logging::logger::Log,
+    script_handler::script_handler::ScriptHandler, server::server::PluginServer,
+    settings::settings::Settings, tray_icon::tray_icon::TrayIcon,
+};
 use std::sync::atomic::AtomicBool;
 use std::time::Instant;
-
-use crate::app_loader::app_loader::AppLoader;
-use crate::common::common::load_internal_functions;
-use crate::common::user_data::UserDataRef;
-use crate::constants::constants::Constants;
-use crate::devices::devices::Devices;
-use crate::events::event_loop::EventLoop;
-use crate::events::events::Events;
-use crate::events::shortcuts::Shortcuts;
-use crate::keyboard::keyboard::process_events;
-use crate::logging::logger::Log;
-use crate::script_handler::script_handler::ScriptHandler;
-use crate::server::server::PluginServer;
-use crate::settings::settings::Settings;
-use crate::tray_icon::tray_icon::TrayIcon;
-
-mod app_loader;
-mod common;
-mod constants;
-mod devices;
-mod events;
-mod keyboard;
-mod logging;
-mod renderer;
-mod script_handler;
-mod server;
-mod settings;
-mod tray_icon;
 
 static RUNNING: AtomicBool = AtomicBool::new(true);
 
