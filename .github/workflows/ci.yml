@@ -2,10 +2,12 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
-  build:
+  build_and_test:
     strategy:
       fail-fast: false
       matrix:
@@ -32,3 +34,6 @@ jobs:
 
       - name: Build
         run: cargo make build
+
+      - name: Test
+        run: cargo test --workspace
