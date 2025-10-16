@@ -17,6 +17,7 @@
  */
 
 use crate::renderer::animation::{Animation, State};
+use crate::script_handler::script_data_types::Repeat;
 
 #[derive(Clone)]
 pub struct AnimationGroup {
@@ -61,15 +62,10 @@ impl AnimationGroup {
 
     pub fn pre_sync(&mut self) {
         self.items.retain_mut(|item| {
-            if item.accessed {
-                if self.new_data && self.keep_in_sync {
-                    item.animation.reset();
-                    item.accessed = false;
-                }
-                true
-            } else {
-                false
+            if self.new_data && self.keep_in_sync {
+                item.animation.reset();
             }
+            std::mem::replace(&mut item.accessed, false)
         });
         self.new_data = false;
     }
@@ -79,12 +75,14 @@ impl AnimationGroup {
             let all_can_wrap = self.items.iter().all(|item| item.animation.can_wrap());
             if all_can_wrap {
                 for item in &mut self.items {
-                    item.animation.reset();
+                    if item.animation.repeat_type() != Repeat::Once {
+                        item.animation.reset();
+                    }
                 }
             }
         } else {
             for item in &mut self.items {
-                if item.animation.can_wrap() {
+                if item.animation.can_wrap() && item.animation.repeat_type() != Repeat::Once {
                     item.animation.reset();
                 }
             }
@@ -145,4 +143,289 @@ pub struct OccupiedEntry<'a> {
 pub struct VacantEntry<'a> {
     hash: u64,
     group: &'a mut AnimationGroup,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::renderer::animation::Animation;
+    use crate::script_handler::script_data_types::Repeat;
+    use test_case::test_case;
+
+    fn run_animation(group: &mut AnimationGroup, n: usize) -> Vec<Vec<(usize, State)>> {
+        let mut data = Vec::new();
+        for _ in 0..n {
+            let mut current_step_data = Vec::new();
+            group.pre_sync();
+            for item in &mut group.items {
+                let step = item.animation.step();
+                let state = item.animation.state();
+                current_step_data.push((step, state));
+
+                item.accessed = true;
+            }
+            group.sync();
+            data.push(current_step_data);
+        }
+        data
+    }
+
+    fn create_test_animation() -> Animation {
+        Animation::new(1, 2, 3, Repeat::Once)
+    }
+
+    #[test_case(true  ; "Synced")]
+    #[test_case(false ; "Not synced")]
+    fn insertion(synced: bool) {
+        const HASH: u64 = 1337;
+
+        let mut group = AnimationGroup::new(synced);
+        let mut insert_count = 0;
+
+        _ = group.entry(HASH).or_insert_with(|| {
+            insert_count += 1;
+            create_test_animation()
+        });
+
+        assert_eq!(insert_count, 1);
+        assert_eq!(group.items.len(), 1);
+        assert_eq!(group.items[0].hash, HASH);
+        assert_eq!(group.items[0].accessed, true);
+        assert_eq!(group.new_data, true);
+
+        group.items[0].accessed = false;
+        group.new_data = false;
+
+        _ = group.entry(HASH).or_insert_with(|| {
+            insert_count += 1;
+            create_test_animation()
+        });
+
+        assert_eq!(insert_count, 1);
+        assert_eq!(group.items.len(), 1);
+        assert_eq!(group.items[0].hash, HASH);
+        assert_eq!(group.items[0].accessed, true);
+        assert_eq!(group.new_data, false);
+    }
+
+    #[test_case(true  ; "Synced")]
+    #[test_case(false ; "Not synced")]
+    fn pre_sync_resets_accessed_flag(synced: bool) {
+        let mut group = AnimationGroup::new(synced);
+        group.entry(1).or_insert_with(|| create_test_animation());
+        group.entry(2).or_insert_with(|| create_test_animation());
+        group.entry(3).or_insert_with(|| create_test_animation());
+
+        assert_eq!(group.items.len(), 3);
+        for item in &group.items {
+            assert_eq!(item.accessed, true);
+        }
+
+        group.pre_sync();
+
+        assert_eq!(group.items.len(), 3);
+        for item in &group.items {
+            assert_eq!(item.accessed, false);
+        }
+    }
+
+    #[test_case(true  ; "Synced")]
+    #[test_case(false ; "Not synced")]
+    fn pre_sync_removes_unaccessed_items(synced: bool) {
+        let mut group = AnimationGroup::new(synced);
+        group.entry(1).or_insert_with(|| create_test_animation());
+        group.entry(2).or_insert_with(|| create_test_animation());
+        group.entry(3).or_insert_with(|| create_test_animation());
+
+        assert_eq!(group.items.len(), 3);
+
+        group.items[0].accessed = true;
+        group.items[1].accessed = false;
+        group.items[2].accessed = true;
+
+        group.pre_sync();
+
+        assert_eq!(group.items.len(), 2);
+        assert_eq!(group.items[0].hash, 1);
+        assert_eq!(group.items[1].hash, 3);
+    }
+
+    #[test_case(true  ; "Synced")]
+    #[test_case(false ; "Not synced")]
+    fn animation_run_equal_repeat_once(synced: bool) {
+        let animation = Animation::new(1, 1, 2, Repeat::Once);
+
+        let mut group = AnimationGroup::new(synced);
+        group.entry(1).or_insert_with(|| animation.clone());
+        group.entry(2).or_insert_with(|| animation.clone());
+
+        let r = run_animation(&mut group, 3);
+        assert_eq!(r[0], vec![(0, State::InProgress), (0, State::InProgress)]);
+        assert_eq!(r[1], vec![(1, State::Finished), (1, State::Finished)]);
+        assert_eq!(r[2], vec![(1, State::Finished), (1, State::Finished)]);
+    }
+
+    #[test_case(true  ; "Synced")]
+    #[test_case(false ; "Not synced")]
+    fn animation_run_different_repeat_once(synced: bool) {
+        let animation_a = Animation::new(1, 1, 2, Repeat::Once);
+        let animation_b = Animation::new(1, 1, 4, Repeat::Once);
+
+        let mut group = AnimationGroup::new(synced);
+        group.entry(1).or_insert_with(|| animation_a);
+        group.entry(2).or_insert_with(|| animation_b);
+
+        let r = run_animation(&mut group, 5);
+        assert_eq!(r[0], vec![(0, State::InProgress), (0, State::InProgress)]);
+        assert_eq!(r[1], vec![(1, State::Finished), (1, State::InProgress)]);
+        assert_eq!(r[2], vec![(1, State::Finished), (2, State::InProgress)]);
+        assert_eq!(r[3], vec![(1, State::Finished), (3, State::Finished)]);
+        assert_eq!(r[4], vec![(1, State::Finished), (3, State::Finished)]);
+    }
+
+    #[test_case(true  ; "Synced")]
+    #[test_case(false ; "Not synced")]
+    fn animation_run_equal_repeat_for_duration(synced: bool) {
+        let animation = Animation::new(1, 1, 2, Repeat::ForDuration);
+
+        let mut group = AnimationGroup::new(synced);
+        group.entry(1).or_insert_with(|| animation.clone());
+        group.entry(2).or_insert_with(|| animation.clone());
+
+        let r = run_animation(&mut group, 4);
+        assert_eq!(r[0], vec![(0, State::CanFinish), (0, State::CanFinish)]);
+        assert_eq!(r[1], vec![(1, State::CanFinish), (1, State::CanFinish)]);
+        assert_eq!(r[2], vec![(0, State::CanFinish), (0, State::CanFinish)]);
+        assert_eq!(r[3], vec![(1, State::CanFinish), (1, State::CanFinish)]);
+    }
+
+    #[test_case(true  ; "Synced")]
+    #[test_case(false ; "Not synced")]
+    fn animation_run_different_repeat_for_duration(synced: bool) {
+        let animation_a = Animation::new(1, 1, 2, Repeat::ForDuration);
+        let animation_b = Animation::new(1, 1, 4, Repeat::ForDuration);
+
+        let mut group = AnimationGroup::new(synced);
+        group.entry(1).or_insert_with(|| animation_a);
+        group.entry(2).or_insert_with(|| animation_b);
+
+        let r = run_animation(&mut group, 6);
+        if synced {
+            assert_eq!(r[0], vec![(0, State::CanFinish), (0, State::CanFinish)]);
+            assert_eq!(r[1], vec![(1, State::CanFinish), (1, State::CanFinish)]);
+            assert_eq!(r[2], vec![(1, State::CanFinish), (2, State::CanFinish)]);
+            assert_eq!(r[3], vec![(1, State::CanFinish), (3, State::CanFinish)]);
+            assert_eq!(r[4], vec![(0, State::CanFinish), (0, State::CanFinish)]);
+            assert_eq!(r[5], vec![(1, State::CanFinish), (1, State::CanFinish)]);
+        } else {
+            assert_eq!(r[0], vec![(0, State::CanFinish), (0, State::CanFinish)]);
+            assert_eq!(r[1], vec![(1, State::CanFinish), (1, State::CanFinish)]);
+            assert_eq!(r[2], vec![(0, State::CanFinish), (2, State::CanFinish)]);
+            assert_eq!(r[3], vec![(1, State::CanFinish), (3, State::CanFinish)]);
+            assert_eq!(r[4], vec![(0, State::CanFinish), (0, State::CanFinish)]);
+            assert_eq!(r[5], vec![(1, State::CanFinish), (1, State::CanFinish)]);
+        }
+    }
+
+    #[test_case(true  ; "Synced")]
+    #[test_case(false ; "Not synced")]
+    fn animation_run_different_mixed(synced: bool) {
+        let animation_a = Animation::new(1, 1, 2, Repeat::ForDuration);
+        let animation_b = Animation::new(1, 1, 4, Repeat::Once);
+
+        let mut group = AnimationGroup::new(synced);
+        group.entry(1).or_insert_with(|| animation_a);
+        group.entry(2).or_insert_with(|| animation_b);
+
+        let r = run_animation(&mut group, 5);
+        if synced {
+            assert_eq!(r[0], vec![(0, State::CanFinish), (0, State::InProgress)]);
+            assert_eq!(r[1], vec![(1, State::CanFinish), (1, State::InProgress)]);
+            assert_eq!(r[2], vec![(1, State::CanFinish), (2, State::InProgress)]);
+            assert_eq!(r[3], vec![(1, State::CanFinish), (3, State::Finished)]);
+            assert_eq!(r[4], vec![(0, State::CanFinish), (3, State::Finished)]);
+        } else {
+            assert_eq!(r[0], vec![(0, State::CanFinish), (0, State::InProgress)]);
+            assert_eq!(r[1], vec![(1, State::CanFinish), (1, State::InProgress)]);
+            assert_eq!(r[2], vec![(0, State::CanFinish), (2, State::InProgress)]);
+            assert_eq!(r[3], vec![(1, State::CanFinish), (3, State::Finished)]);
+            assert_eq!(r[4], vec![(0, State::CanFinish), (3, State::Finished)]);
+        }
+    }
+
+    #[test_case(true  ; "Synced")]
+    #[test_case(false ; "Not synced")]
+    fn animation_run_new_data_repeat_for_duration(synced: bool) {
+        let animation_a = Animation::new(1, 1, 2, Repeat::ForDuration);
+        let animation_b = Animation::new(1, 1, 4, Repeat::ForDuration);
+        let animation_c = Animation::new(1, 1, 4, Repeat::ForDuration);
+
+        let mut group = AnimationGroup::new(synced);
+        group.entry(1).or_insert_with(|| animation_a);
+        group.entry(2).or_insert_with(|| animation_b);
+
+        let r = run_animation(&mut group, 3);
+        if synced {
+            assert_eq!(r[0], vec![(0, State::CanFinish), (0, State::CanFinish)]);
+            assert_eq!(r[1], vec![(1, State::CanFinish), (1, State::CanFinish)]);
+            assert_eq!(r[2], vec![(1, State::CanFinish), (2, State::CanFinish)]);
+        } else {
+            assert_eq!(r[0], vec![(0, State::CanFinish), (0, State::CanFinish)]);
+            assert_eq!(r[1], vec![(1, State::CanFinish), (1, State::CanFinish)]);
+            assert_eq!(r[2], vec![(0, State::CanFinish), (2, State::CanFinish)]);
+        }
+
+        // Simulate new data replacing one of the entries
+        group.entry(3).or_insert_with(|| animation_c);
+        group.items[1].accessed = false;
+
+        let r = run_animation(&mut group, 3);
+        if synced {
+            assert_eq!(r[0], vec![(0, State::CanFinish), (0, State::CanFinish)]);
+            assert_eq!(r[1], vec![(1, State::CanFinish), (1, State::CanFinish)]);
+            assert_eq!(r[2], vec![(1, State::CanFinish), (2, State::CanFinish)]);
+        } else {
+            assert_eq!(r[0], vec![(1, State::CanFinish), (0, State::CanFinish)]);
+            assert_eq!(r[1], vec![(0, State::CanFinish), (1, State::CanFinish)]);
+            assert_eq!(r[2], vec![(1, State::CanFinish), (2, State::CanFinish)]);
+        }
+    }
+
+    #[test_case(true  ; "Synced")]
+    #[test_case(false ; "Not synced")]
+    fn animation_run_new_data_repeat_once(synced: bool) {
+        let animation_a = Animation::new(1, 1, 2, Repeat::Once);
+        let animation_b = Animation::new(1, 1, 4, Repeat::Once);
+        let animation_c = Animation::new(1, 1, 4, Repeat::Once);
+
+        let mut group = AnimationGroup::new(synced);
+        group.entry(1).or_insert_with(|| animation_a);
+        group.entry(2).or_insert_with(|| animation_b);
+
+        let r = run_animation(&mut group, 3);
+        if synced {
+            assert_eq!(r[0], vec![(0, State::InProgress), (0, State::InProgress)]);
+            assert_eq!(r[1], vec![(1, State::Finished), (1, State::InProgress)]);
+            assert_eq!(r[2], vec![(1, State::Finished), (2, State::InProgress)]);
+        } else {
+            assert_eq!(r[0], vec![(0, State::InProgress), (0, State::InProgress)]);
+            assert_eq!(r[1], vec![(1, State::Finished), (1, State::InProgress)]);
+            assert_eq!(r[2], vec![(1, State::Finished), (2, State::InProgress)]);
+        }
+
+        // Simulate new data replacing one of the entries
+        group.entry(3).or_insert_with(|| animation_c);
+        group.items[1].accessed = false;
+
+        let r = run_animation(&mut group, 3);
+        if synced {
+            assert_eq!(r[0], vec![(0, State::InProgress), (0, State::InProgress)]);
+            assert_eq!(r[1], vec![(1, State::Finished), (1, State::InProgress)]);
+            assert_eq!(r[2], vec![(1, State::Finished), (2, State::InProgress)]);
+        } else {
+            assert_eq!(r[0], vec![(1, State::Finished), (0, State::InProgress)]);
+            assert_eq!(r[1], vec![(1, State::Finished), (1, State::InProgress)]);
+            assert_eq!(r[2], vec![(1, State::Finished), (2, State::InProgress)]);
+        }
+    }
 }

@@ -51,5 +51,8 @@ features = ["ksni"]
 [target.'cfg(target_os = "windows")'.build-dependencies]
 windres = "0.2"
 
+[dev-dependencies]
+test-case = "3.3.1"
+
 [features]
 dev = []

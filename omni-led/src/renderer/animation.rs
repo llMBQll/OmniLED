@@ -82,6 +82,10 @@ impl Animation {
         }
     }
 
+    pub fn repeat_type(&self) -> Repeat {
+        self.repeat
+    }
+
     pub fn can_wrap(&self) -> bool {
         self.can_wrap
     }
