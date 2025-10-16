@@ -19,22 +19,17 @@
 use tokio::runtime::Handle;
 use tokio::sync::mpsc::Sender;
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
-use windows::Win32::Media::Audio::Endpoints::{
-    IAudioEndpointVolume, IAudioEndpointVolume_Impl, IAudioEndpointVolumeCallback,
-};
+use windows::Win32::Media::Audio::Endpoints::{IAudioEndpointVolume, IAudioEndpointVolumeCallback};
 use windows::Win32::Media::Audio::{
     EDataFlow, IMMDevice, IMMDeviceEnumerator, MMDeviceEnumerator, eCapture, eConsole, eRender,
 };
 use windows::Win32::System::Com::StructuredStorage::PropVariantToStringAlloc;
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance, STGM_READ};
-use windows::core::{BOOL, GUID, Ref, implement};
 
 use crate::audio::windows::audio_endpoint_volume_callback::AudioEndpointVolumeCallback;
-use crate::audio::windows::com_guard::ComGuard;
 use crate::{DeviceData, DeviceType};
 
 pub struct EndpointVolume {
-    _com_guard: ComGuard,
     endpoint_volume: IAudioEndpointVolume,
     endpoint_volume_callback: IAudioEndpointVolumeCallback,
 }
@@ -45,7 +40,6 @@ impl EndpointVolume {
         handle: Handle,
         device_type: DeviceType,
     ) -> Self {
-        let com_guard = ComGuard::new();
         let endpoint_volume_callback =
             AudioEndpointVolumeCallback::new(tx.clone(), handle.clone(), device_type);
         let endpoint_volume = unsafe {
@@ -80,7 +74,6 @@ impl EndpointVolume {
         };
 
         Self {
-            _com_guard: com_guard,
             endpoint_volume,
             endpoint_volume_callback,
         }
@@ -101,109 +94,5 @@ impl Drop for EndpointVolume {
                 .UnregisterControlChangeNotify(&self.endpoint_volume_callback)
                 .unwrap();
         }
-
-        // This is a temporary solution while I investigate why dropping the IAudioEndpointVolume
-        // object hangs the program execution
-        let mut endpoint_volume = EmptyAudioEndpointVolume::new();
-        std::mem::swap(&mut self.endpoint_volume, &mut endpoint_volume);
-        std::mem::forget(endpoint_volume);
-    }
-}
-
-// This implementation is only needed to create a temporary object that can be dropped without
-// hanging the program execution
-#[implement(IAudioEndpointVolume)]
-struct EmptyAudioEndpointVolume {}
-
-impl EmptyAudioEndpointVolume {
-    pub fn new() -> IAudioEndpointVolume {
-        let this = Self {};
-        this.into()
-    }
-}
-
-#[allow(non_snake_case)]
-impl IAudioEndpointVolume_Impl for EmptyAudioEndpointVolume_Impl {
-    fn RegisterControlChangeNotify(
-        &self,
-        _: Ref<'_, IAudioEndpointVolumeCallback>,
-    ) -> windows::core::Result<()> {
-        Ok(())
-    }
-
-    fn UnregisterControlChangeNotify(
-        &self,
-        _: Ref<'_, IAudioEndpointVolumeCallback>,
-    ) -> windows::core::Result<()> {
-        Ok(())
-    }
-
-    fn GetChannelCount(&self) -> windows::core::Result<u32> {
-        Ok(0)
-    }
-
-    fn SetMasterVolumeLevel(&self, _: f32, _: *const GUID) -> windows::core::Result<()> {
-        Ok(())
-    }
-
-    fn SetMasterVolumeLevelScalar(&self, _: f32, _: *const GUID) -> windows::core::Result<()> {
-        Ok(())
-    }
-
-    fn GetMasterVolumeLevel(&self) -> windows::core::Result<f32> {
-        Ok(0.0)
-    }
-
-    fn GetMasterVolumeLevelScalar(&self) -> windows::core::Result<f32> {
-        Ok(0.0)
-    }
-
-    fn SetChannelVolumeLevel(&self, _: u32, _: f32, _: *const GUID) -> windows::core::Result<()> {
-        Ok(())
-    }
-
-    fn SetChannelVolumeLevelScalar(
-        &self,
-        _: u32,
-        _: f32,
-        _: *const GUID,
-    ) -> windows::core::Result<()> {
-        Ok(())
-    }
-
-    fn GetChannelVolumeLevel(&self, _: u32) -> windows::core::Result<f32> {
-        Ok(0.0)
-    }
-
-    fn GetChannelVolumeLevelScalar(&self, _: u32) -> windows::core::Result<f32> {
-        Ok(0.0)
-    }
-
-    fn SetMute(&self, _: BOOL, _: *const GUID) -> windows::core::Result<()> {
-        Ok(())
-    }
-
-    fn GetMute(&self) -> windows::core::Result<BOOL> {
-        Ok(false.into())
-    }
-
-    fn GetVolumeStepInfo(&self, _: *mut u32, _: *mut u32) -> windows::core::Result<()> {
-        Ok(())
-    }
-
-    fn VolumeStepUp(&self, _: *const GUID) -> windows::core::Result<()> {
-        Ok(())
-    }
-
-    fn VolumeStepDown(&self, _: *const GUID) -> windows::core::Result<()> {
-        Ok(())
-    }
-
-    fn QueryHardwareSupport(&self) -> windows::core::Result<u32> {
-        Ok(0)
-    }
-
-    fn GetVolumeRange(&self, _: *mut f32, _: *mut f32, _: *mut f32) -> windows::core::Result<()> {
-        Ok(())
     }
 }
