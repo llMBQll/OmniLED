@@ -17,7 +17,7 @@
  */
 
 use log::{debug, error};
-use mlua::{ErrorContext, FromLua, Lua, UserData, chunk};
+use mlua::{ErrorContext, FromLua, Lua, UserData, Value, chunk};
 use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::time::Duration;
 
@@ -79,8 +79,16 @@ impl Settings {
                 err
             );
 
-            let default: Settings = lua.load(chunk! { {} }).eval().unwrap();
-            Settings::set_unique(lua, default);
+            Self::set_default_settings(lua);
+        }
+
+        if lua
+            .globals()
+            .get::<Option<Value>>(Settings::identifier())
+            .unwrap()
+            .is_none()
+        {
+            Self::set_default_settings(lua);
         }
 
         let settings = UserDataRef::<Settings>::load(lua);
@@ -88,6 +96,11 @@ impl Settings {
         logger.get().set_level_filter(lua, settings.get().log_level);
 
         debug!("Loaded settings {:?}", settings.get());
+    }
+
+    fn set_default_settings(lua: &Lua) {
+        let default: Settings = lua.load(chunk! { {} }).eval().unwrap();
+        Settings::set_unique(lua, default);
     }
 
     fn from_millis(millis: u64, _: &Lua) -> mlua::Result<Duration> {

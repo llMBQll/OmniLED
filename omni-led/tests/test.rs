@@ -42,12 +42,7 @@ async fn it_works() {
             end)
             "#,
         )),
-        SettingsConfig(String::from(
-            r#"
-            -- Use default settings
-            Settings{}
-            "#,
-        )),
+        SettingsConfig(String::from(r#"-- Use default settings"#)),
     );
 
     let local = LocalSet::new();
