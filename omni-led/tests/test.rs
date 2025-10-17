@@ -1,3 +1,4 @@
+use common::{ApplicationsConfig, DevicesConfig, ScriptsConfig, SettingsConfig};
 use mlua::{Lua, Value};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -15,6 +16,39 @@ async fn it_works() {
             RUNNING.store(false, Ordering::Relaxed);
             Ok(())
         })];
+
+    common::setup_config(
+        &config_dir,
+        ApplicationsConfig(String::from(
+            r#"
+            local function get_app_path(name)
+                return '..' .. PLATFORM.PathSeparator .. 'target' .. PLATFORM.PathSeparator .. 'debug'
+                            .. PLATFORM.PathSeparator .. name .. PLATFORM.ExeSuffix
+            end
+
+            load_app {
+                path = get_app_path('clock'),
+                args = { '--address', SERVER.Address },
+            }
+            "#,
+        )),
+        DevicesConfig(String::from(r#"-- Empty"#)),
+        ScriptsConfig(String::from(
+            r#"
+            EVENTS:register('*', function(event, value)
+                if event == 'OMNILED.Update' and value == 10 then
+                    end_test()
+                end
+            end)
+            "#,
+        )),
+        SettingsConfig(String::from(
+            r#"
+            -- Use default settings
+            Settings{}
+            "#,
+        )),
+    );
 
     let local = LocalSet::new();
     let (_lua, events) = local

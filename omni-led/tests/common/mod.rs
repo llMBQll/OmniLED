@@ -100,3 +100,25 @@ fn register_event_collector(lua: &Lua, events: Rc<RefCell<Vec<(String, Value)>>>
         .register("*".to_string(), lua.create_function_mut(collector).unwrap())
         .unwrap();
 }
+
+pub struct ApplicationsConfig(pub String);
+pub struct DevicesConfig(pub String);
+pub struct ScriptsConfig(pub String);
+pub struct SettingsConfig(pub String);
+
+pub fn setup_config(
+    cfg: &PathBuf,
+    applications_cfg: ApplicationsConfig,
+    devices_cfg: DevicesConfig,
+    scripts_cfg: ScriptsConfig,
+    settings_cfg: SettingsConfig,
+) {
+    if !cfg.exists() {
+        std::fs::create_dir_all(&cfg).unwrap();
+    }
+
+    std::fs::write(cfg.join("applications.lua"), applications_cfg.0).unwrap();
+    std::fs::write(cfg.join("devices.lua"), devices_cfg.0).unwrap();
+    std::fs::write(cfg.join("scripts.lua"), scripts_cfg.0).unwrap();
+    std::fs::write(cfg.join("settings.lua"), settings_cfg.0).unwrap();
+}
