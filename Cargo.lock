@@ -490,38 +490,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "325918d6fe32f23b19878fe4b34794ae41fc19ddbe53b10571a4874d44ffd39b"
 
 [[package]]
-name = "camino"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "276a59bf2b2c967788139340c9f0c5b12d7fd6630315c15c217e559de85d2609"
-dependencies = [
- "serde_core",
-]
-
-[[package]]
-name = "cargo-platform"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e35af189006b9c0f00a064685c727031e3ed2d8020f7ba284d78cc2671bd36ea"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "cargo_metadata"
-version = "0.15.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eee4243f1f26fc7a42710e7439c149e2b10b05472f88090acce52632f231a73a"
-dependencies = [
- "camino",
- "cargo-platform",
- "semver",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
 name = "cc"
 version = "1.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2447,7 +2415,6 @@ dependencies = [
  "rusb",
  "serde",
  "serde_json",
- "test-binary",
  "test-case",
  "tokio",
  "tokio-stream",
@@ -3221,9 +3188,6 @@ name = "semver"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cb6eb87a131f756572d7fb904f6e7b68633f09cca868c5df1c4b8d1a694bbba"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "serde"
@@ -3509,19 +3473,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "test-binary"
-version = "3.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c7cb854285c40b61c0fade358bf63a2bb1226688a1ea11432ea65349209e6e3"
-dependencies = [
- "camino",
- "cargo_metadata",
- "once_cell",
- "paste",
- "thiserror",
-]
-
-[[package]]
 name = "test-case"
 version = "3.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3552,6 +3503,15 @@ dependencies = [
  "quote 1.0.37",
  "syn 2.0.90",
  "test-case-core",
+]
+
+[[package]]
+name = "test_events"
+version = "0.4.1"
+dependencies = [
+ "clap 4.5.23",
+ "omni-led-api",
+ "tokio",
 ]
 
 [[package]]

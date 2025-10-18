@@ -54,7 +54,6 @@ windres = "0.2"
 
 [dev-dependencies]
 test-case = "3.3.1"
-test-binary = "3.0.2"
 
 [features]
 dev = []
