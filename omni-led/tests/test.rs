@@ -6,44 +6,41 @@ use tokio::task::LocalSet;
 
 mod common;
 
+build_test_binary_once!(test_events, "testbins");
+
+fn test_events_app_path() -> String {
+    let path = path_to_test_events().to_str().unwrap().to_string();
+    path.replace("\\", "\\\\")
+}
+
 static RUNNING: AtomicBool = AtomicBool::new(true);
 
 #[tokio::test]
-async fn it_works() {
+async fn event_handler() {
     let config_dir = PathBuf::from("tests/config");
-    let custom_fns: Vec<(&str, fn(lua: &Lua, value: Value) -> mlua::Result<()>)> =
-        vec![("end_test", |_: &Lua, _: Value| -> mlua::Result<()> {
-            RUNNING.store(false, Ordering::Relaxed);
-            Ok(())
-        })];
-
     common::setup_config(
         &config_dir,
-        ApplicationsConfig(String::from(
+        ApplicationsConfig(format!(
             r#"
-            local function get_app_path(name)
-                return '..' .. PLATFORM.PathSeparator .. 'target' .. PLATFORM.PathSeparator .. 'debug'
-                            .. PLATFORM.PathSeparator .. name .. PLATFORM.ExeSuffix
-            end
-
-            load_app {
-                path = get_app_path('clock'),
-                args = { '--address', SERVER.Address },
-            }
+            load_app {{
+                path = '{}',
+                args = {{ '--address', SERVER.Address }},
+            }}
             "#,
+            test_events_app_path()
         )),
         DevicesConfig(String::from(r#"-- Empty"#)),
         ScriptsConfig(String::from(
-            r#"
-            EVENTS:register('*', function(event, value)
-                if event == 'OMNILED.Update' and value == 10 then
-                    end_test()
-                end
-            end)
-            "#,
+            r#"EVENTS:register('TEST_EVENTS.End', function(event, value) end_test() end)"#,
         )),
         SettingsConfig(String::from(r#"-- Use default settings"#)),
     );
+
+    let custom_fns: Vec<(&str, fn(lua: &Lua, value: Value) -> mlua::Result<()>)> =
+        vec![("end_test", |_: &Lua, _: Value| {
+            RUNNING.store(false, Ordering::Relaxed);
+            Ok(())
+        })];
 
     let local = LocalSet::new();
     let (_lua, events) = local
