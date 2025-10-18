@@ -1,4 +1,3 @@
-/data
-/target
+data
+target
 /omni-led/tests/config
-/omni-led/tests/data
