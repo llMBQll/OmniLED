@@ -48,3 +48,14 @@ description = "Run development binaries in release mode"
 command = "cargo"
 args = ["run", "--release", "--features=dev"]
 dependencies = ["build-release"]
+
+[tasks.build-test-binaries]
+description = "Build test application binaries"
+command = "cargo"
+args = ["build", "--package=test_events"]
+
+[tasks.test]
+description = "Run tests"
+command = "cargo"
+args = ["test", "--workspace", "--features=dev", "--no-fail-fast"]
+dependencies = ["build", "build-test-binaries"]

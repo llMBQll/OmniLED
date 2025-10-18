@@ -26,6 +26,7 @@ use omni_led_lib::{
     settings::settings::Settings,
 };
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::atomic::AtomicBool;
 
@@ -119,4 +120,18 @@ pub fn setup_config(
     std::fs::write(cfg.join("devices.lua"), devices_cfg.0).unwrap();
     std::fs::write(cfg.join("scripts.lua"), scripts_cfg.0).unwrap();
     std::fs::write(cfg.join("settings.lua"), settings_cfg.0).unwrap();
+}
+
+pub fn get_test_app_path(name: &str) -> String {
+    let path = PathBuf::from("..")
+        .join("target")
+        .join("debug")
+        .join(name)
+        .with_extension(std::env::consts::EXE_EXTENSION)
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    // Need to escape backslashes as we use this as a string literal in Lua
+    path.replace("\\", "\\\\")
 }
