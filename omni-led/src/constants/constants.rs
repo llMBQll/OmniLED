@@ -72,10 +72,12 @@ impl Constants {
     }
 
     pub fn config_dir() -> PathBuf {
-        Self::root_dir().join("config")
+        // TODO: remove temporary change
+        Self::root_dir().join("tests").join("config")
     }
 
     pub fn data_dir() -> PathBuf {
-        Constants::root_dir().join("data")
+        // TODO: remove temporary change
+        Constants::root_dir().join("tests").join("data")
     }
 }
