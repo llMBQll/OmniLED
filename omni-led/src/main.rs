@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
 use log::debug;
 use mlua::Lua;
