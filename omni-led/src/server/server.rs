@@ -81,8 +81,9 @@ impl PluginServer {
             timestamp,
         };
 
+        let constants = UserDataRef::<Constants>::load(lua);
         std::fs::write(
-            Constants::data_dir().join("server.json"),
+            constants.get().data_dir.join("server.json"),
             serde_json::to_string_pretty(&info).unwrap(),
         )
         .unwrap();

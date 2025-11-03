@@ -25,7 +25,6 @@ use crate::common::common::exec_file;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::constants::Constants;
 use crate::create_table_with_defaults;
-use crate::settings::settings::get_full_path;
 
 #[derive(UniqueUserData)]
 pub struct AppLoader {
@@ -50,9 +49,10 @@ impl AppLoader {
             .unwrap();
 
         let get_default_path_fn = lua
-            .create_function(|_, app_name: String| {
+            .create_function(|lua, app_name: String| {
                 let executable = format!("{}{}", app_name, std::env::consts::EXE_SUFFIX);
-                let path = Constants::applications_dir().join(executable);
+                let constants = UserDataRef::<Constants>::load(lua);
+                let path = constants.get().applications_dir.join(executable);
                 Ok(path.to_string_lossy().to_string())
             })
             .unwrap();
@@ -65,7 +65,9 @@ impl AppLoader {
             SERVER = SERVER,
         });
 
-        exec_file(lua, &get_full_path("applications.lua"), env).unwrap();
+        let constants = UserDataRef::<Constants>::load(lua);
+        let filename = constants.get().config_dir.join("applications.lua");
+        exec_file(lua, &filename, env).unwrap();
 
         let app_loader = UserDataRef::<AppLoader>::load(lua);
         if app_loader.get().processes.len() == 0 {

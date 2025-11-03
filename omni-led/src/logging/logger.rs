@@ -25,7 +25,7 @@ use mlua::{FromLua, Lua, UserData, UserDataMethods};
 use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::path::{Path, PathBuf};
 
-use crate::common::user_data::UniqueUserData;
+use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::constants::Constants;
 
 #[derive(Clone, Debug, UniqueUserData)]
@@ -35,18 +35,19 @@ pub struct Log {
 
 impl Log {
     pub fn load(lua: &Lua) {
-        let handle = init(Self::get_path());
+        let handle = init(Self::get_path(lua));
         let logger = Log { handle };
 
         Log::set_unique(lua, logger);
     }
 
-    pub fn set_level_filter(&self, level_filter: LevelFilter) {
-        change_log_level(&self.handle, Self::get_path(), level_filter.into());
+    pub fn set_level_filter(&self, lua: &Lua, level_filter: LevelFilter) {
+        change_log_level(&self.handle, Self::get_path(lua), level_filter.into());
     }
 
-    fn get_path() -> PathBuf {
-        Constants::data_dir().join("logging.log")
+    fn get_path(lua: &Lua) -> PathBuf {
+        let constants = UserDataRef::<Constants>::load(lua);
+        constants.get().data_dir.join("logging.log")
     }
 }
 

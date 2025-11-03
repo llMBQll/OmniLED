@@ -18,6 +18,7 @@
 
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
+use clap::Parser;
 use log::debug;
 use mlua::Lua;
 use omni_led_lib::{
@@ -28,6 +29,7 @@ use omni_led_lib::{
     script_handler::script_handler::ScriptHandler, server::server::PluginServer,
     settings::settings::Settings, tray_icon::tray_icon::TrayIcon,
 };
+use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 
@@ -37,11 +39,13 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 async fn main() {
     let init_begin = Instant::now();
 
+    let options = Options::parse();
+
     let lua = Lua::new();
 
     load_internal_functions(&lua);
+    Constants::load(&lua, options.config_dir);
     Log::load(&lua);
-    Constants::load(&lua);
     Settings::load(&lua);
     PluginServer::load(&lua).await;
     Events::load(&lua);
@@ -50,7 +54,7 @@ async fn main() {
     ScriptHandler::load(&lua);
     AppLoader::load(&lua);
 
-    let _tray = TrayIcon::new(&RUNNING);
+    let _tray = TrayIcon::new(&lua, &RUNNING);
 
     let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
 
@@ -73,4 +77,11 @@ async fn main() {
         .await;
 
     keyboard_handle.join().unwrap();
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about)]
+struct Options {
+    #[clap(short, long)]
+    config_dir: Option<PathBuf>,
 }

@@ -17,9 +17,11 @@
  */
 
 use log::error;
+use mlua::Lua;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tray_item::{IconSource, TrayItem};
 
+use crate::common::user_data::UserDataRef;
 use crate::constants::constants::Constants;
 
 pub struct TrayIcon {
@@ -28,24 +30,28 @@ pub struct TrayIcon {
 
 impl TrayIcon {
     #[must_use]
-    pub fn new(running: &'static AtomicBool) -> Self {
+    pub fn new(lua: &Lua, running: &'static AtomicBool) -> Self {
         #[cfg(feature = "dev")]
         const TITLE: &str = "OmniLED (dev)";
 
         #[cfg(not(feature = "dev"))]
         const TITLE: &str = "OmniLED";
 
+        let constants = UserDataRef::<Constants>::load(lua);
+        let config_dir = constants.get().config_dir.clone();
+        let license = config_dir.join("LICENSE");
+
         let mut tray = TrayItem::new(TITLE, Self::load_icon()).unwrap();
 
-        tray.add_menu_item("Config", || {
-            if let Err(err) = opener::reveal(Constants::config_dir()) {
+        tray.add_menu_item("Config", move || {
+            if let Err(err) = opener::reveal(&config_dir) {
                 error!("Failed to reveal config directory: {}", err);
             }
         })
         .unwrap();
 
-        tray.add_menu_item("License", || {
-            if let Err(err) = opener::reveal(Constants::root_dir().join("LICENSE")) {
+        tray.add_menu_item("License", move || {
+            if let Err(err) = opener::reveal(&license) {
                 error!("Failed to reveal license: {}", err);
             }
         })

@@ -25,13 +25,13 @@ use std::collections::hash_map::Entry;
 
 use crate::common::common::exec_file;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
+use crate::constants::constants::Constants;
 use crate::create_table_with_defaults;
 use crate::devices::device::{Device, Settings};
 use crate::devices::emulator::emulator::EmulatorSettings;
 use crate::devices::steelseries_engine::steelseries_engine_device::SteelseriesEngineDeviceSettings;
 use crate::devices::usb_device;
 use crate::devices::usb_device::usb_device::USBDeviceSettings;
-use crate::settings::settings::get_full_path;
 
 type Constructor = fn(&Lua, Value) -> Box<dyn Device>;
 
@@ -93,7 +93,9 @@ impl Devices {
     }
 
     fn load_devices(lua: &Lua, env: Table) {
-        exec_file(lua, &get_full_path("devices.lua"), env).unwrap();
+        let constants = UserDataRef::<Constants>::load(lua);
+        let filename = constants.get().config_dir.join("devices.lua");
+        exec_file(lua, &filename, env).unwrap();
     }
 
     fn create_loaders(lua: &Lua) -> (HashMap<String, Constructor>, Table) {
