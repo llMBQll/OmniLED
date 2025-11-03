@@ -27,6 +27,7 @@ use std::time::Duration;
 
 use crate::common::common::{KEY_VAL_TABLE, exec_file};
 use crate::common::user_data::{UniqueUserData, UserDataRef};
+use crate::constants::constants::Constants;
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
@@ -36,7 +37,6 @@ use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::renderer::Renderer;
 use crate::script_handler::script_data_types::{Widget, load_script_data_types};
-use crate::settings::settings::get_full_path;
 
 #[derive(UniqueUserData)]
 pub struct ScriptHandler {
@@ -91,7 +91,9 @@ impl ScriptHandler {
             .register("*".to_string(), event_handler)
             .unwrap();
 
-        exec_file(lua, &get_full_path("scripts.lua"), environment).unwrap();
+        let constants = UserDataRef::<Constants>::load(lua);
+        let filename = constants.get().config_dir.join("scripts.lua");
+        exec_file(lua, &filename, environment).unwrap();
     }
 
     pub fn set_value(&self, lua: &Lua, value_name: String, value: Value) -> mlua::Result<()> {

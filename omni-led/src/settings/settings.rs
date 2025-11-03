@@ -19,7 +19,6 @@
 use log::{debug, error};
 use mlua::{ErrorContext, FromLua, Lua, UserData, chunk};
 use omni_led_derive::{FromLuaValue, UniqueUserData};
-use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::common::common::exec_file;
@@ -59,8 +58,6 @@ pub struct Settings {
 
 impl Settings {
     pub fn load(lua: &Lua) {
-        const PATH: &str = "settings.lua";
-
         let load_settings_fn = lua
             .create_function(move |lua, settings: Settings| {
                 Settings::set_unique(lua, settings);
@@ -68,7 +65,8 @@ impl Settings {
             })
             .unwrap();
 
-        let filename = get_full_path(PATH);
+        let constants = UserDataRef::<Constants>::load(lua);
+        let filename = constants.get().config_dir.join("settings.lua");
         let env = create_table_with_defaults!(lua, {
             LOG = LOG,
             PLATFORM = PLATFORM,
@@ -87,7 +85,7 @@ impl Settings {
 
         let settings = UserDataRef::<Settings>::load(lua);
         let logger = UserDataRef::<Log>::load(lua);
-        logger.get().set_level_filter(settings.get().log_level);
+        logger.get().set_level_filter(lua, settings.get().log_level);
 
         debug!("Loaded settings {:?}", settings.get());
     }
@@ -98,14 +96,3 @@ impl Settings {
 }
 
 impl UserData for Settings {}
-
-pub fn get_full_path(path: &str) -> String {
-    let path_buf = PathBuf::from(path);
-    match path_buf.is_absolute() {
-        true => path.to_string(),
-        false => Constants::config_dir()
-            .join(path)
-            .to_string_lossy()
-            .to_string(),
-    }
-}
