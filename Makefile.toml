@@ -57,5 +57,5 @@ args = ["build", "--package=test_events"]
 [tasks.test]
 description = "Run tests"
 command = "cargo"
-args = ["test", "--package=omni-led", "--features=dev", "--no-fail-fast"]
+args = ["test", "--package=omni-led", "--features=dev", "--no-fail-fast", "--", "--nocapture"]
 dependencies = ["build", "build-test-binaries"]
