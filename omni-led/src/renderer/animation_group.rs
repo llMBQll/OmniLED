@@ -60,6 +60,12 @@ impl AnimationGroup {
         }
     }
 
+    pub fn reset(&mut self) {
+        for item in &mut self.items {
+            item.animation.reset();
+        }
+    }
+
     pub fn pre_sync(&mut self) {
         self.items.retain_mut(|item| {
             if self.new_data && self.keep_in_sync {

@@ -235,6 +235,7 @@ impl ScriptHandler {
             Some(to_update) => to_update,
             None => return Ok(()),
         };
+        let screen_changed = to_update != ctx.last_priority;
 
         let size = ctx.device.size(lua)?;
         let memory_layout = ctx.device.memory_layout(lua)?;
@@ -243,6 +244,7 @@ impl ScriptHandler {
         let output: LayoutData = ctx.layouts[to_update].layout.call(())?;
         let (animation_state, image) = renderer.render(
             &mut ctx.animation_groups[to_update],
+            screen_changed,
             size,
             output.widgets,
             memory_layout,
