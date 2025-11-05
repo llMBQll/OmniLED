@@ -70,13 +70,14 @@ impl Renderer {
     pub fn render(
         &mut self,
         animation_groups: &mut HashMap<usize, AnimationGroup>,
+        screen_changed: bool,
         size: Size,
         mut widgets: Vec<Widget>,
         memory_layout: MemoryLayout,
     ) -> (State, Buffer) {
         let mut buffer = Buffer::new(size, memory_layout);
 
-        self.calculate_animations(animation_groups, &mut widgets);
+        self.calculate_animations(animation_groups, &mut widgets, screen_changed);
 
         for operation in widgets {
             match operation {
@@ -267,6 +268,7 @@ impl Renderer {
         &mut self,
         animation_groups: &mut HashMap<usize, AnimationGroup>,
         widgets: &mut Vec<Widget>,
+        screen_changed: bool,
     ) {
         for widget in widgets {
             match widget {
@@ -318,8 +320,14 @@ impl Renderer {
             };
         }
 
-        for (_, group) in animation_groups {
+        for (_, group) in &mut *animation_groups {
             group.pre_sync();
+        }
+
+        if screen_changed {
+            for (_, group) in animation_groups {
+                group.reset();
+            }
         }
     }
 
