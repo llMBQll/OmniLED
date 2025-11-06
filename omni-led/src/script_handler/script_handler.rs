@@ -25,9 +25,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
-use crate::common::common::{KEY_VAL_TABLE, exec_file};
+use crate::common::common::KEY_VAL_TABLE;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
-use crate::constants::constants::Constants;
+use crate::constants::configs::{ConfigType, Configs};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
@@ -91,9 +91,10 @@ impl ScriptHandler {
             .register("*".to_string(), event_handler)
             .unwrap();
 
-        let constants = UserDataRef::<Constants>::load(lua);
-        let filename = constants.get().config_dir.join("scripts.lua");
-        exec_file(lua, &filename, environment).unwrap();
+        UserDataRef::<Configs>::load(lua)
+            .get_mut()
+            .load_config(lua, ConfigType::Scripts, environment)
+            .unwrap();
     }
 
     pub fn set_value(&self, lua: &Lua, value_name: String, value: Value) -> mlua::Result<()> {

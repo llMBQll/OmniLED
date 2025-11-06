@@ -23,9 +23,8 @@ use omni_led_derive::UniqueUserData;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
-use crate::common::common::exec_file;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
-use crate::constants::constants::Constants;
+use crate::constants::configs::{ConfigType, Configs};
 use crate::create_table_with_defaults;
 use crate::devices::device::{Device, Settings};
 use crate::devices::emulator::emulator::EmulatorSettings;
@@ -93,9 +92,10 @@ impl Devices {
     }
 
     fn load_devices(lua: &Lua, env: Table) {
-        let constants = UserDataRef::<Constants>::load(lua);
-        let filename = constants.get().config_dir.join("devices.lua");
-        exec_file(lua, &filename, env).unwrap();
+        UserDataRef::<Configs>::load(lua)
+            .get_mut()
+            .load_config(lua, ConfigType::Devices, env)
+            .unwrap();
     }
 
     fn create_loaders(lua: &Lua) -> (HashMap<String, Constructor>, Table) {

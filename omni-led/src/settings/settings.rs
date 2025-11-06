@@ -21,9 +21,8 @@ use mlua::{ErrorContext, FromLua, Lua, UserData, chunk};
 use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::time::Duration;
 
-use crate::common::common::exec_file;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
-use crate::constants::constants::Constants;
+use crate::constants::configs::{ConfigType, Configs};
 use crate::create_table_with_defaults;
 use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
@@ -65,15 +64,17 @@ impl Settings {
             })
             .unwrap();
 
-        let constants = UserDataRef::<Constants>::load(lua);
-        let filename = constants.get().config_dir.join("settings.lua");
         let env = create_table_with_defaults!(lua, {
             LOG = LOG,
             PLATFORM = PLATFORM,
             Settings = $load_settings_fn,
         });
 
-        if let Err(err) = exec_file(lua, &filename, env) {
+        let result =
+            UserDataRef::<Configs>::load(lua)
+                .get_mut()
+                .load_config(lua, ConfigType::Settings, env);
+        if let Err(err) = result {
             error!(
                 "Error loading settings: {}. Falling back to default settings",
                 err

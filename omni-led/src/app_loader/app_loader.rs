@@ -21,8 +21,8 @@ use mlua::{Lua, UserData, chunk};
 use omni_led_derive::UniqueUserData;
 
 use crate::app_loader::process::{Config, Process};
-use crate::common::common::exec_file;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
+use crate::constants::configs::{ConfigType, Configs};
 use crate::constants::constants::Constants;
 use crate::create_table_with_defaults;
 
@@ -65,9 +65,10 @@ impl AppLoader {
             SERVER = SERVER,
         });
 
-        let constants = UserDataRef::<Constants>::load(lua);
-        let filename = constants.get().config_dir.join("applications.lua");
-        exec_file(lua, &filename, env).unwrap();
+        UserDataRef::<Configs>::load(lua)
+            .get_mut()
+            .load_config(lua, ConfigType::Applications, env)
+            .unwrap();
 
         let app_loader = UserDataRef::<AppLoader>::load(lua);
         if app_loader.get().processes.len() == 0 {

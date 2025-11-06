@@ -23,9 +23,9 @@ use log::debug;
 use mlua::Lua;
 use omni_led_lib::{
     app_loader::app_loader::AppLoader, common::common::load_internal_functions,
-    common::user_data::UserDataRef, constants::constants::Constants, devices::devices::Devices,
-    events::event_loop::EventLoop, events::events::Events, events::shortcuts::Shortcuts,
-    keyboard::keyboard::process_events, logging::logger::Log,
+    common::user_data::UserDataRef, constants::configs::Configs, constants::constants::Constants,
+    devices::devices::Devices, events::event_loop::EventLoop, events::events::Events,
+    events::shortcuts::Shortcuts, keyboard::keyboard::process_events, logging::logger::Log,
     script_handler::script_handler::ScriptHandler, server::server::PluginServer,
     settings::settings::Settings, tray_icon::tray_icon::TrayIcon,
 };
@@ -45,6 +45,7 @@ async fn main() {
 
     load_internal_functions(&lua);
     Constants::load(&lua, options.config_dir);
+    Configs::load(&lua);
     Log::load(&lua);
     Settings::load(&lua);
     PluginServer::load(&lua).await;
