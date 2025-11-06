@@ -16,11 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+mod configs;
 mod devices;
 mod logging;
 
-use crate::devices::load_supported_devices;
-use crate::logging::LogHandleImpl;
 use iced::border::Radius;
 use iced::widget::container::Style;
 use iced::widget::{
@@ -35,6 +34,11 @@ use omni_led_lib::constants::constants::Constants;
 use omni_led_lib::devices::devices::Devices;
 use omni_led_lib::logging::logger::Log;
 use rusb::{Device, DeviceDescriptor, GlobalContext};
+use std::collections::HashMap;
+
+use crate::configs::ConfigProviderImpl;
+use crate::devices::load_supported_devices;
+use crate::logging::LogHandleImpl;
 
 const DEVICES: &str = include_str!("../../config/devices.lua");
 
@@ -59,13 +63,13 @@ fn init_lua() -> Lua {
 
     Constants::load(&lua, None);
 
-    Log::load(&lua, LogHandleImpl);
+    let log_handle = LogHandleImpl;
+    Log::load(&lua, log_handle);
 
-    // Config directory doesn't exist yet, override device config from memory
-    UserDataRef::<Configs>::load(&lua)
-        .get_mut()
-        .store_config(ConfigType::Devices, DEVICES)
-        .unwrap();
+    let config_files = HashMap::from([(ConfigType::Devices, DEVICES.into())]);
+    let config_provider = ConfigProviderImpl::new(config_files);
+    Configs::load(&lua, config_provider);
+
     Devices::load(&lua);
 
     lua

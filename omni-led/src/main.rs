@@ -34,6 +34,7 @@ use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 use tray_icon::TrayIcon;
 
+mod configs;
 mod logging;
 mod tray_icon;
 
@@ -49,7 +50,9 @@ async fn main() {
 
     load_internal_functions(&lua);
     Constants::load(&lua, options.config_dir);
-    Configs::load(&lua);
+
+    let config_provider = configs::ConfigProviderImpl::new(&lua);
+    Configs::load(&lua, config_provider);
 
     let log_handle = logging::init(&lua);
     Log::load(&lua, log_handle);
