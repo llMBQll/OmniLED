@@ -21,11 +21,15 @@ use iced::widget::container::Style;
 use iced::widget::{
     button, column, container, horizontal_space, radio, row, scrollable, text, toggler,
 };
-use iced::{Alignment, Border, Element, Length, Theme};
+use iced::{Alignment, Border, Element, Font, Length, Theme};
 use rusb::{Device, DeviceDescriptor, GlobalContext};
 
 pub fn main() -> iced::Result {
     iced::application(Installer::title, Installer::update, Installer::view)
+        .font(include_bytes!(
+            "../../assets/fonts/FiraMono/FiraMono-Bold.ttf"
+        ))
+        .default_font(Font::with_name("FiraMono"))
         .centered()
         .run()
 }
