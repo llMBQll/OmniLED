@@ -86,7 +86,7 @@ impl Settings {
 
         let settings = UserDataRef::<Settings>::load(lua);
         let logger = UserDataRef::<Log>::load(lua);
-        logger.get().set_level_filter(lua, settings.get().log_level);
+        logger.get().set_level_filter(settings.get().log_level);
 
         debug!("Loaded settings {:?}", settings.get());
     }

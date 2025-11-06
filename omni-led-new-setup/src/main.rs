@@ -17,19 +17,32 @@
  */
 
 mod devices;
+mod logging;
 
+use crate::devices::load_supported_devices;
+use crate::logging::LogHandleImpl;
 use iced::border::Radius;
 use iced::widget::container::Style;
 use iced::widget::{
     button, column, container, horizontal_space, radio, row, scrollable, text, toggler,
 };
 use iced::{Alignment, Border, Element, Font, Length, Theme};
+use mlua::Lua;
+use omni_led_lib::common::common::load_internal_functions;
+use omni_led_lib::common::user_data::UserDataRef;
+use omni_led_lib::constants::configs::{ConfigType, Configs};
+use omni_led_lib::constants::constants::Constants;
+use omni_led_lib::devices::devices::Devices;
+use omni_led_lib::logging::logger::Log;
 use rusb::{Device, DeviceDescriptor, GlobalContext};
 
-use crate::devices::load_supported_devices;
+const DEVICES: &str = include_str!("../../config/devices.lua");
 
 pub fn main() -> iced::Result {
-    load_supported_devices();
+    logging::init();
+
+    let lua = init_lua();
+    load_supported_devices(&lua);
 
     iced::application(Installer::title, Installer::update, Installer::view)
         .font(include_bytes!(
@@ -38,6 +51,24 @@ pub fn main() -> iced::Result {
         .default_font(Font::with_name("FiraMono"))
         .centered()
         .run()
+}
+
+fn init_lua() -> Lua {
+    let lua = Lua::new();
+    load_internal_functions(&lua);
+
+    Constants::load(&lua, None);
+
+    Log::load(&lua, LogHandleImpl);
+
+    // Config directory doesn't exist yet, override device config from memory
+    UserDataRef::<Configs>::load(&lua)
+        .get_mut()
+        .store_config(ConfigType::Devices, DEVICES)
+        .unwrap();
+    Devices::load(&lua);
+
+    lua
 }
 
 #[derive(Default, Debug)]

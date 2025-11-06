@@ -26,53 +26,26 @@ use omni_led_lib::devices::devices::Devices;
 use omni_led_lib::devices::usb_device::usb_device::USBDeviceSettings;
 use omni_led_lib::logging::logger::Log;
 
-const DEVICES: &str = include_str!("../../config/devices.lua");
-
 pub const STEEL_SERIES_VENDOR_ID: u16 = 0x1038;
 
-fn init_lua() -> Lua {
-    let lua = Lua::new();
-    load_internal_functions(&lua);
+pub fn load_supported_devices(lua: &Lua) {
 
-    Constants::load(&lua, None);
-
-    // Make the data dir the same as applications dir - will do logging in the installer directory
-    let mut constants = UserDataRef::<Constants>::load(&lua).get_mut();
-    constants.data_dir = constants.applications_dir.clone();
-    drop(constants);
-
-    Configs::load(&lua);
-    Log::load(&lua);
-
-    lua
-}
-
-pub fn load_supported_devices() {
-    let lua = init_lua();
-
-    // Config directory doesn't exist yet, override device config from memory
-    UserDataRef::<Configs>::load(&lua)
-        .get_mut()
-        .store_config(ConfigType::Devices, DEVICES)
-        .unwrap();
-    Devices::load(&lua);
-
-    let available: Vec<_> = UserDataRef::<Devices>::load(&lua)
-        .get()
-        .get_available_settings()
-        .into_iter()
-        .filter_map(|value| match USBDeviceSettings::from_lua(value, &lua) {
-            Ok(settings) => Some((
-                settings.name,
-                settings.usb_settings.vendor_id,
-                settings.usb_settings.product_id,
-            )),
-            Err(_) => None,
-        })
-        .collect();
-
-    info!("Available USB devices:");
-    for (name, vendor_id, product_id) in available {
-        info!("  {name} {:04X}:{:04X}", vendor_id, product_id)
-    }
+    // let available: Vec<_> = UserDataRef::<Devices>::load(&lua)
+    //     .get()
+    //     .get_available_settings()
+    //     .into_iter()
+    //     .filter_map(|value| match USBDeviceSettings::from_lua(value, &lua) {
+    //         Ok(settings) => Some((
+    //             settings.name,
+    //             settings.usb_settings.vendor_id,
+    //             settings.usb_settings.product_id,
+    //         )),
+    //         Err(_) => None,
+    //     })
+    //     .collect();
+    //
+    // info!("Available USB devices:");
+    // for (name, vendor_id, product_id) in available {
+    //     info!("  {name} {:04X}:{:04X}", vendor_id, product_id)
+    // }
 }

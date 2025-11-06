@@ -17,37 +17,32 @@
  */
 
 use log::{debug, error, info, trace, warn};
-use log4rs::append::file::FileAppender;
-use log4rs::config::{Appender, Root};
-use log4rs::encode::pattern::PatternEncoder;
-use log4rs::{Config, Handle};
 use mlua::{FromLua, Lua, UserData, UserDataMethods};
 use omni_led_derive::{FromLuaValue, UniqueUserData};
-use std::path::{Path, PathBuf};
 
-use crate::common::user_data::{UniqueUserData, UserDataRef};
-use crate::constants::constants::Constants;
+use crate::common::user_data::UniqueUserData;
 
-#[derive(Clone, Debug, UniqueUserData)]
+pub trait LogHandle {
+    fn set_level_filter(&self, level_filter: log::LevelFilter);
+}
+
+#[derive(UniqueUserData)]
 pub struct Log {
-    handle: Handle,
+    handle: Box<dyn LogHandle>,
 }
 
 impl Log {
-    pub fn load(lua: &Lua) {
-        let handle = init(Self::get_path(lua));
-        let logger = Log { handle };
-
-        Log::set_unique(lua, logger);
+    pub fn load<H: LogHandle + 'static>(lua: &Lua, handle: H) {
+        Log::set_unique(
+            lua,
+            Self {
+                handle: Box::new(handle),
+            },
+        );
     }
 
-    pub fn set_level_filter(&self, lua: &Lua, level_filter: LevelFilter) {
-        change_log_level(&self.handle, Self::get_path(lua), level_filter.into());
-    }
-
-    fn get_path(lua: &Lua) -> PathBuf {
-        let constants = UserDataRef::<Constants>::load(lua);
-        constants.get().data_dir.join("logging.log")
+    pub fn set_level_filter(&self, level_filter: LevelFilter) {
+        self.handle.set_level_filter(level_filter.into());
     }
 }
 
@@ -77,58 +72,6 @@ impl UserData for Log {
             Ok(())
         });
     }
-}
-
-fn init(file_path: impl AsRef<Path>) -> Handle {
-    init_with_level(file_path, default_log_level())
-}
-
-fn init_with_level(file_path: impl AsRef<Path>, level_filter: log::LevelFilter) -> Handle {
-    let config = create_config(file_path, level_filter);
-    let handle = log4rs::init_config(config).unwrap();
-
-    std::panic::set_hook(Box::new(|panic_info| {
-        error!("{panic_info}");
-        println!("{panic_info}");
-    }));
-
-    handle
-}
-
-fn change_log_level(handle: &Handle, file_path: impl AsRef<Path>, level_filter: log::LevelFilter) {
-    let config = create_config(file_path, level_filter);
-    handle.set_config(config);
-}
-
-fn create_config(file_path: impl AsRef<Path>, level_filter: log::LevelFilter) -> Config {
-    let logfile = FileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new(
-            "[{d(%Y-%m-%d %H:%M:%S:%3f)}][{l}][{t}] {m}\n",
-        )))
-        .build(file_path)
-        .unwrap();
-    let config = Config::builder()
-        .appender(Appender::builder().build("logfile", Box::new(logfile)))
-        .logger(log4rs::config::Logger::builder().build("mio", log::LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("hyper", log::LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("rustls", log::LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("tracing", log::LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("ureq", log::LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("warp", log::LevelFilter::Error))
-        .build(Root::builder().appender("logfile").build(level_filter))
-        .unwrap();
-
-    config
-}
-
-#[cfg(debug_assertions)]
-fn default_log_level() -> log::LevelFilter {
-    log::LevelFilter::Debug
-}
-
-#[cfg(not(debug_assertions))]
-fn default_log_level() -> log::LevelFilter {
-    log::LevelFilter::Info
 }
 
 #[derive(Debug, Copy, Clone, FromLuaValue)]
