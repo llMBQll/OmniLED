@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+mod devices;
+
 use iced::border::Radius;
 use iced::widget::container::Style;
 use iced::widget::{
@@ -24,7 +26,11 @@ use iced::widget::{
 use iced::{Alignment, Border, Element, Font, Length, Theme};
 use rusb::{Device, DeviceDescriptor, GlobalContext};
 
+use crate::devices::load_supported_devices;
+
 pub fn main() -> iced::Result {
+    load_supported_devices();
+
     iced::application(Installer::title, Installer::update, Installer::view)
         .font(include_bytes!(
             "../../assets/fonts/FiraMono/FiraMono-Bold.ttf"

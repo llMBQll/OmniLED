@@ -18,7 +18,7 @@
 
 pub mod device;
 pub mod devices;
+pub mod usb_device;
 
 mod emulator;
 mod steelseries_engine;
-mod usb_device;

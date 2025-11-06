@@ -3801,6 +3801,9 @@ name = "omni-led-new-setup"
 version = "0.1.0"
 dependencies = [
  "iced",
+ "log",
+ "mlua",
+ "omni-led",
  "rusb",
 ]
 

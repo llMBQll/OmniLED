@@ -84,6 +84,16 @@ impl Devices {
         Ok(device)
     }
 
+    pub fn get_available_settings(&self) -> Vec<Value> {
+        self.devices
+            .iter()
+            .filter_map(|(_, entry)| match entry {
+                DeviceEntry::Initializer(initializer) => Some(initializer.settings.clone()),
+                DeviceEntry::Loaded => None,
+            })
+            .collect()
+    }
+
     fn new(constructors: HashMap<String, Constructor>) -> Self {
         Self {
             devices: HashMap::new(),
