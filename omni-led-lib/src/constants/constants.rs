@@ -160,6 +160,6 @@ mod tests {
         }
 
         let root_dir = Constants::resolve_config_dir(None);
-        assert_eq!(root_dir, Constants::root_dir().join("config"));
+        assert_eq!(root_dir, Constants::root_dir().join("../../../config"));
     }
 }

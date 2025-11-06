@@ -39,7 +39,7 @@ impl TrayIcon {
 
         let constants = UserDataRef::<Constants>::load(lua);
         let config_dir = constants.get().config_dir.clone();
-        let license = config_dir.join("LICENSE");
+        let license = config_dir.join("../../../LICENSE");
 
         let mut tray = TrayItem::new(TITLE, Self::load_icon()).unwrap();
 
