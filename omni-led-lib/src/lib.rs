@@ -1,4 +1,3 @@
-pub mod app_loader;
 pub mod common;
 pub mod constants;
 pub mod devices;

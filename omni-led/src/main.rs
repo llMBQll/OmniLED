@@ -18,14 +18,15 @@
 
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
+use crate::app_loader::app_loader::AppLoader;
 use clap::Parser;
 use log::debug;
 use mlua::Lua;
 use omni_led_lib::{
-    app_loader::app_loader::AppLoader, common::common::load_internal_functions,
-    common::user_data::UserDataRef, constants::configs::Configs, constants::constants::Constants,
-    devices::devices::Devices, events::event_loop::EventLoop, events::events::Events,
-    events::shortcuts::Shortcuts, keyboard::keyboard::process_events, logging::logger::Log,
+    common::common::load_internal_functions, common::user_data::UserDataRef,
+    constants::configs::Configs, constants::constants::Constants, devices::devices::Devices,
+    events::event_loop::EventLoop, events::events::Events, events::shortcuts::Shortcuts,
+    keyboard::keyboard::process_events, logging::logger::Log,
     script_handler::script_handler::ScriptHandler, server::server::PluginServer,
     settings::settings::Settings,
 };
@@ -34,6 +35,7 @@ use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 use tray_icon::TrayIcon;
 
+mod app_loader;
 mod configs;
 mod logging;
 mod tray_icon;

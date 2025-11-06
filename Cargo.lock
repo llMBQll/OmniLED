@@ -3788,6 +3788,7 @@ dependencies = [
  "log",
  "log4rs",
  "mlua",
+ "omni-led-derive",
  "omni-led-lib",
  "opener",
  "tokio",
