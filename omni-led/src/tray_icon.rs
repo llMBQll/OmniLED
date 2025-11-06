@@ -21,8 +21,8 @@ use mlua::Lua;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tray_item::{IconSource, TrayItem};
 
-use crate::common::user_data::UserDataRef;
-use crate::constants::constants::Constants;
+use omni_led_lib::common::user_data::UserDataRef;
+use omni_led_lib::constants::constants::Constants;
 
 pub struct TrayIcon {
     _tray: TrayItem,
@@ -70,7 +70,7 @@ impl TrayIcon {
 
     #[cfg(target_os = "linux")]
     fn load_icon() -> IconSource {
-        const IMAGE: &[u8] = include_bytes!("../../../assets/icons/white.png");
+        const IMAGE: &[u8] = include_bytes!("../../assets/icons/white.png");
 
         let image = image::load_from_memory(&IMAGE)
             .expect("Failed to load icon data")

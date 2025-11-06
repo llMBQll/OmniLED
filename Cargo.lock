@@ -3784,11 +3784,12 @@ name = "omni-led"
 version = "0.4.1"
 dependencies = [
  "clap 4.5.23",
+ "image",
  "log",
  "log4rs",
  "mlua",
  "omni-led-lib",
- "test-case",
+ "opener",
  "tokio",
  "tray-item",
  "windres",
@@ -3835,7 +3836,6 @@ dependencies = [
  "num-traits",
  "omni-led-api",
  "omni-led-derive",
- "opener",
  "prost",
  "regex",
  "rusb",
@@ -3845,7 +3845,6 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tonic",
- "tray-item",
  "ureq",
 ]
 

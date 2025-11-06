@@ -9,4 +9,3 @@ pub mod renderer;
 pub mod script_handler;
 pub mod server;
 pub mod settings;
-pub mod tray_icon;

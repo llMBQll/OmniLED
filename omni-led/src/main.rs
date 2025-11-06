@@ -27,13 +27,15 @@ use omni_led_lib::{
     devices::devices::Devices, events::event_loop::EventLoop, events::events::Events,
     events::shortcuts::Shortcuts, keyboard::keyboard::process_events, logging::logger::Log,
     script_handler::script_handler::ScriptHandler, server::server::PluginServer,
-    settings::settings::Settings, tray_icon::tray_icon::TrayIcon,
+    settings::settings::Settings,
 };
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::time::Instant;
+use tray_icon::TrayIcon;
 
 mod logging;
+mod tray_icon;
 
 static RUNNING: AtomicBool = AtomicBool::new(true);
 
