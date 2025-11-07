@@ -36,4 +36,4 @@ jobs:
         run: cargo make build
 
       - name: Test
-        run: cargo test --workspace
+        run: cargo make test
