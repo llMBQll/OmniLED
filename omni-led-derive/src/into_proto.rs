@@ -16,12 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use convert_case::Casing;
+use convert_case::{Case, Casing};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput};
 
-use crate::common::{get_attribute, get_case, is_option, parse_attributes};
+use crate::common::{get_attribute, is_option, parse_attributes};
 
 pub fn expand_into_proto_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
@@ -125,5 +125,20 @@ fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
 
     FieldAttributes {
         transform: get_attribute(&mut attributes, "transform"),
+    }
+}
+
+pub fn get_case(rename_strategy: &TokenStream) -> Case<'_> {
+    let strategy = rename_strategy.to_string();
+    match strategy.as_str() {
+        "lowercase" => Case::Lower,
+        "UPPERCASE" => Case::Upper,
+        "PascalCase" => Case::Pascal,
+        "camelCase" => Case::Camel,
+        "snake_case" => Case::Snake,
+        "SCREAMING_SNAKE_CASE" => Case::UpperSnake,
+        "kebab-case" => Case::Kebab,
+        "SCREAMING-KEBAB-CASE" => Case::UpperKebab,
+        convention => panic!("Unknown case convention '{}'", convention),
     }
 }
