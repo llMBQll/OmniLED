@@ -19,12 +19,10 @@
 use minifb::{Window, WindowOptions};
 use mlua::{ErrorContext, FromLua, Lua, Value};
 use omni_led_derive::FromLuaValue;
-use std::cmp::max;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::Duration;
 
 use crate::common::user_data::UserDataRef;
 use crate::devices::device::{Buffer, Device, MemoryLayout, Settings as DeviceSettings, Size};
@@ -34,7 +32,6 @@ pub struct Emulator {
     size: Size,
     name: String,
     buffer: Arc<Mutex<Vec<u32>>>,
-    should_update: Arc<AtomicBool>,
     running: Arc<AtomicBool>,
     window_thread_handle: Option<JoinHandle<()>>,
 }
@@ -48,13 +45,11 @@ impl Device for Emulator {
         let buffer = vec![0; size.width * size.height];
         let buffer = Arc::new(Mutex::new(buffer));
         let running = Arc::new(AtomicBool::new(true));
-        let should_update = Arc::new(AtomicBool::new(true));
         let update_interval = UserDataRef::<Settings>::load(lua).get().update_interval;
 
         let handle = thread::spawn({
             let buffer = Arc::clone(&buffer);
             let running = Arc::clone(&running);
-            let should_update = Arc::clone(&should_update);
             move || {
                 let width = size.width;
                 let height = size.height;
@@ -71,20 +66,14 @@ impl Device for Emulator {
                 )
                 .unwrap();
 
-                let second = Duration::from_secs(1).as_millis() as usize;
-                let update_interval = update_interval.as_millis() as usize;
-                let target_fps = max(1, second / update_interval);
-                window.set_target_fps(target_fps);
-
                 while window.is_open() && running.load(Ordering::Relaxed) {
-                    let update = should_update.swap(false, Ordering::Relaxed);
-                    if !update {
-                        continue;
-                    }
+                    let begin = std::time::Instant::now();
 
                     window
                         .update_with_buffer(&buffer.lock().unwrap(), width, height)
                         .unwrap();
+
+                    thread::sleep(update_interval.saturating_sub(begin.elapsed()));
                 }
             }
         });
@@ -93,7 +82,6 @@ impl Device for Emulator {
             size,
             name,
             buffer,
-            should_update,
             running,
             window_thread_handle: Some(handle),
         })
@@ -114,7 +102,6 @@ impl Device for Emulator {
             .collect();
 
         *self.buffer.lock().unwrap() = expanded;
-        self.should_update.store(true, Ordering::Relaxed);
 
         Ok(())
     }
