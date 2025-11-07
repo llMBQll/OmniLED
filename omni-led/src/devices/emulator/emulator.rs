@@ -19,21 +19,22 @@
 use minifb::{Window, WindowOptions};
 use mlua::{ErrorContext, FromLua, Lua, Value};
 use omni_led_derive::FromLuaValue;
+use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 
-use crate::common::user_data::UserDataRef;
 use crate::devices::device::{Buffer, Device, MemoryLayout, Settings as DeviceSettings, Size};
-use crate::settings::settings::Settings;
 
 pub struct Emulator {
     size: Size,
     name: String,
-    buffer: Arc<Mutex<Vec<u32>>>,
     running: Arc<AtomicBool>,
     window_thread_handle: Option<JoinHandle<()>>,
+    draw_buffer: Arc<DrawBuffer>,
+    data_ready: Arc<BinarySemaphore>,
+    reader_ready: Arc<BinarySemaphore>,
 }
 
 impl Device for Emulator {
@@ -42,14 +43,16 @@ impl Device for Emulator {
 
         let size = settings.screen_size;
         let name = settings.name.clone();
-        let buffer = vec![0; size.width * size.height];
-        let buffer = Arc::new(Mutex::new(buffer));
         let running = Arc::new(AtomicBool::new(true));
-        let update_interval = UserDataRef::<Settings>::load(lua).get().update_interval;
+        let draw_buffer = Arc::new(DrawBuffer::with_size(size.width * size.height));
+        let data_ready = Arc::new(BinarySemaphore::new(false));
+        let reader_ready = Arc::new(BinarySemaphore::new(true));
 
         let handle = thread::spawn({
-            let buffer = Arc::clone(&buffer);
             let running = Arc::clone(&running);
+            let draw_buffer = Arc::clone(&draw_buffer);
+            let data_ready = Arc::clone(&data_ready);
+            let reader_ready = Arc::clone(&reader_ready);
             move || {
                 let width = size.width;
                 let height = size.height;
@@ -67,13 +70,18 @@ impl Device for Emulator {
                 .unwrap();
 
                 while window.is_open() && running.load(Ordering::Relaxed) {
-                    let begin = std::time::Instant::now();
+                    data_ready.acquire();
 
+                    let draw_buffer: &mut Vec<u32> = unsafe {
+                        // SAFETY: `reader_ready` and `data_ready` semaphores make the reader and writer threads
+                        // run sequentially, so the buffer can be safely accessed.
+                        &mut *draw_buffer.data.get()
+                    };
                     window
-                        .update_with_buffer(&buffer.lock().unwrap(), width, height)
+                        .update_with_buffer(draw_buffer, width, height)
                         .unwrap();
 
-                    thread::sleep(update_interval.saturating_sub(begin.elapsed()));
+                    reader_ready.release();
                 }
             }
         });
@@ -81,9 +89,11 @@ impl Device for Emulator {
         Ok(Self {
             size,
             name,
-            buffer,
             running,
             window_thread_handle: Some(handle),
+            draw_buffer,
+            data_ready,
+            reader_ready,
         })
     }
 
@@ -92,17 +102,23 @@ impl Device for Emulator {
     }
 
     fn update(&mut self, _lua: &Lua, buffer: Buffer) -> mlua::Result<()> {
-        let expanded = buffer
-            .bytes()
-            .iter()
-            .map(|value| match value {
+        assert_eq!(buffer.bytes().len(), self.size.width * self.size.height);
+
+        self.reader_ready.acquire();
+
+        let draw_buffer: &mut Vec<u32> = unsafe {
+            // SAFETY: `reader_ready` and `data_ready` semaphores make the reader and writer threads
+            // run sequentially, so the buffer can be safely accessed.
+            &mut *self.draw_buffer.data.get()
+        };
+        for (i, value) in buffer.bytes().iter().enumerate() {
+            draw_buffer[i] = match value {
                 0 => 0x000000,
                 _ => 0xFFFFFF,
-            })
-            .collect();
+            };
+        }
 
-        *self.buffer.lock().unwrap() = expanded;
-
+        self.data_ready.release();
         Ok(())
     }
 
@@ -121,6 +137,52 @@ impl Drop for Emulator {
         self.window_thread_handle.take().map(JoinHandle::join);
     }
 }
+
+struct BinarySemaphore {
+    available: Mutex<bool>,
+    cv: Condvar,
+}
+
+impl BinarySemaphore {
+    fn new(available: bool) -> Self {
+        Self {
+            available: Mutex::new(available),
+            cv: Condvar::new(),
+        }
+    }
+
+    fn acquire(&self) {
+        let mut available = self.available.lock().unwrap();
+        while !*available {
+            available = self.cv.wait(available).unwrap();
+        }
+        *available = false;
+    }
+
+    fn release(&self) {
+        let mut available = self.available.lock().unwrap();
+        *available = true;
+        self.cv.notify_one();
+    }
+}
+
+struct DrawBuffer {
+    data: UnsafeCell<Vec<u32>>,
+}
+
+impl DrawBuffer {
+    fn with_size(size: usize) -> Self {
+        Self {
+            data: UnsafeCell::new(vec![0; size]),
+        }
+    }
+}
+
+// SAFETY: This struct is only used in a single scenario where it is guarded by semaphores
+unsafe impl Send for DrawBuffer {}
+
+// SAFETY: This struct is only used in a single scenario where it is guarded by semaphores
+unsafe impl Sync for DrawBuffer {}
 
 #[derive(Clone, FromLuaValue)]
 pub struct EmulatorSettings {
