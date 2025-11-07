@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use convert_case::Case;
 use proc_macro2::TokenStream;
 use std::collections::HashMap;
 use syn::{Attribute, Token, Type};
@@ -74,21 +73,6 @@ pub fn parse_attributes(
             Some((attribute_name, attribute_value))
         })
         .collect()
-}
-
-pub fn get_case(rename_strategy: &TokenStream) -> Case<'_> {
-    let strategy = rename_strategy.to_string();
-    match strategy.as_str() {
-        "lowercase" => Case::Lower,
-        "UPPERCASE" => Case::Upper,
-        "PascalCase" => Case::Pascal,
-        "camelCase" => Case::Camel,
-        "snake_case" => Case::Snake,
-        "SCREAMING_SNAKE_CASE" => Case::UpperSnake,
-        "kebab-case" => Case::Kebab,
-        "SCREAMING-KEBAB-CASE" => Case::UpperKebab,
-        convention => panic!("Unknown case convention '{}'", convention),
-    }
 }
 
 pub fn is_option(ty: &Type) -> bool {
