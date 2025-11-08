@@ -24,6 +24,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
+use std::time::{Duration, Instant};
 
 use crate::devices::device::{Buffer, Device, MemoryLayout, Settings as DeviceSettings, Size};
 
@@ -36,6 +37,8 @@ pub struct Emulator {
     data_ready: Arc<BinarySemaphore>,
     reader_ready: Arc<BinarySemaphore>,
 }
+
+const ACQUIRE_TIMEOUT: Duration = Duration::from_millis(100);
 
 impl Device for Emulator {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
@@ -70,18 +73,28 @@ impl Device for Emulator {
                 .unwrap();
 
                 while window.is_open() && running.load(Ordering::Relaxed) {
-                    data_ready.acquire();
+                    let acquired = data_ready.try_acquire_for(ACQUIRE_TIMEOUT);
 
-                    let draw_buffer: &mut Vec<u32> = unsafe {
-                        // SAFETY: `reader_ready` and `data_ready` semaphores make the reader and writer threads
-                        // run sequentially, so the buffer can be safely accessed.
-                        &mut *draw_buffer.data.get()
-                    };
-                    window
-                        .update_with_buffer(draw_buffer, width, height)
-                        .unwrap();
+                    if acquired {
+                        let draw_buffer: &mut Vec<u32> = unsafe {
+                            // SAFETY: `reader_ready` and `data_ready` semaphores make the threads
+                            // run alternately, so the buffer can be safely accessed.
+                            &mut *draw_buffer.data.get()
+                        };
+                        window
+                            .update_with_buffer(draw_buffer, width, height)
+                            .unwrap();
 
-                    reader_ready.release();
+                        reader_ready.release();
+                    }
+                }
+
+                // Prevents the entire program from locking after closing the window
+                while running.load(Ordering::Relaxed) {
+                    let acquired = data_ready.try_acquire_for(ACQUIRE_TIMEOUT);
+                    if acquired {
+                        reader_ready.release();
+                    }
                 }
             }
         });
@@ -107,8 +120,8 @@ impl Device for Emulator {
         self.reader_ready.acquire();
 
         let draw_buffer: &mut Vec<u32> = unsafe {
-            // SAFETY: `reader_ready` and `data_ready` semaphores make the reader and writer threads
-            // run sequentially, so the buffer can be safely accessed.
+            // SAFETY: `reader_ready` and `data_ready` semaphores make the threads run alternately,
+            // so the buffer can be safely accessed.
             &mut *self.draw_buffer.data.get()
         };
         for (i, value) in buffer.bytes().iter().enumerate() {
@@ -157,6 +170,28 @@ impl BinarySemaphore {
             available = self.cv.wait(available).unwrap();
         }
         *available = false;
+    }
+
+    fn try_acquire_for(&self, timeout: Duration) -> bool {
+        let mut available = self.available.lock().unwrap();
+
+        let start = Instant::now();
+        while !*available {
+            let remaining = timeout.saturating_sub(start.elapsed());
+            if remaining.is_zero() {
+                return false;
+            }
+
+            let (value, result) = self.cv.wait_timeout(available, remaining).unwrap();
+            available = value;
+
+            if result.timed_out() && !*available {
+                return false;
+            }
+        }
+
+        *available = false;
+        true
     }
 
     fn release(&self) {
