@@ -38,8 +38,6 @@ pub struct Emulator {
     reader_ready: Arc<BinarySemaphore>,
 }
 
-const ACQUIRE_TIMEOUT: Duration = Duration::from_millis(100);
-
 impl Device for Emulator {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
         let settings = EmulatorSettings::from_lua(settings, lua)?;
@@ -73,7 +71,10 @@ impl Device for Emulator {
                 .unwrap();
 
                 while window.is_open() && running.load(Ordering::Relaxed) {
-                    let acquired = data_ready.try_acquire_for(ACQUIRE_TIMEOUT);
+                    // Wait for data to be ready, but can't try to acquire the lock indefinitely,
+                    // as the application could be stopped or just stop updating the emulator.
+                    // Wait up to 100 ms, then recheck the application state.
+                    let acquired = data_ready.try_acquire_for(Duration::from_millis(100));
 
                     if acquired {
                         let draw_buffer: &mut Vec<u32> = unsafe {
@@ -84,15 +85,6 @@ impl Device for Emulator {
                         window
                             .update_with_buffer(draw_buffer, width, height)
                             .unwrap();
-
-                        reader_ready.release();
-                    }
-                }
-
-                // Prevents the entire program from locking after closing the window
-                while running.load(Ordering::Relaxed) {
-                    let acquired = data_ready.try_acquire_for(ACQUIRE_TIMEOUT);
-                    if acquired {
                         reader_ready.release();
                     }
                 }
@@ -115,23 +107,24 @@ impl Device for Emulator {
     }
 
     fn update(&mut self, _lua: &Lua, buffer: Buffer) -> mlua::Result<()> {
-        assert_eq!(buffer.bytes().len(), self.size.width * self.size.height);
-
-        self.reader_ready.acquire();
-
-        let draw_buffer: &mut Vec<u32> = unsafe {
-            // SAFETY: `reader_ready` and `data_ready` semaphores make the threads run alternately,
-            // so the buffer can be safely accessed.
-            &mut *self.draw_buffer.data.get()
-        };
-        for (i, value) in buffer.bytes().iter().enumerate() {
-            draw_buffer[i] = match value {
-                0 => 0x000000,
-                _ => 0xFFFFFF,
+        // Only render if we don't have to wait for the emulator to be ready.
+        // Skip the update otherwise, to not block the main thread.
+        let acquired = self.reader_ready.try_acquire_for(Duration::ZERO);
+        if acquired {
+            let draw_buffer: &mut Vec<u32> = unsafe {
+                // SAFETY: `reader_ready` and `data_ready` semaphores make the threads run alternately,
+                // so the buffer can be safely accessed.
+                &mut *self.draw_buffer.data.get()
             };
+            for (i, value) in buffer.bytes().iter().enumerate() {
+                draw_buffer[i] = match value {
+                    0 => 0x000000,
+                    _ => 0xFFFFFF,
+                };
+            }
+            self.data_ready.release();
         }
 
-        self.data_ready.release();
         Ok(())
     }
 
@@ -162,14 +155,6 @@ impl BinarySemaphore {
             available: Mutex::new(available),
             cv: Condvar::new(),
         }
-    }
-
-    fn acquire(&self) {
-        let mut available = self.available.lock().unwrap();
-        while !*available {
-            available = self.cv.wait(available).unwrap();
-        }
-        *available = false;
     }
 
     fn try_acquire_for(&self, timeout: Duration) -> bool {
