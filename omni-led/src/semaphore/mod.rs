@@ -69,4 +69,108 @@ pub mod semaphore {
 }
 
 #[cfg(target_os = "linux")]
-pub mod semaphore {}
+pub mod semaphore {
+    use std::{mem::MaybeUninit, time::Duration};
+
+    use libc::{
+        __errno_location, CLOCK_REALTIME, EAGAIN, EINTR, ETIMEDOUT, c_int, c_uint, clock_gettime,
+        sem_destroy, sem_init, sem_post, sem_t, sem_timedwait, sem_trywait, time_t, timespec,
+    };
+
+    pub struct BinarySemaphore {
+        sem: sem_t,
+    }
+
+    impl BinarySemaphore {
+        pub fn new(initial: bool) -> Self {
+            let mut sem = MaybeUninit::<sem_t>::zeroed();
+
+            const PROCESS_LOCAL_SEM: c_int = 0;
+            let result =
+                unsafe { sem_init(sem.as_mut_ptr(), PROCESS_LOCAL_SEM, initial as c_uint) };
+            if result != 0 {
+                panic!("{}", std::io::Error::last_os_error());
+            }
+
+            Self {
+                sem: unsafe { sem.assume_init() },
+            }
+        }
+
+        pub fn try_acquire(&self) -> bool {
+            let result = unsafe { sem_trywait(&self.sem as *const _ as *mut _) };
+            if result != 0 {
+                match unsafe { *__errno_location() } {
+                    EAGAIN => false,
+                    errno => {
+                        panic!("{}", std::io::Error::from_raw_os_error(errno));
+                    }
+                }
+            } else {
+                true
+            }
+        }
+
+        pub fn try_acquire_for(&self, duration: Duration) -> bool {
+            let mut ts = timespec {
+                tv_sec: 0,
+                tv_nsec: 0,
+            };
+
+            let result = unsafe { clock_gettime(CLOCK_REALTIME, &mut ts as *mut _) };
+            if result != 0 {
+                panic!("{}", std::io::Error::last_os_error());
+            }
+
+            ts.tv_sec += duration.as_secs() as time_t;
+
+            #[cfg(not(all(target_arch = "x86_64", target_pointer_width = "32")))]
+            {
+                use libc::c_long;
+                ts.tv_nsec += duration.subsec_nanos() as c_long;
+            }
+
+            #[cfg(all(target_arch = "x86_64", target_pointer_width = "32"))]
+            {
+                ts.tv_nsec += duration.subsec_nanos() as i64;
+            }
+
+            ts.tv_sec += ts.tv_nsec / 1_000_000_000;
+            ts.tv_nsec = ts.tv_nsec % 1_000_000_000;
+
+            unsafe {
+                loop {
+                    let wait_result =
+                        sem_timedwait(&self.sem as *const _ as *mut _, &ts as *const _);
+                    if wait_result != 0 {
+                        match *__errno_location() {
+                            EINTR => continue,
+                            ETIMEDOUT => break false,
+                            errno => {
+                                panic!("{}", std::io::Error::from_raw_os_error(errno));
+                            }
+                        }
+                    } else {
+                        break true;
+                    }
+                }
+            }
+        }
+
+        pub fn release(&self) {
+            let result = unsafe { sem_post(&self.sem as *const _ as *mut _) };
+            if result != 0 {
+                panic!("{}", std::io::Error::last_os_error());
+            }
+        }
+    }
+
+    impl Drop for BinarySemaphore {
+        fn drop(&mut self) {
+            unsafe { sem_destroy(&self.sem as *const _ as *mut _) };
+        }
+    }
+
+    unsafe impl Send for BinarySemaphore {}
+    unsafe impl Sync for BinarySemaphore {}
+}
