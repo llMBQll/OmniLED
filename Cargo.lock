@@ -2402,6 +2402,7 @@ dependencies = [
  "freetype-rs",
  "image",
  "lazy_static",
+ "libc",
  "log",
  "log4rs",
  "minifb",
@@ -2421,6 +2422,7 @@ dependencies = [
  "tonic",
  "tray-item",
  "ureq",
+ "windows 0.61.3",
  "windres",
 ]
 

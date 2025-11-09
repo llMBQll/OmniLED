@@ -13,7 +13,7 @@ load_app {
     args = {
         '--address', SERVER.Address,
         '--mode', 'individual',
-        '--map', 'SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify=SPOTIFY',
+        '--map', 'Spotify.exe=SPOTIFY',
     },
 }
 
