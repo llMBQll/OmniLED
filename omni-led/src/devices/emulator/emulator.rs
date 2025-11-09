@@ -20,13 +20,14 @@ use minifb::{Window, WindowOptions};
 use mlua::{ErrorContext, FromLua, Lua, Value};
 use omni_led_derive::FromLuaValue;
 use std::cell::UnsafeCell;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::devices::device::{Buffer, Device, MemoryLayout, Settings as DeviceSettings, Size};
+use crate::semaphore::semaphore::BinarySemaphore;
 
 pub struct Emulator {
     size: Size,
@@ -109,7 +110,7 @@ impl Device for Emulator {
     fn update(&mut self, _lua: &Lua, buffer: Buffer) -> mlua::Result<()> {
         // Only render if we don't have to wait for the emulator to be ready.
         // Skip the update otherwise, to not block the main thread.
-        let acquired = self.reader_ready.try_acquire_for(Duration::ZERO);
+        let acquired = self.reader_ready.try_acquire();
         if acquired {
             let draw_buffer: &mut Vec<u32> = unsafe {
                 // SAFETY: `reader_ready` and `data_ready` semaphores make the threads run alternately,
@@ -141,48 +142,6 @@ impl Drop for Emulator {
     fn drop(&mut self) {
         self.running.store(false, Ordering::Relaxed);
         self.window_thread_handle.take().map(JoinHandle::join);
-    }
-}
-
-struct BinarySemaphore {
-    available: Mutex<bool>,
-    cv: Condvar,
-}
-
-impl BinarySemaphore {
-    fn new(available: bool) -> Self {
-        Self {
-            available: Mutex::new(available),
-            cv: Condvar::new(),
-        }
-    }
-
-    fn try_acquire_for(&self, timeout: Duration) -> bool {
-        let mut available = self.available.lock().unwrap();
-
-        let start = Instant::now();
-        while !*available {
-            let remaining = timeout.saturating_sub(start.elapsed());
-            if remaining.is_zero() {
-                return false;
-            }
-
-            let (value, result) = self.cv.wait_timeout(available, remaining).unwrap();
-            available = value;
-
-            if result.timed_out() && !*available {
-                return false;
-            }
-        }
-
-        *available = false;
-        true
-    }
-
-    fn release(&self) {
-        let mut available = self.available.lock().unwrap();
-        *available = true;
-        self.cv.notify_one();
     }
 }
 

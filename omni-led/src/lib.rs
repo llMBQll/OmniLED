@@ -7,6 +7,7 @@ pub mod keyboard;
 pub mod logging;
 pub mod renderer;
 pub mod script_handler;
+pub mod semaphore;
 pub mod server;
 pub mod settings;
 pub mod tray_icon;
