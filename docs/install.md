@@ -7,13 +7,16 @@
 
 ### Linux
 
-- `gcc` - `apt install gcc`
-- `g++` - `apt install g++`
-- `libdbus` - `apt install libdbus-1-dev`
-- `libfontconfig` - `apt install libfontconfig-dev`
-- `libx11` - `apt install libx11-dev`
-- `pkg-config` - `apt install pkg-config`
-- `protobuf-compiler` - `apt install protobuf-compiler`
+```
+sudo apt install gcc \
+                 g++ \
+                 libdbus-1-dev \
+                 libfontconfig-dev \
+                 libpulse-dev \
+                 libx11-dev \
+                 pkg-config \
+                 protobuf-compiler
+```
 
 > _Note: Tested on Ubuntu 24.04 LTS_
 
@@ -44,7 +47,7 @@
    Else you need to compile the targets manually. This requires 2 build steps due to package
    dependencies.
    > `cargo build --release -p omni-led -p audio -p clock -p images -p media -p weather`  
-   > `cargo build --release -p setup`  
+   > `cargo build --release -p omni-led-setup`  
    > `cargo run --release --bin omni-led-setup -- install --interactive`
 
 ## Post installation steps
@@ -59,9 +62,9 @@ To allow this program to access your device, it needs an entry in udev rules.
    `touch /etc/udev/rules.d/69-omni-led.rules`
 2. Using your favourite text editor add the following line and adapt it for your device.  
    `SUBSYSTEM=="usb", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1618", MODE="0666", GROUP="plugdev"`
-3. Reload udev rules (this may not be sufficient so you may need to unplug and plug the device or
+3. Reload udev rules (in case this is insufficient, you may need to unplug and plug in the device or
    restart the system).  
-   `sudo udevadm control --reload-rules`
+   `sudo udevadm control --reload-rules && sudo udevadm trigger`
 
 ### Common
 
