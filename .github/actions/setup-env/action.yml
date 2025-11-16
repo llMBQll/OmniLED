@@ -1,0 +1,21 @@
+name: 'Setup Env'
+
+description: 'Install dependencies and checkout the code'
+runs:
+  using: composite
+  steps:
+    - name: Install Linux dependencies
+      if: ${{ runner.os == 'Linux' }}
+      run: sudo apt install gcc g++ libdbus-1-dev libfontconfig-dev libpulse-dev libx11-dev pkg-config protobuf-compiler
+      shell: bash
+
+    - name: Install Windows dependencies
+      if: ${{ runner.os == 'Windows' }}
+      run: choco install protoc -y
+      shell: cmd
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    - name: Install cargo-make
+      uses: davidB/rust-cargo-make@v1
