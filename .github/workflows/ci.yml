@@ -21,6 +21,9 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-env
 
+      - name: Format check
+        run: cargo fmt --all --check
+
       - name: Build
         run: cargo make build
 
