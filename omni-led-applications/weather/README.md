@@ -6,7 +6,7 @@ Weather application provides current weather conditions at a requested place.
 
 **Weather in a specified city:**
 
-```
+```shell
 weather <COMMON-OPTIONS> \
     in <CITY> [--country-code <CODE>] [--administrative <ADMINISTRATIVE>]
 ```
@@ -16,7 +16,7 @@ search in case multiple cities have the provided name
 
 **Weather at specified coordinates:**
 
-```
+```shell
 weather <COMMON-OPTIONS> \
     at <LATITUDE> <LONGITUDE>
 ```

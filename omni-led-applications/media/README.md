@@ -4,30 +4,30 @@ Media application provides information about currently playing media, e.g. title
 
 ## Running
 
-```
+```shell
 media --address <ADDRESS> [--mode <MODE>] [--map <MAPPING>...]
 ```
 
 Media expects three arguments
 
 - Required:
-    - `a`/`address` - server address
+  - `a`/`address` - server address
 - Optional:
-    - `m`/`mode` - reporting mode - `individual`, `focused` or `both`.   
+  - `m`/`mode` - reporting mode - `individual`, `focused` or `both`.
       Default: `both`.  
-      More info [here](#reporting-mode).
-    - `map` - map input application name to an event name, e.g. `--map "my_app_name=APP"`. Can be passed multiple
+      Described in [reporting mode](#reporting-mode).
+  - `map` - map input application name to an event name, e.g. `--map "my_app_name=APP"`. Can be passed multiple
       times. Target name must be an uppercase alphanumeric string, that can contain underscores and cannot start with a
-      number.   
+      number.
       Default: `[]`.  
-      More info [here](#application-name-mapping).
+      Describen in [application name mapping](#application-name-mapping).
 
 ## Reporting mode
 
 ### Individual
 
 Send separate events for each currently playing application. Each application will have its own event name as
-described [here](#application-name-mapping).
+described in [application name mapping](#application-name-mapping).
 
 ### Focused
 

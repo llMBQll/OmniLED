@@ -18,6 +18,7 @@
 > > Extension used for executable files on current platform
 > >
 > > Values:
+> >
 > > - `"exe"` on Windows
 > > - `""` (empty string) on Linux
 >
@@ -26,6 +27,7 @@
 > > Suffix used for executable files on current platform
 > >
 > > Values:
+> >
 > > - `".exe"` on Windows
 > > - `""` (empty string) on Linux
 >
@@ -34,6 +36,7 @@
 > > Separator of path components on current platform
 > >
 > > Values:
+> >
 > > - `"\"` on Windows
 > > - `"/"` on Linux
 >
@@ -42,6 +45,7 @@
 > > Separator of path components on current platform
 > >
 > > Values:
+> >
 > > - `"windows"` on Windows
 > > - `"linux"` on Linux
 
@@ -172,7 +176,7 @@
 > >
 > > Set font size to be exactly `n`, regardless of widget size.
 
---- 
+---
 
 > ### `FontStretch`
 >
@@ -366,6 +370,7 @@
 > is in the default installation directory.
 >
 > Examples:
+>
 > - `C:\Users\<USERNAME>\AppData\Roaming\OmniLED\bin\<NAME>.exe` on Windows
 > - `/home/<USERNAME>/.config/OmniLED/bin/<NAME>` on Linux
 
@@ -737,6 +742,7 @@ Widgets are the building blocks for displaying data on screen. Combine them to c
 All widgets have the following common attributes in addition to widget-specific ones.
 
 > ### Common attributes
+> >
 > > `position`: `Point`
 > >
 > > Position of the upper-left corner of the widget.

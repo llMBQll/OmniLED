@@ -7,7 +7,7 @@
 
 ### Linux
 
-```
+```bash
 sudo apt install gcc \
                  g++ \
                  libdbus-1-dev \

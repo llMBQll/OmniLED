@@ -6,7 +6,7 @@ Audio application provides the currently selected audio devices names and states
 
 Audio expects one required argument - server address.
 
-```
+```shell
 audio --address <ADDRESS>
 ```
 

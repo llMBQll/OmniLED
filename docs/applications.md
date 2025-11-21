@@ -57,6 +57,7 @@ If the application is registered in `applications.lua`, it can access the
 eliminates the need for the application to determine the server address manually.
 
 > Example `applications.lua` file:
+>
 > ``` lua
 > load_app {
 >   path = get_default_path('my_application'),
@@ -95,6 +96,7 @@ in the `data` directory. This file provides all the necessary details for the ap
 connect to the server.
 
 > Example `server.json` file:
+>
 > ``` json
 > {
 >   "address": "127.0.0.1:44631",

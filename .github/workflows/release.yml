@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build_and_release:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-env
+
+      - name: Build setup
+        run: cargo make build-setup
+
+      - name: Prepare artifact name
+        id: artifact_name
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            echo "binary=omni-led-setup.exe" >> $GITHUB_OUTPUT
+            echo "release_name=omni-led-setup-windows-${{ github.ref_name }}.exe" >> $GITHUB_OUTPUT
+          else
+            echo "binary=omni-led-setup" >> $GITHUB_OUTPUT
+            echo "release_name=omni-led-setup-linux-${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact_name.outputs.release_name }}
+          path: target/release/${{ steps.artifact_name.outputs.binary }}
+
+  create_release:
+    needs: build_and_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

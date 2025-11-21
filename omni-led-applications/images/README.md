@@ -5,23 +5,23 @@ animated images.
 
 ## Running
 
-```
+```shell
 images --address <ADDRESS> [--image '<NAME> <PATH> [--format <FORMAT>] [--threshold <THRESHOLD>]']...
 ```
 
 Images expects two arguments
 
 - Required:
-    - `a`/`address` - server address
+  - `a`/`address` - server address
 - Optional:
-    - `-i`/`--image` - loaded image options.  
+  - `-i`/`--image` - loaded image options.  
       This option can be specified multiple times and it a **single string** as it's argument with
       image load options:
-        - `<NAME>` - This name will be used as variable name in user scripts.  
+    - `<NAME>` - This name will be used as variable name in user scripts.  
           _This is a positional argument and shall always be specified as a first argument._
-        - `<PATH>` - Path to an image file on disk.  
+    - `<PATH>` - Path to an image file on disk.  
           _This is a positional argument and shall always be specified as a second argument._
-        - `-f`/`--format` - Image extension used as a hint for loading images when the format cannot
+    - `-f`/`--format` - Image extension used as a hint for loading images when the format cannot
           automatically be deduced from the file contents.
 
 ### Example
