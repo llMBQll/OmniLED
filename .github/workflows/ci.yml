@@ -21,8 +21,14 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-env
 
-      - name: Format check
+      - name: Code format check
         run: cargo fmt --all --check
+
+      - name: Docs format check
+        uses: DavidAnson/markdownlint-cli2-action@v21
+        with:
+          config: '.markdownlint.json'
+          globs: '**/*.md'
 
       - name: Build
         run: cargo make build
