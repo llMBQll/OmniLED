@@ -14,21 +14,21 @@ customization.
 ## Features
 
 - Customizability with the Lua scripting engine:
-    - Create custom layouts
-    - Write event handlers
-    - Use any font
+  - Create custom layouts
+  - Write event handlers
+  - Use any font
 - Built-in applications:
-    - Input and output audio device information via [audio](omni-led-applications/audio/README.md)
-    - Date and time via [clock](omni-led-applications/clock/README.md)
-    - Load images into OmniLED via [images](omni-led-applications/images/README.md)
-    - Currently playing media information via [media](omni-led-applications/media/README.md)
-    - Weather via [weather](omni-led-applications/weather/README.md)
+  - Input and output audio device information via [audio](omni-led-applications/audio/README.md)
+  - Date and time via [clock](omni-led-applications/clock/README.md)
+  - Load images into OmniLED via [images](omni-led-applications/images/README.md)
+  - Currently playing media information via [media](omni-led-applications/media/README.md)
+  - Weather via [weather](omni-led-applications/weather/README.md)
 - Extensibility:
-    - Create custom applications using the [gRPC interface](omni-led-api/proto/plugin.proto)
-    - Configure the usb settings and data format to work with your device
+  - Create custom applications using the [gRPC interface](omni-led-api/proto/plugin.proto)
+  - Configure the usb settings and data format to work with your device
 - Versatility:
-    - Works on Linux and Windows
-    - Choose from multiple backends: Raw USB, Emulator, SteelSeries GG
+  - Works on Linux and Windows
+  - Choose from multiple backends: Raw USB, Emulator, SteelSeries GG
 
 ## Supported Devices
 
@@ -73,6 +73,7 @@ Now you can proceed to actually make OmniLED send data to your device.
 3. Create a new configuration file for your device.
    > You can use [`<CONFIG_DIR>/devices.lua`](config/devices.lua) as examples.
 4. Update the `<CONFIG_DIR>/scripts.lua` to register the scripts for your device instead of the emulator.
+
     ```diff
     SCREEN_BUILDER
     -   :new('Emulator')

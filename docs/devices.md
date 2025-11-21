@@ -21,6 +21,7 @@ flexible approach as it should work for any device. Rendered data can also be tr
 script to match the format expected by the device.
 
 > Example `devices.lua` file:
+>
 > ```lua
 > usb_device {
 >     name = 'SteelSeries Apex 7 TKL',
@@ -47,6 +48,7 @@ script to match the format expected by the device.
 >     memory_representation = 'BitPerPixel',
 > }
 > ```
+>
 > In the above example a single usb device config was added for "SteelSeries Apex 7 TKL".
 >
 > It is necessary to provide all usb settings, so the device can be found, and the data is sent to
@@ -71,6 +73,7 @@ option is the easiest as it only requires knowing the device's screen size, and 
 will take the rendered data and send it to the device.
 
 > Example `devices.lua` file:
+>
 > ```lua
 > steelseries_engine_device {
 >     name = 'SteelSeries Apex 7 TKL',
@@ -80,6 +83,7 @@ will take the rendered data and send it to the device.
 >     },
 > }
 > ```
+>
 > In the above example a single SteelSeries device config was added for "SteelSeries Apex 7 TKL".
 >
 > Compared to the USB device example it's quite a bit simpler as it does not require knowing the
@@ -96,6 +100,7 @@ rendered data there. This is particularly useful for prototyping, when your devi
 available, or you just want to test on a bigger screen.
 
 > Example `devices.lua` file:
+>
 > ```lua
 > emulator {
 >     name = 'SteelSeries Apex 7 TKL',
@@ -105,4 +110,5 @@ available, or you just want to test on a bigger screen.
 >     },
 > }
 > ```
+>
 > In the above example a single emulator config was added for "SteelSeries Apex 7 TKL".

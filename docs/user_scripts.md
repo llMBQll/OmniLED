@@ -47,6 +47,7 @@ that regularly.
 > ```
 >
 > This message will result in the following update events:
+>
 > - `MY_APPLICATION`
 > - `MY_APPLICATION.Name`
 > - `MY_APPLICATION.HoursToComplete`
@@ -126,7 +127,7 @@ groups, add group switch shortcut, and register them for a given device.
 >
 > Add 2 very simple layout groups to `My Device`.
 >
-> ```lua 
+> ```lua
 > function layout_1()
 >     return {
 >         widgets = {

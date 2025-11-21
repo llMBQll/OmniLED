@@ -31,6 +31,7 @@ them be missing.
 > > _Optional_. Default: `2`
 >
 > > Example `settings.lua` that sets scroll delay and repeat delay.
+> >
 > > ```lua
 > > Settings {
 > >   animation_ticks_delay = 4,
@@ -50,6 +51,7 @@ them be missing.
 > > simplistic nature of text rendering implementation.
 >
 > > Example `settings.lua` that loads default font
+> >
 > > ```lua
 > > Settings {
 > >   font = 'Default'
@@ -57,6 +59,7 @@ them be missing.
 > > ```
 >
 > > Example `settings.lua` that loads font from the file system
+> >
 > > ```lua
 > > Settings {
 > >   font = {
@@ -68,6 +71,7 @@ them be missing.
 > > }
 >
 > > Example `settings.lua` that loads installed system font
+> >
 > > ```lua
 > > Settings {
 > >   font = {
@@ -90,6 +94,7 @@ them be missing.
 > > _Optional_. Default: `Info`
 >
 > > Example `settings.lua` that accepts debug log levels and above.
+> >
 > > ```lua
 > > Settings {
 > >   log_level = 'Debug'
@@ -112,6 +117,7 @@ them be missing.
 > > _Optional_. Default: `2`
 >
 > > Example `settings.lua` that sets repeat delay and repeat delay.
+> >
 > > ```lua
 > > Settings {
 > >   keyboard_ticks_repeat_delay = 4,
@@ -130,6 +136,7 @@ them be missing.
 > > _Optional_. Default: `0`
 >
 > > Example `settings.lua` that sets server port to be assigned to the first available port.
+> >
 > > ```lua
 > > Settings {
 > >   server_port = 0,
@@ -137,6 +144,7 @@ them be missing.
 > > ```
 >
 > > Example `settings.lua` that sets server port to a fixed port.
+> >
 > > ```lua
 > > Settings {
 > >   server_port = 1234,
@@ -154,6 +162,7 @@ them be missing.
 > > _Optional_. Default: `100`
 >
 > > Example `settings.lua` that sets update interval to `50`.
+> >
 > > ```lua
 > > Settings {
 > >   update_interval = 50,

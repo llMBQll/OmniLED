@@ -6,7 +6,7 @@ Clock application provides the current time and date, as well as day and month n
 
 Clock expects one required argument - server address.
 
-```
+```shell
 clock --address <ADDRESS>
 ```
 
