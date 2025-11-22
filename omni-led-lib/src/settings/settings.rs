@@ -1,4 +1,4 @@
-use log::{debug, error};
+use log::debug;
 use mlua::{ErrorContext, FromLua, Lua, UserData, chunk};
 use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::time::Duration;
@@ -51,15 +51,7 @@ impl Settings {
             PLATFORM = PLATFORM,
             Settings = $load_settings_fn,
         });
-        if let Err(err) = load_config(lua, ConfigType::Settings, &config, env) {
-            error!(
-                "Error loading settings: {}. Falling back to default settings",
-                err
-            );
-
-            let default: Settings = lua.load(chunk! { {} }).eval().unwrap();
-            Settings::set_unique(lua, default);
-        }
+        load_config(lua, ConfigType::Settings, &config, env).unwrap();
 
         let settings = UserDataRef::<Settings>::load(lua);
         let logger = UserDataRef::<Log>::load(lua);
