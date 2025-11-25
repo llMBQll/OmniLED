@@ -45,7 +45,7 @@ async fn main() {
 
     Settings::load(&lua, settings_config);
     PluginServer::load(&lua).await;
-    Events::load(&lua);
+    let mut dispatcher = Events::load(&lua);
     Shortcuts::load(&lua);
     Devices::load(&lua, devices_config);
     ScriptHandler::load(&lua, scripts_config);
@@ -63,9 +63,8 @@ async fn main() {
     let event_loop = EventLoop::new();
     event_loop
         .run(interval, &RUNNING, |events| {
-            let dispatcher = UserDataRef::<Events>::load(&lua);
             for event in events {
-                dispatcher.get().dispatch(&lua, event).unwrap();
+                dispatcher.dispatch(&lua, event).unwrap();
             }
 
             let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
