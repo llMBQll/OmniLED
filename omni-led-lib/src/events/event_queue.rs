@@ -2,6 +2,7 @@ use lazy_static::lazy_static;
 use omni_led_api::types::Table;
 use std::sync::{Arc, Mutex};
 
+use crate::events::events::RegisterEvent;
 use crate::keyboard::keyboard::KeyboardEvent;
 
 type ApplicationEvent = (String, Table);
@@ -9,6 +10,7 @@ type ApplicationEvent = (String, Table);
 pub enum Event {
     Application(ApplicationEvent),
     Keyboard(KeyboardEvent),
+    Register(RegisterEvent),
 }
 
 pub struct EventQueue {
@@ -30,6 +32,10 @@ impl EventQueue {
 
     pub fn push(&mut self, event: Event) {
         self.queue.push(event);
+    }
+
+    pub fn push_front(&mut self, event: Event) {
+        self.queue.insert(0, event);
     }
 
     pub fn get_events(&mut self) -> Vec<Event> {

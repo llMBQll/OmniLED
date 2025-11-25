@@ -1,34 +1,31 @@
 use mlua::{ErrorContext, Function, Lua, UserData, UserDataMethods, Value};
 use omni_led_api::types::{Field, field};
-use omni_led_derive::UniqueUserData;
 
 use crate::common::common::{KEY_VAL_TABLE, proto_to_lua_value};
 use crate::common::user_data::UniqueUserData;
-use crate::events::event_queue::Event;
+use crate::events::event_queue::{Event, EventQueue};
 use crate::keyboard::keyboard::{KeyboardEvent, KeyboardEventEventType};
 
-#[derive(UniqueUserData)]
 pub struct Events {
     entries: Vec<EventEntry>,
 }
 
 impl Events {
-    pub fn load(lua: &Lua) {
-        Self::set_unique(
-            lua,
-            Self {
-                entries: Vec::new(),
-            },
-        );
+    pub fn load(lua: &Lua) -> Self {
+        EventsObject::set_unique(lua, EventsObject);
+        Self {
+            entries: Vec::new(),
+        }
     }
 
-    pub fn register(&mut self, event: String, on_match: Function) -> mlua::Result<()> {
-        self.entries.push(EventEntry { event, on_match });
-
-        Ok(())
+    pub fn register(event: String, on_match: Function) {
+        EventQueue::instance()
+            .lock()
+            .unwrap()
+            .push_front(Event::Register(RegisterEvent { event, on_match }));
     }
 
-    pub fn dispatch(&self, lua: &Lua, event: Event) -> mlua::Result<()> {
+    pub fn dispatch(&mut self, lua: &Lua, event: Event) -> mlua::Result<()> {
         match event {
             Event::Application((application, value)) => {
                 let value = Field {
@@ -40,6 +37,7 @@ impl Events {
                 self.dispatch_application_event(&application, value, None)
             }
             Event::Keyboard(event) => self.dispatch_keyboard_event(lua, event),
+            Event::Register(event) => self.handle_register_event(event),
         }
     }
 
@@ -94,14 +92,13 @@ impl Events {
         }
         Ok(())
     }
-}
 
-impl UserData for Events {
-    fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method_mut(
-            "register",
-            |_lua, this, (event, on_match): (String, Function)| this.register(event, on_match),
-        );
+    fn handle_register_event(&mut self, register_event: RegisterEvent) -> mlua::Result<()> {
+        self.entries.push(EventEntry {
+            event: register_event.event,
+            on_match: register_event.on_match,
+        });
+        Ok(())
     }
 }
 
@@ -109,3 +106,31 @@ struct EventEntry {
     event: String,
     on_match: Function,
 }
+
+struct EventsObject;
+
+impl UniqueUserData for EventsObject {
+    fn identifier() -> &'static str {
+        "EVENTS"
+    }
+}
+
+impl UserData for EventsObject {
+    fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_method_mut(
+            "register",
+            |_lua, _events_object, (event, on_match): (String, Function)| {
+                Events::register(event, on_match);
+                Ok(())
+            },
+        );
+    }
+}
+
+pub struct RegisterEvent {
+    event: String,
+    on_match: Function,
+}
+
+// SAFETY this event will always be created and read on the Lua thread
+unsafe impl Send for RegisterEvent {}
