@@ -31,31 +31,46 @@ impl Log {
         let constants = UserDataRef::<Constants>::load(lua);
         constants.get().data_dir.join("logging.log")
     }
+
+    fn get_log_location(lua: &Lua) -> String {
+        let mut location = String::new();
+        let mut level: usize = 1;
+
+        while let Some(Some(name)) = lua.inspect_stack(level, |debug| {
+            debug.names().name.map(|name| name.to_string())
+        }) {
+            location = format!("::{}{}", name, location);
+            level += 1;
+        }
+
+        format!("script{}", location)
+    }
 }
 
 impl UserData for Log {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("debug", |_, _, message: String| {
-            debug!("{}", message);
+        methods.add_method("debug", |lua, _, message: String| {
+            debug!(target: &Self::get_log_location(lua), "{}", message);
             Ok(())
         });
 
-        methods.add_method("error", |_, _, message: String| {
-            error!("{}", message);
+        methods.add_method("error", |lua, _, message: String| {
+            error!(target: &Self::get_log_location(lua), "{}", message);
             Ok(())
         });
 
-        methods.add_method("info", |_, _, message: String| {
-            info!("{}", message);
-            Ok(())
-        });
-        methods.add_method("trace", |_, _, message: String| {
-            trace!("{}", message);
+        methods.add_method("info", |lua, _, message: String| {
+            info!(target: &Self::get_log_location(lua), "{}", message);
             Ok(())
         });
 
-        methods.add_method("warn", |_, _, message: String| {
-            warn!("{}", message);
+        methods.add_method("trace", |lua, _, message: String| {
+            trace!(target: &Self::get_log_location(lua), "{}", message);
+            Ok(())
+        });
+
+        methods.add_method("warn", |lua, _, message: String| {
+            warn!(target: &Self::get_log_location(lua), "{}", message);
             Ok(())
         });
     }
