@@ -1,4 +1,4 @@
-use mlua::{Function, Lua, UserData, UserDataMethods};
+use mlua::{Function, Lua, UserData, UserDataMethods, Value};
 use omni_led_derive::UniqueUserData;
 
 use crate::common::user_data::UniqueUserData;
@@ -18,6 +18,13 @@ impl Events {
             .unwrap()
             .push_front(Event::Register(RegisterEvent { event, on_match }));
     }
+
+    pub fn send(event: String, value: Value) {
+        EventQueue::instance()
+            .lock()
+            .unwrap()
+            .push(Event::Script(ScriptEvent { event, value }));
+    }
 }
 
 impl UserData for Events {
@@ -29,6 +36,11 @@ impl UserData for Events {
                 Ok(())
             },
         );
+
+        methods.add_method("send", |_lua, _events, (event, value): (String, Value)| {
+            Events::send(event, value);
+            Ok(())
+        });
     }
 }
 
@@ -39,3 +51,11 @@ pub struct RegisterEvent {
 
 // SAFETY this event will always be created and read on the Lua thread
 unsafe impl Send for RegisterEvent {}
+
+pub struct ScriptEvent {
+    pub event: String,
+    pub value: Value,
+}
+
+// SAFETY this event will always be created and read on the Lua thread
+unsafe impl Send for ScriptEvent {}

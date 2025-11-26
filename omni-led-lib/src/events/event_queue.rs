@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use omni_led_api::types::Table;
 use std::sync::{Arc, Mutex};
 
-use crate::events::events::RegisterEvent;
+use crate::events::events::{RegisterEvent, ScriptEvent};
 use crate::keyboard::keyboard::KeyboardEvent;
 
 type ApplicationEvent = (String, Table);
@@ -11,6 +11,7 @@ pub enum Event {
     Application(ApplicationEvent),
     Keyboard(KeyboardEvent),
     Register(RegisterEvent),
+    Script(ScriptEvent),
 }
 
 pub struct EventQueue {

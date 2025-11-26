@@ -30,6 +30,9 @@ impl Dispatcher {
             }
             Event::Keyboard(event) => self.dispatch_keyboard_event(lua, event),
             Event::Register(event) => self.handle_register_event(event),
+            Event::Script(event) => {
+                self.dispatch_application_event(&event.event, event.value, None)
+            }
         }
     }
 
