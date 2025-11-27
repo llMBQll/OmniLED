@@ -1,8 +1,7 @@
-use mlua::{ErrorContext, Lua, ObjectLike, Table, Value, chunk};
+use mlua::{Lua, Table, Value, chunk};
 use omni_led_api::types::Field;
 use omni_led_api::types::field::Field as FieldEntry;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::path::PathBuf;
 
 use crate::script_handler::script_data_types::ImageData;
 
@@ -87,23 +86,6 @@ pub fn load_internal_functions(lua: &Lua) {
             }),
         )
         .unwrap();
-}
-
-pub fn exec_file(lua: &Lua, path: &PathBuf, env: Table) -> mlua::Result<()> {
-    let path = path.to_string_lossy().to_string();
-    let (func, err): (Value, Value) = lua
-        .globals()
-        .call_function("loadfile", (path.clone(), "t", env))?;
-
-    let function = match (func, err) {
-        (Value::Function(func), Value::Nil) => Ok(func),
-        (_, Value::String(err)) => Err(mlua::Error::runtime(err.to_string_lossy())),
-        _ => Err(mlua::Error::runtime("Unknown error")),
-    };
-
-    function
-        .and_then(|function| function.call(()))
-        .map_err(|err| err.with_context(|_| format!("Running '{}'", path)))
 }
 
 pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {

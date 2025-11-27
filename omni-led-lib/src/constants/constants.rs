@@ -19,15 +19,13 @@ pub struct Constants {
     pub root_dir: PathBuf,
 }
 
-const ENV_CONFIG_DIR: &str = "OMNILED_CONFIG_DIR";
-
 impl Constants {
-    pub fn load(lua: &Lua, config_path_override: Option<PathBuf>) {
+    pub fn load(lua: &Lua) {
         Self::set_unique(
             lua,
             Self {
                 applications_dir: Self::exe_dir(),
-                config_dir: Self::resolve_config_dir(config_path_override),
+                config_dir: Self::root_dir().join("config"),
                 data_dir: Self::root_dir().join("data"),
                 exe_extension: EXE_EXTENSION,
                 exe_suffix: EXE_SUFFIX,
@@ -39,13 +37,6 @@ impl Constants {
 
         // Logging isn't initialized yet...
         std::println!("{:#?}", UserDataRef::<Self>::load(lua).get());
-    }
-
-    fn resolve_config_dir(root_override: Option<PathBuf>) -> PathBuf {
-        root_override.unwrap_or_else(|| match std::env::var(ENV_CONFIG_DIR) {
-            Ok(env_config_path) => PathBuf::from(env_config_path),
-            Err(_) => Self::root_dir().join("config"),
-        })
     }
 
     fn root_dir() -> PathBuf {
@@ -93,55 +84,5 @@ impl UserData for Constants {
         fields.add_field_method_get("RootDir", |_, constants| {
             Ok(constants.root_dir.to_str().unwrap().to_string())
         });
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::{Mutex, OnceLock};
-
-    // Sync tests that access set and get the `ENV_CONFIG_DIR` variable so that they don't
-    // interfere with each other.
-    static ENV_TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-
-    fn env_test_lock() -> &'static Mutex<()> {
-        ENV_TEST_LOCK.get_or_init(|| Mutex::new(()))
-    }
-
-    #[test]
-    fn resolve_config_dir_with_path_override() {
-        let _guard = env_test_lock().lock().unwrap();
-
-        unsafe {
-            std::env::set_var(ENV_CONFIG_DIR, "[Env] OmniLED");
-        }
-
-        let root_dir = Constants::resolve_config_dir(Some(PathBuf::from("[CLI] OmniLED")));
-        assert_eq!(root_dir, PathBuf::from("[CLI] OmniLED"));
-    }
-
-    #[test]
-    fn resolve_config_dir_with_env_override() {
-        let _guard = env_test_lock().lock().unwrap();
-
-        unsafe {
-            std::env::set_var(ENV_CONFIG_DIR, "[Env] OmniLED");
-        }
-
-        let root_dir = Constants::resolve_config_dir(None);
-        assert_eq!(root_dir, PathBuf::from("[Env] OmniLED"));
-    }
-
-    #[test]
-    fn resolve_config_dir_with_no_override() {
-        let _guard = env_test_lock().lock().unwrap();
-
-        unsafe {
-            std::env::remove_var(ENV_CONFIG_DIR);
-        }
-
-        let root_dir = Constants::resolve_config_dir(None);
-        assert_eq!(root_dir, Constants::root_dir().join("config"));
     }
 }

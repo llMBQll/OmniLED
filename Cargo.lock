@@ -2422,7 +2422,6 @@ dependencies = [
 name = "omni-led"
 version = "0.5.0"
 dependencies = [
- "clap 4.5.53",
  "log",
  "log4rs",
  "mlua",

@@ -7,9 +7,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
-use crate::common::common::{KEY_VAL_TABLE, exec_file};
+use crate::common::common::KEY_VAL_TABLE;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
-use crate::constants::constants::Constants;
+use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
@@ -41,7 +41,7 @@ struct DeviceContext {
 const DEFAULT_UPDATE_TIME: Duration = Duration::from_millis(1000);
 
 impl ScriptHandler {
-    pub fn load(lua: &Lua) {
+    pub fn load(lua: &Lua, config: String) {
         let environment = Self::make_sandbox(lua);
 
         Self::set_unique(
@@ -59,7 +59,7 @@ impl ScriptHandler {
                 this.get_mut().mark_for_update(&event);
 
                 if Plugin::is_valid_identifier(&event) {
-                    // Set values recursively only from top level application events
+                    // Set values recursively only from top-level application events
                     this.get().set_value(lua, event, value)?;
                 }
 
@@ -73,9 +73,7 @@ impl ScriptHandler {
             .register("*".to_string(), event_handler)
             .unwrap();
 
-        let constants = UserDataRef::<Constants>::load(lua);
-        let filename = constants.get().config_dir.join("scripts.lua");
-        exec_file(lua, &filename, environment).unwrap();
+        load_config(lua, ConfigType::Scripts, &config, environment).unwrap();
     }
 
     pub fn set_value(&self, lua: &Lua, value_name: String, value: Value) -> mlua::Result<()> {
