@@ -4,12 +4,21 @@ use clap::Parser;
 use log::debug;
 use mlua::Lua;
 use omni_led_lib::{
-    app_loader::app_loader::AppLoader, common::common::load_internal_functions,
-    common::user_data::UserDataRef, constants::constants::Constants, devices::devices::Devices,
-    events::event_loop::EventLoop, events::events::Events, events::shortcuts::Shortcuts,
-    keyboard::keyboard::process_events, logging::logger::Log,
-    script_handler::script_handler::ScriptHandler, server::server::PluginServer,
-    settings::settings::Settings, tray_icon::tray_icon::TrayIcon,
+    app_loader::app_loader::AppLoader,
+    common::common::load_internal_functions,
+    common::user_data::UserDataRef,
+    constants::config::{ConfigType, read_config},
+    constants::constants::Constants,
+    devices::devices::Devices,
+    events::event_loop::EventLoop,
+    events::events::Events,
+    events::shortcuts::Shortcuts,
+    keyboard::keyboard::process_events,
+    logging::logger::Log,
+    script_handler::script_handler::ScriptHandler,
+    server::server::PluginServer,
+    settings::settings::Settings,
+    tray_icon::tray_icon::TrayIcon,
 };
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -33,13 +42,18 @@ async fn main() {
     let log_handle = logging::init(&lua);
     Log::load(&lua, log_handle);
 
-    Settings::load(&lua);
+    let applications_config = read_config(&lua, ConfigType::Applications).unwrap();
+    let devices_config = read_config(&lua, ConfigType::Devices).unwrap();
+    let scripts_config = read_config(&lua, ConfigType::Scripts).unwrap();
+    let settings_config = read_config(&lua, ConfigType::Settings).unwrap();
+
+    Settings::load(&lua, settings_config);
     PluginServer::load(&lua).await;
     Events::load(&lua);
     Shortcuts::load(&lua);
-    Devices::load(&lua);
-    ScriptHandler::load(&lua);
-    AppLoader::load(&lua);
+    Devices::load(&lua, devices_config);
+    ScriptHandler::load(&lua, scripts_config);
+    AppLoader::load(&lua, applications_config);
 
     let _tray = TrayIcon::new(&lua, &RUNNING);
 

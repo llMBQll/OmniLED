@@ -5,9 +5,8 @@ use omni_led_derive::UniqueUserData;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
-use crate::common::common::exec_file;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
-use crate::constants::constants::Constants;
+use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::{Device, Settings};
 use crate::devices::emulator::emulator::EmulatorSettings;
@@ -24,11 +23,11 @@ pub struct Devices {
 }
 
 impl Devices {
-    pub fn load(lua: &Lua) {
+    pub fn load(lua: &Lua, config: String) {
         let (constructors, env) = Self::create_loaders(lua);
         usb_device::steelseries::load_common_functions(lua, &env);
         Self::set_unique(lua, Self::new(constructors));
-        Self::load_devices(lua, env);
+        load_config(lua, ConfigType::Devices, &config, env).unwrap();
     }
 
     pub fn device_status(&self, name: &str) -> Option<DeviceStatus> {
@@ -72,12 +71,6 @@ impl Devices {
             devices: HashMap::new(),
             constructors,
         }
-    }
-
-    fn load_devices(lua: &Lua, env: Table) {
-        let constants = UserDataRef::<Constants>::load(lua);
-        let filename = constants.get().config_dir.join("devices.lua");
-        exec_file(lua, &filename, env).unwrap();
     }
 
     fn create_loaders(lua: &Lua) -> (HashMap<String, Constructor>, Table) {
