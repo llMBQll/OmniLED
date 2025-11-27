@@ -15,6 +15,8 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 
+mod logging;
+
 static RUNNING: AtomicBool = AtomicBool::new(true);
 
 #[tokio::main]
@@ -27,7 +29,10 @@ async fn main() {
 
     load_internal_functions(&lua);
     Constants::load(&lua, options.config_dir);
-    Log::load(&lua);
+
+    let log_handle = logging::init(&lua);
+    Log::load(&lua, log_handle);
+
     Settings::load(&lua);
     PluginServer::load(&lua).await;
     Events::load(&lua);
