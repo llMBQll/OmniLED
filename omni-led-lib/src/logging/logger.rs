@@ -43,7 +43,14 @@ impl Log {
             level += 1;
         }
 
-        format!("script{}", location)
+        let source = match lua.inspect_stack(1, |debug| {
+            debug.source().source.map(|source| source.to_string())
+        }) {
+            Some(Some(source)) => source,
+            _ => "script".to_string(),
+        };
+
+        format!("{}{}", source, location)
     }
 }
 
