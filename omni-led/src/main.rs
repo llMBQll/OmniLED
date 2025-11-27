@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
-use clap::Parser;
 use log::debug;
 use mlua::Lua;
 use omni_led_lib::{
@@ -20,7 +19,6 @@ use omni_led_lib::{
     settings::settings::Settings,
     tray_icon::tray_icon::TrayIcon,
 };
-use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 
@@ -32,12 +30,10 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 async fn main() {
     let init_begin = Instant::now();
 
-    let options = Options::parse();
-
     let lua = Lua::new();
 
     load_internal_functions(&lua);
-    Constants::load(&lua, options.config_dir);
+    Constants::load(&lua);
 
     let log_handle = logging::init(&lua);
     Log::load(&lua, log_handle);
@@ -78,11 +74,4 @@ async fn main() {
         .await;
 
     keyboard_handle.join().unwrap();
-}
-
-#[derive(Parser, Debug)]
-#[command(author, version, about)]
-struct Options {
-    #[clap(short, long)]
-    config_dir: Option<PathBuf>,
 }
