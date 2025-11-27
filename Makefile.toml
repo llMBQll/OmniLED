@@ -52,5 +52,5 @@ dependencies = ["build-release"]
 [tasks.test]
 description = "Run tests"
 command = "cargo"
-args = ["test", "--package=omni-led", "--features=dev", "--no-fail-fast"]
+args = ["test", "--package=omni-led-lib", "--features=dev", "--no-fail-fast"]
 dependencies = ["build"]

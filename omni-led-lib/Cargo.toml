@@ -1,0 +1,49 @@
+[package]
+name = "omni-led-lib"
+version = "0.5.0"
+authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
+license = "GPL-3.0-only"
+edition = "2024"
+
+[dependencies]
+convert_case = "0.8"
+device_query = "4.0"
+dirs-next = "2.0"
+font-kit = "0.14"
+freetype-rs = "*"
+image = "0.25"
+lazy_static = "1.4"
+log = "0.4"
+log4rs = "1.3"
+mlua = { version = "0.11", features = ["lua54", "vendored", "macros"] }
+minifb = "0.28"
+num-traits = "0.2"
+prost = "0.14"
+opener = { version = "0.8", features = ["reveal"] }
+regex = "1.10"
+rusb = "0.9"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+omni-led-api = { path = "../omni-led-api" }
+omni-led-derive = { path = "../omni-led-derive", features = ["from-lua-value", "unique-user-data"] }
+tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
+tokio-stream = "0.1"
+ureq = { version = "2.4", features = ["json"] }
+tonic = "0.14"
+tray-item = "0.10"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System", "Win32_System_Threading"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+tray-item = { version = "0.10", features = ["ksni"] }
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
+windres = "0.2"
+
+[dev-dependencies]
+test-case = "3.3.1"
+
+[features]
+dev = []
