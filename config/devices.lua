@@ -14,7 +14,7 @@ usb_device {
         value = '0x0300',
         index = '0x01',
     },
-    transform = transform_steelseries_layout('SteelSeries'),
+    transform = transform_data({ prepend = {0x61}, append = {0x00} }),
     memory_layout = 'SteelSeries',
 }
 
@@ -34,7 +34,7 @@ usb_device {
         value = '0x0300',
         index = '0x01',
     },
-    transform = transform_steelseries_layout('SteelSeries'),
+    transform = transform_data({ prepend = {0x61}, append = {0x00} }),
     memory_layout = 'SteelSeries',
 }
 
@@ -54,7 +54,7 @@ usb_device {
         value = '0x0300',
         index = '0x01',
     },
-    transform = transform_steelseries_layout('SteelSeries'),
+    transform = transform_data({ prepend = {0x61}, append = {0x00} }),
     memory_layout = 'SteelSeries',
 }
 
@@ -74,7 +74,7 @@ usb_device {
         value = '0x0300',
         index = '0x03',
     },
-    transform = transform_steelseries_layout('SteelSeries2'),
+    transform = transform_data({ prepend = {0x0a} }),
     memory_layout = 'SteelSeries2',
 }
 

@@ -392,6 +392,14 @@
 
 ---
 
+> ### `transform_data`
+>
+> Type: `fn(extra: ExtraBytes) -> fn(buffer: Buffer) -> [byte]`
+>
+> Creates a tranform function that will add extra bytes to the rendered buffer.
+
+---
+
 > ### `usb_device`
 >
 > Type: `fn(config: USBDeviceConfig)`
@@ -485,6 +493,24 @@
 > > `screen_size: Size`
 > >
 > > Screen size to use for emulator display.
+
+---
+
+> ### `ExtraBytes`
+>
+> Specify where and what bytes should be added to rendered buffer.
+>
+> > `prepend: [u8]`
+> >
+> > _Optional_. Default: `[]`.
+> >
+> > Prepend bytes to rendered buffer.
+>
+> > `append: [u8]`
+> >
+> > _Optional_. Default: `[]`.
+> >
+> > Append bytes to rendered buffer.
 
 ---
 
