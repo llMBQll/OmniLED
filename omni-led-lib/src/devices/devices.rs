@@ -25,7 +25,7 @@ pub struct Devices {
 impl Devices {
     pub fn load(lua: &Lua, config: String) {
         let (constructors, env) = Self::create_loaders(lua);
-        usb_device::steelseries::load_common_functions(lua, &env);
+        usb_device::transform::load_common_functions(lua, &env);
         Self::set_unique(lua, Self::new(constructors));
         load_config(lua, ConfigType::Devices, &config, env).unwrap();
     }
