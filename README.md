@@ -37,12 +37,13 @@ right out of the box.
 
 ### USB
 
-Devices confirmed to be working:
+Officially supported devices:
 
 - SteelSeries Apex 5
 - SteelSeries Apex 7 TKL
 - SteelSeries Apex Pro
-- SteelSeries Apex Pro TKL Wireless Gen 3
+- SteelSeries Apex Pro TKL Wireless Gen 3 (Wired mode)
+- SteelSeries Apex Pro TKL Wireless Gen 3 (2.4G Wireless mode)
 
 > You can help expand this list by submitting a PR with a tested configuration. See
 > the [contributing guide](CONTRIBUTING.md) for more information.
