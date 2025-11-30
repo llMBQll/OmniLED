@@ -59,6 +59,26 @@ usb_device {
 }
 
 usb_device {
+    name = 'SteelSeries Apex Pro TKL Wireless Gen 3 (2.4G)',
+    screen_size = {
+        width = 128,
+        height = 40,
+    },
+    usb_settings = {
+        vendor_id = '0x1038',
+        product_id = '0x1644',
+        interface = '0x03',
+        alternate_setting = '0x00',
+        request_type = '0x21',
+        request = '0x09',
+        value = '0x0300',
+        index = '0x03',
+    },
+    transform = transform_data({ prepend = {0x4a} }),
+    memory_layout = 'SteelSeries2',
+}
+
+usb_device {
     name = 'SteelSeries Apex Pro TKL Wireless Gen 3',
     screen_size = {
         width = 128,
