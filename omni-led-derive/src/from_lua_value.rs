@@ -2,7 +2,10 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput};
 
-use crate::common::{get_attribute, get_attribute_with_default_value, is_option, parse_attributes};
+use crate::common::{
+    EnumFieldType, collect_enum_variants, get_attribute, get_attribute_with_default_value, is_option,
+    parse_attributes,
+};
 
 pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
@@ -147,23 +150,7 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
         },
 
         Data::Enum(ref data) => {
-            let fields: Vec<_> = data
-                .variants
-                .iter()
-                .map(|variant| match &variant.fields {
-                    syn::Fields::Named(_) => unimplemented!(),
-                    syn::Fields::Unnamed(_) => (
-                        FieldType::Unnamed,
-                        &variant.ident,
-                        EnumAttributes { alias: None },
-                    ),
-                    syn::Fields::Unit => (
-                        FieldType::Unit,
-                        &variant.ident,
-                        get_enum_attributes(&variant.attrs),
-                    ),
-                })
-                .collect();
+            let fields = collect_enum_variants(data, get_enum_attributes);
 
             let names = fields.iter().map(|(_, ident, attrs)| {
                 let alias = attrs.alias.as_ref().map(|alias| quote! { #alias, });
@@ -178,14 +165,14 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
 
             for field in fields {
                 match field {
-                    (FieldType::Unnamed, ident, _attrs) => {
+                    (EnumFieldType::Unnamed, ident, _attrs) => {
                         unnamed_initializers.push(quote! {
                             else if table.contains_key(stringify!(#ident))? {
                                 Ok(Self::#ident(table.get(stringify!(#ident))?))
                             }
                         });
                     }
-                    (FieldType::Unit, ident, attrs) => {
+                    (EnumFieldType::Unit, ident, attrs) => {
                         let alias = attrs.alias.map(|alias| {
                             quote! {
                                 #alias => Ok(Self::#ident),
@@ -232,13 +219,6 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
         }
         Data::Union(_) => unimplemented!(),
     }
-}
-
-#[derive(Debug)]
-enum FieldType {
-    // Named,
-    Unnamed,
-    Unit,
 }
 
 struct StructAttributes {

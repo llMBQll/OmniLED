@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput};
 
-use crate::common::{get_attribute, parse_attributes};
+use crate::common::{EnumFieldType, collect_enum_variants, get_attribute, parse_attributes};
 
 pub fn expand_lua_enum_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
@@ -40,28 +40,12 @@ fn generate_initializer(data: &Data) -> TokenStream {
     match *data {
         Data::Struct(_) => panic!("Expected enum"),
         Data::Enum(ref data) => {
-            let fields: Vec<_> = data
-                .variants
-                .iter()
-                .map(|variant| match &variant.fields {
-                    syn::Fields::Named(_) => unimplemented!(),
-                    syn::Fields::Unnamed(_) => (
-                        FieldType::Unnamed,
-                        &variant.ident,
-                        get_enum_attributes(&variant.attrs),
-                    ),
-                    syn::Fields::Unit => (
-                        FieldType::Unit,
-                        &variant.ident,
-                        get_enum_attributes(&variant.attrs),
-                    ),
-                })
-                .collect();
+            let fields = collect_enum_variants(data, get_enum_attributes);
 
             let mut initializers = Vec::new();
             for field in fields {
                 match field {
-                    (FieldType::Unnamed, ident, _attrs) => {
+                    (EnumFieldType::Unnamed, ident, _attrs) => {
                         let initializer = quote! {
                             table.set(stringify!(#ident), lua.create_function(|_, value| {
                                 Ok(Self::#ident(value))
@@ -69,7 +53,7 @@ fn generate_initializer(data: &Data) -> TokenStream {
                         };
                         initializers.push(initializer);
                     }
-                    (FieldType::Unit, ident, attrs) => {
+                    (EnumFieldType::Unit, ident, attrs) => {
                         let initializer = quote! {
                             table.set(stringify!(#ident), Self::#ident)?;
                         };
@@ -92,13 +76,6 @@ fn generate_initializer(data: &Data) -> TokenStream {
         }
         Data::Union(_) => panic!("Expected enum"),
     }
-}
-
-#[derive(Debug)]
-enum FieldType {
-    // Named,
-    Unnamed,
-    Unit,
 }
 
 struct EnumAttributes {
