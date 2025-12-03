@@ -1,21 +1,31 @@
-use mlua::{ErrorContext, FromLua};
-use omni_led_derive::FromLuaValue;
+use mlua::{ErrorContext, FromLua, Lua, Table, UserData};
+use omni_led_derive::{FromLuaValue, LuaEnum};
 
-#[derive(Debug, Clone, FromLuaValue)]
+pub fn set_font_selector_enums(lua: &Lua, env: &Table) {
+    FontSelector::set_lua_enum(lua, env).unwrap();
+    FamilyName::set_lua_enum(lua, env).unwrap();
+    Style::set_lua_enum(lua, env).unwrap();
+    Weight::set_lua_enum(lua, env).unwrap();
+    Stretch::set_lua_enum(lua, env).unwrap();
+}
+
+#[derive(Debug, Clone, PartialEq, LuaEnum)]
 pub enum FontSelector {
     Default,
     Filesystem(FilesystemSelector),
     System(SystemSelector),
 }
 
-#[derive(Debug, Clone, FromLuaValue)]
+impl UserData for FontSelector {}
+
+#[derive(Debug, Clone, PartialEq, FromLuaValue)]
 pub struct FilesystemSelector {
     pub path: String,
     #[mlua(default = 0)]
     pub font_index: u32,
 }
 
-#[derive(Debug, Clone, FromLuaValue)]
+#[derive(Debug, Clone, PartialEq, FromLuaValue)]
 pub struct SystemSelector {
     pub names: Vec<FamilyName>,
     #[mlua(default = Style::Normal)]
@@ -26,50 +36,39 @@ pub struct SystemSelector {
     pub stretch: Stretch,
 }
 
-#[derive(Debug, Clone)]
-pub struct FamilyName {
-    pub title: String,
+#[derive(Debug, Clone, PartialEq, LuaEnum)]
+pub enum FamilyName {
+    Title(String),
+    Serif,
+    SansSerif,
+    Monospace,
+    Cursive,
+    Fantasy,
 }
 
-impl FromLua for FamilyName {
-    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
-        match value {
-            mlua::Value::String(string) => {
-                let title = string.to_string_lossy();
-                Ok(Self { title })
-            }
-            mlua::Value::UserData(user_data) => {
-                let data = user_data.borrow::<FamilyName>()?;
-                Ok(data.clone())
-            }
-            other => Err(mlua::Error::FromLuaConversionError {
-                from: other.type_name(),
-                to: String::from("FamilyName"),
-                message: None,
-            }),
-        }
-    }
-}
+impl UserData for FamilyName {}
 
 impl Into<font_kit::family_name::FamilyName> for FamilyName {
     fn into(self) -> font_kit::family_name::FamilyName {
-        match self.title.as_str() {
-            "Serif" => font_kit::family_name::FamilyName::Serif,
-            "SansSerif" => font_kit::family_name::FamilyName::SansSerif,
-            "Monospace" => font_kit::family_name::FamilyName::Monospace,
-            "Cursive" => font_kit::family_name::FamilyName::Cursive,
-            "Fantasy" => font_kit::family_name::FamilyName::Fantasy,
-            _ => font_kit::family_name::FamilyName::Title(self.title),
+        match self {
+            FamilyName::Title(title) => font_kit::family_name::FamilyName::Title(title),
+            FamilyName::Serif => font_kit::family_name::FamilyName::Serif,
+            FamilyName::SansSerif => font_kit::family_name::FamilyName::SansSerif,
+            FamilyName::Monospace => font_kit::family_name::FamilyName::Monospace,
+            FamilyName::Cursive => font_kit::family_name::FamilyName::Cursive,
+            FamilyName::Fantasy => font_kit::family_name::FamilyName::Fantasy,
         }
     }
 }
 
-#[derive(Debug, Clone, FromLuaValue)]
+#[derive(Debug, Clone, PartialEq, LuaEnum)]
 pub enum Style {
     Normal,
     Italic,
     Oblique,
 }
+
+impl UserData for Style {}
 
 impl Into<font_kit::properties::Style> for Style {
     fn into(self) -> font_kit::properties::Style {
@@ -81,7 +80,7 @@ impl Into<font_kit::properties::Style> for Style {
     }
 }
 
-#[derive(Debug, Clone, FromLuaValue)]
+#[derive(Debug, Clone, PartialEq, LuaEnum)]
 pub enum Weight {
     Thin,
     ExtraLight,
@@ -93,6 +92,8 @@ pub enum Weight {
     ExtraBold,
     Black,
 }
+
+impl UserData for Weight {}
 
 impl Into<font_kit::properties::Weight> for Weight {
     fn into(self) -> font_kit::properties::Weight {
@@ -110,7 +111,7 @@ impl Into<font_kit::properties::Weight> for Weight {
     }
 }
 
-#[derive(Debug, Clone, FromLuaValue)]
+#[derive(Debug, Clone, PartialEq, LuaEnum)]
 pub enum Stretch {
     UltraCondensed,
     ExtraCondensed,
@@ -122,6 +123,8 @@ pub enum Stretch {
     ExtraExpanded,
     UltraExpanded,
 }
+
+impl UserData for Stretch {}
 
 impl Into<font_kit::properties::Stretch> for Stretch {
     fn into(self) -> font_kit::properties::Stretch {

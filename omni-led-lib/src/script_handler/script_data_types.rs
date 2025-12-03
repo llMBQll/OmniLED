@@ -1,5 +1,5 @@
-use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields, Value};
-use omni_led_derive::FromLuaValue;
+use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields};
+use omni_led_derive::{FromLuaValue, LuaEnum};
 use std::hash::Hash;
 
 #[derive(Debug, Clone, Copy, FromLuaValue)]
@@ -40,9 +40,34 @@ pub struct ImageData {
     pub hash: Option<u64>,
 }
 
-/// This is a private enum used just to facilitate easier parsing into image::ImageFormat type
-#[derive(Clone, Debug, FromLuaValue)]
-enum ImageFormatEnum {
+impl ImageData {
+    fn parse_format(format: ImageFormat, _: &Lua) -> mlua::Result<image::ImageFormat> {
+        match format {
+            ImageFormat::Avif => Ok(image::ImageFormat::Avif),
+            ImageFormat::Bmp => Ok(image::ImageFormat::Bmp),
+            ImageFormat::Dds => Ok(image::ImageFormat::Dds),
+            ImageFormat::Farbfeld => Ok(image::ImageFormat::Farbfeld),
+            ImageFormat::Gif => Ok(image::ImageFormat::Gif),
+            ImageFormat::Hdr => Ok(image::ImageFormat::Hdr),
+            ImageFormat::Ico => Ok(image::ImageFormat::Ico),
+            ImageFormat::Jpeg => Ok(image::ImageFormat::Jpeg),
+            ImageFormat::OpenExr => Ok(image::ImageFormat::OpenExr),
+            ImageFormat::Pcx => Ok(image::ImageFormat::Pcx),
+            ImageFormat::Png => Ok(image::ImageFormat::Png),
+            ImageFormat::Pnm => Ok(image::ImageFormat::Pnm),
+            ImageFormat::Qoi => Ok(image::ImageFormat::Qoi),
+            ImageFormat::Tga => Ok(image::ImageFormat::Tga),
+            ImageFormat::Tiff => Ok(image::ImageFormat::Tiff),
+            ImageFormat::WebP => Ok(image::ImageFormat::WebP),
+        }
+    }
+}
+
+impl UserData for ImageData {}
+
+// 1:1 equivalent to image::ImageFormat, only used to facilitate the conversion from lua values
+#[derive(Clone, Debug, LuaEnum)]
+enum ImageFormat {
     Avif,
     Bmp,
     Dds,
@@ -61,34 +86,9 @@ enum ImageFormatEnum {
     WebP,
 }
 
-impl UserData for ImageFormatEnum {}
+impl UserData for ImageFormat {}
 
-impl ImageData {
-    fn parse_format(format: ImageFormatEnum, _: &Lua) -> mlua::Result<image::ImageFormat> {
-        match format {
-            ImageFormatEnum::Avif => Ok(image::ImageFormat::Avif),
-            ImageFormatEnum::Bmp => Ok(image::ImageFormat::Bmp),
-            ImageFormatEnum::Dds => Ok(image::ImageFormat::Dds),
-            ImageFormatEnum::Farbfeld => Ok(image::ImageFormat::Farbfeld),
-            ImageFormatEnum::Gif => Ok(image::ImageFormat::Gif),
-            ImageFormatEnum::Hdr => Ok(image::ImageFormat::Hdr),
-            ImageFormatEnum::Ico => Ok(image::ImageFormat::Ico),
-            ImageFormatEnum::Jpeg => Ok(image::ImageFormat::Jpeg),
-            ImageFormatEnum::OpenExr => Ok(image::ImageFormat::OpenExr),
-            ImageFormatEnum::Pcx => Ok(image::ImageFormat::Pcx),
-            ImageFormatEnum::Png => Ok(image::ImageFormat::Png),
-            ImageFormatEnum::Pnm => Ok(image::ImageFormat::Pnm),
-            ImageFormatEnum::Qoi => Ok(image::ImageFormat::Qoi),
-            ImageFormatEnum::Tga => Ok(image::ImageFormat::Tga),
-            ImageFormatEnum::Tiff => Ok(image::ImageFormat::Tiff),
-            ImageFormatEnum::WebP => Ok(image::ImageFormat::WebP),
-        }
-    }
-}
-
-impl UserData for ImageData {}
-
-#[derive(Clone, Debug, FromLua)]
+#[derive(Clone, Debug, LuaEnum)]
 pub enum Widget {
     Bar(Bar),
     Image(Image),
@@ -110,7 +110,7 @@ impl Range {
             Ok(())
         } else {
             Err(mlua::Error::runtime(format!(
-                "range.max shall be greater or equal than range.min, got min = {}, max = {}",
+                "range.max shall be greater than or equal to range.min, got min = {}, max = {}",
                 range.min, range.max
             )))
         }
@@ -135,11 +135,13 @@ pub struct Bar {
 
 impl UserData for Bar {}
 
-#[derive(FromLuaValue, Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, LuaEnum)]
 pub enum Repeat {
     Once,
     ForDuration,
 }
+
+impl UserData for Repeat {}
 
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Image {
@@ -185,7 +187,7 @@ pub struct Text {
 
 impl UserData for Text {}
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, LuaEnum)]
 pub enum FontSize {
     Value(usize),
     Auto,
@@ -193,29 +195,6 @@ pub enum FontSize {
 }
 
 impl UserData for FontSize {}
-
-impl FromLua for FontSize {
-    fn from_lua(value: Value, _lua: &Lua) -> mlua::Result<Self> {
-        match value {
-            Value::Integer(value) => Ok(FontSize::Value(value as usize)),
-            Value::String(value) => {
-                let value = value.to_string_lossy();
-                match value.as_str() {
-                    "Auto" => Ok(FontSize::Auto),
-                    "AutoUpper" => Ok(FontSize::AutoUpper),
-                    _ => Err(mlua::Error::runtime(format!(
-                        "Expected one of ['Auto', 'AutoUpper'], got '{}'",
-                        value
-                    ))),
-                }
-            }
-            other => Err(mlua::Error::runtime(format!(
-                "Expected type 'integer' or 'string', got '{}'",
-                other.type_name()
-            ))),
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default, FromLuaValue)]
 pub struct Modifiers {
@@ -234,7 +213,7 @@ pub struct Modifiers {
 
 impl UserData for Modifiers {}
 
-#[derive(Clone, Copy, FromLuaValue)]
+#[derive(Clone, Copy, LuaEnum)]
 pub enum MemoryLayout {
     #[mlua(alias = "SteelSeries")]
     BitPerPixel,
@@ -243,20 +222,12 @@ pub enum MemoryLayout {
     BitPerPixelVertical,
 }
 
-pub fn load_script_data_types(lua: &Lua, env: &Table) {
-    macro_rules! register_widget {
-        ($lua:ident, $table:ident, $type_name:ident) => {
-            $table
-                .set(
-                    stringify!($type_name),
-                    $lua.create_function(|_: &Lua, obj: $type_name| Ok(Widget::$type_name(obj)))
-                        .unwrap(),
-                )
-                .unwrap();
-        };
-    }
+impl UserData for MemoryLayout {}
 
-    register_widget!(lua, env, Bar);
-    register_widget!(lua, env, Image);
-    register_widget!(lua, env, Text);
+pub fn load_script_data_types(lua: &Lua, env: &Table) {
+    FontSize::set_lua_enum(lua, env).unwrap();
+    ImageFormat::set_lua_enum(lua, env).unwrap();
+    MemoryLayout::set_lua_enum(lua, env).unwrap();
+    Repeat::set_lua_enum(lua, env).unwrap();
+    Widget::set_lua_enum(lua, env).unwrap();
 }

@@ -13,6 +13,7 @@ use crate::devices::emulator::emulator::EmulatorSettings;
 use crate::devices::steelseries_engine::steelseries_engine_device::SteelseriesEngineDeviceSettings;
 use crate::devices::usb_device;
 use crate::devices::usb_device::usb_device::USBDeviceSettings;
+use crate::script_handler::script_data_types;
 
 type Constructor = fn(&Lua, Value) -> Box<dyn Device>;
 
@@ -26,6 +27,7 @@ impl Devices {
     pub fn load(lua: &Lua, config: String) {
         let (constructors, env) = Self::create_loaders(lua);
         usb_device::transform::load_common_functions(lua, &env);
+        script_data_types::load_script_data_types(lua, &env);
         Self::set_unique(lua, Self::new(constructors));
         load_config(lua, ConfigType::Devices, &config, env).unwrap();
     }

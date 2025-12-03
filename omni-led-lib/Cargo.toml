@@ -24,7 +24,7 @@ rusb = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 omni-led-api = { path = "../omni-led-api" }
-omni-led-derive = { path = "../omni-led-derive", features = ["from-lua-value", "unique-user-data"] }
+omni-led-derive = { path = "../omni-led-derive", features = ["from-lua-value", "lua-enum", "unique-user-data"] }
 tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
 tokio-stream = "0.1"
 ureq = { version = "2.4", features = ["json"] }
