@@ -15,7 +15,7 @@ usb_device {
         index = '0x01',
     },
     transform = transform_data({ prepend = {0x61}, append = {0x00} }),
-    memory_layout = 'SteelSeries',
+    memory_layout = MemoryLayout.SteelSeries,
 }
 
 usb_device {
@@ -35,7 +35,7 @@ usb_device {
         index = '0x01',
     },
     transform = transform_data({ prepend = {0x61}, append = {0x00} }),
-    memory_layout = 'SteelSeries',
+    memory_layout = MemoryLayout.SteelSeries,
 }
 
 usb_device {
@@ -55,7 +55,7 @@ usb_device {
         index = '0x01',
     },
     transform = transform_data({ prepend = {0x61}, append = {0x00} }),
-    memory_layout = 'SteelSeries',
+    memory_layout = MemoryLayout.SteelSeries,
 }
 
 usb_device {
@@ -75,7 +75,7 @@ usb_device {
         index = '0x03',
     },
     transform = transform_data({ prepend = {0x4a} }),
-    memory_layout = 'SteelSeries2',
+    memory_layout = MemoryLayout.SteelSeries2,
 }
 
 usb_device {
@@ -95,7 +95,7 @@ usb_device {
         index = '0x03',
     },
     transform = transform_data({ prepend = {0x0a} }),
-    memory_layout = 'SteelSeries2',
+    memory_layout = MemoryLayout.SteelSeries2,
 }
 
 emulator {

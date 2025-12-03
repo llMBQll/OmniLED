@@ -1,26 +1,26 @@
 local function volume()
     local function display_device(widgets, offset, device, device_type)
         if device then
-            table.insert(widgets, Text {
+            table.insert(widgets, Widget.Text {
                 text = device.Name,
                 scrolling = true,
-                repeats = 'Once',
+                repeats = Repeat.Once,
                 position = { x = 0, y = offset },
                 size = { width = SCREEN.Width * 2 / 3, height = SCREEN.Height / 2 },
                 animation_group = 1,
             })
-            table.insert(widgets, Text {
+            table.insert(widgets, Widget.Text {
                 text = device.IsMuted and ' M ' or string.format("%3d", device.Volume),
-                font_size = 24,
+                font_size = FontSize.Value(24),
                 text_offset = 1,
                 position = { x = SCREEN.Width * 2 / 3, y = offset },
                 size = { width = SCREEN.Width / 3, height = SCREEN.Height / 2 },
             })
         else
-            table.insert(widgets, Text {
+            table.insert(widgets, Widget.Text {
                 text = string.format('No %s device', device_type),
                 scrolling = true,
-                repeats = 'Once',
+                repeats = Repeat.Once,
                 position = { x = 0, y = offset },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 2 },
                 animation_group = 1,
@@ -42,29 +42,29 @@ local SPOTIFY_DURATION = PLATFORM.Os == 'windows' and 5000 or 1000
 local function spotify()
     return {
         widgets = {
-            Bar {
+            Widget.Bar {
                 value = SPOTIFY.Progress,
                 range = { min = 0, max = SPOTIFY.Duration },
                 position = { x = 0, y = 0 },
                 size = { width = SCREEN.Width, height = 2 },
             },
-            Text {
+            Widget.Text {
                 text = string.format("%s - %s", SPOTIFY.Artist, SPOTIFY.Title),
                 scrolling = true,
                 position = { x = 0, y = 2 },
                 size = { width = SCREEN.Width, height = 20 },
             },
-            Text {
+            Widget.Text {
                 text = string.format("%02d:%02d", CLOCK.Hours, CLOCK.Minutes),
                 position = { x = 0, y = SCREEN.Height - 18 },
                 size = { width = 50, height = 18 },
             },
-            Text {
+            Widget.Text {
                 text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month], CLOCK.MonthDay),
                 position = { x = SCREEN.Width - 50, y = SCREEN.Height - 18 },
                 size = { width = 50, height = 18 },
             },
-            Bar {
+            Widget.Bar {
                 value = CLOCK.Seconds,
                 range = { min = 0, max = 59 },
                 position = { x = 0, y = SCREEN.Height - 2 },
@@ -78,26 +78,26 @@ end
 local function clock()
     return {
         widgets = {
-            Text {
+            Widget.Text {
                 text = string.format("%02d", CLOCK.Hours),
-                font_size = 50,
+                font_size = FontSize.Value(50),
                 text_offset = 1,
                 position = { x = 10, y = 0 },
                 size = { width = SCREEN.Width / 2, height = SCREEN.Height - 3 },
             },
-            Text {
+            Widget.Text {
                 text = string.format("%02d", CLOCK.Minutes),
-                font_size = 37,
+                font_size = FontSize.Value(37),
                 text_offset = 1,
                 position = { x = SCREEN.Width / 2 + 3, y = 0 },
                 size = { width = 54, height = 26 },
             },
-            Text {
+            Widget.Text {
                 text = string.format("%.3s%02d", CLOCK.MonthNames[CLOCK.Month], CLOCK.MonthDay),
                 position = { x = SCREEN.Width / 2 + 6, y = 26 },
                 size = { width = 54, height = 14 },
             },
-            Bar {
+            Widget.Bar {
                 value = CLOCK.Seconds,
                 range = { min = 0, max = 59 },
                 position = { x = 0, y = SCREEN.Height - 2 },
@@ -121,29 +121,29 @@ local function weather()
 
     return {
         widgets = {
-            Image {
+            Widget.Image {
                 image = WEATHER[WEATHER.ImageKey],
                 position = { x = 0, y = 0 },
                 size = { width = SCREEN.Height, height = SCREEN.Height },
             },
-            Text {
+            Widget.Text {
                 text = value,
-                font_size = 30,
+                font_size = FontSize.Value(30),
                 text_offset = 1,
                 position = { x = SCREEN.Height, y = 0 },
                 size = { width = SCREEN.Height * 2, height = SCREEN.Height * 2 / 3 },
             },
-            Text {
+            Widget.Text {
                 text = unit,
                 position = { x = 96, y = 0 },
                 size = { width = 30, height = 13 },
             },
-            Text {
+            Widget.Text {
                 text = string.format("%.3s %02d:%02d", CLOCK.DayNames[CLOCK.WeekDay], CLOCK.Hours, CLOCK.Minutes),
                 position = { x = SCREEN.Height + 4, y = SCREEN.Height / 2 + 4 },
                 size = { width = SCREEN.Height * 2, height = SCREEN.Height / 2 - 4 },
             },
-            Bar {
+            Widget.Bar {
                 value = CLOCK.Seconds,
                 range = { min = 0, max = 59 },
                 position = { x = 0, y = SCREEN.Height - 2 },
