@@ -1,4 +1,4 @@
-use mlua::{ErrorContext, FromLua, Lua, Table, UserData, UserDataFields};
+use mlua::{ErrorContext, FromLua, Lua, UserData, UserDataFields};
 use omni_led_derive::{FromLuaValue, LuaEnum};
 use std::hash::Hash;
 
@@ -67,7 +67,7 @@ impl UserData for ImageData {}
 
 // 1:1 equivalent to image::ImageFormat, only used to facilitate the conversion from lua values
 #[derive(Clone, Debug, LuaEnum)]
-enum ImageFormat {
+pub enum ImageFormat {
     Avif,
     Bmp,
     Dds,
@@ -223,11 +223,3 @@ pub enum MemoryLayout {
 }
 
 impl UserData for MemoryLayout {}
-
-pub fn load_script_data_types(lua: &Lua, env: &Table) {
-    FontSize::set_lua_enum(lua, env).unwrap();
-    ImageFormat::set_lua_enum(lua, env).unwrap();
-    MemoryLayout::set_lua_enum(lua, env).unwrap();
-    Repeat::set_lua_enum(lua, env).unwrap();
-    Widget::set_lua_enum(lua, env).unwrap();
-}

@@ -15,7 +15,6 @@ pub struct Log {
 
 impl Log {
     pub fn load<H: LogHandle + 'static>(lua: &Lua, handle: H) {
-        LevelFilter::set_lua_enum(lua, &lua.globals()).unwrap();
         Log::set_unique(
             lua,
             Self {

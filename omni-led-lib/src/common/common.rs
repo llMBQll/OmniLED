@@ -15,36 +15,39 @@ macro_rules! create_table {
 #[macro_export]
 macro_rules! create_table_with_defaults {
     ($lua:ident, $values:tt) => {{
-        $lua.load(chunk! {
-            new_table = $values
-            new_table.assert = assert
-            new_table.coroutine = internal.table_copy(coroutine)
-            new_table.dump = internal.dump
-            new_table.getmetatable = getmetatable
-            new_table.ipairs = ipairs
-            new_table.math = internal.table_copy(math)
-            new_table.math.round = internal.round
-            new_table.next = next
-            new_table.os = {
-                clock = os.clock,
-                date = os.date,
-                difftime = os.difftime,
-                getenv = os.getenv,
-                time = os.time
-            }
-            new_table.pairs = pairs
-            new_table.pcall = pcall
-            new_table.print = print
-            new_table.string = internal.table_copy(string)
-            new_table.table = internal.table_copy(table)
-            new_table.tonumber = tonumber
-            new_table.tostring = tostring
-            new_table.type = type
-            new_table.utf8 = internal.table_copy(utf8)
-            return new_table
-        })
-        .eval::<mlua::Table>()
-        .unwrap()
+        let table = $lua
+            .load(chunk! {
+                new_table = $values
+                new_table.assert = assert
+                new_table.coroutine = internal.table_copy(coroutine)
+                new_table.dump = internal.dump
+                new_table.getmetatable = getmetatable
+                new_table.ipairs = ipairs
+                new_table.math = internal.table_copy(math)
+                new_table.math.round = internal.round
+                new_table.next = next
+                new_table.os = {
+                    clock = os.clock,
+                    date = os.date,
+                    difftime = os.difftime,
+                    getenv = os.getenv,
+                    time = os.time
+                }
+                new_table.pairs = pairs
+                new_table.pcall = pcall
+                new_table.print = print
+                new_table.string = internal.table_copy(string)
+                new_table.table = internal.table_copy(table)
+                new_table.tonumber = tonumber
+                new_table.tostring = tostring
+                new_table.type = type
+                new_table.utf8 = internal.table_copy(utf8)
+                return new_table
+            })
+            .eval::<mlua::Table>()
+            .unwrap();
+        crate::common::lua_enum::set_lua_enums($lua, &table);
+        table
     }};
 }
 

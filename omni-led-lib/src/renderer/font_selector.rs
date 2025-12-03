@@ -1,13 +1,5 @@
-use mlua::{ErrorContext, FromLua, Lua, Table, UserData};
+use mlua::{ErrorContext, FromLua, UserData};
 use omni_led_derive::{FromLuaValue, LuaEnum};
-
-pub fn set_font_selector_enums(lua: &Lua, env: &Table) {
-    FontSelector::set_lua_enum(lua, env).unwrap();
-    FamilyName::set_lua_enum(lua, env).unwrap();
-    Style::set_lua_enum(lua, env).unwrap();
-    Weight::set_lua_enum(lua, env).unwrap();
-    Stretch::set_lua_enum(lua, env).unwrap();
-}
 
 #[derive(Debug, Clone, PartialEq, LuaEnum)]
 pub enum FontSelector {
@@ -145,7 +137,8 @@ impl Into<font_kit::properties::Stretch> for Stretch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mlua::chunk;
+    use crate::common::lua_enum::set_lua_enums;
+    use mlua::{Lua, chunk};
 
     macro_rules! eval {
         ($lua:ident, $code:tt) => {
@@ -157,7 +150,7 @@ mod tests {
 
     fn get_lua_env() -> Lua {
         let lua = Lua::new();
-        set_font_selector_enums(&lua, &lua.globals());
+        set_lua_enums(&lua, &lua.globals());
         lua
     }
 
