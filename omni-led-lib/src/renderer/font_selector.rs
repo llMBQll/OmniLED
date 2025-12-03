@@ -141,3 +141,70 @@ impl Into<font_kit::properties::Stretch> for Stretch {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mlua::chunk;
+
+    macro_rules! eval {
+        ($lua:ident, $code:tt) => {
+            $lua.load(chunk! $code)
+            .eval::<FontSelector>()
+            .unwrap()
+        };
+    }
+
+    fn get_lua_env() -> Lua {
+        let lua = Lua::new();
+        set_font_selector_enums(&lua, &lua.globals());
+        lua
+    }
+
+    #[test]
+    fn default_selector() {
+        let lua = get_lua_env();
+        let selector = eval!(lua, { FontSelector.Default });
+        assert_eq!(selector, FontSelector::Default);
+    }
+
+    #[test]
+    fn filesystem_selector() {
+        const PATH: &str = "my/path";
+        const INDEX: u32 = 7;
+
+        let lua = get_lua_env();
+        let selector =
+            eval!(lua, { FontSelector.Filesystem({ path = $PATH, font_index = $INDEX }) });
+        assert_eq!(
+            selector,
+            FontSelector::Filesystem(FilesystemSelector {
+                path: PATH.to_string(),
+                font_index: INDEX,
+            })
+        );
+    }
+
+    #[test]
+    fn system_selector() {
+        const TITLE: &str = "font-title";
+
+        let lua = get_lua_env();
+        let selector = eval!(lua, { FontSelector.System({
+            names = { FamilyName.Title($TITLE), FamilyName.Monospace },
+            style = Style.Italic,
+            weight = Weight.Thin,
+            stretch = Stretch.SemiCondensed,
+        }) });
+
+        assert_eq!(
+            selector,
+            FontSelector::System(SystemSelector {
+                names: vec![FamilyName::Title(TITLE.to_string()), FamilyName::Monospace],
+                style: Style::Italic,
+                weight: Weight::Thin,
+                stretch: Stretch::SemiCondensed,
+            })
+        );
+    }
+}
