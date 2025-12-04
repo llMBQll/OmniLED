@@ -3,8 +3,8 @@ use quote::quote;
 use syn::{Attribute, Data, DeriveInput};
 
 use crate::common::{
-    EnumFieldType, collect_enum_variants, get_attribute, get_attribute_with_default_value, is_option,
-    parse_attributes,
+    EnumFieldType, collect_enum_variants, get_attribute, get_attribute_with_default_value,
+    is_option, parse_attributes,
 };
 
 pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
