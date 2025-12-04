@@ -1,6 +1,6 @@
 Settings {
-    font = 'Default',
-    log_level = 'Debug',
+    font = FontSelector.Default,
+    log_level = LevelFilter.Debug,
     keyboard_ticks_repeat_delay = 2,
     keyboard_ticks_repeat_rate = 2,
     server_port = 0,

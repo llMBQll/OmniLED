@@ -10,6 +10,16 @@ pub fn from_lua_table_derive(input: proc_macro::TokenStream) -> proc_macro::Toke
     from_lua_value::expand_lua_value_derive(input)
 }
 
+#[cfg(feature = "lua-enum")]
+mod lua_enum;
+
+#[cfg(feature = "lua-enum")]
+#[proc_macro_derive(LuaEnum, attributes(mlua))]
+pub fn lua_enum_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    lua_enum::expand_lua_enum_derive(input)
+}
+
 #[cfg(feature = "into-proto")]
 mod into_proto;
 

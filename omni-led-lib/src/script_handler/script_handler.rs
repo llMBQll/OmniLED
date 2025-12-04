@@ -18,7 +18,7 @@ use crate::events::shortcuts::Shortcuts;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::renderer::Renderer;
-use crate::script_handler::script_data_types::{Widget, load_script_data_types};
+use crate::script_handler::script_data_types::Widget;
 
 #[derive(UniqueUserData)]
 pub struct ScriptHandler {
@@ -269,7 +269,6 @@ impl ScriptHandler {
             }
         });
         env.set(ScreenBuilder::identifier(), ScreenBuilder).unwrap();
-        load_script_data_types(lua, &env);
 
         env
     }

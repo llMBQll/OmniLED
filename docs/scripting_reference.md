@@ -111,32 +111,46 @@
 
 ## Enums
 
+Given the following enum:
+
+> `MyEnum`
+> > VariantA
+>
+> > VariantB(value: integer)
+>
+> The variants can created like so
+>
+> ```lua
+> local variant_a = MyEnum.VariantA
+> local variant_b = MyEnum.VariantB(7)
+> ```
+
 > ### `FontName`
 >
 > Font name to search for.
 >
 > > `Cursive`
->
+> >
 > > Search for the best matching cursive font.
->
+> >
 > > `Fantasy`
 >
 > > Search for the best matching fantasy font.
->
+> >
 > > `Monospace`
->
+> >
 > > Search for the best matching monospace font.
 >
 > > `SansSerif`
->
+> >
 > > Search for the best matching sans serif font.
 >
 > > `Serif`
->
+> >
 > > Search for the best matching serif font.
 >
-> > `title: string`
->
+> > `Title(title: string)`
+> >
 > > Search for a font with a specific `title`.
 
 ---
@@ -149,11 +163,11 @@
 > >
 > > Load default font.
 > >
-> > `Filesystem: FilesystemSelector`
+> > `Filesystem(selector: FilesystemSelector)`
 > >
 > > Load a font using a file system path.
 > >
-> > `System: SystemSelector`
+> > `System(selector: SystemSelector)`
 > >
 > > Load for a system-installed font.
 
@@ -172,7 +186,7 @@
 > > Calculate font size to fit any text that doesn't have any "descendants". Useful for text that
 > > consists only of uppercase characters or numbers.
 >
-> > `n: integer`
+> > `Value(n: integer)`
 > >
 > > Set font size to be exactly `n`, regardless of widget size.
 

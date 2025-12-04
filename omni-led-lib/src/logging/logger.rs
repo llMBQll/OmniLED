@@ -1,6 +1,6 @@
 use log::{debug, error, info, trace, warn};
 use mlua::{FromLua, Lua, UserData, UserDataMethods};
-use omni_led_derive::{FromLuaValue, UniqueUserData};
+use omni_led_derive::{LuaEnum, UniqueUserData};
 
 use crate::common::user_data::UniqueUserData;
 
@@ -78,7 +78,7 @@ impl UserData for Log {
     }
 }
 
-#[derive(Debug, Copy, Clone, FromLuaValue)]
+#[derive(Debug, Copy, Clone, LuaEnum)]
 pub enum LevelFilter {
     Off,
     Error,
@@ -87,6 +87,8 @@ pub enum LevelFilter {
     Debug,
     Trace,
 }
+
+impl UserData for LevelFilter {}
 
 impl Into<log::LevelFilter> for LevelFilter {
     fn into(self) -> log::LevelFilter {
