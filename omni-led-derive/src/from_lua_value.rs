@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{Attribute, Data, DeriveInput};
+use syn::{Attribute, Data, DeriveInput, Type};
 
 use crate::common::{get_attribute, get_attribute_with_default_value, is_option, parse_attributes};
 
@@ -47,106 +47,101 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
 }
 
 fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<TokenStream>) {
-    match *data {
-        Data::Struct(ref data) => match data.fields {
-            syn::Fields::Named(ref fields) => {
-                let mut deprecated_field_handlers = Vec::new();
+    let fields = get_fields(data);
+    match fields {
+        Fields::Struct(struct_fields) => {
+            let mut deprecated_field_handlers = Vec::new();
 
-                let names = fields.named.iter().map(|f| {
-                    let field = &f.ident;
-
-                    let attrs = get_field_attributes(&f.attrs);
-
-                    attrs.deprecated.map(|target| {
-                        deprecated_field_handlers.push(quote! {
-                            match (value.#field.is_some(), value.#target.is_some()) {
-                                (true, true) => {
-                                    Err(mlua::Error::runtime(format!(
-                                        "Both '{}' and '{}' are set, use '{}'",
-                                        stringify!(#field),
-                                        stringify!(#target),
-                                        stringify!(#target)
-                                    )))
-                                }
-                                (true, false) => {
-                                    warn!(
-                                        "'{}' field is deprecated, use '{}'",
-                                        stringify!(#field),
-                                        stringify!(#target)
-                                    );
-                                    std::mem::swap(&mut value.#field, &mut value.#target);
-                                    Ok(())
-                                }
-                                (false, true) => {
-                                    Ok(())
-                                }
-                                (false, false) => {
-                                    Err(mlua::Error::runtime(
-                                        "Key not found".to_string()
-                                    ))
-                                }
-                            }.with_context(|_| {
-                                format!(
-                                    "Error occurred when parsing {}.{}",
-                                    stringify!(#name),
+            let names = struct_fields.into_iter().map(|f| {
+                let attrs = f.attributes;
+                let ident = f.ident;
+                let ty = f.ty;
+                attrs.deprecated.map(|target| {
+                    deprecated_field_handlers.push(quote! {
+                        match (value.#ident.is_some(), value.#target.is_some()) {
+                            (true, true) => {
+                                Err(mlua::Error::runtime(format!(
+                                    "Both '{}' and '{}' are set, use '{}'",
+                                    stringify!(#ident),
+                                    stringify!(#target),
                                     stringify!(#target)
-                                )
-                            })?;
-                        });
+                                )))
+                            }
+                            (true, false) => {
+                                warn!(
+                                    "'{}' field is deprecated, use '{}'",
+                                    stringify!(#ident),
+                                    stringify!(#target)
+                                );
+                                std::mem::swap(&mut value.#ident, &mut value.#target);
+                                Ok(())
+                            }
+                            (false, true) => {
+                                Ok(())
+                            }
+                            (false, false) => {
+                                Err(mlua::Error::runtime(
+                                    "Key not found".to_string()
+                                ))
+                            }
+                        }.with_context(|_| {
+                            format!(
+                                "Error occurred when parsing {}.{}",
+                                stringify!(#name),
+                                stringify!(#target)
+                            )
+                        })?;
                     });
-
-                    let transform = match attrs.transform {
-                        Some(transform) => quote! { #transform(x, lua) },
-                        None => quote! { Ok(x) },
-                    };
-
-                    let default = match (attrs.default, is_option(&f.ty)) {
-                        (Some(default), _) => quote! { Ok(#default) },
-                        (None, true) => quote! { Ok(None) },
-                        (None, false) => quote! { Err(mlua::Error::runtime("Key not found".to_string())) },
-                    };
-
-                    let initializer = quote! {
-                        table.get::<Option<_>>(stringify!(#field))
-                            .and_then(|optional| match optional {
-                                Some(x) => #transform,
-                                None => #default,
-                            })
-                            .with_context(|_| {
-                                format!("Error occurred when parsing {}.{}", stringify!(#name), stringify!(#field))
-                            })?
-                    };
-
-                    quote! {
-                        #field: #initializer,
-                    }
                 });
 
+                let transform = match attrs.transform {
+                    Some(transform) => quote! { #transform(x, lua) },
+                    None => quote! { Ok(x) },
+                };
+
+                let default = match (attrs.default, is_option(&ty)) {
+                    (Some(default), _) => quote! { Ok(#default) },
+                    (None, true) => quote! { Ok(None) },
+                    (None, false) => quote! { Err(mlua::Error::runtime("Key not found".to_string())) },
+                };
+
                 let initializer = quote! {
-                    mlua::Value::Table(table) => Ok(#name {
-                        #(#names)*
-                    })
+                    table.get::<Option<_>>(stringify!(#ident))
+                        .and_then(|optional| match optional {
+                            Some(x) => #transform,
+                            None => #default,
+                        })
+                        .with_context(|_| {
+                            format!("Error occurred when parsing {}.{}", stringify!(#name), stringify!(#ident))
+                        })?
                 };
 
-                let handle_deprecated = if deprecated_field_handlers.is_empty() {
-                    None
-                } else {
-                    let handlers = quote! { #(#deprecated_field_handlers)* };
-                    Some(quote! {
-                        let result = result.and_then(|mut value| {
-                            #handlers
-                            Ok(value)
-                        });
-                    })
-                };
+                quote! {
+                    #ident: #initializer,
+                }
+            });
 
-                (initializer, handle_deprecated)
-            }
-            syn::Fields::Unnamed(_) | syn::Fields::Unit => unimplemented!(),
-        },
+            let initializer = quote! {
+                mlua::Value::Table(table) => Ok(#name {
+                    #(#names)*
+                })
+            };
 
-        Data::Enum(_) => unimplemented!(),
-        Data::Union(_) => unimplemented!(),
+            let handle_deprecated = if deprecated_field_handlers.is_empty() {
+                None
+            } else {
+                let handlers = quote! { #(#deprecated_field_handlers)* };
+                Some(quote! {
+                    let result = result.and_then(|mut value| {
+                        #handlers
+                        Ok(value)
+                    });
+                })
+            };
+
+            (initializer, handle_deprecated)
+        }
+        Fields::Enum(_enum_field) => unimplemented!(),
     }
 }
 
@@ -181,3 +176,39 @@ fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
         transform: get_attribute(&mut attributes, "transform"),
     }
 }
+
+fn get_fields(data: &Data) -> Fields {
+    match *data {
+        Data::Struct(ref data) => match data.fields {
+            syn::Fields::Named(ref fields) => {
+                let fields = fields
+                    .named
+                    .iter()
+                    .map(|f| StructField {
+                        attributes: get_field_attributes(&f.attrs),
+                        ident: f.ident.as_ref().unwrap().clone(),
+                        ty: f.ty.clone(),
+                    })
+                    .collect();
+                Fields::Struct(fields)
+            }
+            syn::Fields::Unnamed(_) | syn::Fields::Unit => unimplemented!(),
+        },
+        Data::Enum(_) => unimplemented!(),
+        Data::Union(_) => unimplemented!(),
+    }
+}
+
+enum Fields {
+    Struct(Vec<StructField>),
+    #[allow(dead_code)] // temp
+    Enum(EnumField),
+}
+
+struct StructField {
+    attributes: FieldAttributes,
+    ident: Ident,
+    ty: Type,
+}
+
+struct EnumField {}
