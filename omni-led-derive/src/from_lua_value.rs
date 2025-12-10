@@ -6,7 +6,7 @@ use crate::common::{get_attribute, get_attribute_with_default_value, is_option, 
 
 pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
-    let struct_attrs = get_struct_attributes(&input.attrs);
+    let struct_attrs = StructAttributes::parse(&input.attrs);
     let (initializer, handle_deprecated) = generate_initializer(&name, &input.data);
 
     let validate = match struct_attrs.validate {
@@ -145,37 +145,68 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
     }
 }
 
-struct StructAttributes {
-    validate: Option<TokenStream>,
+macro_rules! struct_define {
+    ($name:ident {$($body:tt)*} ($variant:ident) $($tail:tt)*) => {
+        struct_define!{
+            $name
+            {
+                $($body)*
+                $variant: Option<TokenStream>,
+            }
+            $($tail)*
+        }
+    };
+    ($name:ident {$($body:tt)*} (($variant:ident = $extra:expr)) $($tail:tt)*) => {
+        struct_define!{
+            $name
+            {
+                $($body)*
+                $variant: Option<TokenStream>,
+            }
+            $($tail)*
+        }
+    };
+    ($name:ident {$($body:tt)*}) => {
+        #[derive(Default)]
+        struct $name { $($body)* }
+    };
 }
 
-fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
-    let mut attributes = parse_attributes("mlua", attributes);
+macro_rules! struct_init {
+    ($this:ident, $attrs:ident, $variant:ident) => {
+        $this.$variant = get_attribute(&mut $attrs, stringify!($variant));
+    };
+    ($this:ident, $attrs:ident, ($variant:ident = $extra:expr)) => {
+        $this.$variant = get_attribute_with_default_value(&mut $attrs, stringify!($variant), $extra);
+    };
+    ($this:ident, $attrs:ident, $($variants:tt),*) => {
+        $(struct_init!($this, $attrs, $variants));*
+    };
+}
 
-    StructAttributes {
-        validate: get_attribute(&mut attributes, "validate"),
+macro_rules! define_attrs_struct {
+    ($name:ident, $($variants:tt),*) => {
+        struct_define!{$name {} $(($variants))*}
+
+        impl $name {
+            pub fn parse(attrs: &Vec<Attribute>) -> Self {
+                let mut attrs = parse_attributes("mlua", attrs);
+                let mut this: Self = Default::default();
+                struct_init!{this, attrs, $($variants),*}
+                this
+            }
+        }
     }
 }
 
-struct FieldAttributes {
-    default: Option<TokenStream>,
-    deprecated: Option<TokenStream>,
-    transform: Option<TokenStream>,
-}
+define_attrs_struct!(
+    FieldAttributes,
+    (default = quote! {Default::default()}),
+    deprecated,
+    transform
+);
 
-fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
-    let mut attributes = parse_attributes("mlua", attributes);
-
-    FieldAttributes {
-        default: get_attribute_with_default_value(
-            &mut attributes,
-            "default",
-            quote!(Default::default()),
-        ),
-        deprecated: get_attribute(&mut attributes, "deprecated"),
-        transform: get_attribute(&mut attributes, "transform"),
-    }
-}
+define_attrs_struct!(StructAttributes, validate);
 
 fn get_fields(data: &Data) -> Fields {
     match *data {
@@ -185,7 +216,7 @@ fn get_fields(data: &Data) -> Fields {
                     .named
                     .iter()
                     .map(|f| StructField {
-                        attributes: get_field_attributes(&f.attrs),
+                        attributes: FieldAttributes::parse(&f.attrs),
                         ident: f.ident.as_ref().unwrap().clone(),
                         ty: f.ty.clone(),
                     })
