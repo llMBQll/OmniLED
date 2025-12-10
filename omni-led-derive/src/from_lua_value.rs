@@ -7,7 +7,7 @@ use crate::common::{get_attribute, get_attribute_with_default_value, is_option, 
 pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
     let struct_attrs = StructAttributes::parse(&input.attrs);
-    let (initializer, handle_deprecated) = generate_initializer(&name, &input.data);
+    let initializer = generate_initializer(&name, &input.data);
 
     let validate = match struct_attrs.validate {
         Some(validate) => quote! {
@@ -37,7 +37,6 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
                         message: None,
                     }),
                 };
-                #handle_deprecated
                 #validate
             }
         }
@@ -46,53 +45,27 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     proc_macro::TokenStream::from(expanded)
 }
 
-fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<TokenStream>) {
+fn generate_initializer(name: &Ident, data: &Data) -> TokenStream {
     let fields = get_fields(data);
     match fields {
         Fields::Struct(struct_fields) => {
-            let mut deprecated_field_handlers = Vec::new();
-
             let names = struct_fields.into_iter().map(|f| {
                 let attrs = f.attributes;
                 let ident = f.ident;
                 let ty = f.ty;
-                attrs.deprecated.map(|target| {
-                    deprecated_field_handlers.push(quote! {
-                        match (value.#ident.is_some(), value.#target.is_some()) {
-                            (true, true) => {
-                                Err(mlua::Error::runtime(format!(
-                                    "Both '{}' and '{}' are set, use '{}'",
-                                    stringify!(#ident),
-                                    stringify!(#target),
-                                    stringify!(#target)
-                                )))
+
+                let deprecated = match attrs.deprecated {
+                    Some(deprecated) => quote! {
+                        match table.get::<Option<_>>(stringify!(#deprecated)) {
+                            Ok(None) => Ok(None),
+                            parsed => {
+                                warn!("'{}' is deprecated, use '{}'", stringify!(#deprecated), stringify!(#ident));
+                                parsed
                             }
-                            (true, false) => {
-                                warn!(
-                                    "'{}' field is deprecated, use '{}'",
-                                    stringify!(#ident),
-                                    stringify!(#target)
-                                );
-                                std::mem::swap(&mut value.#ident, &mut value.#target);
-                                Ok(())
-                            }
-                            (false, true) => {
-                                Ok(())
-                            }
-                            (false, false) => {
-                                Err(mlua::Error::runtime(
-                                    "Key not found".to_string()
-                                ))
-                            }
-                        }.with_context(|_| {
-                            format!(
-                                "Error occurred when parsing {}.{}",
-                                stringify!(#name),
-                                stringify!(#target)
-                            )
-                        })?;
-                    });
-                });
+                        }
+                    },
+                    None => quote! { Ok(None) }
+                };
 
                 let transform = match attrs.transform {
                     Some(transform) => quote! { #transform(x, lua) },
@@ -107,7 +80,11 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
 
                 let initializer = quote! {
                     table.get::<Option<_>>(stringify!(#ident))
-                        .and_then(|optional| match optional {
+                        .and_then(|x| match x {
+                            Some(x) => Ok(Some(x)),
+                            None => #deprecated,
+                        })
+                        .and_then(|x| match x {
                             Some(x) => #transform,
                             None => #default,
                         })
@@ -127,19 +104,7 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
                 })
             };
 
-            let handle_deprecated = if deprecated_field_handlers.is_empty() {
-                None
-            } else {
-                let handlers = quote! { #(#deprecated_field_handlers)* };
-                Some(quote! {
-                    let result = result.and_then(|mut value| {
-                        #handlers
-                        Ok(value)
-                    });
-                })
-            };
-
-            (initializer, handle_deprecated)
+            initializer
         }
         Fields::Enum(_enum_field) => unimplemented!(),
     }

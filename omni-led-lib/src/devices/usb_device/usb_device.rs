@@ -78,7 +78,7 @@ impl Device for USBDevice {
             settings: settings.usb_settings.clone(),
             transform: settings.transform,
             handle,
-            layout: settings.memory_layout.unwrap(),
+            layout: settings.memory_layout,
         })
     }
 
@@ -136,9 +136,8 @@ pub struct USBDeviceSettings {
     pub screen_size: Size,
     pub usb_settings: USBSettings,
     pub transform: Option<Function>,
-    #[mlua(deprecated = memory_layout)]
-    pub memory_representation: Option<MemoryLayout>,
-    pub memory_layout: Option<MemoryLayout>,
+    #[mlua(deprecated = memory_representation)]
+    pub memory_layout: MemoryLayout,
 }
 
 impl Settings for USBDeviceSettings {
