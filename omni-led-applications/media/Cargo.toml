@@ -6,14 +6,14 @@ license = "GPL-3.0-only"
 edition = "2024"
 
 [dependencies]
-clap = { version = "4.4", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
 log = { version = "0.4", features = ["std"] }
 omni-led-api = { path = "../../omni-led-api" }
 omni-led-derive = { path = "../../omni-led-derive", features = ["into-proto"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [target.'cfg(target_os = "windows")'.dependencies.windows]
-version = "0.61"
+version = "0.62"
 features = ["Foundation", "Foundation_Collections", "Media_Control"]
 
 [target.'cfg(target_os = "linux")'.dependencies.mpris]
