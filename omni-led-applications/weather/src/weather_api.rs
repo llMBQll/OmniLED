@@ -16,7 +16,7 @@ pub fn get_weather(
 ) -> WeatherData {
     const OPEN_METEO_BASE: &str = "https://api.open-meteo.com/v1/forecast";
 
-    let res = agent
+    let mut res = agent
         .get(OPEN_METEO_BASE)
         .query("current_weather", "true")
         .query("latitude", &coordinates.latitude.to_string())
@@ -31,7 +31,7 @@ pub fn get_weather(
         )
         .call()
         .unwrap();
-    let result: WeatherResult = res.into_json().unwrap();
+    let result: WeatherResult = res.body_mut().read_json().unwrap();
 
     let time = format!("{}:00-00:00", result.current_weather.time);
     let time: chrono::DateTime<chrono::Local> = chrono::DateTime::parse_from_rfc3339(time.as_str())
