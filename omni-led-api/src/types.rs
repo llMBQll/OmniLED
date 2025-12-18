@@ -126,9 +126,11 @@ impl<T: Into<Field>> Into<Field> for Vec<T> {
 // Image values
 into_field!(ImageData, field::Field::FImageData);
 
-impl From<image::ImageFormat> for ImageFormat {
-    fn from(value: image::ImageFormat) -> Self {
-        match value {
+impl TryFrom<image::ImageFormat> for ImageFormat {
+    type Error = &'static str;
+
+    fn try_from(value: image::ImageFormat) -> Result<Self, Self::Error> {
+        let res = match value {
             image::ImageFormat::Png => ImageFormat::Png,
             image::ImageFormat::Jpeg => ImageFormat::Jpeg,
             image::ImageFormat::Gif => ImageFormat::Gif,
@@ -144,15 +146,19 @@ impl From<image::ImageFormat> for ImageFormat {
             image::ImageFormat::Farbfeld => ImageFormat::Farbfeld,
             image::ImageFormat::Avif => ImageFormat::Avif,
             image::ImageFormat::Qoi => ImageFormat::Qoi,
-            image::ImageFormat::Pcx => ImageFormat::Pcx,
-            _ => ImageFormat::Unknown,
-        }
+            #[allow(deprecated)]
+            image::ImageFormat::Pcx => return Err("Pcx image format is deprecated"),
+            _ => return Err("Unknown image format"),
+        };
+        Ok(res)
     }
 }
 
-impl Into<image::ImageFormat> for ImageFormat {
-    fn into(self) -> image::ImageFormat {
-        match self {
+impl TryInto<image::ImageFormat> for ImageFormat {
+    type Error = &'static str;
+
+    fn try_into(self) -> Result<image::ImageFormat, Self::Error> {
+        let res = match self {
             ImageFormat::Unknown => todo!(),
             ImageFormat::Png => image::ImageFormat::Png,
             ImageFormat::Jpeg => image::ImageFormat::Jpeg,
@@ -169,7 +175,8 @@ impl Into<image::ImageFormat> for ImageFormat {
             ImageFormat::Farbfeld => image::ImageFormat::Farbfeld,
             ImageFormat::Avif => image::ImageFormat::Avif,
             ImageFormat::Qoi => image::ImageFormat::Qoi,
-            ImageFormat::Pcx => image::ImageFormat::Pcx,
-        }
+            ImageFormat::Pcx => return Err("Pcx image format is deprecated"),
+        };
+        Ok(res)
     }
 }

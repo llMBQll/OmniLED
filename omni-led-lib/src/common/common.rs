@@ -125,7 +125,7 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
         Some(FieldEntry::FImageData(image)) => {
             let hash = hash(&image.data);
             let image_data = ImageData {
-                format: image.format().into(),
+                format: image.format().try_into().map_err(mlua::Error::external)?,
                 bytes: image.data,
                 hash: Some(hash),
             };

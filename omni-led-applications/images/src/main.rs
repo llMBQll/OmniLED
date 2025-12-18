@@ -25,8 +25,6 @@ fn load_images(image_options: Vec<ImageOptions>) -> Table {
         let (format, bytes) = match load_image(&option.path, &option.format) {
             Ok((format, bytes)) => {
                 debug!("Loaded image {:?}", option);
-
-                let format: ImageFormat = format.into();
                 (format, bytes)
             }
             Err(err) => {
@@ -51,7 +49,7 @@ fn load_images(image_options: Vec<ImageOptions>) -> Table {
 fn load_image(
     path: &str,
     format: &Option<String>,
-) -> Result<(image::ImageFormat, Vec<u8>), Box<dyn std::error::Error>> {
+) -> Result<(ImageFormat, Vec<u8>), Box<dyn std::error::Error>> {
     let bytes = std::fs::read(path)?;
 
     let format = match &format {
@@ -67,7 +65,7 @@ fn load_image(
     // Test if image actually loads with provided or guessed format
     let _ = image::load_from_memory_with_format(&bytes, format)?;
 
-    Ok((format, bytes))
+    Ok((format.try_into()?, bytes))
 }
 
 #[derive(Parser, Debug)]

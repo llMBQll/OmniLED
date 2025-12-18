@@ -56,7 +56,7 @@ enum ImageFormat {
   IMAGE_FORMAT_FARBFELD = 13;
   IMAGE_FORMAT_AVIF = 14;
   IMAGE_FORMAT_QOI = 15;
-  IMAGE_FORMAT_PCX = 16;
+  IMAGE_FORMAT_PCX = 16 [deprecated = true];
 }
 
 message LogData {
