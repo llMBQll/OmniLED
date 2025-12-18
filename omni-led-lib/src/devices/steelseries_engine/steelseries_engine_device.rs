@@ -32,18 +32,18 @@ impl Device for SteelseriesEngineDevice {
     fn update(&mut self, _: &Lua, buffer: Buffer) -> mlua::Result<()> {
         match api::update(&self.size, buffer.bytes()) {
             Ok(_) => Ok(()),
-            Err(Error::Disconnected(message)) => {
-                error!(
-                    "SteelSeries Engine is temporarily not available. {}",
-                    message
-                );
+            Err(Error::Disconnected) => {
+                error!("SteelSeries Engine is temporarily not available.");
                 Ok(())
             }
             Err(Error::NotAvailable(message)) => Err(mlua::Error::runtime(format!(
                 "SteelSeries Engine is not available. {}",
                 message
             ))),
-            Err(Error::BadRequest(status, response)) => Err(mlua::Error::runtime(format!(
+            Err(Error::BadRequest(error)) => {
+                Err(mlua::Error::runtime(format!("Update failed. {:?}", error)))
+            }
+            Err(Error::BadData(status, response)) => Err(mlua::Error::runtime(format!(
                 "Update failed. Response: [{}] {:?}",
                 status, response
             ))),

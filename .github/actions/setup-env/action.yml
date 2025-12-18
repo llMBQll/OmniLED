@@ -6,7 +6,9 @@ runs:
   steps:
     - name: Install Linux dependencies
       if: ${{ runner.os == 'Linux' }}
-      run: sudo apt install gcc g++ libdbus-1-dev libfontconfig-dev libpulse-dev libx11-dev pkg-config protobuf-compiler
+      run: |
+        sudo apt update
+        sudo apt install gcc g++ libdbus-1-dev libfontconfig-dev libpulse-dev libx11-dev pkg-config protobuf-compiler
       shell: bash
 
     - name: Install Windows dependencies

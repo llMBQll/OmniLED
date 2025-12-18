@@ -31,7 +31,7 @@ impl GlobalSystemMedia {
         let handle = Handle::current();
         let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
             .unwrap()
-            .get()
+            .await
             .unwrap();
         let sessions = manager.GetSessions().unwrap();
 

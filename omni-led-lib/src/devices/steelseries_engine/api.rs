@@ -5,7 +5,8 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::sync::Mutex;
-use ureq::{Agent, Response};
+use ureq::http::StatusCode;
+use ureq::{Agent, Body};
 
 use crate::devices::device::Size;
 use crate::renderer::buffer::{BitBuffer, BufferTrait};
@@ -21,8 +22,9 @@ pub fn update(size: &Size, data: &[u8]) -> Result<()> {
 #[derive(Debug)]
 pub enum Error {
     NotAvailable(String),
-    Disconnected(String),
-    BadRequest(u16, Response),
+    Disconnected,
+    BadRequest(ureq::Error),
+    BadData(StatusCode, Body),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
@@ -46,7 +48,7 @@ struct Api {
 impl Api {
     fn new() -> Self {
         Self {
-            agent: Agent::new(),
+            agent: Agent::new_with_defaults(),
             address: None,
             counter: 0,
             sizes: HashSet::new(),
@@ -157,27 +159,24 @@ impl Api {
 
         let address = match &self.address {
             Some(address) => address,
-            None => {
-                return Err(Error::Disconnected(
-                    "Couldn't read server address".to_string(),
-                ));
-            }
+            None => return Err(Error::Disconnected),
         };
 
         let url = format!("http://{}{}", address, endpoint);
-        let result = self
-            .agent
-            .post(url.as_str())
-            .set("Content-Type", "application/json")
-            .send_string(json);
+        let result = self.agent.post(url.as_str()).send_json(json);
+
         match result {
-            Ok(_) => Ok(()),
-            Err(error) => match error {
-                ureq::Error::Status(status, response) => Err(Error::BadRequest(status, response)),
-                ureq::Error::Transport(transport) => {
-                    self.address = None;
-                    Err(Error::Disconnected(transport.to_string()))
+            Ok(response) => {
+                let status = response.status();
+                if status == StatusCode::OK {
+                    Ok(())
+                } else {
+                    Err(Error::BadData(status, response.into_body()))
                 }
+            }
+            Err(error) => match error {
+                ureq::Error::HostNotFound => Err(Error::Disconnected),
+                other => Err(Error::BadRequest(other)),
             },
         }
     }

@@ -41,7 +41,7 @@ impl MediaImpl {
             match message {
                 Message::SessionAdded(session) => {
                     let name = Self::get_name(&session);
-                    let (artist, title) = Self::get_song(&session);
+                    let (artist, title) = Self::get_song(&session).await;
                     let (progress, duration) = Self::get_progress(&session);
                     let playing = Self::is_playing(&session);
 
@@ -84,7 +84,7 @@ impl MediaImpl {
 
                     match sessions.get_mut(&name) {
                         Some(entry) => {
-                            let (artist, title) = Self::get_song(&session);
+                            let (artist, title) = Self::get_song(&session).await;
                             entry.artist = artist;
                             entry.title = title;
 
@@ -115,8 +115,8 @@ impl MediaImpl {
         session.SourceAppUserModelId().unwrap().to_string_lossy()
     }
 
-    fn get_song(session: &GlobalSystemMediaTransportControlsSession) -> (String, String) {
-        let properties = session.TryGetMediaPropertiesAsync().unwrap().get().unwrap();
+    async fn get_song(session: &GlobalSystemMediaTransportControlsSession) -> (String, String) {
+        let properties = session.TryGetMediaPropertiesAsync().unwrap().await.unwrap();
         let artist = properties.Artist().unwrap().to_string_lossy();
         let title = properties.Title().unwrap().to_string_lossy();
 

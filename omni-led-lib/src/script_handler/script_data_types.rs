@@ -52,6 +52,7 @@ impl ImageData {
             ImageFormat::Ico => Ok(image::ImageFormat::Ico),
             ImageFormat::Jpeg => Ok(image::ImageFormat::Jpeg),
             ImageFormat::OpenExr => Ok(image::ImageFormat::OpenExr),
+            #[allow(deprecated)]
             ImageFormat::Pcx => Ok(image::ImageFormat::Pcx),
             ImageFormat::Png => Ok(image::ImageFormat::Png),
             ImageFormat::Pnm => Ok(image::ImageFormat::Pnm),

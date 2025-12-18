@@ -26,7 +26,7 @@ async fn main() {
 
     debug!("Mapped to {} at {:?}", name, coordinates);
 
-    let agent = Agent::new();
+    let agent = Agent::new_with_defaults();
 
     loop {
         let weather = weather_api::get_weather(&agent, &coordinates, name, &options);
@@ -49,13 +49,13 @@ async fn load_and_send_images(plugin: &mut Plugin) {
 fn get_coordinates_from_name(name: &Name) -> Coordinates {
     const GEOCODING_URL_BASE: &str = "https://geocoding-api.open-meteo.com/v1/search";
 
-    let agent = Agent::new();
-    let res = agent
+    let agent = Agent::new_with_defaults();
+    let mut res = agent
         .get(GEOCODING_URL_BASE)
         .query("name", &name.city)
         .call()
         .unwrap();
-    let results: Results = res.into_json().unwrap();
+    let results: Results = res.body_mut().read_json().unwrap();
 
     let mut results = results.results.into_iter().filter_map(|data| {
         let admin_matches = name.administrative.is_none()
