@@ -17,6 +17,7 @@ pub enum Event {
 pub struct EventQueue {
     queue: Vec<Event>,
     counter: u64,
+    push_front_count: usize,
 }
 
 impl EventQueue {
@@ -24,7 +25,8 @@ impl EventQueue {
         lazy_static! {
             static ref UPDATE_HANDLER: Arc<Mutex<EventQueue>> = Arc::new(Mutex::new(EventQueue {
                 queue: Vec::new(),
-                counter: 0
+                counter: 0,
+                push_front_count: 0,
             }));
         }
 
@@ -36,10 +38,13 @@ impl EventQueue {
     }
 
     pub fn push_front(&mut self, event: Event) {
-        self.queue.insert(0, event);
+        self.queue.insert(self.push_front_count, event);
+        self.push_front_count += 1;
     }
 
     pub fn get_events(&mut self) -> Vec<Event> {
+        self.push_front_count = 0;
+
         let mut events: Vec<Event> = self.get_default_event_queue();
         std::mem::swap(&mut events, &mut self.queue);
         events
