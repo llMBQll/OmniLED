@@ -46,7 +46,6 @@ async fn main() {
 
     Settings::load(&lua, settings_config);
     PluginServer::load(&lua).await;
-    let mut dispatcher = Dispatcher::load(&lua);
     Events::load(&lua);
     Shortcuts::load(&lua);
     Devices::load(&lua, devices_config);
@@ -60,6 +59,7 @@ async fn main() {
     let init_end = Instant::now();
     debug!("Initialized in {:?}", init_end - init_begin);
 
+    let mut dispatcher = Dispatcher::new();
     let settings = UserDataRef::<Settings>::load(&lua);
     let interval = settings.get().update_interval;
     let event_loop = EventLoop::new();

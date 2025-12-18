@@ -11,7 +11,7 @@ pub struct Dispatcher {
 }
 
 impl Dispatcher {
-    pub fn load(_: &Lua) -> Self {
+    pub fn new() -> Self {
         Self {
             entries: Vec::new(),
         }
