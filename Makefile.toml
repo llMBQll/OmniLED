@@ -9,7 +9,7 @@ args = ["clean"]
 [tasks.build-setup-dependencies]
 description = "Build binaries that will be included in the setup binary"
 command = "cargo"
-args = ["build", "--release", "--package=omni-led", "--package=audio", "--package=clock",
+args = ["build", "--release", "--package=omni-led", "--package=audio", "--package=clock", "--package=hwinfo",
     "--package=images", "--package=media", "--package=weather"]
 
 [tasks.build-setup]
@@ -28,13 +28,13 @@ dependencies = ["build-setup"]
 [tasks.build]
 description = "Build development binaries in debug mode"
 command = "cargo"
-args = ["build", "--features=dev", "--package=omni-led", "--package=audio", "--package=clock",
+args = ["build", "--features=dev", "--package=omni-led", "--package=audio", "--package=clock", "--package=hwinfo",
     "--package=images", "--package=media", "--package=weather"]
 
 [tasks.build-release]
 description = "Build development binaries in release mode"
 command = "cargo"
-args = ["build", "--release", "--features=dev", "--package=omni-led", "--package=audio",
+args = ["build", "--release", "--features=dev", "--package=omni-led", "--package=audio", "--package=hwinfo",
     "--package=clock", "--package=images", "--package=media", "--package=weather"]
 
 [tasks.run]

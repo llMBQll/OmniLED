@@ -154,6 +154,21 @@ local function weather()
     }
 end
 
+local function cpu()
+    return {
+        widgets = {
+            Widget.Text {
+                text = string.format("%f", HWINFO.TotalCpuUsage),
+                font_size = FontSize.Value(50),
+                text_offset = 1,
+                position = { x = 0, y = 0 },
+                size = { width = SCREEN.Width, height = SCREEN.Height },
+            },
+        },
+        duration = 1000,
+    }
+end
+
 SCREEN_BUILDER
     :new('Emulator')
     :with_layout_group({
@@ -174,6 +189,12 @@ SCREEN_BUILDER
         {
             layout = weather,
             run_on = { 'CLOCK.Seconds' },
+        }
+    })
+    :with_layout_group({
+        {
+            layout = cpu,
+            run_on = { 'HWINFO.TotalCpuUsage' },
         }
     })
     :with_layout_group_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
