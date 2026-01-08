@@ -66,14 +66,16 @@ struct AudioEvent {
 #[derive(IntoProto)]
 #[proto(rename_all = PascalCase)]
 struct DeviceData {
+    connected: bool,
     is_muted: bool,
     volume: i32,
     name: Option<String>,
 }
 
 impl DeviceData {
-    pub fn new(is_muted: bool, volume: i32, name: Option<String>) -> Self {
+    pub fn new(connected: bool, is_muted: bool, volume: i32, name: Option<String>) -> Self {
         Self {
+            connected,
             is_muted,
             volume,
             name,

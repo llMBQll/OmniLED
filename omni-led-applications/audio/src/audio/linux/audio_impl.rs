@@ -178,7 +178,7 @@ impl AudioImpl {
         device.volume = volume;
 
         handle.spawn(async move {
-            tx.send((DeviceData::new(muted, volume, None), device_type))
+            tx.send((DeviceData::new(true, muted, volume, None), device_type))
                 .await
                 .unwrap();
         });
@@ -223,9 +223,12 @@ impl AudioImpl {
                         device.muted = muted;
                         device.volume = volume;
                         handle.spawn(async move {
-                            tx.send((DeviceData::new(muted, volume, Some(name)), $device_type))
-                                .await
-                                .unwrap();
+                            tx.send((
+                                DeviceData::new(true, muted, volume, Some(name)),
+                                $device_type,
+                            ))
+                            .await
+                            .unwrap();
                         });
                     }
                     _ => {}

@@ -1,6 +1,6 @@
 local function volume()
     local function display_device(widgets, offset, device, device_type)
-        if device then
+        if device and device.Connected then
             table.insert(widgets, Widget.Text {
                 text = device.Name,
                 scrolling = true,
