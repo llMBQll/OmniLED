@@ -3,7 +3,7 @@ use tokio::sync::mpsc::Sender;
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Media::Audio::Endpoints::{IAudioEndpointVolume, IAudioEndpointVolumeCallback};
 use windows::Win32::Media::Audio::{
-    EDataFlow, IMMDevice, IMMDeviceEnumerator, MMDeviceEnumerator, eCapture, eConsole, eRender,
+    EDataFlow, IMMDeviceEnumerator, MMDeviceEnumerator, eCapture, eConsole, eRender,
 };
 use windows::Win32::System::Com::StructuredStorage::PropVariantToStringAlloc;
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance, STGM_READ};
@@ -21,44 +21,59 @@ impl EndpointVolume {
         tx: Sender<(DeviceData, DeviceType)>,
         handle: Handle,
         device_type: DeviceType,
-    ) -> Self {
+    ) -> Option<Self> {
         let endpoint_volume_callback =
             AudioEndpointVolumeCallback::new(tx.clone(), handle.clone(), device_type);
         let endpoint_volume = unsafe {
             let enumerator: IMMDeviceEnumerator =
                 CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_INPROC_SERVER).unwrap();
-            let device: IMMDevice = enumerator
+
+            match enumerator
                 .GetDefaultAudioEndpoint(Self::device_type_to_data_flow(device_type), eConsole)
-                .unwrap();
-            let endpoint_volume: IAudioEndpointVolume =
-                device.Activate(CLSCTX_INPROC_SERVER, None).unwrap();
-            endpoint_volume
-                .RegisterControlChangeNotify(&endpoint_volume_callback)
-                .unwrap();
+            {
+                Ok(device) => {
+                    let endpoint_volume: IAudioEndpointVolume =
+                        device.Activate(CLSCTX_INPROC_SERVER, None).unwrap();
+                    endpoint_volume
+                        .RegisterControlChangeNotify(&endpoint_volume_callback)
+                        .unwrap();
 
-            let mute = endpoint_volume.GetMute().unwrap().into();
+                    let mute = endpoint_volume.GetMute().unwrap().into();
 
-            let volume = endpoint_volume.GetMasterVolumeLevelScalar().unwrap();
-            let volume = (volume * 100.0).round() as i32;
+                    let volume = endpoint_volume.GetMasterVolumeLevelScalar().unwrap();
+                    let volume = (volume * 100.0).round() as i32;
 
-            let props = device.OpenPropertyStore(STGM_READ).unwrap();
-            let prop = props.GetValue(&PKEY_Device_FriendlyName).unwrap();
-            let name = PropVariantToStringAlloc(&prop).unwrap();
-            let name = name.to_string().unwrap();
+                    let props = device.OpenPropertyStore(STGM_READ).unwrap();
+                    let prop = props.GetValue(&PKEY_Device_FriendlyName).unwrap();
+                    let name = PropVariantToStringAlloc(&prop).unwrap();
+                    let name = name.to_string().unwrap();
 
-            handle.spawn(async move {
-                tx.send((DeviceData::new(mute, volume, Some(name)), device_type))
-                    .await
-                    .unwrap()
-            });
+                    handle.spawn(async move {
+                        tx.send((DeviceData::new(true, mute, volume, Some(name)), device_type))
+                            .await
+                            .unwrap()
+                    });
 
-            endpoint_volume
+                    endpoint_volume
+                }
+                Err(_err) => {
+                    handle.spawn(async move {
+                        tx.send((
+                            DeviceData::new(false, true, 0, Some("".to_string())),
+                            device_type,
+                        ))
+                        .await
+                        .unwrap()
+                    });
+                    return None;
+                }
+            }
         };
 
-        Self {
+        Some(Self {
             endpoint_volume,
             endpoint_volume_callback,
-        }
+        })
     }
 
     fn device_type_to_data_flow(device_type: DeviceType) -> EDataFlow {

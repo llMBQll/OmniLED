@@ -17,13 +17,18 @@ Audio application sends `AUDIO` events in two forms:
 1. Full update for both devices on startup and on main input/output device change  
    `AUDIO`: table
     - `Input`: table
+        - `Connected`: bool
         - `IsMuted`: bool
         - `Volume`: integer
         - `Name`: string
     - `Output`: table
+        - `Connected`: bool
         - `IsMuted`: bool
         - `Volume`: integer
         - `Name`: string
+
+   > `Connected` field tells if the device is actually connected or not. If `Connected` is `false` then rest of the data
+   > for the relevant device type is filled with dummy values.
 
 2. Partial update on main input/output device's volume change  
    `AUDIO`: table

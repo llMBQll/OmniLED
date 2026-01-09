@@ -46,7 +46,7 @@ impl IAudioEndpointVolumeCallback_Impl for AudioEndpointVolumeCallback_Impl {
         let tx = self.tx.clone();
         let device_type = self.device_type;
         self.handle.spawn(async move {
-            tx.send((DeviceData::new(muted, volume, None), device_type))
+            tx.send((DeviceData::new(true, muted, volume, None), device_type))
                 .await
                 .unwrap();
         });
