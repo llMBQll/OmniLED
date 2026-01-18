@@ -8,16 +8,16 @@ use crate::devices::device::{Device, MemoryLayout, Settings, Size};
 use crate::devices::usb_device::parse::from_hex;
 use crate::renderer::buffer::Buffer;
 
-pub struct RawUSBDevice {
+pub struct RawUsbDevice {
     name: String,
     size: Size,
-    settings: RawUSBSettings,
+    settings: RawUsbSettings,
     transform: Option<Function>,
     handle: DeviceHandle<GlobalContext>,
     layout: MemoryLayout,
 }
 
-impl RawUSBDevice {
+impl RawUsbDevice {
     fn write_bytes(&self, bytes: &[u8]) {
         self.handle
             .write_control(
@@ -32,9 +32,9 @@ impl RawUSBDevice {
     }
 }
 
-impl Device for RawUSBDevice {
+impl Device for RawUsbDevice {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
-        let settings = RawUSBDeviceSettings::from_lua(settings, lua)?;
+        let settings = RawUsbDeviceSettings::from_lua(settings, lua)?;
 
         let vendor_id = settings.usb_settings.vendor_id;
         let product_id = settings.usb_settings.product_id;
@@ -107,7 +107,7 @@ impl Device for RawUSBDevice {
     }
 }
 
-impl Drop for RawUSBDevice {
+impl Drop for RawUsbDevice {
     fn drop(&mut self) {
         let interface = self.settings.interface;
 
@@ -131,28 +131,28 @@ impl Drop for RawUSBDevice {
 }
 
 #[derive(FromLuaValue, Clone)]
-pub struct RawUSBDeviceSettings {
+pub struct RawUsbDeviceSettings {
     pub name: String,
     pub screen_size: Size,
-    pub usb_settings: RawUSBSettings,
+    pub usb_settings: RawUsbSettings,
     pub transform: Option<Function>,
     #[mlua(deprecated = memory_layout)]
     pub memory_representation: Option<MemoryLayout>,
     pub memory_layout: Option<MemoryLayout>,
 }
 
-impl Settings for RawUSBDeviceSettings {
-    type DeviceType = RawUSBDevice;
+impl Settings for RawUsbDeviceSettings {
+    type DeviceType = RawUsbDevice;
 
     fn name(&self) -> String {
         self.name.clone()
     }
 }
 
-impl UserData for RawUSBDeviceSettings {}
+impl UserData for RawUsbDeviceSettings {}
 
 #[derive(FromLuaValue, Clone)]
-pub struct RawUSBSettings {
+pub struct RawUsbSettings {
     #[mlua(transform = from_hex)]
     pub vendor_id: u16,
     #[mlua(transform = from_hex)]
@@ -171,4 +171,4 @@ pub struct RawUSBSettings {
     pub index: u16,
 }
 
-impl UserData for RawUSBSettings {}
+impl UserData for RawUsbSettings {}

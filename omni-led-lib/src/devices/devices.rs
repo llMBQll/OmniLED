@@ -10,10 +10,10 @@ use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::{Device, Settings};
 use crate::devices::emulator::emulator::EmulatorSettings;
-use crate::devices::steelseries_engine::steelseries_engine_device::SteelseriesEngineDeviceSettings;
+use crate::devices::steelseries_engine::steelseries_engine_device::SteelSeriesEngineDeviceSettings;
 use crate::devices::usb_device;
-use crate::devices::usb_device::hid_device::HiDDeviceSettings;
-use crate::devices::usb_device::raw_usb_device::RawUSBDeviceSettings;
+use crate::devices::usb_device::hid_device::HidDeviceSettings;
+use crate::devices::usb_device::raw_usb_device::RawUsbDeviceSettings;
 
 type Constructor = fn(&Lua, Value) -> Box<dyn Device>;
 
@@ -83,9 +83,9 @@ impl Devices {
 
         let loaders = [
             Self::create_loader::<EmulatorSettings>(lua),
-            Self::create_loader::<HiDDeviceSettings>(lua),
-            Self::create_loader::<SteelseriesEngineDeviceSettings>(lua),
-            Self::create_loader::<RawUSBDeviceSettings>(lua),
+            Self::create_loader::<HidDeviceSettings>(lua),
+            Self::create_loader::<RawUsbDeviceSettings>(lua),
+            Self::create_loader::<SteelSeriesEngineDeviceSettings>(lua),
         ];
 
         for (name, constructor, loader) in loaders {

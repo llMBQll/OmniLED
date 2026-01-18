@@ -5,7 +5,7 @@ use crate::devices::device::{Device, MemoryLayout, Settings, Size};
 use crate::devices::usb_device::parse::from_hex;
 use crate::renderer::buffer::Buffer;
 
-pub struct HIDDevice {
+pub struct HidDevice {
     name: String,
     size: Size,
     handle: hidapi::HidDevice,
@@ -13,15 +13,15 @@ pub struct HIDDevice {
     layout: MemoryLayout,
 }
 
-impl HIDDevice {
+impl HidDevice {
     fn write_bytes(&self, bytes: &[u8]) {
         self.handle.send_feature_report(bytes).unwrap();
     }
 }
 
-impl Device for HIDDevice {
+impl Device for HidDevice {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
-        let settings = HiDDeviceSettings::from_lua(settings, lua)?;
+        let settings = HidDeviceSettings::from_lua(settings, lua)?;
 
         let vendor_id = settings.hid_settings.vendor_id;
         let product_id = settings.hid_settings.product_id;
@@ -82,26 +82,26 @@ impl Device for HIDDevice {
 }
 
 #[derive(FromLuaValue, Clone)]
-pub struct HiDDeviceSettings {
+pub struct HidDeviceSettings {
     pub name: String,
     pub screen_size: Size,
-    pub hid_settings: HIDSettings,
+    pub hid_settings: HidSettings,
     pub transform: Option<Function>,
     pub memory_layout: Option<MemoryLayout>,
 }
 
-impl Settings for HiDDeviceSettings {
-    type DeviceType = HIDDevice;
+impl Settings for HidDeviceSettings {
+    type DeviceType = HidDevice;
 
     fn name(&self) -> String {
         self.name.clone()
     }
 }
 
-impl UserData for HiDDeviceSettings {}
+impl UserData for HidDeviceSettings {}
 
 #[derive(FromLuaValue, Clone)]
-pub struct HIDSettings {
+pub struct HidSettings {
     #[mlua(transform = from_hex)]
     pub vendor_id: u16,
     #[mlua(transform = from_hex)]
@@ -110,4 +110,4 @@ pub struct HIDSettings {
     pub interface: u8,
 }
 
-impl UserData for HIDSettings {}
+impl UserData for HidSettings {}
