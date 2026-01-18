@@ -163,7 +163,11 @@ impl Api {
         };
 
         let url = format!("http://{}{}", address, endpoint);
-        let result = self.agent.post(url.as_str()).send_json(json);
+        let result = self
+            .agent
+            .post(&url)
+            .content_type("application/json")
+            .send(json);
 
         match result {
             Ok(response) => {
