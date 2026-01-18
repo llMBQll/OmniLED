@@ -21,7 +21,7 @@ impl HIDDevice {
 
 impl Device for HIDDevice {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
-        let settings = HiDDeviceSettings::from_lua(settings, lua)?;
+        let settings = HidDeviceSettings::from_lua(settings, lua)?;
 
         let vendor_id = settings.hid_settings.vendor_id;
         let product_id = settings.hid_settings.product_id;
@@ -80,15 +80,15 @@ impl Device for HIDDevice {
 }
 
 #[derive(FromLuaValue, Clone)]
-pub struct HiDDeviceSettings {
+pub struct HidDeviceSettings {
     pub name: String,
     pub screen_size: Size,
-    pub hid_settings: HIDSettings,
+    pub hid_settings: HidSettings,
     pub transform: Option<Function>,
     pub memory_layout: Option<MemoryLayout>,
 }
 
-impl Settings for HiDDeviceSettings {
+impl Settings for HidDeviceSettings {
     type DeviceType = HIDDevice;
 
     fn name(&self) -> String {
@@ -96,10 +96,10 @@ impl Settings for HiDDeviceSettings {
     }
 }
 
-impl UserData for HiDDeviceSettings {}
+impl UserData for HidDeviceSettings {}
 
 #[derive(FromLuaValue, Clone)]
-pub struct HIDSettings {
+pub struct HidSettings {
     #[mlua(transform = from_hex)]
     pub vendor_id: u16,
     #[mlua(transform = from_hex)]
@@ -108,4 +108,4 @@ pub struct HIDSettings {
     pub interface: u8,
 }
 
-impl UserData for HIDSettings {}
+impl UserData for HidSettings {}
