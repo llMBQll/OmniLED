@@ -1,9 +1,5 @@
 use lazy_static::lazy_static;
-use serde_json::Value;
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
 use std::sync::Mutex;
 use ureq::http::StatusCode;
 use ureq::{Agent, Body};
@@ -185,9 +181,19 @@ impl Api {
         }
     }
 
+    #[cfg(target_os = "linux")]
     fn read_address() -> Result<String> {
-        #[cfg(target_os = "linux")]
-        let root_dir = String::new();
+        Err(Error::NotAvailable(
+            "SteelSeries Engine does not work on Linux".to_string(),
+        ))
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    fn read_address() -> Result<String> {
+        use serde_json::Value;
+        use std::fs::File;
+        use std::io::BufReader;
+        use std::path::Path;
 
         #[cfg(target_os = "windows")]
         let dir = {
