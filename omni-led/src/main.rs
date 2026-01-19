@@ -3,6 +3,8 @@
 use log::debug;
 use mlua::Lua;
 #[cfg(not(target_os = "macos"))]
+use omni_led_lib::keyboard::keyboard::process_events;
+#[cfg(not(target_os = "macos"))]
 use omni_led_lib::tray_icon::tray_icon::TrayIcon;
 use omni_led_lib::{
     app_loader::app_loader::AppLoader,
@@ -14,7 +16,6 @@ use omni_led_lib::{
     events::event_loop::EventLoop,
     events::events::Events,
     events::shortcuts::Shortcuts,
-    keyboard::keyboard::process_events,
     logging::logger::Log,
     script_handler::script_handler::ScriptHandler,
     server::server::PluginServer,
@@ -54,8 +55,8 @@ async fn main() {
 
     #[cfg(not(target_os = "macos"))]
     let _tray = TrayIcon::new(&lua, &RUNNING);
-    
-    #[cfg(not(target_os = "macos"))] 
+
+    #[cfg(not(target_os = "macos"))]
     let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
 
     let init_end = Instant::now();
