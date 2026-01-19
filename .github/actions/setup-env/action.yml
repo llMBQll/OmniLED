@@ -16,6 +16,11 @@ runs:
       run: choco install protoc -y
       shell: cmd
 
+    - name: Install macOS dependencies
+      if: ${{ runner.os == 'macOS' }}
+      run: brew install protobuf
+      shell: bash
+
     - name: Setup Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
 
