@@ -30,7 +30,9 @@ fn main() {
     let out_dir = env::var_os("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join("binaries.rs");
     let mut file = File::create(&dest_path).unwrap();
-    for binary in ["omni-led", "audio", "clock", "images", "media", "weather"] {
+    for binary in [
+        "omni-led", "audio", "clock", "hwinfo", "images", "media", "weather",
+    ] {
         writeln!(
             file,
             "pub const {}: &[u8] = include_bytes!(r\"{}\");",

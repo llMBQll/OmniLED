@@ -8,6 +8,7 @@ members = [
     "omni-led-setup",
     "omni-led-applications/audio",
     "omni-led-applications/clock",
+    "omni-led-applications/hwinfo",
     "omni-led-applications/images",
     "omni-led-applications/media",
     "omni-led-applications/weather",

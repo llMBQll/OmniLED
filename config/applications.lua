@@ -1,11 +1,19 @@
 load_app {
+    path = get_default_path('audio'),
+    args = { '--address', SERVER.Address },
+}
+
+load_app {
     path = get_default_path('clock'),
     args = { '--address', SERVER.Address },
 }
 
 load_app {
-    path = get_default_path('audio'),
-    args = { '--address', SERVER.Address },
+    path = get_default_path('hwinfo'),
+    args = {
+        '--address', SERVER.Address,
+        '--interval', 500,
+    }
 }
 
 load_app {
