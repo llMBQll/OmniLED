@@ -51,6 +51,7 @@ fn create_config(file_path: impl AsRef<Path>, level_filter: LevelFilter) -> Conf
         .logger(log4rs::config::Logger::builder().build("rustls", LevelFilter::Error))
         .logger(log4rs::config::Logger::builder().build("tracing", LevelFilter::Error))
         .logger(log4rs::config::Logger::builder().build("ureq", LevelFilter::Error))
+        .logger(log4rs::config::Logger::builder().build("ureq_proto", LevelFilter::Error))
         .logger(log4rs::config::Logger::builder().build("warp", LevelFilter::Error))
         .build(Root::builder().appender("logfile").build(level_filter))
         .unwrap();
