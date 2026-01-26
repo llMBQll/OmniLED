@@ -10,5 +10,3 @@ pub mod script_handler;
 pub mod semaphore;
 pub mod server;
 pub mod settings;
-#[cfg(not(target_os = "macos"))]
-pub mod tray_icon;

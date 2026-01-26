@@ -36,8 +36,8 @@ impl PluginServer {
 
         let log_level_filter = settings.get().log_level.into();
 
-        tokio::task::spawn(
-            Server::builder()
+        tokio::task::spawn(async move {
+            let x = Server::builder()
                 .add_service(
                     omni_led_api::types::plugin_server::PluginServer::new(Self::new(
                         log_level_filter,
@@ -45,8 +45,9 @@ impl PluginServer {
                     .max_decoding_message_size(64 * 1024 * 1024)
                     .max_encoding_message_size(64 * 1024 * 1024),
                 )
-                .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener)),
-        );
+                .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener));
+            x.await.expect("Oł noł");
+        });
 
         let address = format!("{LOCALHOST}:{bound_port}");
         let timestamp = SystemTime::now()
