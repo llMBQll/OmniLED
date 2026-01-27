@@ -155,7 +155,7 @@ local function weather()
 end
 
 SCREEN_BUILDER
-    :new('SteelSeries Apex Pro TKL Wireless Gen 3')
+    :new('Emulator')
     :with_layout_group({
         {
             layout = volume,
@@ -176,5 +176,5 @@ SCREEN_BUILDER
             run_on = { 'CLOCK.Seconds' },
         }
     })
-    :with_layout_group_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
+    :with_layout_group_toggle({ 'KEY(RControl)', 'KEY(Slash)' })
     :register()

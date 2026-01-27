@@ -2,8 +2,6 @@
 
 use log::debug;
 use mlua::Lua;
-#[cfg(not(target_os = "macos"))]
-use omni_led_lib::keyboard::keyboard::process_events;
 use omni_led_lib::{
     app_loader::app_loader::AppLoader,
     common::common::load_internal_functions,
@@ -14,6 +12,7 @@ use omni_led_lib::{
     events::event_loop::EventLoop,
     events::events::Events,
     events::shortcuts::Shortcuts,
+    keyboard::keyboard::process_events,
     logging::logger::Log,
     script_handler::script_handler::ScriptHandler,
     server::server::PluginServer,
@@ -63,9 +62,6 @@ fn main() {
                 ScriptHandler::load(&lua, scripts_config);
                 AppLoader::load(&lua, applications_config);
 
-                #[cfg(not(target_os = "macos"))]
-                let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
-
                 let init_end = Instant::now();
                 debug!("Initialized in {:?}", init_end - init_begin);
 
@@ -83,11 +79,11 @@ fn main() {
                         script_handler.get_mut().update(&lua, interval).unwrap();
                     })
                     .await;
-
-                #[cfg(not(target_os = "macos"))]
-                keyboard_handle.join().unwrap();
             })
     });
+
+    // TODO move handling to winit event loop
+    let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
 
     let event_loop = winit::event_loop::EventLoop::<UserEvent>::with_user_event()
         .build()
@@ -99,6 +95,7 @@ fn main() {
     let mut app = App {};
     event_loop.run_app(&mut app).unwrap();
 
+    _ = keyboard_handle.join();
     _ = handle.join();
 }
 
