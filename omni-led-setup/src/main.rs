@@ -285,3 +285,23 @@ mod os {
         file.set_permissions(permissions)
     }
 }
+
+#[cfg(target_os = "macos")]
+mod os {
+    use std::fs::File;
+    use std::os::unix::fs::PermissionsExt;
+
+    pub fn autostart_enable() {
+        println!("Autostart setup is not yet available on macOS");
+    }
+
+    pub fn autostart_disable() {
+        // Nothing to disable yet
+    }
+
+    pub fn set_exe_permissions(file: &mut File) -> std::io::Result<()> {
+        let mut permissions = file.metadata()?.permissions();
+        permissions.set_mode(0o775);
+        file.set_permissions(permissions)
+    }
+}

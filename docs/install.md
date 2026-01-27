@@ -13,6 +13,7 @@ sudo apt install gcc \
                  libdbus-1-dev \
                  libfontconfig-dev \
                  libpulse-dev \
+                 libudev-dev \
                  libx11-dev \
                  pkg-config \
                  protobuf-compiler

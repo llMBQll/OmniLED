@@ -155,7 +155,7 @@ local function weather()
 end
 
 SCREEN_BUILDER
-    :new('Emulator')
+    :new('SteelSeries Apex Pro TKL Wireless Gen 3')
     :with_layout_group({
         {
             layout = volume,

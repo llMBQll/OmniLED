@@ -1,9 +1,5 @@
 use lazy_static::lazy_static;
-use serde_json::Value;
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
 use std::sync::Mutex;
 use ureq::http::StatusCode;
 use ureq::{Agent, Body};
@@ -163,7 +159,11 @@ impl Api {
         };
 
         let url = format!("http://{}{}", address, endpoint);
-        let result = self.agent.post(url.as_str()).send_json(json);
+        let result = self
+            .agent
+            .post(&url)
+            .content_type("application/json")
+            .send(json);
 
         match result {
             Ok(response) => {
@@ -181,10 +181,30 @@ impl Api {
         }
     }
 
+    #[cfg(target_os = "linux")]
     fn read_address() -> Result<String> {
-        let program_data =
-            std::env::var("PROGRAMDATA").expect("PROGRAMDATA env variable not found");
-        let dir = format!("{}/SteelSeries/SteelSeries Engine 3", program_data);
+        Err(Error::NotAvailable(
+            "SteelSeries Engine does not work on Linux".to_string(),
+        ))
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    fn read_address() -> Result<String> {
+        use serde_json::Value;
+        use std::fs::File;
+        use std::io::BufReader;
+        use std::path::Path;
+
+        #[cfg(target_os = "windows")]
+        let dir = {
+            let program_data =
+                std::env::var("PROGRAMDATA").expect("PROGRAMDATA env variable not found");
+            format!("{}/SteelSeries/SteelSeries Engine 3", program_data)
+        };
+
+        #[cfg(target_os = "macos")]
+        let dir = String::from("/Library/Application Support/SteelSeries Engine 3");
+
         if !Path::new(&dir).is_dir() {
             return Err(Error::NotAvailable(format!(
                 "SteelSeries Engine directory '{}' doesn't exist",

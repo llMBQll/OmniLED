@@ -156,3 +156,72 @@ pub mod semaphore {
     unsafe impl Send for BinarySemaphore {}
     unsafe impl Sync for BinarySemaphore {}
 }
+
+#[cfg(target_os = "macos")]
+pub mod semaphore {
+    use std::sync::{Condvar, Mutex};
+    use std::time::{Duration, Instant};
+
+    pub struct BinarySemaphore {
+        available: Mutex<bool>,
+        cvar: Condvar,
+    }
+
+    impl BinarySemaphore {
+        pub fn new(initial: bool) -> Self {
+            Self {
+                available: Mutex::new(initial),
+                cvar: Condvar::new(),
+            }
+        }
+
+        pub fn try_acquire(&self) -> bool {
+            let mut available = self.available.lock().unwrap();
+            if *available {
+                *available = false;
+                true
+            } else {
+                false
+            }
+        }
+
+        pub fn try_acquire_for(&self, duration: Duration) -> bool {
+            let deadline = Instant::now() + duration;
+            let mut available = self.available.lock().unwrap();
+
+            while !*available {
+                let now = Instant::now();
+                if now >= deadline {
+                    return false;
+                }
+
+                let remaining = deadline - now;
+                let (guard, timeout_result) = self.cvar.wait_timeout(available, remaining).unwrap();
+
+                available = guard;
+
+                if timeout_result.timed_out() && !*available {
+                    return false;
+                }
+            }
+
+            *available = false;
+            true
+        }
+
+        pub fn release(&self) {
+            let mut available = self.available.lock().unwrap();
+            *available = true;
+            self.cvar.notify_one();
+        }
+    }
+
+    // impl Drop for BinarySemaphore {
+    //     fn drop(&mut self) {
+    //
+    //     }
+    // }
+
+    // unsafe impl Send for BinarySemaphore {}
+    // unsafe impl Sync for BinarySemaphore {}
+}
