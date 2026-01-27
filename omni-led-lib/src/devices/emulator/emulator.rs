@@ -1,24 +1,23 @@
-use minifb::{Window, WindowOptions};
+use crate::OmniLedEvent;
+use crate::common::common::get_proxy;
+use crate::devices::device::{Buffer, Device, MemoryLayout, Settings as DeviceSettings, Size};
+use crate::semaphore::semaphore::BinarySemaphore;
 use mlua::{ErrorContext, FromLua, Lua, Value};
 use omni_led_derive::FromLuaValue;
 use std::cell::UnsafeCell;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread;
-use std::thread::JoinHandle;
 use std::time::Duration;
-
-use crate::devices::device::{Buffer, Device, MemoryLayout, Settings as DeviceSettings, Size};
-use crate::semaphore::semaphore::BinarySemaphore;
+use winit::event_loop::EventLoopProxy;
 
 pub struct Emulator {
     size: Size,
     name: String,
     running: Arc<AtomicBool>,
-    window_thread_handle: Option<JoinHandle<()>>,
     draw_buffer: Arc<DrawBuffer>,
     data_ready: Arc<BinarySemaphore>,
     reader_ready: Arc<BinarySemaphore>,
+    proxy: EventLoopProxy<OmniLedEvent>,
 }
 
 impl Device for Emulator {
@@ -32,56 +31,26 @@ impl Device for Emulator {
         let data_ready = Arc::new(BinarySemaphore::new(false));
         let reader_ready = Arc::new(BinarySemaphore::new(true));
 
-        let handle = thread::spawn({
-            let running = Arc::clone(&running);
-            let draw_buffer = Arc::clone(&draw_buffer);
-            let data_ready = Arc::clone(&data_ready);
-            let reader_ready = Arc::clone(&reader_ready);
-            move || {
-                let width = size.width;
-                let height = size.height;
-                let name = settings.name;
-
-                let mut window = Window::new(
-                    &name,
-                    width,
-                    height,
-                    WindowOptions {
-                        resize: true,
-                        ..Default::default()
-                    },
-                )
-                .unwrap();
-
-                while window.is_open() && running.load(Ordering::Relaxed) {
-                    // Wait for data to be ready, but can't try to acquire the lock indefinitely,
-                    // as the application could be stopped or just stop updating the emulator.
-                    // Wait up to 100 ms, then recheck the application state.
-                    let acquired = data_ready.try_acquire_for(Duration::from_millis(100));
-
-                    if acquired {
-                        let draw_buffer: &mut Vec<u32> = unsafe {
-                            // SAFETY: `reader_ready` and `data_ready` semaphores make the threads
-                            // run alternately, so the buffer can be safely accessed.
-                            &mut *draw_buffer.data.get()
-                        };
-                        window
-                            .update_with_buffer(draw_buffer, width, height)
-                            .unwrap();
-                        reader_ready.release();
-                    }
-                }
-            }
-        });
+        let proxy = get_proxy(&lua);
+        proxy
+            .send_event(OmniLedEvent::NewScreen(EmulatorHandle {
+                height: size.height,
+                width: size.width,
+                name: name.clone(),
+                draw_buffer: Arc::clone(&draw_buffer),
+                data_ready: Arc::clone(&data_ready),
+                reader_ready: Arc::clone(&reader_ready),
+            }))
+            .map_err(mlua::Error::external)?;
 
         Ok(Self {
             size,
             name,
             running,
-            window_thread_handle: Some(handle),
             draw_buffer,
             data_ready,
             reader_ready,
+            proxy,
         })
     }
 
@@ -94,18 +63,21 @@ impl Device for Emulator {
         // Skip the update otherwise, to not block the main thread.
         let acquired = self.reader_ready.try_acquire();
         if acquired {
-            let draw_buffer: &mut Vec<u32> = unsafe {
+            let draw_buffer: &mut Vec<u8> = unsafe {
                 // SAFETY: `reader_ready` and `data_ready` semaphores make the threads run alternately,
                 // so the buffer can be safely accessed.
                 &mut *self.draw_buffer.data.get()
             };
             for (i, value) in buffer.bytes().iter().enumerate() {
-                draw_buffer[i] = match value {
-                    0 => 0x000000,
-                    _ => 0xFFFFFF,
-                };
+                let index = i * 4;
+                draw_buffer[index] = *value;
+                draw_buffer[index + 1] = *value;
+                draw_buffer[index + 2] = *value;
+                draw_buffer[index + 3] = *value;
             }
             self.data_ready.release();
+
+            _ = self.proxy.send_event(OmniLedEvent::Update);
         }
 
         Ok(())
@@ -123,18 +95,42 @@ impl Device for Emulator {
 impl Drop for Emulator {
     fn drop(&mut self) {
         self.running.store(false, Ordering::Relaxed);
-        self.window_thread_handle.take().map(JoinHandle::join);
+    }
+}
+
+pub struct EmulatorHandle {
+    pub height: usize,
+    pub width: usize,
+    pub name: String,
+    draw_buffer: Arc<DrawBuffer>,
+    data_ready: Arc<BinarySemaphore>,
+    reader_ready: Arc<BinarySemaphore>,
+}
+
+impl EmulatorHandle {
+    pub fn draw(&self, buffer: &mut [u8]) -> bool {
+        let acquired = self.data_ready.try_acquire_for(Duration::from_millis(1));
+        if acquired {
+            let draw_buffer: &mut Vec<u8> = unsafe {
+                // SAFETY: `reader_ready` and `data_ready` semaphores make the threads
+                // run alternately, so the buffer can be safely accessed.
+                &mut *self.draw_buffer.data.get()
+            };
+            buffer.copy_from_slice(draw_buffer);
+            self.reader_ready.release();
+        }
+        acquired
     }
 }
 
 struct DrawBuffer {
-    data: UnsafeCell<Vec<u32>>,
+    data: UnsafeCell<Vec<u8>>,
 }
 
 impl DrawBuffer {
     fn with_size(size: usize) -> Self {
         Self {
-            data: UnsafeCell::new(vec![0; size]),
+            data: UnsafeCell::new(vec![0; size * 4]),
         }
     }
 }

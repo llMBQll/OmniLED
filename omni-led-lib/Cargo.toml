@@ -16,7 +16,6 @@ image = "0.25"
 lazy_static = "1.4"
 log = { version = "0.4", features = ["std"] }
 mlua = { version = "0.11", features = ["lua54", "vendored", "macros"] }
-minifb = "0.28"
 num-traits = "0.2"
 prost = "0.14"
 opener = { version = "0.8", features = ["reveal"] }
@@ -29,7 +28,9 @@ omni-led-derive = { path = "../omni-led-derive", features = ["from-lua-value", "
 tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
 tokio-stream = "0.1"
 tonic = "0.14"
+tray-icon = "0.21"
 ureq = { version = "3.1", features = ["json"] }
+winit = "0.30"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Security", "Win32_System", "Win32_System_Threading"] }

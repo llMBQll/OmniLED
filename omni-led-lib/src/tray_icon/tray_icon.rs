@@ -2,7 +2,7 @@ use tray_icon::menu::{Menu, MenuEvent, MenuItem};
 use tray_icon::{Icon, TrayIconBuilder};
 use winit::event_loop::EventLoopProxy;
 
-use crate::UserEvent;
+use crate::OmniLedEvent;
 
 pub enum TrayEvent {
     Config,
@@ -16,7 +16,7 @@ pub struct TrayIcon {
 
 impl TrayIcon {
     #[must_use]
-    pub fn new(proxy: EventLoopProxy<UserEvent>) -> Self {
+    pub fn new(proxy: EventLoopProxy<OmniLedEvent>) -> Self {
         #[cfg(feature = "dev")]
         const TITLE: &str = "OmniLED (dev)";
 
@@ -44,7 +44,7 @@ impl TrayIcon {
                     _ => return,
                 };
 
-                _ = proxy.send_event(UserEvent::TrayEvent(event));
+                _ = proxy.send_event(OmniLedEvent::Tray(event));
             })
         });
 

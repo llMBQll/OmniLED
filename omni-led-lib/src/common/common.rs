@@ -1,9 +1,10 @@
-use mlua::{Lua, Table, Value, chunk};
+use crate::OmniLedEvent;
+use crate::script_handler::script_data_types::ImageData;
+use mlua::{FromLua, Lua, Table, UserData, UserDataRef, Value, chunk};
 use omni_led_api::types::Field;
 use omni_led_api::types::field::Field as FieldEntry;
 use std::hash::{DefaultHasher, Hash, Hasher};
-
-use crate::script_handler::script_data_types::ImageData;
+use winit::event_loop::EventLoopProxy;
 
 #[macro_export]
 macro_rules! create_table {
@@ -89,6 +90,34 @@ pub fn load_internal_functions(lua: &Lua) {
             }),
         )
         .unwrap();
+}
+
+const PROXY_KEY: &str = "proxy";
+
+#[derive(Clone)]
+struct ProxyWrapper {
+    proxy: EventLoopProxy<OmniLedEvent>,
+}
+
+impl FromLua for ProxyWrapper {
+    fn from_lua(value: Value, _lua: &Lua) -> mlua::Result<Self> {
+        match value {
+            Value::UserData(userdata) => Ok(userdata.borrow::<Self>()?.clone()),
+            _ => std::unreachable!(),
+        }
+    }
+}
+
+impl UserData for ProxyWrapper {}
+
+pub fn set_proxy(lua: &Lua, proxy: EventLoopProxy<OmniLedEvent>) {
+    lua.globals()
+        .set(PROXY_KEY, ProxyWrapper { proxy })
+        .unwrap();
+}
+
+pub fn get_proxy(lua: &Lua) -> EventLoopProxy<OmniLedEvent> {
+    lua.globals().get::<ProxyWrapper>(PROXY_KEY).unwrap().proxy
 }
 
 pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {

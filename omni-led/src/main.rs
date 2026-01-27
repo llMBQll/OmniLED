@@ -1,10 +1,12 @@
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
-use log::debug;
+use log::{debug, error};
 use mlua::Lua;
+use omni_led_lib::devices::emulator::emulator::EmulatorHandle;
 use omni_led_lib::{
+    OmniLedEvent,
     app_loader::app_loader::AppLoader,
-    common::common::load_internal_functions,
+    common::common::{load_internal_functions, set_proxy},
     common::user_data::UserDataRef,
     constants::config::{ConfigType, read_config},
     constants::constants::Constants,
@@ -17,22 +19,30 @@ use omni_led_lib::{
     script_handler::script_handler::ScriptHandler,
     server::server::PluginServer,
     settings::settings::Settings,
+    tray_icon::tray_icon::{TrayEvent, TrayIcon},
 };
+use pixels::{Pixels, SurfaceTexture};
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 use winit::application::ApplicationHandler;
+use winit::dpi::LogicalSize;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
-use winit::window::WindowId;
-
-use crate::tray_icon::{TrayEvent, TrayIcon};
+use winit::window::{Window, WindowAttributes, WindowId};
 
 mod logging;
-mod tray_icon;
 
 static RUNNING: AtomicBool = AtomicBool::new(true);
 
 fn main() {
+    let event_loop = winit::event_loop::EventLoop::<OmniLedEvent>::with_user_event()
+        .build()
+        .unwrap();
+    let proxy = event_loop.create_proxy();
+    let lua_proxy = proxy.clone();
+
     let handle = std::thread::spawn(move || {
         tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -44,6 +54,7 @@ fn main() {
                 let lua = Lua::new();
 
                 load_internal_functions(&lua);
+                set_proxy(&lua, lua_proxy);
                 Constants::load(&lua);
 
                 let log_handle = logging::init(&lua);
@@ -85,47 +96,111 @@ fn main() {
     // TODO move handling to winit event loop
     let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
 
-    let event_loop = winit::event_loop::EventLoop::<UserEvent>::with_user_event()
-        .build()
-        .unwrap();
-    let proxy = event_loop.create_proxy();
-
     let _tray = TrayIcon::new(proxy);
 
-    let mut app = App {};
+    let mut app = App {
+        windows: HashMap::new(),
+    };
     event_loop.run_app(&mut app).unwrap();
 
     _ = keyboard_handle.join();
     _ = handle.join();
 }
 
-enum UserEvent {
-    TrayEvent(TrayEvent),
+struct App {
+    windows: HashMap<WindowId, WindowHandle>,
 }
 
-struct App {}
+struct WindowHandle {
+    window: Arc<Window>,
+    pixels: Pixels<'static>,
+    emulator_handle: EmulatorHandle,
+}
 
-impl ApplicationHandler<UserEvent> for App {
+impl App {
+    fn exit(event_loop: &ActiveEventLoop) {
+        RUNNING.store(false, Ordering::Relaxed);
+        event_loop.exit();
+    }
+}
+
+impl ApplicationHandler<OmniLedEvent> for App {
     fn resumed(&mut self, _event_loop: &ActiveEventLoop) {}
 
-    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: UserEvent) {
+    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: OmniLedEvent) {
         match event {
-            UserEvent::TrayEvent(e) => match e {
+            OmniLedEvent::NewScreen(emulator_handle) => {
+                let width = emulator_handle.width as u32;
+                let height = emulator_handle.height as u32;
+
+                let attributes = WindowAttributes::default()
+                    .with_title(emulator_handle.name.clone())
+                    .with_resizable(true)
+                    .with_min_inner_size(LogicalSize::new(width, height));
+
+                let window = match event_loop.create_window(attributes) {
+                    Ok(window) => Arc::new(window),
+                    Err(err) => {
+                        error!("{}", err);
+                        Self::exit(&event_loop);
+                        return;
+                    }
+                };
+
+                let surface = SurfaceTexture::new(width, height, Arc::clone(&window));
+                let pixels = Pixels::new(width, height, surface).unwrap();
+
+                self.windows.insert(
+                    window.id(),
+                    WindowHandle {
+                        window,
+                        pixels,
+                        emulator_handle,
+                    },
+                );
+            }
+            OmniLedEvent::Tray(e) => match e {
                 TrayEvent::Config => {}
                 TrayEvent::License => {}
                 TrayEvent::Quit => {
-                    RUNNING.store(false, Ordering::Relaxed);
-                    event_loop.exit();
+                    Self::exit(&event_loop);
                 }
             },
+            OmniLedEvent::Update => {
+                // TODO update only specific windows
+                for handle in self.windows.values() {
+                    handle.window.request_redraw();
+                }
+            }
         }
     }
 
     fn window_event(
         &mut self,
         _event_loop: &ActiveEventLoop,
-        _window_id: WindowId,
-        _event: WindowEvent,
+        window_id: WindowId,
+        event: WindowEvent,
     ) {
+        macro_rules! get_handle_or_return {
+            () => {
+                match self.windows.get_mut(&window_id) {
+                    Some(handle) => handle,
+                    None => return,
+                }
+            };
+        }
+
+        match event {
+            WindowEvent::CloseRequested => {
+                self.windows.remove(&window_id);
+            }
+            WindowEvent::RedrawRequested => {
+                let handle = get_handle_or_return!();
+
+                handle.emulator_handle.draw(handle.pixels.frame_mut());
+                handle.pixels.render().unwrap();
+            }
+            _ => {}
+        }
     }
 }
