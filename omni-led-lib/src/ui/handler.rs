@@ -7,10 +7,11 @@ use winit::application::ApplicationHandler;
 use winit::dpi::LogicalSize;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy};
-use winit::window::{Window, WindowAttributes, WindowId};
+use winit::window::{Icon, Window, WindowAttributes, WindowId};
 
 use crate::constants::constants::Constants;
 use crate::ui::event::Event;
+use crate::ui::icon_image::window_icon_image;
 use crate::ui::tray_icon::TrayIcon;
 use crate::ui::window::WindowHandle;
 
@@ -54,12 +55,14 @@ struct WindowContext {
 
 struct HandlerImpl {
     windows: HashMap<WindowId, WindowContext>,
+    icon: Icon,
 }
 
 impl HandlerImpl {
     fn new() -> Self {
         Self {
             windows: HashMap::new(),
+            icon: window_icon_image(),
         }
     }
 }
@@ -76,6 +79,7 @@ impl ApplicationHandler<Event> for HandlerImpl {
 
                 let attributes = WindowAttributes::default()
                     .with_title(window_handle.name.clone())
+                    .with_window_icon(Some(self.icon.clone()))
                     .with_resizable(true)
                     .with_inner_size(size)
                     .with_min_inner_size(size);

@@ -1,10 +1,11 @@
 use log::error;
+use tray_icon::TrayIconBuilder;
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
-use tray_icon::{Icon, TrayIconBuilder};
 
 use crate::constants::constants::Constants;
 use crate::ui::event::Event;
 use crate::ui::handler::HandlerProxy;
+use crate::ui::icon_image::tray_icon_image;
 
 pub struct TrayIcon {
     _tray: tray_icon::TrayIcon,
@@ -50,17 +51,10 @@ impl TrayIcon {
         let tray = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
             .with_tooltip(TITLE)
-            .with_icon(Self::load_icon())
+            .with_icon(tray_icon_image())
             .build()
             .unwrap();
 
         Self { _tray: tray }
-    }
-
-    fn load_icon() -> Icon {
-        // TODO load from image
-
-        const SIZE: usize = 64;
-        Icon::from_rgba(vec![0xFF; 4 * SIZE * SIZE], SIZE as u32, SIZE as u32).unwrap()
     }
 }
