@@ -27,9 +27,10 @@ omni-led-api = { path = "../omni-led-api" }
 omni-led-derive = { path = "../omni-led-derive", features = ["from-lua-value", "lua-enum", "unique-user-data"] }
 tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
 tokio-stream = "0.1"
-ureq = { version = "3.1", features = ["json"] }
 tonic = "0.14"
 tray-item = "0.10"
+ureq = { version = "3.1", features = ["json"] }
+winit = "0.30"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Security", "Win32_System", "Win32_System_Threading"] }

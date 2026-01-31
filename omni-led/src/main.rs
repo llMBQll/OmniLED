@@ -22,6 +22,10 @@ use omni_led_lib::{
 };
 use std::sync::atomic::AtomicBool;
 use std::time::Instant;
+use winit::application::ApplicationHandler;
+use winit::event::WindowEvent;
+use winit::event_loop::ActiveEventLoop;
+use winit::window::WindowId;
 
 mod logging;
 
@@ -29,51 +33,85 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 
 #[tokio::main]
 async fn main() {
-    let init_begin = Instant::now();
+    let event_loop = winit::event_loop::EventLoop::<UiEvent>::with_user_event()
+        .build()
+        .unwrap();
 
-    let lua = Lua::new();
+    let scripting_thread = std::thread::spawn(|| {
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        rt.block_on(async {
+            let init_begin = Instant::now();
 
-    load_internal_functions(&lua);
-    Constants::load(&lua);
+            let lua = Lua::new();
 
-    let log_handle = logging::init(&lua);
-    Log::load(&lua, log_handle);
+            load_internal_functions(&lua);
+            Constants::load(&lua);
 
-    let applications_config = read_config(&lua, ConfigType::Applications).unwrap();
-    let devices_config = read_config(&lua, ConfigType::Devices).unwrap();
-    let scripts_config = read_config(&lua, ConfigType::Scripts).unwrap();
-    let settings_config = read_config(&lua, ConfigType::Settings).unwrap();
+            let log_handle = logging::init(&lua);
+            Log::load(&lua, log_handle);
 
-    Settings::load(&lua, settings_config);
-    PluginServer::load(&lua).await;
-    Events::load(&lua);
-    Shortcuts::load(&lua);
-    Devices::load(&lua, devices_config);
-    ScriptHandler::load(&lua, scripts_config);
-    AppLoader::load(&lua, applications_config);
+            let applications_config = read_config(&lua, ConfigType::Applications).unwrap();
+            let devices_config = read_config(&lua, ConfigType::Devices).unwrap();
+            let scripts_config = read_config(&lua, ConfigType::Scripts).unwrap();
+            let settings_config = read_config(&lua, ConfigType::Settings).unwrap();
 
-    #[cfg(not(target_os = "macos"))]
-    let _tray = TrayIcon::new(&lua, &RUNNING);
+            Settings::load(&lua, settings_config);
+            PluginServer::load(&lua).await;
+            Events::load(&lua);
+            Shortcuts::load(&lua);
+            Devices::load(&lua, devices_config);
+            ScriptHandler::load(&lua, scripts_config);
+            AppLoader::load(&lua, applications_config);
 
-    let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
+            let _tray = TrayIcon::new(&lua, &RUNNING);
 
-    let init_end = Instant::now();
-    debug!("Initialized in {:?}", init_end - init_begin);
+            let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
 
-    let settings = UserDataRef::<Settings>::load(&lua);
-    let interval = settings.get().update_interval;
-    let event_loop = EventLoop::new();
-    event_loop
-        .run(interval, &RUNNING, |events| {
-            let dispatcher = UserDataRef::<Events>::load(&lua);
-            for event in events {
-                dispatcher.get().dispatch(&lua, event).unwrap();
-            }
+            let init_end = Instant::now();
+            debug!("Initialized in {:?}", init_end - init_begin);
 
-            let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
-            script_handler.get_mut().update(&lua, interval).unwrap();
-        })
-        .await;
+            let settings = UserDataRef::<Settings>::load(&lua);
+            let interval = settings.get().update_interval;
+            let event_loop = EventLoop::new();
+            event_loop
+                .run(interval, &RUNNING, |events| {
+                    let dispatcher = UserDataRef::<Events>::load(&lua);
+                    for event in events {
+                        dispatcher.get().dispatch(&lua, event).unwrap();
+                    }
 
-    keyboard_handle.join().unwrap();
+                    let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
+                    script_handler.get_mut().update(&lua, interval).unwrap();
+                })
+                .await;
+
+            keyboard_handle.join().unwrap();
+        });
+    });
+
+    let mut ui_handler = UiHandler;
+    event_loop.run_app(&mut ui_handler).unwrap();
+
+    _ = scripting_thread.join();
+}
+
+pub enum UiEvent {}
+
+struct UiHandler;
+
+impl ApplicationHandler<UiEvent> for UiHandler {
+    fn resumed(&mut self, _event_loop: &ActiveEventLoop) {}
+
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, _event: UiEvent) {}
+
+    fn window_event(
+        &mut self,
+        _event_loop: &ActiveEventLoop,
+        _window_id: WindowId,
+        _event: WindowEvent,
+    ) {
+    }
 }
