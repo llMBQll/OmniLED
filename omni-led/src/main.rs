@@ -17,7 +17,7 @@ use omni_led_lib::{
     script_handler::script_handler::ScriptHandler,
     server::server::PluginServer,
     settings::settings::Settings,
-    ui::handler::Handler,
+    ui::handler::HandlerBuilder,
 };
 use std::sync;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -91,11 +91,10 @@ async fn main() {
         });
     });
 
-    let constants = constants_rx.recv().unwrap();
-    let ui_handler = Handler::new(constants, move || {
-        ready_tx.send(true).unwrap();
-    });
-    ui_handler.run();
+    HandlerBuilder::new()
+        .with_constants(constants_rx.recv().unwrap())
+        .with_on_init(move || ready_tx.send(true).unwrap())
+        .run();
 
     RUNNING.store(false, Ordering::Relaxed);
     _ = scripting_thread.join();

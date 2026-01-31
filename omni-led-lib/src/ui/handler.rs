@@ -16,13 +16,14 @@ use crate::ui::icon_image::window_icon_image;
 use crate::ui::tray_icon::TrayIcon;
 use crate::ui::window::WindowHandle;
 
-pub struct Handler {
+pub struct HandlerBuilder {
     event_loop: EventLoop<Event>,
-    handler_impl: HandlerImpl,
+    constants: Option<Constants>,
+    on_init: Option<Box<dyn FnOnce()>>,
 }
 
-impl Handler {
-    pub fn new<F: FnOnce() + 'static>(constants: Constants, on_init: F) -> Self {
+impl HandlerBuilder {
+    pub fn new() -> Self {
         let event_loop = EventLoop::<Event>::with_user_event().build().unwrap();
         let proxy = event_loop.create_proxy();
 
@@ -30,12 +31,24 @@ impl Handler {
 
         Self {
             event_loop,
-            handler_impl: HandlerImpl::new(constants, on_init),
+            constants: None,
+            on_init: None,
         }
     }
 
-    pub fn run(mut self) {
-        self.event_loop.run_app(&mut self.handler_impl).unwrap();
+    pub fn with_constants(mut self, constants: Constants) -> Self {
+        self.constants = Some(constants);
+        self
+    }
+
+    pub fn with_on_init<F: FnOnce() + 'static>(mut self, on_init: F) -> Self {
+        self.on_init = Some(Box::new(on_init));
+        self
+    }
+
+    pub fn run(self) {
+        let mut handler = Handler::new(self.constants.unwrap(), self.on_init.unwrap());
+        self.event_loop.run_app(&mut handler).unwrap();
     }
 }
 
@@ -45,7 +58,7 @@ struct WindowContext {
     window_handle: WindowHandle,
 }
 
-struct HandlerImpl {
+struct Handler {
     windows: HashMap<WindowId, WindowContext>,
     icon: Icon,
     constants: Constants,
@@ -53,19 +66,19 @@ struct HandlerImpl {
     _tray: Option<TrayIcon>,
 }
 
-impl HandlerImpl {
-    fn new<F: FnOnce() + 'static>(constants: Constants, on_init: F) -> Self {
+impl Handler {
+    fn new(constants: Constants, on_init: Box<dyn FnOnce()>) -> Self {
         Self {
             windows: HashMap::new(),
             icon: window_icon_image(),
             constants,
-            on_init: Some(Box::new(on_init)),
+            on_init: Some(on_init),
             _tray: None,
         }
     }
 }
 
-impl ApplicationHandler<Event> for HandlerImpl {
+impl ApplicationHandler<Event> for Handler {
     fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
         if let StartCause::Init = cause {
             self._tray = Some(TrayIcon::new(
