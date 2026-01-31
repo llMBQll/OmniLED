@@ -6,7 +6,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 use winit::application::ApplicationHandler;
 use winit::dpi::LogicalSize;
-use winit::event::WindowEvent;
+use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::window::{Icon, Window, WindowAttributes, WindowId};
 
@@ -19,11 +19,10 @@ use crate::ui::window::WindowHandle;
 pub struct Handler {
     event_loop: EventLoop<Event>,
     handler_impl: HandlerImpl,
-    constants: Constants,
 }
 
 impl Handler {
-    pub fn new(constants: Constants) -> Self {
+    pub fn new<F: FnOnce() + 'static>(constants: Constants, on_init: F) -> Self {
         let event_loop = EventLoop::<Event>::with_user_event().build().unwrap();
         let proxy = event_loop.create_proxy();
 
@@ -31,19 +30,11 @@ impl Handler {
 
         Self {
             event_loop,
-            handler_impl: HandlerImpl::new(),
-            constants,
+            handler_impl: HandlerImpl::new(constants, on_init),
         }
     }
 
     pub fn run(mut self) {
-        let _tray = TrayIcon::new(
-            self.constants.clone(),
-            HandlerProxy {
-                proxy: self.event_loop.create_proxy(),
-            },
-        );
-
         self.event_loop.run_app(&mut self.handler_impl).unwrap();
     }
 }
@@ -57,18 +48,35 @@ struct WindowContext {
 struct HandlerImpl {
     windows: HashMap<WindowId, WindowContext>,
     icon: Icon,
+    constants: Constants,
+    on_init: Option<Box<dyn FnOnce()>>,
+    _tray: Option<TrayIcon>,
 }
 
 impl HandlerImpl {
-    fn new() -> Self {
+    fn new<F: FnOnce() + 'static>(constants: Constants, on_init: F) -> Self {
         Self {
             windows: HashMap::new(),
             icon: window_icon_image(),
+            constants,
+            on_init: Some(Box::new(on_init)),
+            _tray: None,
         }
     }
 }
 
 impl ApplicationHandler<Event> for HandlerImpl {
+    fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
+        if let StartCause::Init = cause {
+            self._tray = Some(TrayIcon::new(
+                self.constants.clone(),
+                PROXY.get().unwrap().clone(),
+            ));
+
+            self.on_init.take().unwrap()();
+        }
+    }
+
     fn resumed(&mut self, _event_loop: &ActiveEventLoop) {}
 
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: Event) {
