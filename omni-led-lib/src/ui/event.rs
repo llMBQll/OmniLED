@@ -1,4 +1,7 @@
+use crate::ui::window::WindowHandle;
+
 pub enum Event {
-    // Fn(Box<dyn FnMut() + Send>),
+    OpenWindow(WindowHandle),
+    UpdateWindow(u64),
     Quit,
 }

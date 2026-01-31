@@ -15,8 +15,8 @@ image = "0.25"
 lazy_static = "1.4"
 log = { version = "0.4", features = ["std"] }
 mlua = { version = "0.11", features = ["lua54", "vendored", "macros"] }
-minifb = "0.28"
 num-traits = "0.2"
+pixels = "0.15"
 prost = "0.14"
 opener = { version = "0.8", features = ["reveal"] }
 regex = "1.10"
