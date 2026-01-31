@@ -3,10 +3,11 @@ use pixels::{Pixels, SurfaceTexture};
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, OnceLock};
+use std::time::{Duration, Instant};
 use winit::application::ApplicationHandler;
 use winit::dpi::LogicalSize;
 use winit::event::WindowEvent;
-use winit::event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy};
+use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::window::{Icon, Window, WindowAttributes, WindowId};
 
 use crate::constants::constants::Constants;
@@ -146,6 +147,18 @@ impl ApplicationHandler<Event> for HandlerImpl {
                 ctx.pixels.render().unwrap();
             }
             _ => {}
+        }
+    }
+
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        // Force winit to wake up after the tray icon puts it to sleep.
+        // Without this winit ignores all screen update events after the tray icon is shown.
+
+        let wait_until = Instant::now() + Duration::from_millis(16);
+        event_loop.set_control_flow(ControlFlow::WaitUntil(wait_until));
+
+        for ctx in self.windows.values() {
+            ctx.window.request_redraw();
         }
     }
 }
