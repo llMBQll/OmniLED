@@ -7,7 +7,7 @@ use std::{
 
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Constants {
     pub applications_dir: PathBuf,
     pub config_dir: PathBuf,

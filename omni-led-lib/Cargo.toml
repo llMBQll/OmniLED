@@ -28,7 +28,7 @@ omni-led-derive = { path = "../omni-led-derive", features = ["from-lua-value", "
 tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
 tokio-stream = "0.1"
 tonic = "0.14"
-tray-item = "0.10"
+tray-icon = "0.21"
 ureq = { version = "3.1", features = ["json"] }
 winit = "0.30"
 
@@ -37,7 +37,6 @@ windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Security", 
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"
-tray-item = { version = "0.10", features = ["ksni"] }
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
 windres = "0.2"

@@ -2,8 +2,6 @@
 
 use log::debug;
 use mlua::Lua;
-#[cfg(not(target_os = "macos"))]
-use omni_led_lib::tray_icon::tray_icon::TrayIcon;
 use omni_led_lib::{
     app_loader::app_loader::AppLoader,
     common::common::load_internal_functions,
@@ -19,13 +17,11 @@ use omni_led_lib::{
     script_handler::script_handler::ScriptHandler,
     server::server::PluginServer,
     settings::settings::Settings,
+    ui::handler::Handler,
 };
-use std::sync::atomic::AtomicBool;
+use std::sync;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
-use winit::application::ApplicationHandler;
-use winit::event::WindowEvent;
-use winit::event_loop::ActiveEventLoop;
-use winit::window::WindowId;
 
 mod logging;
 
@@ -33,11 +29,10 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 
 #[tokio::main]
 async fn main() {
-    let event_loop = winit::event_loop::EventLoop::<UiEvent>::with_user_event()
-        .build()
-        .unwrap();
+    let (constants_tx, constants_rx) = sync::mpsc::channel();
+    let (ready_tx, ready_rx) = sync::mpsc::channel();
 
-    let scripting_thread = std::thread::spawn(|| {
+    let scripting_thread = std::thread::spawn(move || {
         let rt = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
@@ -49,6 +44,12 @@ async fn main() {
 
             load_internal_functions(&lua);
             Constants::load(&lua);
+
+            constants_tx
+                .send(UserDataRef::<Constants>::load(&lua).get().clone())
+                .unwrap();
+
+            let _ = ready_rx.recv().unwrap();
 
             let log_handle = logging::init(&lua);
             Log::load(&lua, log_handle);
@@ -65,8 +66,6 @@ async fn main() {
             Devices::load(&lua, devices_config);
             ScriptHandler::load(&lua, scripts_config);
             AppLoader::load(&lua, applications_config);
-
-            let _tray = TrayIcon::new(&lua, &RUNNING);
 
             let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
 
@@ -92,26 +91,14 @@ async fn main() {
         });
     });
 
-    let mut ui_handler = UiHandler;
-    event_loop.run_app(&mut ui_handler).unwrap();
+    let constants = constants_rx.recv().unwrap();
+    let ui_handler = Handler::new(constants);
+
+    ready_tx.send(true).unwrap();
+
+    ui_handler.run();
+
+    RUNNING.store(false, Ordering::Relaxed);
 
     _ = scripting_thread.join();
-}
-
-pub enum UiEvent {}
-
-struct UiHandler;
-
-impl ApplicationHandler<UiEvent> for UiHandler {
-    fn resumed(&mut self, _event_loop: &ActiveEventLoop) {}
-
-    fn user_event(&mut self, _event_loop: &ActiveEventLoop, _event: UiEvent) {}
-
-    fn window_event(
-        &mut self,
-        _event_loop: &ActiveEventLoop,
-        _window_id: WindowId,
-        _event: WindowEvent,
-    ) {
-    }
 }
