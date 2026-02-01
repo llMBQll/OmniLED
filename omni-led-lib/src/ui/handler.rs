@@ -191,8 +191,9 @@ impl ApplicationHandler<Event> for Handler {
                 let mut buffer = ctx.surface.buffer_mut().unwrap();
                 let width = buffer.width().get() as usize;
                 let height = buffer.height().get() as usize;
-                ctx.window_handle.draw(&mut *buffer, width, height);
-                buffer.present().unwrap();
+                if ctx.window_handle.draw(&mut *buffer, width, height) {
+                    buffer.present().unwrap();
+                }
             }
             _ => {}
         }

@@ -73,7 +73,7 @@ pub struct WindowHandle {
 }
 
 impl WindowHandle {
-    pub fn draw(&self, buffer: &mut [u32], width: usize, height: usize) {
+    pub fn draw(&self, buffer: &mut [u32], width: usize, height: usize) -> bool {
         let acquired = self.data_ready.try_acquire_for(Duration::from_millis(1));
         if acquired {
             let draw_buffer: &mut Vec<u8> = unsafe {
@@ -93,6 +93,7 @@ impl WindowHandle {
 
             self.reader_ready.release();
         }
+        acquired
     }
 
     fn draw_scaled(
