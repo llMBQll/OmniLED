@@ -27,8 +27,7 @@ mod logging;
 
 static RUNNING: AtomicBool = AtomicBool::new(true);
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let (constants_tx, constants_rx) = sync::mpsc::channel();
     let (ready_tx, ready_rx) = sync::mpsc::channel();
 
