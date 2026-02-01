@@ -47,8 +47,20 @@ impl HandlerBuilder {
     }
 
     pub fn run(self) {
-        let mut handler = Handler::new(self.constants.unwrap(), self.on_init.unwrap());
+        #[cfg(target_os = "linux")]
+        Self::run_tray_icon_thread(self.constants.clone().unwrap());
+
+        let mut handler = Handler::new(self.constants, self.on_init.unwrap());
         self.event_loop.run_app(&mut handler).unwrap();
+    }
+
+    #[cfg(target_os = "linux")]
+    fn run_tray_icon_thread(constants: Constants) {
+        std::thread::spawn(move || {
+            gtk::init().unwrap();
+            let _tray = Some(TrayIcon::new(constants, PROXY.get().unwrap().clone()));
+            gtk::main();
+        });
     }
 }
 
@@ -61,13 +73,14 @@ struct WindowContext {
 struct Handler {
     windows: HashMap<WindowId, WindowContext>,
     icon: Icon,
-    constants: Constants,
+    #[cfg_attr(target_os = "linux", allow(unused))]
+    constants: Option<Constants>,
     on_init: Option<Box<dyn FnOnce()>>,
     _tray: Option<TrayIcon>,
 }
 
 impl Handler {
-    fn new(constants: Constants, on_init: Box<dyn FnOnce()>) -> Self {
+    fn new(constants: Option<Constants>, on_init: Box<dyn FnOnce()>) -> Self {
         Self {
             windows: HashMap::new(),
             icon: window_icon_image(),
@@ -81,10 +94,13 @@ impl Handler {
 impl ApplicationHandler<Event> for Handler {
     fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
         if let StartCause::Init = cause {
-            self._tray = Some(TrayIcon::new(
-                self.constants.clone(),
-                PROXY.get().unwrap().clone(),
-            ));
+            #[cfg(not(target_os = "linux"))]
+            {
+                self._tray = Some(TrayIcon::new(
+                    self.constants.take().unwrap(),
+                    PROXY.get().unwrap().clone(),
+                ));
+            }
 
             self.on_init.take().unwrap()();
         }

@@ -3446,6 +3446,7 @@ dependencies = [
  "dirs-next",
  "font-kit",
  "freetype-rs",
+ "gtk",
  "image",
  "lazy_static",
  "libc",
