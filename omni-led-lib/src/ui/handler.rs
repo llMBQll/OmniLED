@@ -1,6 +1,7 @@
 use log::error;
-use pixels::{Pixels, SurfaceTexture};
+use softbuffer::{Context, Surface};
 use std::collections::HashMap;
+use std::num::NonZero;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
@@ -66,7 +67,7 @@ impl HandlerBuilder {
 
 struct WindowContext {
     window: Arc<Window>,
-    pixels: Pixels<'static>,
+    surface: Surface<Arc<Window>, Arc<Window>>,
     window_handle: WindowHandle,
 }
 
@@ -135,14 +136,17 @@ impl ApplicationHandler<Event> for Handler {
                     .id
                     .store(window.id().into(), Ordering::Release);
 
-                let surface = SurfaceTexture::new(width, height, Arc::clone(&window));
-                let pixels = Pixels::new(width, height, surface).unwrap();
+                let context = Context::new(Arc::clone(&window)).unwrap();
+                let mut surface = Surface::new(&context, Arc::clone(&window)).unwrap();
+                surface
+                    .resize(NonZero::new(width).unwrap(), NonZero::new(height).unwrap())
+                    .unwrap();
 
                 self.windows.insert(
                     window.id(),
                     WindowContext {
                         window,
-                        pixels,
+                        surface,
                         window_handle,
                     },
                 );
@@ -172,7 +176,11 @@ impl ApplicationHandler<Event> for Handler {
                     None => return,
                 };
 
-                let _ = ctx.pixels.resize_surface(new_size.width, new_size.height);
+                if let (Some(width), Some(height)) =
+                    (NonZero::new(new_size.width), NonZero::new(new_size.height))
+                {
+                    ctx.surface.resize(width, height).unwrap();
+                }
             }
             WindowEvent::RedrawRequested => {
                 let ctx = match self.windows.get_mut(&window_id) {
@@ -180,8 +188,11 @@ impl ApplicationHandler<Event> for Handler {
                     None => return,
                 };
 
-                ctx.window_handle.draw(ctx.pixels.frame_mut());
-                ctx.pixels.render().unwrap();
+                let mut buffer = ctx.surface.buffer_mut().unwrap();
+                let width = buffer.width().get() as usize;
+                let height = buffer.height().get() as usize;
+                ctx.window_handle.draw(&mut *buffer, width, height);
+                buffer.present().unwrap();
             }
             _ => {}
         }

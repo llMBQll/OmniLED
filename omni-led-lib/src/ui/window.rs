@@ -54,13 +54,7 @@ impl Window {
                 // alternately, so the buffer can be safely accessed.
                 &mut *self.draw_buffer.data.get()
             };
-            for i in 0..bytes.len() {
-                let index = 4 * i;
-                draw_buffer[index] = bytes[i];
-                draw_buffer[index + 1] = bytes[i];
-                draw_buffer[index + 2] = bytes[i];
-                draw_buffer[index + 3] = bytes[i];
-            }
+            draw_buffer.copy_from_slice(bytes);
             self.data_ready.release();
 
             self.proxy
@@ -79,7 +73,7 @@ pub struct WindowHandle {
 }
 
 impl WindowHandle {
-    pub fn draw(&self, buffer: &mut [u8]) {
+    pub fn draw(&self, buffer: &mut [u32], width: usize, height: usize) {
         let acquired = self.data_ready.try_acquire_for(Duration::from_millis(1));
         if acquired {
             let draw_buffer: &mut Vec<u8> = unsafe {
@@ -87,8 +81,44 @@ impl WindowHandle {
                 // run alternately, so the buffer can be safely accessed.
                 &mut *self.draw_buffer.data.get()
             };
-            buffer.copy_from_slice(draw_buffer);
+
+            Self::draw_scaled(
+                draw_buffer,
+                self.size.width,
+                self.size.height,
+                buffer,
+                width,
+                height,
+            );
+
             self.reader_ready.release();
+        }
+    }
+
+    fn draw_scaled(
+        src_buffer: &[u8],
+        src_width: usize,
+        src_height: usize,
+        dst_buffer: &mut [u32],
+        dst_width: usize,
+        dst_height: usize,
+    ) {
+        let x_ratio = (src_width << 16) / dst_width;
+        let y_ratio = (src_height << 16) / dst_height;
+
+        for dst_y in 0..dst_height {
+            for dst_x in 0..dst_width {
+                let src_x = ((dst_x * x_ratio) >> 16).min(src_width - 1);
+                let src_y = ((dst_y * y_ratio) >> 16).min(src_height - 1);
+
+                let src_idx = src_y * src_width + src_x;
+                let dst_idx = dst_y * dst_width + dst_x;
+
+                dst_buffer[dst_idx] = match src_buffer[src_idx] {
+                    0 => 0,
+                    _ => 0xFFFFFFFF,
+                }
+            }
         }
     }
 }
@@ -100,7 +130,7 @@ struct DrawBuffer {
 impl DrawBuffer {
     fn with_size(size: Size) -> Self {
         Self {
-            data: UnsafeCell::new(vec![0; 4 * size.width * size.height]),
+            data: UnsafeCell::new(vec![0; size.width * size.height]),
         }
     }
 }
