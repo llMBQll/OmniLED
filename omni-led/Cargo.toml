@@ -12,7 +12,6 @@ log4rs = "1.4"
 mlua = "0.11.4"
 omni-led-lib = { path = "../omni-led-lib" }
 tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
-winit = "0.30"
 
 [features]
 dev = ["omni-led-lib/dev"]

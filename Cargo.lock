@@ -3410,7 +3410,6 @@ dependencies = [
  "mlua",
  "omni-led-lib",
  "tokio",
- "winit",
 ]
 
 [[package]]
