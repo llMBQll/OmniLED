@@ -10,10 +10,13 @@
 ```bash
 sudo apt install gcc \
                  g++ \
+                 libappindicator3-dev \
                  libdbus-1-dev \
                  libfontconfig-dev \
+                 libgtk-3-dev \
                  libpulse-dev \
                  libx11-dev \
+                 libxdo-dev \
                  pkg-config \
                  protobuf-compiler
 ```
