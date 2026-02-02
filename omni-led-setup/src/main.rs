@@ -285,3 +285,20 @@ mod os {
         file.set_permissions(permissions)
     }
 }
+
+#[cfg(target_os = "macos")]
+mod os {
+    use std::fs::File;
+
+    pub fn autostart_enable() {
+        todo!()
+    }
+
+    pub fn autostart_disable() {
+        todo!()
+    }
+
+    pub fn set_exe_permissions(_file: &mut File) -> std::io::Result<()> {
+        todo!()
+    }
+}
