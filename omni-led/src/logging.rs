@@ -46,13 +46,16 @@ fn create_config(file_path: impl AsRef<Path>, level_filter: LevelFilter) -> Conf
         .unwrap();
     let config = Config::builder()
         .appender(Appender::builder().build("logfile", Box::new(logfile)))
-        .logger(log4rs::config::Logger::builder().build("mio", LevelFilter::Error))
         .logger(log4rs::config::Logger::builder().build("hyper", LevelFilter::Error))
+        .logger(log4rs::config::Logger::builder().build("mio", LevelFilter::Error))
+        .logger(log4rs::config::Logger::builder().build("naga", LevelFilter::Error))
         .logger(log4rs::config::Logger::builder().build("rustls", LevelFilter::Error))
         .logger(log4rs::config::Logger::builder().build("tracing", LevelFilter::Error))
         .logger(log4rs::config::Logger::builder().build("ureq", LevelFilter::Error))
         .logger(log4rs::config::Logger::builder().build("ureq_proto", LevelFilter::Error))
         .logger(log4rs::config::Logger::builder().build("warp", LevelFilter::Error))
+        .logger(log4rs::config::Logger::builder().build("wgpu_core", LevelFilter::Error))
+        .logger(log4rs::config::Logger::builder().build("wgpu_hal", LevelFilter::Error))
         .build(Root::builder().appender("logfile").build(level_filter))
         .unwrap();
 
