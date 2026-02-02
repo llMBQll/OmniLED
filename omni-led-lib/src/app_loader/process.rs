@@ -30,7 +30,7 @@ impl Process {
         command.creation_flags(CREATE_NO_WINDOW);
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(not(target_os = "windows"))]
     fn extra_configuration(_command: &mut Command) {
         // No extra configuration required
     }
