@@ -7,14 +7,14 @@ use crate::devices::steelseries_engine::api;
 use crate::devices::steelseries_engine::api::Error;
 use crate::renderer::buffer::Buffer;
 
-pub struct SteelseriesEngineDevice {
+pub struct SteelSeriesEngineDevice {
     name: String,
     size: Size,
 }
 
-impl Device for SteelseriesEngineDevice {
+impl Device for SteelSeriesEngineDevice {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
-        let settings = SteelseriesEngineDeviceSettings::from_lua(settings, lua)?;
+        let settings = SteelSeriesEngineDeviceSettings::from_lua(settings, lua)?;
 
         let screen_size = settings.screen_size;
         api::register_size(screen_size);
@@ -60,13 +60,13 @@ impl Device for SteelseriesEngineDevice {
 }
 
 #[derive(FromLuaValue, Clone)]
-pub struct SteelseriesEngineDeviceSettings {
+pub struct SteelSeriesEngineDeviceSettings {
     pub name: String,
     pub screen_size: Size,
 }
 
-impl Settings for SteelseriesEngineDeviceSettings {
-    type DeviceType = SteelseriesEngineDevice;
+impl Settings for SteelSeriesEngineDeviceSettings {
+    type DeviceType = SteelSeriesEngineDevice;
 
     fn name(&self) -> String {
         self.name.clone()
