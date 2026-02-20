@@ -11,6 +11,7 @@ pub struct SessionData {
     #[proto(transform = Self::duration_into_ms)]
     pub duration: Duration,
     pub playing: bool,
+    pub rate: f64,
 }
 
 impl SessionData {
