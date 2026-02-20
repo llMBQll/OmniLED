@@ -1,6 +1,6 @@
 # Media
 
-Media application provides information about currently playing media, e.g. title, artist, duration etc.
+Media application provides information about currently playing media, e.g., title, artist, duration, etc.
 
 ## Running
 
@@ -14,13 +14,13 @@ Media expects three arguments
   - `a`/`address` - server address
 - Optional:
   - `m`/`mode` - reporting mode - `individual`, `focused` or `both`.
-      Default: `both`.  
-      Described in [reporting mode](#reporting-mode).
+    Default: `both`.  
+    Described in [reporting mode](#reporting-mode).
   - `map` - map input application name to an event name, e.g. `--map "my_app_name=APP"`. Can be passed multiple
-      times. Target name must be an uppercase alphanumeric string, that can contain underscores and cannot start with a
-      number.
-      Default: `[]`.  
-      Describen in [application name mapping](#application-name-mapping).
+    times. Target name must be an uppercase alphanumeric string that can contain underscores and cannot start with a
+    number.
+    Default: `[]`.  
+    Described in [application name mapping](#application-name-mapping).
 
 ## Reporting mode
 
@@ -36,15 +36,15 @@ All updates will be sent with event name `MEDIA`, regardless of source applicati
 
 ### Both
 
-Report events in both ways - individual per application and combined for currently focused application.
+Report events in both ways – individual per application and combined for currently focused application.
 
 ## Application name mapping
 
 When sending events in [individual](#individual) mode, application names will be mapped to event names.  
 If mapping was provided as a command line parameter, then it will use the target name from that mapping.  
-If mapping was not provided, source application name will be converted in the following manner:
+If mapping was not provided, the source application name will be converted in the following manner:
 
-- If name starts with a digit it will be prefixed with an underscore.
+- If the name starts with a digit, it will be prefixed with an underscore.
 - All ascii letters will be converted to uppercase.
 - All non-alphanumeric characters will be converted to underscores.
 
@@ -63,10 +63,10 @@ Examples:
 
 Media sends a single type of event, and its name depends on the selected [mode](#reporting-mode).
 
-> There is a discrepancy in event frequency between current implementations on Windows and Linux operating systems.  
-> On Windows the interval seems to be around 4 seconds and on Linux it's a fixed update interval of 1 second.
+> Apps report the updates with varying frequencies.
+> This application tracks the playback rate and duration since the last update to send updates at least once a second.
 
-> Availability of event fields depends entirely on the media source. Be sure to check if a field is present when
+> The availability of event fields depends entirely on the media source. Be sure to check if a field is present when
 > handling media events.
 
 `MEDIA` or `<MAPPED_NAME>`: table
@@ -76,3 +76,4 @@ Media sends a single type of event, and its name depends on the selected [mode](
 - `Progress`: integer (value in milliseconds),
 - `Duration`: integer (value in milliseconds),
 - `Playing`: bool,
+- `Rate`: float (Playback speed multiplier - `1.0` for regular speed)
