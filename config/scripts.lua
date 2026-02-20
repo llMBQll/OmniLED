@@ -170,7 +170,7 @@ SCREEN_BUILDER
             layout = volume,
             run_on = { 'AUDIO.Input', 'AUDIO.Output' },
         },
-        make_media_layout('SPOTIFY'),
+        make_media_layout('MEDIA'),
         {
             layout = clock,
             run_on = { 'CLOCK.Seconds' },
