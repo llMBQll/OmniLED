@@ -110,6 +110,7 @@ impl MediaImpl {
         let title = metadata.title().unwrap_or_default();
         let progress = player.get_position().unwrap_or_default();
         let duration = metadata.length().unwrap_or_default();
+        let rate = player.get_playback_rate().unwrap_or(1.0);
 
         Ok(SessionData {
             artist: artist.to_string(),
@@ -117,6 +118,7 @@ impl MediaImpl {
             progress,
             duration,
             playing: true,
+            rate,
         })
     }
 }

@@ -49,6 +49,21 @@ impl GlobalSystemMedia {
             Self::register_session_handlers(&session, &tx, handle.clone());
         }
 
+        match manager.GetCurrentSession() {
+            Ok(session) => {
+                tx.send(Message::CurrentSessionChanged(Some(session)))
+                    .await
+                    .unwrap();
+            }
+            Err(err) => {
+                // Error code will be OK if there are no media sessions started,
+                // but otherwise the query succeeded
+                if err.code().is_err() {
+                    panic!("{err}");
+                }
+            }
+        }
+
         let sessions = Arc::new(Mutex::new(sessions));
         Self::register_global_handlers(tx, handle, &manager, &sessions);
     }
