@@ -17,7 +17,8 @@ use omni_led_lib::{
     script_handler::script_handler::ScriptHandler,
     server::server::PluginServer,
     settings::settings::Settings,
-    ui::handler::HandlerBuilder,
+    ui::event::Event,
+    ui::handler::{HandlerBuilder, PROXY},
 };
 use std::sync;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -28,6 +29,8 @@ mod logging;
 static RUNNING: AtomicBool = AtomicBool::new(true);
 
 fn main() {
+    set_panic_hook();
+
     let (constants_tx, constants_rx) = sync::mpsc::channel();
     let (ready_tx, ready_rx) = sync::mpsc::channel();
 
@@ -97,4 +100,17 @@ fn main() {
 
     RUNNING.store(false, Ordering::Relaxed);
     _ = scripting_thread.join();
+}
+
+fn set_panic_hook() {
+    // Exit all loops on panic to avoid deadlocks on cleanup
+
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        if let Some(proxy) = PROXY.get() {
+            proxy.send(Event::Quit)
+        }
+        RUNNING.store(false, Ordering::Relaxed);
+        hook(info);
+    }));
 }
