@@ -22,7 +22,7 @@ use omni_led_lib::{
 };
 use std::sync;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 mod logging;
 
@@ -39,59 +39,57 @@ fn main() {
             .enable_all()
             .build()
             .unwrap();
-        rt.block_on(async {
-            let init_begin = Instant::now();
 
-            let lua = Lua::new();
+        let init_begin = Instant::now();
 
-            load_internal_functions(&lua);
-            Constants::load(&lua);
+        let lua = Lua::new();
 
-            constants_tx
-                .send(UserDataRef::<Constants>::load(&lua).get().clone())
-                .unwrap();
+        load_internal_functions(&lua);
+        Constants::load(&lua);
 
-            let _ = ready_rx.recv().unwrap();
+        constants_tx
+            .send(UserDataRef::<Constants>::load(&lua).get().clone())
+            .unwrap();
 
-            let log_handle = logging::init(&lua);
-            Log::load(&lua, log_handle);
+        let _ = ready_rx.recv().unwrap();
 
-            let applications_config = read_config(&lua, ConfigType::Applications).unwrap();
-            let devices_config = read_config(&lua, ConfigType::Devices).unwrap();
-            let scripts_config = read_config(&lua, ConfigType::Scripts).unwrap();
-            let settings_config = read_config(&lua, ConfigType::Settings).unwrap();
+        let log_handle = logging::init(&lua);
+        Log::load(&lua, log_handle);
 
-            Settings::load(&lua, settings_config);
-            PluginServer::load(&lua).await;
-            Events::load(&lua);
-            Shortcuts::load(&lua);
-            Devices::load(&lua, devices_config);
-            ScriptHandler::load(&lua, scripts_config);
-            AppLoader::load(&lua, applications_config);
+        let applications_config = read_config(&lua, ConfigType::Applications).unwrap();
+        let devices_config = read_config(&lua, ConfigType::Devices).unwrap();
+        let scripts_config = read_config(&lua, ConfigType::Scripts).unwrap();
+        let settings_config = read_config(&lua, ConfigType::Settings).unwrap();
 
-            let keyboard_handle = std::thread::spawn(|| process_events(&RUNNING));
+        Settings::load(&lua, settings_config);
+        let server_shutdown_tx = PluginServer::load(&lua, &rt);
+        Events::load(&lua);
+        Shortcuts::load(&lua);
+        Devices::load(&lua, devices_config);
+        ScriptHandler::load(&lua, scripts_config);
+        AppLoader::load(&lua, applications_config);
 
-            let init_end = Instant::now();
-            debug!("Initialized in {:?}", init_end - init_begin);
+        let init_end = Instant::now();
+        debug!("Initialized in {:?}", init_end - init_begin);
 
-            let settings = UserDataRef::<Settings>::load(&lua);
-            let interval = settings.get().update_interval;
-            let event_loop = EventLoop::new();
-            event_loop
-                .run(interval, &RUNNING, |events| {
-                    let dispatcher = UserDataRef::<Events>::load(&lua);
-                    for event in events {
-                        dispatcher.get().dispatch(&lua, event).unwrap();
-                    }
+        let settings = UserDataRef::<Settings>::load(&lua);
+        let interval = settings.get().update_interval;
+        let event_loop = EventLoop::new();
+        event_loop.run(interval, &RUNNING, |events| {
+            let dispatcher = UserDataRef::<Events>::load(&lua);
+            for event in events {
+                dispatcher.get().dispatch(&lua, event).unwrap();
+            }
 
-                    let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
-                    script_handler.get_mut().update(&lua, interval).unwrap();
-                })
-                .await;
-
-            keyboard_handle.join().unwrap();
+            let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
+            script_handler.get_mut().update(&lua, interval).unwrap();
         });
+
+        server_shutdown_tx.send(()).unwrap();
+        rt.shutdown_timeout(Duration::from_secs(1));
     });
+
+    let keyboard_thread = std::thread::spawn(|| process_events(&RUNNING));
 
     HandlerBuilder::new()
         .with_constants(constants_rx.recv().unwrap())
@@ -100,6 +98,7 @@ fn main() {
 
     RUNNING.store(false, Ordering::Relaxed);
     _ = scripting_thread.join();
+    _ = keyboard_thread.join().unwrap();
 }
 
 fn set_panic_hook() {

@@ -6,6 +6,8 @@ use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::net::TcpListener;
+use tokio::runtime::Runtime;
+use tokio::sync::oneshot;
 use tokio_stream::StreamExt;
 use tonic::transport::Server;
 use tonic::{Code, Request, Response, Status, Streaming};
@@ -22,21 +24,24 @@ pub struct PluginServer {
 }
 
 impl PluginServer {
-    pub async fn load(lua: &Lua) {
+    pub fn load(lua: &Lua, rt: &Runtime) -> oneshot::Sender<()> {
         const LOCALHOST: &str = "127.0.0.1";
 
         let settings = UserDataRef::<Settings>::load(lua);
 
         let port: u16 = settings.get().server_port;
-        let listener = TcpListener::bind(format!("{LOCALHOST}:{port}"))
-            .await
+
+        let listener = rt
+            .block_on(TcpListener::bind(format!("{LOCALHOST}:{port}")))
             .unwrap();
+
         let address = listener.local_addr().unwrap();
         let bound_port = address.port();
 
         let log_level_filter = settings.get().log_level.into();
 
-        tokio::task::spawn(
+        let (tx, rx) = oneshot::channel();
+        rt.spawn(
             Server::builder()
                 .add_service(
                     omni_led_api::types::plugin_server::PluginServer::new(Self::new(
@@ -45,7 +50,13 @@ impl PluginServer {
                     .max_decoding_message_size(64 * 1024 * 1024)
                     .max_encoding_message_size(64 * 1024 * 1024),
                 )
-                .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener)),
+                .serve_with_incoming_shutdown(
+                    tokio_stream::wrappers::TcpListenerStream::new(listener),
+                    async {
+                        _ = rx.await;
+                        debug!("Server shutting down")
+                    },
+                ),
         );
 
         let address = format!("{LOCALHOST}:{bound_port}");
@@ -71,6 +82,8 @@ impl PluginServer {
         .unwrap();
 
         lua.globals().set("SERVER", info).unwrap();
+
+        tx
     }
 
     fn new(log_level_filter: log::LevelFilter) -> Self {

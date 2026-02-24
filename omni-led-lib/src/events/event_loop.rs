@@ -11,7 +11,7 @@ impl EventLoop {
         Self {}
     }
 
-    pub async fn run<F: FnMut(Vec<Event>)>(
+    pub fn run<F: FnMut(Vec<Event>)>(
         &self,
         interval: Duration,
         running: &AtomicBool,
@@ -29,7 +29,7 @@ impl EventLoop {
             let update_duration = end - begin;
             trace!("Update took {:?}", update_duration);
 
-            tokio::time::sleep(interval.saturating_sub(update_duration)).await;
+            std::thread::sleep(interval.saturating_sub(update_duration));
         }
     }
 }
