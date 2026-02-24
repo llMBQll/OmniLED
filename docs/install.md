@@ -8,17 +8,19 @@
 ### Linux
 
 ```bash
-sudo apt install gcc \
-                 g++ \
-                 libappindicator3-dev \
-                 libdbus-1-dev \
-                 libfontconfig-dev \
-                 libgtk-3-dev \
-                 libpulse-dev \
-                 libx11-dev \
-                 libxdo-dev \
-                 pkg-config \
-                 protobuf-compiler
+sudo apt install \
+          gcc \
+          g++ \
+          libappindicator3-dev \
+          libdbus-1-dev \
+          libfontconfig-dev \
+          libgtk-3-dev \
+          libpulse-dev \
+          libudev-dev \
+          libx11-dev \
+          libxdo-dev \
+          pkg-config \
+          protobuf-compiler
 ```
 
 > _Note: Tested on Ubuntu 24.04 LTS_
@@ -63,8 +65,13 @@ To allow this program to access your device, it needs an entry in udev rules.
 
 1. Create udev rules entry.  
    `touch /etc/udev/rules.d/69-omni-led.rules`
-2. Using your favourite text editor add the following line and adapt it for your device.  
-   `SUBSYSTEM=="usb", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1618", MODE="0666", GROUP="plugdev"`
+2. Using your favourite text editor add the following lines and adapt it for your device  
+
+   ```text
+   SUBSYSTEM=="usb", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1618", MODE="0666", GROUP="plugdev"
+   SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1618", MODE="0666", GROUP="plugdev"
+   ```
+
 3. Reload udev rules (in case this is insufficient, you may need to unplug and plug in the device or
    restart the system).  
    `sudo udevadm control --reload-rules && sudo udevadm trigger`
