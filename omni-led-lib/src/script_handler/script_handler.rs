@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
-use crate::common::common::KEY_VAL_TABLE;
+use crate::common::common::CLEANUP_ENTRIES;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
@@ -90,9 +90,7 @@ impl ScriptHandler {
         match value {
             Value::Table(table) => match table.metatable() {
                 Some(metatable) => {
-                    if !metatable.contains_key(KEY_VAL_TABLE)? {
-                        unreachable!("Only key-value tables should have a metatable")
-                    }
+                    let cleanup_entries: Table = metatable.get(CLEANUP_ENTRIES)?;
 
                     if !parent.contains_key(value_name)? {
                         let empty = lua.create_table()?;
@@ -102,6 +100,10 @@ impl ScriptHandler {
 
                     table.for_each(|key: String, val: Value| {
                         Self::set_value_impl(lua, &entry, &key, val)
+                    })?;
+
+                    cleanup_entries.for_each(|key: String, _: Value| {
+                        Self::set_value_impl(lua, &entry, &key, Value::Nil)
                     })
                 }
                 None => {

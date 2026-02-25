@@ -2,7 +2,7 @@ use mlua::{ErrorContext, Function, Lua, UserData, UserDataMethods, Value};
 use omni_led_api::types::{Field, field};
 use omni_led_derive::UniqueUserData;
 
-use crate::common::common::{KEY_VAL_TABLE, proto_to_lua_value};
+use crate::common::common::{CLEANUP_ENTRIES, proto_to_lua_value};
 use crate::common::user_data::UniqueUserData;
 use crate::events::event_queue::Event;
 use crate::keyboard::keyboard::{KeyboardEvent, KeyboardEventEventType};
@@ -59,8 +59,11 @@ impl Events {
         match value {
             Value::Table(table) => match table.metatable() {
                 Some(metatable) => {
-                    if !metatable.contains_key(KEY_VAL_TABLE)? {
-                        unreachable!("Only key-value tables should have a metatable")
+                    if !metatable.contains_key(CLEANUP_ENTRIES)? {
+                        return Err(mlua::Error::runtime(format!(
+                            "Unexpected metatable {:#?}",
+                            metatable
+                        )));
                     }
 
                     table.for_each(|key: String, val: Value| {

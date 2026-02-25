@@ -51,7 +51,7 @@ macro_rules! create_table_with_defaults {
     }};
 }
 
-pub const KEY_VAL_TABLE: &str = "key-val-table";
+pub const CLEANUP_ENTRIES: &str = "CE";
 
 pub fn load_internal_functions(lua: &Lua) {
     let dump = lua
@@ -111,13 +111,19 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
         }
         Some(FieldEntry::FTable(map)) => {
             let size = map.items.len();
+
             let table = lua.create_table_with_capacity(0, size)?;
+            let cleanup_entries = lua.create_table_with_capacity(0, size)?;
+
             for (key, value) in map.items {
-                table.set(key, proto_to_lua_value(lua, value)?)?;
+                match proto_to_lua_value(lua, value)? {
+                    Value::Nil => cleanup_entries.set(key, true)?,
+                    value => table.set(key, value)?,
+                }
             }
 
             let meta = lua.create_table_with_capacity(0, 1)?;
-            meta.set(KEY_VAL_TABLE, true)?;
+            meta.set(CLEANUP_ENTRIES, cleanup_entries)?;
             _ = table.set_metatable(Some(meta));
 
             Ok(Value::Table(table))
