@@ -124,7 +124,7 @@ pub fn get_cleanup_entries_metatable(table: &Table) -> mlua::Result<Option<Table
     }
 }
 
-fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
+pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
     match field.field {
         Some(FieldEntry::FNone(_)) | None => Ok(mlua::Nil),
         Some(FieldEntry::FBool(bool)) => Ok(Value::Boolean(bool)),
@@ -173,8 +173,7 @@ fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
         }
     }
 }
-
-pub fn hash<T: Hash>(t: &T) -> u64 {
+fn hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
