@@ -93,7 +93,7 @@ pub fn load_internal_functions(lua: &Lua) {
 
 pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
     match field.field {
-        None => Ok(mlua::Nil),
+        Some(FieldEntry::FNone(_)) | None => Ok(mlua::Nil),
         Some(FieldEntry::FBool(bool)) => Ok(Value::Boolean(bool)),
         Some(FieldEntry::FInteger(integer)) => Ok(Value::Integer(integer)),
         Some(FieldEntry::FFloat(float)) => Ok(Value::Number(float)),
