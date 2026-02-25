@@ -69,7 +69,7 @@ To allow this program to access your device, it needs an entry in udev rules.
 
    ```text
    SUBSYSTEM=="usb", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1618", MODE="0666", GROUP="plugdev"
-   SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1618", MODE="0666", GROUP="plugdev"
+   KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1618", MODE="0666", GROUP="plugdev"
    ```
 
 3. Reload udev rules (in case this is insufficient, you may need to unplug and plug in the device or
