@@ -1,11 +1,13 @@
-use mlua::{ErrorContext, Function, Lua, UserData, UserDataMethods, Value};
+use mlua::{ErrorContext, Function, Lua, Table, UserData, UserDataMethods, Value};
+use omni_led_api::types::field::Field as FieldEntry;
 use omni_led_api::types::{Field, field};
 use omni_led_derive::UniqueUserData;
+use std::hash::{DefaultHasher, Hash, Hasher};
 
-use crate::common::common::{CLEANUP_ENTRIES, proto_to_lua_value};
 use crate::common::user_data::UniqueUserData;
 use crate::events::event_queue::Event;
 use crate::keyboard::keyboard::{KeyboardEvent, KeyboardEventEventType};
+use crate::script_handler::script_data_types::ImageData;
 
 #[derive(UniqueUserData)]
 pub struct Events {
@@ -111,4 +113,69 @@ impl UserData for Events {
 struct EventEntry {
     event: String,
     on_match: Function,
+}
+
+const CLEANUP_ENTRIES: &str = "__cleanup_entries";
+
+pub fn get_cleanup_entries_metatable(table: &Table) -> mlua::Result<Option<Table>> {
+    match table.metatable() {
+        Some(metatable) => metatable.get(CLEANUP_ENTRIES),
+        None => Ok(None),
+    }
+}
+
+fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
+    match field.field {
+        Some(FieldEntry::FNone(_)) | None => Ok(mlua::Nil),
+        Some(FieldEntry::FBool(bool)) => Ok(Value::Boolean(bool)),
+        Some(FieldEntry::FInteger(integer)) => Ok(Value::Integer(integer)),
+        Some(FieldEntry::FFloat(float)) => Ok(Value::Number(float)),
+        Some(FieldEntry::FString(string)) => {
+            let string = lua.create_string(string)?;
+            Ok(Value::String(string))
+        }
+        Some(FieldEntry::FArray(array)) => {
+            let size = array.items.len();
+            let table = lua.create_table_with_capacity(size, 0)?;
+            for value in array.items {
+                table.push(proto_to_lua_value(lua, value)?)?;
+            }
+            Ok(Value::Table(table))
+        }
+        Some(FieldEntry::FTable(map)) => {
+            let size = map.items.len();
+
+            let table = lua.create_table_with_capacity(0, size)?;
+            let cleanup_entries = lua.create_table_with_capacity(0, size)?;
+
+            for (key, value) in map.items {
+                match proto_to_lua_value(lua, value)? {
+                    Value::Nil => cleanup_entries.set(key, true)?,
+                    value => table.set(key, value)?,
+                }
+            }
+
+            let meta = lua.create_table_with_capacity(0, 1)?;
+            meta.set(CLEANUP_ENTRIES, cleanup_entries)?;
+            _ = table.set_metatable(Some(meta));
+
+            Ok(Value::Table(table))
+        }
+        Some(FieldEntry::FImageData(image)) => {
+            let hash = hash(&image.data);
+            let image_data = ImageData {
+                format: image.format().try_into().map_err(mlua::Error::external)?,
+                bytes: image.data,
+                hash: Some(hash),
+            };
+            let user_data = lua.create_any_userdata(image_data)?;
+            Ok(Value::UserData(user_data))
+        }
+    }
+}
+
+pub fn hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
 }

@@ -7,13 +7,12 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
-use crate::common::common::CLEANUP_ENTRIES;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
-use crate::events::events::Events;
+use crate::events::events::{Events, get_cleanup_entries_metatable};
 use crate::events::shortcuts::Shortcuts;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
@@ -88,10 +87,8 @@ impl ScriptHandler {
         value: Value,
     ) -> mlua::Result<()> {
         match value {
-            Value::Table(table) => match table.metatable() {
-                Some(metatable) => {
-                    let cleanup_entries: Table = metatable.get(CLEANUP_ENTRIES)?;
-
+            Value::Table(table) => match get_cleanup_entries_metatable(&table)? {
+                Some(cleanup_entries) => {
                     if !parent.contains_key(value_name)? {
                         let empty = lua.create_table()?;
                         parent.set(value_name, empty)?;
