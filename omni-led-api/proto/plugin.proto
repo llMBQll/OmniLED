@@ -16,6 +16,7 @@ message EventResponse {}
 
 message Field {
   oneof field {
+    None f_none = 8;
     bool f_bool = 1;
     int64 f_integer = 2;
     double f_float = 3;
@@ -87,3 +88,5 @@ enum LogLevelFilter {
   LOG_LEVEL_FILTER_DEBUG = 5;
   LOG_LEVEL_FILTER_TRACE = 6;
 }
+
+message None {}

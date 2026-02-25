@@ -1,9 +1,4 @@
 use mlua::{Lua, Table, Value, chunk};
-use omni_led_api::types::Field;
-use omni_led_api::types::field::Field as FieldEntry;
-use std::hash::{DefaultHasher, Hash, Hasher};
-
-use crate::script_handler::script_data_types::ImageData;
 
 #[macro_export]
 macro_rules! create_table {
@@ -51,8 +46,6 @@ macro_rules! create_table_with_defaults {
     }};
 }
 
-pub const KEY_VAL_TABLE: &str = "key-val-table";
-
 pub fn load_internal_functions(lua: &Lua) {
     let dump = lua
         .create_function(|_, value: Value| {
@@ -89,54 +82,4 @@ pub fn load_internal_functions(lua: &Lua) {
             }),
         )
         .unwrap();
-}
-
-pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
-    match field.field {
-        None => Ok(mlua::Nil),
-        Some(FieldEntry::FBool(bool)) => Ok(Value::Boolean(bool)),
-        Some(FieldEntry::FInteger(integer)) => Ok(Value::Integer(integer)),
-        Some(FieldEntry::FFloat(float)) => Ok(Value::Number(float)),
-        Some(FieldEntry::FString(string)) => {
-            let string = lua.create_string(string)?;
-            Ok(Value::String(string))
-        }
-        Some(FieldEntry::FArray(array)) => {
-            let size = array.items.len();
-            let table = lua.create_table_with_capacity(size, 0)?;
-            for value in array.items {
-                table.push(proto_to_lua_value(lua, value)?)?;
-            }
-            Ok(Value::Table(table))
-        }
-        Some(FieldEntry::FTable(map)) => {
-            let size = map.items.len();
-            let table = lua.create_table_with_capacity(0, size)?;
-            for (key, value) in map.items {
-                table.set(key, proto_to_lua_value(lua, value)?)?;
-            }
-
-            let meta = lua.create_table_with_capacity(0, 1)?;
-            meta.set(KEY_VAL_TABLE, true)?;
-            _ = table.set_metatable(Some(meta));
-
-            Ok(Value::Table(table))
-        }
-        Some(FieldEntry::FImageData(image)) => {
-            let hash = hash(&image.data);
-            let image_data = ImageData {
-                format: image.format().try_into().map_err(mlua::Error::external)?,
-                bytes: image.data,
-                hash: Some(hash),
-            };
-            let user_data = lua.create_any_userdata(image_data)?;
-            Ok(Value::UserData(user_data))
-        }
-    }
-}
-
-pub fn hash<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
-    t.hash(&mut s);
-    s.finish()
 }

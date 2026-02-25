@@ -7,13 +7,12 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
-use crate::common::common::KEY_VAL_TABLE;
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
-use crate::events::events::Events;
+use crate::events::events::{Events, get_cleanup_entries_metatable};
 use crate::events::shortcuts::Shortcuts;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
@@ -88,20 +87,22 @@ impl ScriptHandler {
         value: Value,
     ) -> mlua::Result<()> {
         match value {
-            Value::Table(table) => match table.metatable() {
-                Some(metatable) => {
-                    if !metatable.contains_key(KEY_VAL_TABLE)? {
-                        unreachable!("Only key-value tables should have a metatable")
-                    }
-
+            Value::Table(table) => match get_cleanup_entries_metatable(&table)? {
+                Some(cleanup_entries) => {
                     if !parent.contains_key(value_name)? {
                         let empty = lua.create_table()?;
                         parent.set(value_name, empty)?;
                     }
                     let entry: Table = parent.get(value_name)?;
 
+                    println!("{value_name}");
+
                     table.for_each(|key: String, val: Value| {
                         Self::set_value_impl(lua, &entry, &key, val)
+                    })?;
+
+                    cleanup_entries.for_each(|key: String, _: Value| {
+                        Self::set_value_impl(lua, &entry, &key, Value::Nil)
                     })
                 }
                 None => {
@@ -109,7 +110,10 @@ impl ScriptHandler {
                     parent.set(value_name, Value::Table(table))
                 }
             },
-            value => parent.set(value_name, value),
+            value => {
+                println!("  - {value_name}: {value:?}");
+                parent.set(value_name, value)
+            }
         }
     }
 
@@ -489,5 +493,235 @@ impl UserData for ScreenBuilderImpl {
 
             Ok(())
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::create_table;
+    use crate::events::events::proto_to_lua_value;
+    use omni_led_derive::IntoProto;
+
+    fn assert_tables_equal(lua: &Lua, left: &Table, right: &Table, line: u32) {
+        assert_tables_equal_impl(lua, left, right, &format!("{line}"))
+    }
+
+    fn assert_tables_equal_impl(lua: &Lua, left: &Table, right: &Table, path: &str) {
+        let left_count = left.pairs::<Value, Value>().count();
+        let right_count = right.pairs::<Value, Value>().count();
+        assert_eq!(
+            left_count, right_count,
+            "Tables at '{}' have different sizes: {} vs {}",
+            path, left_count, right_count
+        );
+
+        for pair in left.pairs::<String, Value>() {
+            let (key, left_value) = pair.unwrap();
+            let new_path = format!("{}.{}", path, key);
+            let right_value: Value = right.raw_get(key).unwrap();
+
+            assert_values_equal(lua, &left_value, &right_value, &new_path);
+        }
+    }
+
+    fn assert_values_equal(lua: &Lua, left: &Value, right: &Value, path: &str) {
+        match (left, right) {
+            (Value::Nil, Value::Nil) => {}
+            (Value::Boolean(l), Value::Boolean(r)) => {
+                assert_eq!(l, r, "Booleans at '{}' differ: {} vs {}", path, l, r);
+            }
+            (Value::Integer(l), Value::Integer(r)) => {
+                assert_eq!(l, r, "Integers at '{}' differ: {} vs {}", path, l, r);
+            }
+            (Value::Number(l), Value::Number(r)) => {
+                assert!(
+                    (l - r).abs() < f64::EPSILON,
+                    "Numbers at '{}' differ: {} vs {}",
+                    path,
+                    l,
+                    r
+                );
+            }
+            (Value::String(l), Value::String(r)) => {
+                assert_eq!(
+                    l.to_str().unwrap(),
+                    r.to_str().unwrap(),
+                    "Strings at '{}' differ: {:?} vs {:?}",
+                    path,
+                    l.to_str().unwrap(),
+                    r.to_str().unwrap()
+                );
+            }
+            (Value::Table(l), Value::Table(r)) => assert_tables_equal_impl(lua, l, r, path),
+            (l, r) => {
+                // Types don't match, or we have unhandled types, good enough for testing purposes
+                panic!(
+                    "Unexpected value at '{}': {}({:?}) vs {}({:?})",
+                    path,
+                    l.type_name(),
+                    l,
+                    r.type_name(),
+                    r
+                );
+            }
+        }
+    }
+
+    #[derive(IntoProto)]
+    struct InputA {
+        a: Option<i64>,
+        b: Option<InputB>,
+    }
+
+    #[derive(IntoProto)]
+    struct InputB {
+        b: Option<i64>,
+        c: Option<InputC>,
+    }
+
+    #[derive(IntoProto)]
+    struct InputC {
+        c: Option<i64>,
+    }
+
+    #[derive(IntoProto)]
+    struct InputStrongA {
+        a: Option<i64>,
+        #[proto(strong_none)]
+        b: Option<InputB>,
+    }
+
+    #[test]
+    fn recursive_set() {
+        let lua = Lua::new();
+        let env = lua.create_table().unwrap();
+
+        let input = InputA {
+            a: Some(1),
+            b: Some(InputB {
+                b: Some(2),
+                c: Some(InputC { c: None }),
+            }),
+        };
+        let input = proto_to_lua_value(&lua, input.into()).unwrap();
+        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+
+        let expected = create_table! {
+            lua,
+            {
+                a = {
+                    a = 1,
+                    b = {
+                        b = 2,
+                        c = { }
+                    }
+                }
+            }
+        };
+        assert_tables_equal(&lua, &expected, &env, line!());
+    }
+
+    #[test]
+    fn partial_update() {
+        let lua = Lua::new();
+        let env = lua.create_table().unwrap();
+
+        let input = InputA {
+            a: None,
+            b: Some(InputB {
+                b: Some(2),
+                c: None,
+            }),
+        };
+        let input = proto_to_lua_value(&lua, input.into()).unwrap();
+        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+
+        let expected = create_table! {
+            lua,
+            {
+                a = {
+                    b = {
+                        b = 2,
+                    }
+                }
+            }
+        };
+        assert_tables_equal(&lua, &expected, &env, line!());
+
+        let input = InputA {
+            a: Some(1),
+            b: Some(InputB {
+                b: None,
+                c: Some(InputC { c: Some(3) }),
+            }),
+        };
+        let input = proto_to_lua_value(&lua, input.into()).unwrap();
+        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+
+        let expected = create_table! {
+            lua,
+            {
+                a = {
+                    a = 1,
+                    b = {
+                        b = 2,
+                        c = {
+                            c = 3,
+                        },
+                    }
+                }
+            }
+        };
+        assert_tables_equal(&lua, &expected, &env, line!());
+    }
+
+    #[test]
+    fn partial_update_remove() {
+        let lua = Lua::new();
+        let env = lua.create_table().unwrap();
+
+        let input = InputA {
+            a: Some(1),
+            b: Some(InputB {
+                b: Some(2),
+                c: Some(InputC { c: Some(3) }),
+            }),
+        };
+        let input = proto_to_lua_value(&lua, input.into()).unwrap();
+        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+
+        let expected = create_table! {
+            lua,
+            {
+                a = {
+                    a = 1,
+                    b = {
+                        b = 2,
+                        c = {
+                            c = 3,
+                        }
+                    }
+                }
+            }
+        };
+        assert_tables_equal(&lua, &expected, &env, line!());
+
+        let input = InputStrongA {
+            a: Some(1),
+            b: None,
+        };
+        let input = proto_to_lua_value(&lua, input.into()).unwrap();
+        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+
+        let expected = create_table! {
+            lua,
+            {
+                a = {
+                    a = 1,
+                }
+            }
+        };
+        assert_tables_equal(&lua, &expected, &env, line!());
     }
 }
