@@ -2,8 +2,8 @@ use audio::Audio;
 use clap::Parser;
 use log::debug;
 use omni_led_api::plugin::Plugin;
+use omni_led_api::types::Table;
 use omni_led_derive::IntoProto;
-use std::error::Error;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -13,9 +13,9 @@ mod audio;
 const NAME: &str = "AUDIO";
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() {
     let options = Options::parse();
-    let mut plugin = Plugin::new(NAME, &options.address).await?;
+    let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
 
     let (tx, mut rx): (
         Sender<(DeviceData, DeviceType)>,
@@ -33,21 +33,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
             );
         }
 
-        let event = match device_type {
-            DeviceType::Input => AudioEvent {
-                input: Some(data),
-                output: None,
-            },
-            DeviceType::Output => AudioEvent {
-                input: None,
-                output: Some(data),
-            },
+        let event_data = if data.connected {
+            Some(EventData {
+                is_muted: data.is_muted,
+                volume: data.volume,
+                name: data.name,
+            })
+        } else {
+            None
+        };
+
+        let event: Table = match device_type {
+            DeviceType::Input => InputAudioEvent { input: event_data }.into(),
+            DeviceType::Output => OutputAudioEvent { output: event_data }.into(),
         };
 
         plugin.update(event.into()).await.unwrap();
     }
-
-    Ok(())
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -58,13 +60,26 @@ pub enum DeviceType {
 
 #[derive(IntoProto)]
 #[proto(rename_all = PascalCase)]
-struct AudioEvent {
-    input: Option<DeviceData>,
-    output: Option<DeviceData>,
+struct InputAudioEvent {
+    #[proto(strong_none)]
+    input: Option<EventData>,
 }
 
 #[derive(IntoProto)]
 #[proto(rename_all = PascalCase)]
+struct OutputAudioEvent {
+    #[proto(strong_none)]
+    output: Option<EventData>,
+}
+
+#[derive(IntoProto)]
+#[proto(rename_all = PascalCase)]
+struct EventData {
+    is_muted: bool,
+    volume: i32,
+    name: Option<String>,
+}
+
 struct DeviceData {
     connected: bool,
     is_muted: bool,
