@@ -80,6 +80,9 @@ macro_rules! into_field {
     };
 }
 
+// None
+into_field!(None, field::Field::FNone);
+
 // Boolean values
 into_field!(bool, field::Field::FBool);
 

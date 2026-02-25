@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput};
 
-use crate::common::{get_attribute, is_option, parse_attributes};
+use crate::common::{get_attribute, get_attribute_with_default_value, is_option, parse_attributes};
 
 pub fn expand_into_proto_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
@@ -47,9 +47,10 @@ fn generate_assignments(data: &Data, struct_attrs: &StructAttributes) -> TokenSt
                         None => field_name,
                     };
 
-                    let is_option = is_option(&field.ty);
-
                     let attrs = get_field_attributes(&field.attrs);
+
+                    let is_option = is_option(&field.ty);
+                    let propagate_none = attrs.strong_none.is_some();
 
                     let value_accessor = if is_option {
                         quote! { value }
@@ -65,17 +66,30 @@ fn generate_assignments(data: &Data, struct_attrs: &StructAttributes) -> TokenSt
                     };
 
                     let insertion = quote! {
-                        table.items.insert(#renamed.to_string(), #transformed.into());
+                        table.items.insert(#renamed.to_string(), #transformed.into())
+                    };
+
+                    let none_insertion = quote! {
+                        table.items.insert(#renamed.to_string(), omni_led_api::types::None{}.into())
                     };
 
                     if is_option {
-                        quote! {
-                            if let Some(value) = self.#field_identifier {
-                                #insertion
+                        if propagate_none {
+                            quote! {
+                                match self.#field_identifier {
+                                    Some(value) => #insertion,
+                                    None => #none_insertion,
+                                };
+                            }
+                        } else {
+                            quote! {
+                                if let Some(value) = self.#field_identifier {
+                                    #insertion;
+                                }
                             }
                         }
                     } else {
-                        insertion
+                        quote! { #insertion; }
                     }
                 });
                 quote! { #(#assignments)* }
@@ -99,6 +113,7 @@ fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
 }
 
 struct FieldAttributes {
+    strong_none: Option<TokenStream>,
     transform: Option<TokenStream>,
 }
 
@@ -106,6 +121,7 @@ fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
     let mut attributes = parse_attributes("proto", attributes);
 
     FieldAttributes {
+        strong_none: get_attribute_with_default_value(&mut attributes, "strong_none", quote! {}),
         transform: get_attribute(&mut attributes, "transform"),
     }
 }
