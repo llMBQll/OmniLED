@@ -95,8 +95,6 @@ impl ScriptHandler {
                     }
                     let entry: Table = parent.get(value_name)?;
 
-                    println!("{value_name}");
-
                     table.for_each(|key: String, val: Value| {
                         Self::set_value_impl(lua, &entry, &key, val)
                     })?;
@@ -110,10 +108,7 @@ impl ScriptHandler {
                     parent.set(value_name, Value::Table(table))
                 }
             },
-            value => {
-                println!("  - {value_name}: {value:?}");
-                parent.set(value_name, value)
-            }
+            value => parent.set(value_name, value),
         }
     }
 
