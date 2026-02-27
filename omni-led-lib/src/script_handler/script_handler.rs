@@ -31,7 +31,7 @@ struct DeviceContext {
     name: String,
     layouts: Vec<Layout>,
     animation_groups: Vec<HashMap<usize, AnimationGroup>>,
-    marked_for_update: Vec<bool>,
+    layout_update_flags: Vec<bool>,
     time_remaining: Duration,
     last_priority: usize,
     state: State,
@@ -116,7 +116,7 @@ impl ScriptHandler {
         for device in &mut self.devices {
             for (index, layout) in device.layouts.iter().enumerate() {
                 if layout.run_on.contains(key) {
-                    device.marked_for_update[index] = true;
+                    device.layout_update_flags[index] = true;
                 }
             }
         }
@@ -133,7 +133,7 @@ impl ScriptHandler {
     fn reset(&mut self, device_name: &String) {
         match self.devices.iter_mut().find(|x| x.name == *device_name) {
             Some(ctx) => {
-                ctx.marked_for_update = vec![false; ctx.marked_for_update.len()];
+                ctx.layout_update_flags.fill(false);
                 ctx.time_remaining = Duration::ZERO;
                 ctx.last_priority = 0;
                 ctx.state = State::Finished;
@@ -144,7 +144,7 @@ impl ScriptHandler {
         }
     }
 
-    pub(self) fn register(
+    fn register(
         &mut self,
         lua: &Lua,
         device_name: String,
@@ -160,7 +160,7 @@ impl ScriptHandler {
             name: device_name,
             layouts,
             animation_groups: vec![HashMap::new(); layout_count],
-            marked_for_update: vec![false; layout_count],
+            layout_update_flags: vec![false; layout_count],
             time_remaining: Default::default(),
             last_priority: 0,
             state: State::Finished,
@@ -186,29 +186,38 @@ impl ScriptHandler {
         time_passed: Duration,
     ) -> mlua::Result<()> {
         ctx.time_remaining = ctx.time_remaining.saturating_sub(time_passed);
-
-        let mut marked_for_update = vec![false; ctx.marked_for_update.len()];
-        std::mem::swap(&mut ctx.marked_for_update, &mut marked_for_update);
+        let has_time_remaining = !ctx.time_remaining.is_zero();
 
         let mut to_update = None;
         let mut new_update = false;
-        for (priority, marked_for_update) in marked_for_update.into_iter().enumerate() {
-            let can_finish = !ctx.time_remaining.is_zero()
-                && ctx.last_priority < priority
-                && ctx.state == State::CanFinish;
-            let in_progress = ctx.last_priority == priority && ctx.state == State::InProgress;
-
-            if can_finish || in_progress {
-                to_update = Some(ctx.last_priority);
+        for (priority, marked_for_update) in ctx.layout_update_flags.iter().enumerate() {
+            // If a more important layout still has time remaining, don't bother checking further
+            if has_time_remaining && ctx.last_priority < priority {
                 break;
             }
 
-            if marked_for_update && Self::test_predicate(&ctx.layouts[priority].predicate)? {
+            if *marked_for_update && Self::test_predicate(&ctx.layouts[priority].predicate)? {
                 to_update = Some(priority);
                 new_update = true;
                 break;
             }
+
+            // Handle repetition if currently processed priority is equal to that of the last update
+            if ctx.last_priority == priority {
+                // For `Repeat::ForDuration` make sure that there is still time remaining
+                let repeat_for_duration = has_time_remaining && ctx.state == State::CanFinish;
+
+                // For `Repeat::Once` make sure that the animation is in progress
+                let repeat_once = ctx.state == State::InProgress;
+
+                if repeat_for_duration || repeat_once {
+                    to_update = Some(priority);
+                    break;
+                }
+            }
         }
+
+        ctx.layout_update_flags.fill(false);
 
         let to_update = match to_update {
             Some(to_update) => to_update,
@@ -231,10 +240,9 @@ impl ScriptHandler {
 
         ctx.device.update(lua, image)?;
 
-        ctx.time_remaining = match (new_update, animation_state) {
-            (false, State::CanFinish) => ctx.time_remaining,
-            _ => output.duration,
-        };
+        if new_update {
+            ctx.time_remaining = output.duration;
+        }
         ctx.last_priority = to_update;
         ctx.state = animation_state;
 
