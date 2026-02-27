@@ -33,7 +33,8 @@ struct InstallOptions {
     #[clap(short, long)]
     interactive: bool,
 
-    /// Override your config files with defaults. Required in non-interactive mode.
+    /// Override your config files with defaults. Current configuration will be backed up.
+    /// Required in non-interactive mode.
     #[clap(
         short, long, action = ArgAction::Set,
         conflicts_with = "interactive", required_unless_present = "interactive"
@@ -92,15 +93,33 @@ fn install_binary_impl(name: &str, bytes: &[u8]) -> std::io::Result<()> {
 
 fn install_config_impl(name: &str, bytes: &[u8], override_config: bool) {
     let target = get_config_dir().join(name).with_extension("lua");
+    let target_new = get_config_dir().join(name).with_extension("lua.new");
+    let mut number = 0;
+    let backup = loop {
+        let backup = target.with_extension(format!("lua.bak.{number}"));
+        if !backup.exists() {
+            break backup;
+        }
+        number += 1;
+    };
 
-    if override_config || !target.exists() {
-        println!("Copying config file: {}", target.display());
+    println!("Writing config file {name}:");
+    if override_config {
+        if target.exists() {
+            fs::copy(&target, &backup).unwrap();
+            println!("  Backup stored - {}", backup.display());
+        }
         fs::write(&target, bytes).unwrap();
-    } else {
+        println!("  New config written - {}", target.display());
+    } else if target.exists() {
+        fs::write(&target_new, bytes).unwrap();
         println!(
-            "Skipped copying config file (file already exists): {}",
-            target.display()
+            "  New config written {}. Current config was not changed.",
+            target_new.display()
         );
+    } else {
+        fs::write(&target, bytes).unwrap();
+        println!("  New config written {}.", target.display());
     }
 }
 
@@ -171,7 +190,10 @@ fn install(options: InstallOptions) {
     install_binary!(WEATHER);
 
     let override_config = options.override_config == Some(true)
-        || (options.interactive && ask_user("Do you wish to override your config?"));
+        || (options.interactive
+            && ask_user(
+                "Do you wish to override your config? (Current configuration will be backed up.)",
+            ));
 
     install_config!(APPLICATIONS, override_config);
     install_config!(DEVICES, override_config);
