@@ -13,10 +13,10 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact_name: omni-led-setup-x86_64-linux
-            bin_name: omni-led
+            bin_name: omni-led-setup
           - os: windows-latest
             artifact_name: omni-led-setup-x86_64-windows.exe
-            bin_name: omni-led.exe
+            bin_name: omni-led-setup.exe
 
     runs-on: ${{ matrix.os }}
 
