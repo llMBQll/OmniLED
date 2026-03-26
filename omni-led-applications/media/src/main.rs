@@ -59,6 +59,10 @@ async fn main() {
 type Data = (bool, String, SessionData);
 
 async fn transform_name(name: &String) -> String {
+    if name.contains("spotify") {
+        return "SPOTIFY".to_string();
+    }
+
     let mut new_name = String::with_capacity(name.capacity());
 
     for character in name.chars() {

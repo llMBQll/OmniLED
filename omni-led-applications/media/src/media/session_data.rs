@@ -1,7 +1,7 @@
 use omni_led_derive::IntoProto;
 use std::time::Duration;
 
-#[derive(Clone, IntoProto)]
+#[derive(Clone, IntoProto, Default, Debug)]
 #[proto(rename_all = PascalCase)]
 pub struct SessionData {
     pub artist: String,
