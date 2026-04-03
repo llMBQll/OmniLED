@@ -4,21 +4,10 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::time::interval;
+use tokio::time::MissedTickBehavior::Skip;
 use zbus::{Connection, fdo::DBusProxy, proxy, zvariant::OwnedValue};
 
 use crate::{Data, media::session_data::SessionData};
-
-#[derive(Debug)]
-enum MprisEvent {
-    PlayerAdded(String),
-    PlayerRemoved(String),
-    FullUpdate((String, SessionData)),
-    MetadataUpdate((String, Metadata)),
-    ProgressUpdate((String, Duration)),
-    PlayingUpdate((String, bool)),
-    RateUpdate((String, f64)),
-    Tick,
-}
 
 pub struct MediaImpl {
     tx: Sender<Data>,
@@ -46,6 +35,7 @@ impl MediaImpl {
             let event_tx = event_tx.clone();
             async move {
                 let mut interval = interval(Duration::from_millis(500));
+                interval.set_missed_tick_behavior(Skip);
                 loop {
                     let _ = interval.tick().await;
                     let _ = event_tx.send(MprisEvent::Tick).await;
@@ -61,6 +51,14 @@ impl MediaImpl {
         mut rx: Receiver<MprisEvent>,
         data_tx: Sender<Data>,
     ) {
+        macro_rules! update_and_send {
+            ($tx:ident, $name:expr, $entry:ident, $entry_update:block) => {
+                Self::update_progress($entry);
+                $entry_update;
+                $tx.send((false, $name, $entry.data.clone())).await.unwrap();
+            };
+        }
+
         let mut players = HashMap::<String, PlayerData>::new();
 
         while let Some(event) = rx.recv().await {
@@ -93,71 +91,47 @@ impl MediaImpl {
                 }
                 MprisEvent::FullUpdate((name, data)) => {
                     if let Some(entry) = players.get_mut(&name) {
-                        entry.data = data;
-                        entry.last_update = Instant::now();
-                        data_tx
-                            .send((false, name, entry.data.clone()))
-                            .await
-                            .unwrap();
+                        update_and_send!(data_tx, name, entry, {
+                            entry.data = data;
+                        });
                     }
                 }
                 MprisEvent::MetadataUpdate((name, metadata)) => {
                     if let Some(entry) = players.get_mut(&name) {
-                        Self::update_progress(entry);
-
-                        entry.data.artist = metadata.artist;
-                        entry.data.title = metadata.title;
-                        entry.data.duration = metadata.duration;
-                        data_tx
-                            .send((false, name, entry.data.clone()))
-                            .await
-                            .unwrap();
+                        update_and_send!(data_tx, name, entry, {
+                            entry.data.artist = metadata.artist;
+                            entry.data.title = metadata.title;
+                            entry.data.duration = metadata.duration;
+                            entry.data.progress = Duration::ZERO;
+                        });
                     }
                 }
                 MprisEvent::ProgressUpdate((name, progress)) => {
                     if let Some(entry) = players.get_mut(&name) {
-                        entry.data.progress = progress;
-                        entry.last_update = Instant::now();
-                        data_tx
-                            .send((false, name, entry.data.clone()))
-                            .await
-                            .unwrap();
+                        update_and_send!(data_tx, name, entry, {
+                            entry.data.progress = progress;
+                        });
                     }
                 }
                 MprisEvent::PlayingUpdate((name, playing)) => {
                     if let Some(entry) = players.get_mut(&name) {
-                        Self::update_progress(entry);
-
-                        entry.data.playing = playing;
-                        data_tx
-                            .send((false, name, entry.data.clone()))
-                            .await
-                            .unwrap();
+                        update_and_send!(data_tx, name, entry, {
+                            entry.data.playing = playing;
+                        });
                     }
                 }
                 MprisEvent::RateUpdate((name, rate)) => {
                     if let Some(entry) = players.get_mut(&name) {
-                        // Update the progress with previous playback rate before setting the new one
-                        Self::update_progress(entry);
-
-                        entry.data.rate = rate;
-                        data_tx
-                            .send((false, name, entry.data.clone()))
-                            .await
-                            .unwrap();
+                        update_and_send!(data_tx, name, entry, {
+                            entry.data.rate = rate;
+                        });
                     }
                 }
                 MprisEvent::Tick => {
                     for (name, entry) in players.iter_mut() {
-                        if !entry.data.playing {
-                            continue;
+                        if entry.data.playing {
+                            update_and_send!(data_tx, name.clone(), entry, { });
                         }
-
-                        Self::update_progress(entry);
-                        data_tx
-                            .send((false, name.clone(), entry.data.clone()))
-                            .await
-                            .unwrap();
                     }
                 }
             }
@@ -300,7 +274,7 @@ impl MediaImpl {
         }
     }
 
-    fn read_title<'a>(metadata: &'a HashMap<String, OwnedValue>) -> String {
+    fn read_title(metadata: &HashMap<String, OwnedValue>) -> String {
         metadata
             .get("xesam:title")
             .map(|val| val.downcast_ref::<String>().unwrap())
@@ -360,6 +334,18 @@ trait MprisPlayer {
 
     #[zbus(signal)]
     fn seeked(&self, position: i64) -> zbus::Result<()>;
+}
+
+#[derive(Debug)]
+enum MprisEvent {
+    PlayerAdded(String),
+    PlayerRemoved(String),
+    FullUpdate((String, SessionData)),
+    MetadataUpdate((String, Metadata)),
+    ProgressUpdate((String, Duration)),
+    PlayingUpdate((String, bool)),
+    RateUpdate((String, f64)),
+    Tick,
 }
 
 #[derive(Debug)]
