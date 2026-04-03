@@ -231,10 +231,14 @@ impl MediaImpl {
 
             match (old.as_deref(), new.as_deref()) {
                 (Some(old), None) => {
-                    let _ = tx.send(MprisEvent::PlayerRemoved(old.to_string())).await;
+                    if old.starts_with(MPRIS_PREFIX) {
+                        let _ = tx.send(MprisEvent::PlayerRemoved(old.to_string())).await;
+                    }
                 }
                 (None, Some(new)) => {
-                    let _ = tx.send(MprisEvent::PlayerAdded(new.to_string())).await;
+                    if new.starts_with(MPRIS_PREFIX) {
+                        let _ = tx.send(MprisEvent::PlayerAdded(new.to_string())).await;
+                    }
                 }
                 _ => continue,
             }
@@ -266,38 +270,29 @@ impl MediaImpl {
 
     fn read_metadata(metadata: &HashMap<String, OwnedValue>) -> Metadata {
         Metadata {
-            title: Self::read_title(metadata),
-            artist: Self::read_artist(metadata),
-            duration: Self::read_duration(metadata),
+            artist: Self::read_artist(metadata).unwrap_or_default(),
+            title: Self::read_title(metadata).unwrap_or_default(),
+            duration: Self::read_duration(metadata).unwrap_or_default(),
         }
     }
 
-    fn read_title(metadata: &HashMap<String, OwnedValue>) -> String {
-        metadata
-            .get("xesam:title")
-            .map(|val| val.downcast_ref::<String>().unwrap())
-            .unwrap_or_default()
+    fn read_artist(metadata: &HashMap<String, OwnedValue>) -> Option<String> {
+        let val = metadata.get("xesam:artist")?;
+        let arr = val.downcast_ref::<zbus::zvariant::Array>().ok()?;
+        arr.iter()
+            .next()
+            .map(|v| v.downcast_ref::<String>().ok().unwrap_or_default())
     }
 
-    fn read_artist(metadata: &HashMap<String, OwnedValue>) -> String {
-        metadata
-            .get("xesam:artist")
-            .map::<String, _>(|val| {
-                let arr = val.downcast_ref::<zbus::zvariant::Array>().unwrap();
-                arr.iter()
-                    .map(|v| v.downcast_ref::<String>().unwrap())
-                    .next()
-                    .unwrap_or_default()
-            })
-            .unwrap_or_default()
+    fn read_title(metadata: &HashMap<String, OwnedValue>) -> Option<String> {
+        let val = metadata.get("xesam:title")?;
+        val.downcast_ref::<String>().ok()
     }
 
-    fn read_duration(metadata: &HashMap<String, OwnedValue>) -> Duration {
-        let length = metadata
-            .get("mpris:length")
-            .and_then(|v| Some(v.downcast_ref::<u64>().unwrap()))
-            .unwrap_or_default();
-        Duration::from_micros(length)
+    fn read_duration(metadata: &HashMap<String, OwnedValue>) -> Option<Duration> {
+        let val = metadata.get("mpris:length")?;
+        let length = val.downcast_ref::<u64>().ok()?;
+        Some(Duration::from_micros(length))
     }
 
     fn update_progress(entry: &mut PlayerData) {
@@ -365,7 +360,7 @@ struct PlayerData {
 
 #[derive(Debug)]
 struct Metadata {
-    title: String,
     artist: String,
+    title: String,
     duration: Duration,
 }
