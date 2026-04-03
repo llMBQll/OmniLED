@@ -97,10 +97,14 @@ impl MediaImpl {
                 MprisEvent::MetadataUpdate((name, metadata)) => {
                     if let Some(entry) = players.get_mut(&name) {
                         update_and_send!(data_tx, entry, {
+                            if entry.data.title != metadata.title
+                                || entry.data.artist != metadata.artist
+                            {
+                                entry.data.progress = Duration::ZERO;
+                            }
                             entry.data.artist = metadata.artist;
                             entry.data.title = metadata.title;
                             entry.data.duration = metadata.duration;
-                            entry.data.progress = Duration::ZERO;
                         });
                     }
                 }
@@ -296,11 +300,12 @@ impl MediaImpl {
     }
 
     fn update_progress(entry: &mut PlayerData) {
+        let now = Instant::now();
         if entry.data.playing {
-            let elapsed = entry.last_update.elapsed();
+            let elapsed = now.saturating_duration_since(entry.last_update);
             entry.data.progress += elapsed.mul_f64(entry.data.rate);
         }
-        entry.last_update = Instant::now();
+        entry.last_update = now;
     }
 
     fn get_player_name(name: &str) -> String {
