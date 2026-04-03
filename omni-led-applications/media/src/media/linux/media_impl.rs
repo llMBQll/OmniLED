@@ -3,8 +3,8 @@ use log::error;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc::{self, Receiver, Sender};
-use tokio::time::interval;
 use tokio::time::MissedTickBehavior::Skip;
+use tokio::time::interval;
 use zbus::{Connection, fdo::DBusProxy, proxy, zvariant::OwnedValue};
 
 use crate::{Data, media::session_data::SessionData};
@@ -52,10 +52,12 @@ impl MediaImpl {
         data_tx: Sender<Data>,
     ) {
         macro_rules! update_and_send {
-            ($tx:ident, $name:expr, $entry:ident, $entry_update:block) => {
+            ($tx:ident, $entry:ident, $entry_update:block) => {
                 Self::update_progress($entry);
                 $entry_update;
-                $tx.send((false, $name, $entry.data.clone())).await.unwrap();
+                $tx.send((false, $entry.player_name.clone(), $entry.data.clone()))
+                    .await
+                    .unwrap();
             };
         }
 
@@ -74,6 +76,7 @@ impl MediaImpl {
                         tx.clone(),
                     ));
                     let data = SessionData::default();
+                    let player_name = Self::get_player_name(&name);
 
                     players.insert(
                         name,
@@ -81,6 +84,7 @@ impl MediaImpl {
                             handle,
                             data,
                             last_update: Instant::now(),
+                            player_name,
                         },
                     );
                 }
@@ -91,14 +95,14 @@ impl MediaImpl {
                 }
                 MprisEvent::FullUpdate((name, data)) => {
                     if let Some(entry) = players.get_mut(&name) {
-                        update_and_send!(data_tx, name, entry, {
+                        update_and_send!(data_tx, entry, {
                             entry.data = data;
                         });
                     }
                 }
                 MprisEvent::MetadataUpdate((name, metadata)) => {
                     if let Some(entry) = players.get_mut(&name) {
-                        update_and_send!(data_tx, name, entry, {
+                        update_and_send!(data_tx, entry, {
                             entry.data.artist = metadata.artist;
                             entry.data.title = metadata.title;
                             entry.data.duration = metadata.duration;
@@ -108,29 +112,29 @@ impl MediaImpl {
                 }
                 MprisEvent::ProgressUpdate((name, progress)) => {
                     if let Some(entry) = players.get_mut(&name) {
-                        update_and_send!(data_tx, name, entry, {
+                        update_and_send!(data_tx, entry, {
                             entry.data.progress = progress;
                         });
                     }
                 }
                 MprisEvent::PlayingUpdate((name, playing)) => {
                     if let Some(entry) = players.get_mut(&name) {
-                        update_and_send!(data_tx, name, entry, {
+                        update_and_send!(data_tx, entry, {
                             entry.data.playing = playing;
                         });
                     }
                 }
                 MprisEvent::RateUpdate((name, rate)) => {
                     if let Some(entry) = players.get_mut(&name) {
-                        update_and_send!(data_tx, name, entry, {
+                        update_and_send!(data_tx, entry, {
                             entry.data.rate = rate;
                         });
                     }
                 }
                 MprisEvent::Tick => {
-                    for (name, entry) in players.iter_mut() {
+                    for (_, entry) in players.iter_mut() {
                         if entry.data.playing {
-                            update_and_send!(data_tx, name.clone(), entry, { });
+                            update_and_send!(data_tx, entry, {});
                         }
                     }
                 }
@@ -309,6 +313,15 @@ impl MediaImpl {
         }
         entry.last_update = Instant::now();
     }
+
+    fn get_player_name(name: &str) -> String {
+        let name = name.strip_prefix(MPRIS_PREFIX).unwrap();
+
+        match name.find('.') {
+            Some(offset) => name[0..offset].to_string(),
+            None => name.to_string(),
+        }
+    }
 }
 
 const MPRIS_PREFIX: &str = "org.mpris.MediaPlayer2.";
@@ -353,6 +366,7 @@ struct PlayerData {
     handle: tokio::task::JoinHandle<()>,
     data: SessionData,
     last_update: Instant,
+    player_name: String,
 }
 
 #[derive(Debug)]
