@@ -9,16 +9,10 @@ use zbus::{Connection, fdo::DBusProxy, proxy, zvariant::OwnedValue};
 
 use crate::{Data, media::session_data::SessionData};
 
-pub struct MediaImpl {
-    tx: Sender<Data>,
-}
+pub struct MediaImpl;
 
 impl MediaImpl {
-    pub fn new(tx: Sender<Data>) -> Self {
-        Self { tx }
-    }
-
-    pub async fn run(&self) {
+    pub async fn run(tx: Sender<Data>) {
         let conn = Connection::session()
             .await
             .expect("Failed to connect to D-Bus session bus");
@@ -29,7 +23,7 @@ impl MediaImpl {
             conn.clone(),
             event_tx.clone(),
             event_rx,
-            self.tx.clone(),
+            tx,
         ));
         tokio::task::spawn({
             let event_tx = event_tx.clone();

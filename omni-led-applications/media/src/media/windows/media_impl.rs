@@ -12,9 +12,7 @@ use crate::Data;
 use crate::media::session_data::SessionData;
 use crate::media::windows::global_system_media::{GlobalSystemMedia, Message};
 
-pub struct MediaImpl {
-    tx: Sender<Data>,
-}
+pub struct MediaImpl;
 
 struct SessionState {
     data: SessionData,
@@ -22,14 +20,9 @@ struct SessionState {
 }
 
 impl MediaImpl {
-    pub fn new(tx: Sender<Data>) -> Self {
-        Self { tx }
-    }
-
-    pub async fn run(&self) {
+    pub async fn run(audio_tx: Sender<Data>) {
         let (tx, rx): (Sender<Message>, Receiver<Message>) = mpsc::channel(256);
 
-        let audio_tx = self.tx.clone();
         let loop_handle = tokio::task::spawn(async move {
             Self::run_message_loop(audio_tx, rx).await;
         });
