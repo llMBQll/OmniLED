@@ -232,17 +232,12 @@ impl MediaImpl {
 
             let old = args.old_owner();
             let new = args.new_owner();
-
             match (old.as_deref(), new.as_deref()) {
-                (Some(old), None) => {
-                    if old.starts_with(MPRIS_PREFIX) {
-                        let _ = tx.send(MprisEvent::PlayerRemoved(old.to_string())).await;
-                    }
+                (Some(_), None) => {
+                    let _ = tx.send(MprisEvent::PlayerRemoved(name.to_string())).await;
                 }
-                (None, Some(new)) => {
-                    if new.starts_with(MPRIS_PREFIX) {
-                        let _ = tx.send(MprisEvent::PlayerAdded(new.to_string())).await;
-                    }
+                (None, Some(_)) => {
+                    let _ = tx.send(MprisEvent::PlayerAdded(name.to_string())).await;
                 }
                 _ => continue,
             }
