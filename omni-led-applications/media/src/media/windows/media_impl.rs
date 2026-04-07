@@ -119,9 +119,7 @@ impl MediaImpl {
                             let progress_delta = elapsed.mul_f64(state.data.rate);
 
                             let mut data = state.data.clone();
-
-                            data.progress = (data.progress + progress_delta)
-                                .min(state.data.duration);
+                            data.progress = data.progress + progress_delta;
 
                             Self::send_data(&tx, name.clone(), data, &current_session).await;
                         }
@@ -135,20 +133,20 @@ impl MediaImpl {
         session.SourceAppUserModelId().unwrap().to_string_lossy()
     }
 
-    async fn get_song(session: &GlobalSystemMediaTransportControlsSession) -> (String, String) {
-        const DEFAULT_STR: &str = "N/A";
-
+    async fn get_song(
+        session: &GlobalSystemMediaTransportControlsSession,
+    ) -> (Option<String>, Option<String>) {
         match session.TryGetMediaPropertiesAsync() {
             Ok(operation) => match operation.await {
                 Ok(properties) => Ok((
                     properties
                         .Artist()
-                        .and_then(|x| Ok(x.to_string_lossy()))
-                        .unwrap_or(DEFAULT_STR.to_string()),
+                        .and_then(|x| Ok(Some(x.to_string_lossy())))
+                        .unwrap_or(None),
                     properties
                         .Title()
-                        .and_then(|x| Ok(x.to_string_lossy()))
-                        .unwrap_or(DEFAULT_STR.to_string()),
+                        .and_then(|x| Ok(Some(x.to_string_lossy())))
+                        .unwrap_or(None),
                 )),
                 Err(err) => Err(err),
             },
@@ -156,13 +154,14 @@ impl MediaImpl {
         }
         .unwrap_or_else(|err| {
             warn!("{err}");
-            (DEFAULT_STR.to_string(), DEFAULT_STR.to_string())
+            (None, None)
         })
     }
 
-    fn get_progress(session: &GlobalSystemMediaTransportControlsSession) -> (Duration, Duration) {
+    fn get_progress(
+        session: &GlobalSystemMediaTransportControlsSession,
+    ) -> (Duration, Option<Duration>) {
         const DEFAULT_POSITION: Duration = Duration::from_millis(0);
-        const DEFAULT_END: Duration = Duration::from_millis(1);
 
         match session.GetTimelineProperties() {
             Ok(properties) => (
@@ -172,12 +171,12 @@ impl MediaImpl {
                     .unwrap_or(DEFAULT_POSITION),
                 properties
                     .EndTime()
-                    .and_then(|x| Ok(x.into()))
-                    .unwrap_or(DEFAULT_END),
+                    .and_then(|x| Ok(Some(x.into())))
+                    .unwrap_or(None),
             ),
             Err(err) => {
                 warn!("{err}");
-                (DEFAULT_POSITION, DEFAULT_END)
+                (DEFAULT_POSITION, None)
             }
         }
     }

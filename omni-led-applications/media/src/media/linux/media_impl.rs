@@ -269,9 +269,9 @@ impl MediaImpl {
 
     fn read_metadata(metadata: &HashMap<String, OwnedValue>) -> Metadata {
         Metadata {
-            artist: Self::read_artist(metadata).unwrap_or_default(),
-            title: Self::read_title(metadata).unwrap_or_default(),
-            duration: Self::read_duration(metadata).unwrap_or_default(),
+            artist: Self::read_artist(metadata),
+            title: Self::read_title(metadata),
+            duration: Self::read_duration(metadata),
         }
     }
 
@@ -360,7 +360,7 @@ struct PlayerData {
 
 #[derive(Debug)]
 struct Metadata {
-    artist: String,
-    title: String,
-    duration: Duration,
+    artist: Option<String>,
+    title: Option<String>,
+    duration: Option<Duration>,
 }

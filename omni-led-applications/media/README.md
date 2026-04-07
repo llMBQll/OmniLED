@@ -64,16 +64,16 @@ Examples:
 Media sends a single type of event, and its name depends on the selected [mode](#reporting-mode).
 
 > Apps report the updates with varying frequencies.
-> This application tracks the playback rate and duration since the last update to send updates at least once a second.
+> This application tracks the playback rate and duration since the last update to send updates once every ~500ms.
 
 > The availability of event fields depends entirely on the media source. Be sure to check if a field is present when
 > handling media events.
 
 `MEDIA` or `<MAPPED_NAME>`: table
 
-- `Artist`: string,
-- `Title`: string,
+- `Artist`: string | none,
+- `Title`: string | none,
 - `Progress`: integer (value in milliseconds),
-- `Duration`: integer (value in milliseconds),
+- `Duration`: integer (value in milliseconds) | none,
 - `Playing`: bool,
 - `Rate`: float (Playback speed multiplier - `1.0` for regular speed)

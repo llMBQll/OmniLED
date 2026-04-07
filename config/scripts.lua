@@ -42,12 +42,12 @@ local function media(source)
         widgets = {
             Widget.Bar {
                 value = source.Progress,
-                range = { min = 0, max = source.Duration },
+                range = { min = 0, max = source.Duration or 0 },
                 position = { x = 0, y = 0 },
                 size = { width = SCREEN.Width, height = 2 },
             },
             Widget.Text {
-                text = string.format("%s - %s", source.Artist, source.Title),
+                text = table.concat({ source.Artist, source.Title }, ' - '),
                 scrolling = true,
                 position = { x = 0, y = 2 },
                 size = { width = SCREEN.Width, height = 20 },
@@ -70,17 +70,6 @@ local function media(source)
             },
         },
         duration = 1000,
-    }
-end
-
-function make_media_layout(source)
-    return {
-        layout = function() return media(_ENV[source]) end,
-        run_on = {
-            string.format('%s.Artist', source),
-            string.format('%s.Progress', source),
-            string.format('%s.Title', source)
-        },
     }
 end
 
@@ -160,6 +149,18 @@ local function weather()
             },
         },
         duration = 1000,
+    }
+end
+
+-- Helper function to easily register layout for any media source
+function make_media_layout(source)
+    return {
+        layout = function() return media(_ENV[source]) end,
+        run_on = {
+            string.format('%s.Artist', source),
+            string.format('%s.Progress', source),
+            string.format('%s.Title', source)
+        },
     }
 end
 

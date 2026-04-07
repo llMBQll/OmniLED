@@ -4,18 +4,20 @@ use std::time::Duration;
 #[derive(Clone, IntoProto, Default, Debug)]
 #[proto(rename_all = PascalCase)]
 pub struct SessionData {
-    pub artist: String,
-    pub title: String,
+    #[proto(strong_none)]
+    pub artist: Option<String>,
+    #[proto(strong_none)]
+    pub title: Option<String>,
     #[proto(transform = Self::duration_into_ms)]
     pub progress: Duration,
-    #[proto(transform = Self::duration_into_ms)]
-    pub duration: Duration,
+    #[proto(strong_none, transform = Self::duration_into_ms)]
+    pub duration: Option<Duration>,
     pub playing: bool,
     pub rate: f64,
 }
 
 impl SessionData {
-    fn duration_into_ms(duration: Duration) -> i64 {
-        duration.as_millis() as i64
+    fn duration_into_ms(duration: Duration) -> u64 {
+        duration.as_millis() as u64
     }
 }
