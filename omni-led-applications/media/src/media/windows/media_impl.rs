@@ -33,95 +33,91 @@ impl MediaImpl {
     }
 
     async fn run_message_loop(tx: Sender<Data>, mut rx: Receiver<Message>) {
+        macro_rules! update_and_send {
+            ($tx:expr, $current:expr, $name:expr, $entry:ident, $entry_update:block) => {
+                Self::update_progress($entry);
+                $entry_update;
+                Self::send_data($tx, $name, $entry.data.clone(), $current).await;
+            };
+        }
+
         let mut sessions: HashMap<String, SessionState> = HashMap::new();
         let mut current_session: Option<String> = None;
 
-        let mut heartbeat = tokio::time::interval(Duration::from_secs(1));
+        while let Some(message) = rx.recv().await {
+            match message {
+                Message::SessionAdded(session) => {
+                    let name = Self::get_name(&session);
+                    let (artist, title) = Self::get_song(&session).await;
+                    let (progress, duration) = Self::get_progress(&session);
+                    let (playing, rate) = Self::playback_info(&session);
 
-        loop {
-            tokio::select! {
-                message = rx.recv() => {
-                    match message {
-                        Some(Message::SessionAdded(session)) => {
-                            let name = Self::get_name(&session);
-                            let (artist, title) = Self::get_song(&session).await;
-                            let (progress, duration) = Self::get_progress(&session);
-                            let (playing, rate) = Self::playback_info(&session);
+                    sessions.insert(
+                        name,
+                        SessionState {
+                            data: SessionData {
+                                artist,
+                                title,
+                                progress,
+                                duration,
+                                playing,
+                                rate,
+                            },
+                            last_update: Instant::now(),
+                        },
+                    );
+                }
+                Message::SessionRemoved(session) => {
+                    let name = Self::get_name(&session);
+                    sessions.remove(&name);
+                }
+                Message::CurrentSessionChanged(session) => {
+                    current_session = match session {
+                        Some(session) => Some(Self::get_name(&session)),
+                        None => None,
+                    };
+                }
+                Message::PlaybackInfoChanged(session) => {
+                    let name = Self::get_name(&session);
 
-                            sessions.insert(
-                                name,
-                                SessionState {
-                                    data: SessionData {
-                                        artist,
-                                        title,
-                                        progress,
-                                        duration,
-                                        playing,
-                                        rate,
-                                    },
-                                    last_update: Instant::now(),
-                                },
-                            );
-                        }
-                        Some(Message::SessionRemoved(session)) => {
-                            let name = Self::get_name(&session);
-                            sessions.remove(&name);
-                        }
-                        Some(Message::CurrentSessionChanged(session)) => {
-                            current_session = match session {
-                                Some(session) => Some(Self::get_name(&session)),
-                                None => None,
-                            };
-                        }
-                        Some(Message::PlaybackInfoChanged(session)) => {
-                            let name = Self::get_name(&session);
+                    if let Some(state) = sessions.get_mut(&name) {
+                        let (playing, rate) = Self::playback_info(&session);
 
-                            if let Some(state) = sessions.get_mut(&name) {
-                                let (playing, rate) = Self::playback_info(&session);
-                                state.data.playing = playing;
-                                state.data.rate = rate;
-                                state.last_update = Instant::now();
-
-                                Self::send_data(&tx, name, state.data.clone(), &current_session).await;
-                            }
-                        }
-                        Some(Message::MediaPropertiesChanged(session)) => {
-                            let name = Self::get_name(&session);
-
-                            if let Some(state) = sessions.get_mut(&name) {
-                                let (artist, title) = Self::get_song(&session).await;
-                                state.data.artist = artist;
-                                state.data.title = title;
-
-                                Self::send_data(&tx, name, state.data.clone(), &current_session).await;
-                            }
-                        }
-                        Some(Message::TimelinePropertiesChanged(session)) => {
-                            let name = Self::get_name(&session);
-
-                            if let Some(state) = sessions.get_mut(&name) {
-                                let (progress, duration) = Self::get_progress(&session);
-                                state.data.progress = progress;
-                                state.data.duration = duration;
-                                state.last_update = Instant::now();
-
-                                Self::send_data(&tx, name, state.data.clone(), &current_session).await;
-                            }
-                        }
-                        None => break,
+                        update_and_send!(&tx, &current_session, name, state, {
+                            state.data.playing = playing;
+                            state.data.rate = rate;
+                            state.last_update = Instant::now();
+                        });
                     }
                 }
+                Message::MediaPropertiesChanged(session) => {
+                    let name = Self::get_name(&session);
 
-                _ = heartbeat.tick() => {
-                    for (name, state) in &sessions {
-                        if state.data.playing && state.data.rate > 0.0 {
-                            let elapsed = state.last_update.elapsed();
-                            let progress_delta = elapsed.mul_f64(state.data.rate);
+                    if let Some(state) = sessions.get_mut(&name) {
+                        let (artist, title) = Self::get_song(&session).await;
 
-                            let mut data = state.data.clone();
-                            data.progress = data.progress + progress_delta;
+                        update_and_send!(&tx, &current_session, name, state, {
+                            state.data.artist = artist;
+                            state.data.title = title;
+                        });
+                    }
+                }
+                Message::TimelinePropertiesChanged(session) => {
+                    let name = Self::get_name(&session);
 
-                            Self::send_data(&tx, name.clone(), data, &current_session).await;
+                    if let Some(state) = sessions.get_mut(&name) {
+                        let (progress, duration) = Self::get_progress(&session);
+
+                        update_and_send!(&tx, &current_session, name, state, {
+                            state.data.progress = progress;
+                            state.data.duration = duration;
+                        });
+                    }
+                }
+                Message::Tick => {
+                    for (name, state) in sessions.iter_mut() {
+                        if state.data.playing {
+                            update_and_send!(&tx, &current_session, name.clone(), state, {});
                         }
                     }
                 }
@@ -206,6 +202,15 @@ impl MediaImpl {
             Some(current_name) => *name == *current_name,
             None => false,
         }
+    }
+
+    fn update_progress(entry: &mut SessionState) {
+        let now = Instant::now();
+        if entry.data.playing {
+            let elapsed = now.saturating_duration_since(entry.last_update);
+            entry.data.progress += elapsed.mul_f64(entry.data.rate);
+        }
+        entry.last_update = now;
     }
 
     async fn send_data(
