@@ -6,11 +6,7 @@ use crate::Data;
 pub struct MediaImpl;
 
 impl MediaImpl {
-    pub fn new(_tx: Sender<Data>) -> Self {
-        Self
-    }
-
-    pub async fn run(&self) {
+    pub async fn run(_tx: Sender<Data>) {
         warn!("Application 'media' is not implemented on macOS");
     }
 }

@@ -1,30 +1,28 @@
+use log::warn;
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
-use windows::Foundation::TimeSpan;
 use windows::Media::Control::{
     GlobalSystemMediaTransportControlsSession,
-    GlobalSystemMediaTransportControlsSessionPlaybackStatus,
+    GlobalSystemMediaTransportControlsSessionPlaybackStatus as PlaybackStatus,
 };
 
 use crate::Data;
 use crate::media::session_data::SessionData;
 use crate::media::windows::global_system_media::{GlobalSystemMedia, Message};
 
-pub struct MediaImpl {
-    tx: Sender<Data>,
+pub struct MediaImpl;
+
+struct SessionState {
+    data: SessionData,
+    last_update: Instant,
 }
 
 impl MediaImpl {
-    pub fn new(tx: Sender<Data>) -> Self {
-        Self { tx }
-    }
-
-    pub async fn run(&self) {
+    pub async fn run(audio_tx: Sender<Data>) {
         let (tx, rx): (Sender<Message>, Receiver<Message>) = mpsc::channel(256);
 
-        let audio_tx = self.tx.clone();
         let loop_handle = tokio::task::spawn(async move {
             Self::run_message_loop(audio_tx, rx).await;
         });
@@ -35,30 +33,42 @@ impl MediaImpl {
     }
 
     async fn run_message_loop(tx: Sender<Data>, mut rx: Receiver<Message>) {
-        let mut sessions: HashMap<String, SessionData> = HashMap::new();
+        macro_rules! update_and_send {
+            ($tx:expr, $current:expr, $name:expr, $entry:ident, $entry_update:block) => {
+                Self::update_position($entry);
+                $entry_update;
+                Self::send_data($tx, $name, $entry.data.clone(), $current).await;
+            };
+        }
+
+        let mut sessions: HashMap<String, SessionState> = HashMap::new();
         let mut current_session: Option<String> = None;
+
         while let Some(message) = rx.recv().await {
             match message {
                 Message::SessionAdded(session) => {
                     let name = Self::get_name(&session);
                     let (artist, title) = Self::get_song(&session).await;
-                    let (progress, duration) = Self::get_progress(&session);
-                    let playing = Self::is_playing(&session);
+                    let (position, duration) = Self::get_position(&session);
+                    let (playing, rate) = Self::playback_info(&session);
 
                     sessions.insert(
                         name,
-                        SessionData {
-                            artist,
-                            title,
-                            progress,
-                            duration,
-                            playing,
+                        SessionState {
+                            data: SessionData {
+                                artist,
+                                title,
+                                position,
+                                duration,
+                                playing,
+                                rate,
+                            },
+                            last_update: Instant::now(),
                         },
                     );
                 }
                 Message::SessionRemoved(session) => {
                     let name = Self::get_name(&session);
-
                     sessions.remove(&name);
                 }
                 Message::CurrentSessionChanged(session) => {
@@ -70,41 +80,45 @@ impl MediaImpl {
                 Message::PlaybackInfoChanged(session) => {
                     let name = Self::get_name(&session);
 
-                    match sessions.get_mut(&name) {
-                        Some(entry) => {
-                            entry.playing = Self::is_playing(&session);
+                    if let Some(state) = sessions.get_mut(&name) {
+                        let (playing, rate) = Self::playback_info(&session);
 
-                            Self::send_data(&tx, name, entry.clone(), &current_session).await;
-                        }
-                        None => {}
+                        update_and_send!(&tx, &current_session, name, state, {
+                            state.data.playing = playing;
+                            state.data.rate = rate;
+                            state.last_update = Instant::now();
+                        });
                     }
                 }
                 Message::MediaPropertiesChanged(session) => {
                     let name = Self::get_name(&session);
 
-                    match sessions.get_mut(&name) {
-                        Some(entry) => {
-                            let (artist, title) = Self::get_song(&session).await;
-                            entry.artist = artist;
-                            entry.title = title;
+                    if let Some(state) = sessions.get_mut(&name) {
+                        let (artist, title) = Self::get_song(&session).await;
 
-                            Self::send_data(&tx, name, entry.clone(), &current_session).await;
-                        }
-                        None => {}
+                        update_and_send!(&tx, &current_session, name, state, {
+                            state.data.artist = artist;
+                            state.data.title = title;
+                        });
                     }
                 }
                 Message::TimelinePropertiesChanged(session) => {
                     let name = Self::get_name(&session);
 
-                    match sessions.get_mut(&name) {
-                        Some(entry) => {
-                            let (progress, duration) = Self::get_progress(&session);
-                            entry.progress = progress;
-                            entry.duration = duration;
+                    if let Some(state) = sessions.get_mut(&name) {
+                        let (position, duration) = Self::get_position(&session);
 
-                            Self::send_data(&tx, name, entry.clone(), &current_session).await;
+                        update_and_send!(&tx, &current_session, name, state, {
+                            state.data.position = position;
+                            state.data.duration = duration;
+                        });
+                    }
+                }
+                Message::Tick => {
+                    for (name, state) in sessions.iter_mut() {
+                        if state.data.playing {
+                            update_and_send!(&tx, &current_session, name.clone(), state, {});
                         }
-                        None => {}
                     }
                 }
             }
@@ -115,33 +129,72 @@ impl MediaImpl {
         session.SourceAppUserModelId().unwrap().to_string_lossy()
     }
 
-    async fn get_song(session: &GlobalSystemMediaTransportControlsSession) -> (String, String) {
-        let properties = session.TryGetMediaPropertiesAsync().unwrap().await.unwrap();
-        let artist = properties.Artist().unwrap().to_string_lossy();
-        let title = properties.Title().unwrap().to_string_lossy();
-
-        (artist, title)
+    async fn get_song(
+        session: &GlobalSystemMediaTransportControlsSession,
+    ) -> (Option<String>, Option<String>) {
+        match session.TryGetMediaPropertiesAsync() {
+            Ok(operation) => match operation.await {
+                Ok(properties) => Ok((
+                    properties
+                        .Artist()
+                        .and_then(|x| Ok(Some(x.to_string_lossy())))
+                        .unwrap_or(None),
+                    properties
+                        .Title()
+                        .and_then(|x| Ok(Some(x.to_string_lossy())))
+                        .unwrap_or(None),
+                )),
+                Err(err) => Err(err),
+            },
+            Err(err) => Err(err),
+        }
+        .unwrap_or_else(|err| {
+            warn!("{err}");
+            (None, None)
+        })
     }
 
-    fn get_progress(session: &GlobalSystemMediaTransportControlsSession) -> (Duration, Duration) {
-        let to_duration = |timespan: TimeSpan| {
-            let ms = timespan.Duration / 10000;
-            Duration::from_millis(ms as u64)
-        };
+    fn get_position(
+        session: &GlobalSystemMediaTransportControlsSession,
+    ) -> (Duration, Option<Duration>) {
+        const DEFAULT_POSITION: Duration = Duration::from_millis(0);
 
-        let properties = session.GetTimelineProperties().unwrap();
-        let progress = to_duration(properties.Position().unwrap());
-        let duration = to_duration(properties.EndTime().unwrap());
-
-        (progress, duration)
+        match session.GetTimelineProperties() {
+            Ok(properties) => (
+                properties
+                    .Position()
+                    .and_then(|x| Ok(x.into()))
+                    .unwrap_or(DEFAULT_POSITION),
+                properties
+                    .EndTime()
+                    .and_then(|x| Ok(Some(x.into())))
+                    .unwrap_or(None),
+            ),
+            Err(err) => {
+                warn!("{err}");
+                (DEFAULT_POSITION, None)
+            }
+        }
     }
 
-    fn is_playing(session: &GlobalSystemMediaTransportControlsSession) -> bool {
-        let info = session.GetPlaybackInfo().unwrap();
-        let playing = info.PlaybackStatus().unwrap()
-            == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing;
+    fn playback_info(session: &GlobalSystemMediaTransportControlsSession) -> (bool, f64) {
+        const DEFAULT_STATUS: bool = false;
+        const DEFAULT_RATE: f64 = 1.0;
 
-        playing
+        match session.GetPlaybackInfo() {
+            Ok(info) => (
+                info.PlaybackStatus()
+                    .and_then(|x| Ok(x == PlaybackStatus::Playing))
+                    .unwrap_or(DEFAULT_STATUS),
+                info.PlaybackRate()
+                    .and_then(|x| x.Value())
+                    .unwrap_or(DEFAULT_RATE),
+            ),
+            Err(err) => {
+                warn!("{err}");
+                (DEFAULT_STATUS, DEFAULT_RATE)
+            }
+        }
     }
 
     fn is_current(name: &String, current: &Option<String>) -> bool {
@@ -149,6 +202,15 @@ impl MediaImpl {
             Some(current_name) => *name == *current_name,
             None => false,
         }
+    }
+
+    fn update_position(entry: &mut SessionState) {
+        let now = Instant::now();
+        if entry.data.playing {
+            let elapsed = now.saturating_duration_since(entry.last_update);
+            entry.data.position += elapsed.mul_f64(entry.data.rate);
+        }
+        entry.last_update = now;
     }
 
     async fn send_data(

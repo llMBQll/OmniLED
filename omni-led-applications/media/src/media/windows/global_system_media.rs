@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc::Sender;
+use tokio::time::MissedTickBehavior::Skip;
 use windows::{
     Foundation::TypedEventHandler,
     Media::Control::{
@@ -22,6 +24,7 @@ pub enum Message {
     PlaybackInfoChanged(MediaEventData),
     MediaPropertiesChanged(MediaEventData),
     TimelinePropertiesChanged(MediaEventData),
+    Tick,
 }
 
 pub struct GlobalSystemMedia;
@@ -49,8 +52,32 @@ impl GlobalSystemMedia {
             Self::register_session_handlers(&session, &tx, handle.clone());
         }
 
+        match manager.GetCurrentSession() {
+            Ok(session) => {
+                tx.send(Message::CurrentSessionChanged(Some(session)))
+                    .await
+                    .unwrap();
+            }
+            Err(err) => {
+                // Error code will be OK if there are no media sessions started,
+                // but otherwise the query succeeded
+                if err.code().is_err() {
+                    panic!("{err}");
+                }
+            }
+        }
+
         let sessions = Arc::new(Mutex::new(sessions));
-        Self::register_global_handlers(tx, handle, &manager, &sessions);
+        Self::register_global_handlers(tx.clone(), handle, &manager, &sessions);
+
+        tokio::task::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_millis(500));
+            interval.set_missed_tick_behavior(Skip);
+            loop {
+                interval.tick().await;
+                _ = tx.send(Message::Tick).await;
+            }
+        });
     }
 
     fn register_global_handlers(

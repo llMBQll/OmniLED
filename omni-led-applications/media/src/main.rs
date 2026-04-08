@@ -26,8 +26,6 @@ async fn main() {
     }
     let mode = options.mode;
 
-    let media = Media::new(tx.clone());
-
     let loop_handle = tokio::task::spawn(async move {
         while let Some((current, name, session_data)) = rx.recv().await {
             if current && (mode == Focused || mode == Both) {
@@ -51,7 +49,7 @@ async fn main() {
         }
     });
 
-    media.run().await;
+    Media::run(tx).await;
 
     loop_handle.await.unwrap();
 }

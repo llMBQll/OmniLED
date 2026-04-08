@@ -37,19 +37,17 @@ local function volume()
     }
 end
 
--- 5s duration on Windows due to an issue mentioned in oled-applications/media/README.md
-local SPOTIFY_DURATION = PLATFORM.Os == 'windows' and 5000 or 1000
-local function spotify()
+local function media(source)
     return {
         widgets = {
             Widget.Bar {
-                value = SPOTIFY.Progress,
-                range = { min = 0, max = SPOTIFY.Duration },
+                value = source.Position,
+                range = { min = 0, max = source.Duration or 0 },
                 position = { x = 0, y = 0 },
                 size = { width = SCREEN.Width, height = 2 },
             },
             Widget.Text {
-                text = string.format("%s - %s", SPOTIFY.Artist, SPOTIFY.Title),
+                text = table.concat({ source.Artist, source.Title }, ' - '),
                 scrolling = true,
                 position = { x = 0, y = 2 },
                 size = { width = SCREEN.Width, height = 20 },
@@ -71,7 +69,7 @@ local function spotify()
                 size = { width = SCREEN.Width, height = 2 },
             },
         },
-        duration = SPOTIFY_DURATION,
+        duration = 1000,
     }
 end
 
@@ -154,6 +152,18 @@ local function weather()
     }
 end
 
+-- Helper function to easily register layout for any media source
+function make_media_layout(source)
+    return {
+        layout = function() return media(_ENV[source]) end,
+        run_on = {
+            string.format('%s.Artist', source),
+            string.format('%s.Progress', source),
+            string.format('%s.Title', source)
+        },
+    }
+end
+
 SCREEN_BUILDER
     :new('Emulator')
     :with_layout_group({
@@ -161,10 +171,7 @@ SCREEN_BUILDER
             layout = volume,
             run_on = { 'AUDIO.Input', 'AUDIO.Output' },
         },
-        {
-            layout = spotify,
-            run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
-        },
+        make_media_layout('SPOTIFY'),
         {
             layout = clock,
             run_on = { 'CLOCK.Seconds' },
