@@ -178,6 +178,7 @@ impl TryInto<image::ImageFormat> for ImageFormat {
             ImageFormat::Farbfeld => image::ImageFormat::Farbfeld,
             ImageFormat::Avif => image::ImageFormat::Avif,
             ImageFormat::Qoi => image::ImageFormat::Qoi,
+            #[allow(deprecated)]
             ImageFormat::Pcx => return Err("Pcx image format is deprecated"),
         };
         Ok(res)
