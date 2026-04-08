@@ -24,6 +24,10 @@ Media expects three arguments
 
 ## Reporting mode
 
+> On Linux with MPRIS, there is no concept of a “currently focused” media source. As a result, only individual
+> updates are sent. Setting the mode to “Both” behaves the same as “Individual”, while setting it to “Focused”
+> results in no events being sent.
+
 ### Individual
 
 Send separate events for each currently playing application. Each application will have its own event name as
@@ -73,7 +77,7 @@ Media sends a single type of event, and its name depends on the selected [mode](
 
 - `Artist`: string | none,
 - `Title`: string | none,
-- `Progress`: integer (value in milliseconds),
+- `Position`: integer (value in milliseconds),
 - `Duration`: integer (value in milliseconds) | none,
 - `Playing`: bool,
 - `Rate`: float (Playback speed multiplier - `1.0` for regular speed)

@@ -41,7 +41,7 @@ local function media(source)
     return {
         widgets = {
             Widget.Bar {
-                value = source.Progress,
+                value = source.Position,
                 range = { min = 0, max = source.Duration or 0 },
                 position = { x = 0, y = 0 },
                 size = { width = SCREEN.Width, height = 2 },

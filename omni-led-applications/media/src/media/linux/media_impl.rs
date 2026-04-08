@@ -47,7 +47,7 @@ impl MediaImpl {
     ) {
         macro_rules! update_and_send {
             ($tx:ident, $entry:ident, $entry_update:block) => {
-                Self::update_progress($entry);
+                Self::update_position($entry);
                 $entry_update;
                 $tx.send((false, $entry.player_name.clone(), $entry.data.clone()))
                     .await
@@ -100,7 +100,7 @@ impl MediaImpl {
                             if entry.data.title != metadata.title
                                 || entry.data.artist != metadata.artist
                             {
-                                entry.data.progress = Duration::ZERO;
+                                entry.data.position = Duration::ZERO;
                             }
                             entry.data.artist = metadata.artist;
                             entry.data.title = metadata.title;
@@ -108,10 +108,10 @@ impl MediaImpl {
                         });
                     }
                 }
-                MprisEvent::ProgressUpdate((name, progress)) => {
+                MprisEvent::PositionUpdate((name, position)) => {
                     if let Some(entry) = players.get_mut(&name) {
                         update_and_send!(data_tx, entry, {
-                            entry.data.progress = progress;
+                            entry.data.position = position;
                         });
                     }
                 }
@@ -190,8 +190,8 @@ impl MediaImpl {
                 }
                 Some(position) = seeked_stream.next() => {
                     if let Ok(args) = position.args() {
-                        let progress = Duration::from_micros(args.position as u64);
-                        let _ = tx.send(MprisEvent::ProgressUpdate((player_name.clone(), progress))).await;
+                        let position = Duration::from_micros(args.position as u64);
+                        let _ = tx.send(MprisEvent::PositionUpdate((player_name.clone(), position))).await;
                     }
                 }
                 Some(status) = status_stream.next() => {
@@ -254,13 +254,13 @@ impl MediaImpl {
 
         let metadata = Self::read_metadata(&metadata.unwrap_or_default());
         let playing = status.unwrap_or_default() == "Playing";
-        let progress = Duration::from_micros(position.unwrap_or(0) as u64);
+        let position = Duration::from_micros(position.unwrap_or(0) as u64);
         let rate = rate.unwrap_or(1.0);
 
         SessionData {
             artist: metadata.artist,
             title: metadata.title,
-            progress,
+            position,
             duration: metadata.duration,
             playing,
             rate,
@@ -294,11 +294,11 @@ impl MediaImpl {
         Some(Duration::from_micros(length))
     }
 
-    fn update_progress(entry: &mut PlayerData) {
+    fn update_position(entry: &mut PlayerData) {
         let now = Instant::now();
         if entry.data.playing {
             let elapsed = now.saturating_duration_since(entry.last_update);
-            entry.data.progress += elapsed.mul_f64(entry.data.rate);
+            entry.data.position += elapsed.mul_f64(entry.data.rate);
         }
         entry.last_update = now;
     }
@@ -344,7 +344,7 @@ enum MprisEvent {
     PlayerRemoved(String),
     FullUpdate((String, SessionData)),
     MetadataUpdate((String, Metadata)),
-    ProgressUpdate((String, Duration)),
+    PositionUpdate((String, Duration)),
     PlayingUpdate((String, bool)),
     RateUpdate((String, f64)),
     Tick,

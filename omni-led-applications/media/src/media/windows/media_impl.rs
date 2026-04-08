@@ -35,7 +35,7 @@ impl MediaImpl {
     async fn run_message_loop(tx: Sender<Data>, mut rx: Receiver<Message>) {
         macro_rules! update_and_send {
             ($tx:expr, $current:expr, $name:expr, $entry:ident, $entry_update:block) => {
-                Self::update_progress($entry);
+                Self::update_position($entry);
                 $entry_update;
                 Self::send_data($tx, $name, $entry.data.clone(), $current).await;
             };
@@ -49,7 +49,7 @@ impl MediaImpl {
                 Message::SessionAdded(session) => {
                     let name = Self::get_name(&session);
                     let (artist, title) = Self::get_song(&session).await;
-                    let (progress, duration) = Self::get_progress(&session);
+                    let (position, duration) = Self::get_position(&session);
                     let (playing, rate) = Self::playback_info(&session);
 
                     sessions.insert(
@@ -58,7 +58,7 @@ impl MediaImpl {
                             data: SessionData {
                                 artist,
                                 title,
-                                progress,
+                                position,
                                 duration,
                                 playing,
                                 rate,
@@ -106,10 +106,10 @@ impl MediaImpl {
                     let name = Self::get_name(&session);
 
                     if let Some(state) = sessions.get_mut(&name) {
-                        let (progress, duration) = Self::get_progress(&session);
+                        let (position, duration) = Self::get_position(&session);
 
                         update_and_send!(&tx, &current_session, name, state, {
-                            state.data.progress = progress;
+                            state.data.position = position;
                             state.data.duration = duration;
                         });
                     }
@@ -154,7 +154,7 @@ impl MediaImpl {
         })
     }
 
-    fn get_progress(
+    fn get_position(
         session: &GlobalSystemMediaTransportControlsSession,
     ) -> (Duration, Option<Duration>) {
         const DEFAULT_POSITION: Duration = Duration::from_millis(0);
@@ -204,11 +204,11 @@ impl MediaImpl {
         }
     }
 
-    fn update_progress(entry: &mut SessionState) {
+    fn update_position(entry: &mut SessionState) {
         let now = Instant::now();
         if entry.data.playing {
             let elapsed = now.saturating_duration_since(entry.last_update);
-            entry.data.progress += elapsed.mul_f64(entry.data.rate);
+            entry.data.position += elapsed.mul_f64(entry.data.rate);
         }
         entry.last_update = now;
     }

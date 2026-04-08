@@ -9,7 +9,7 @@ pub struct SessionData {
     #[proto(strong_none)]
     pub title: Option<String>,
     #[proto(transform = Self::duration_into_ms)]
-    pub progress: Duration,
+    pub position: Duration,
     #[proto(strong_none, transform = Self::duration_into_ms)]
     pub duration: Option<Duration>,
     pub playing: bool,
