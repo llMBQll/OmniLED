@@ -156,6 +156,9 @@ impl ApplicationHandler<Event> for Handler {
                     ctx.window.request_redraw();
                 }
             }
+            Event::CloseWindow(id) => {
+                self.windows.remove(&id.into());
+            }
             Event::Quit => event_loop.exit(),
         }
     }
