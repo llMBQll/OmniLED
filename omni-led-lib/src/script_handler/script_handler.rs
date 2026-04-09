@@ -1,4 +1,4 @@
-use log::warn;
+use log::{debug, warn};
 use mlua::{ErrorContext, FromLua, Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
 use omni_led_api::plugin::Plugin;
 use omni_led_derive::{FromLuaValue, UniqueUserData};
@@ -70,7 +70,31 @@ impl ScriptHandler {
         let regex = Regex::new(".*").unwrap();
         Events::register(EventKey::Regex(regex), event_handler, true);
 
-        load_config(lua, ConfigType::Scripts, &config, environment).unwrap();
+        Self::reload_config(lua, config).unwrap()
+    }
+
+    pub fn reload_config(lua: &Lua, config: String) -> mlua::Result<()> {
+        debug!("Reloading user scripts");
+
+        let mut this = UserDataRef::<Self>::load(lua);
+        let environment = this.get().environment.clone();
+        this.get_mut().cleanup(lua)?;
+
+        load_config(lua, ConfigType::Scripts, &config, environment)
+    }
+
+    fn cleanup(&mut self, lua: &Lua) -> mlua::Result<()> {
+        Events::clear_non_persistent();
+
+        // Clear device contexts and unload the devices
+        let mut devices = UserDataRef::<Devices>::load(lua);
+        let mut device_contexts = Vec::new();
+        std::mem::swap(&mut self.devices, &mut device_contexts);
+        for device_ctx in device_contexts {
+            devices.get_mut().unload_device(lua, device_ctx.device)?;
+        }
+
+        Ok(())
     }
 
     pub fn set_value(&self, lua: &Lua, value_name: String, value: Value) -> mlua::Result<()> {
