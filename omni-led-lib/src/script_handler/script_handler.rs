@@ -12,7 +12,8 @@ use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
-use crate::events::events::{Events, get_cleanup_entries_metatable};
+use crate::events::events::Events;
+use crate::events::proto_to_lua::get_cleanup_entries_metatable;
 use crate::events::shortcuts::Shortcuts;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
@@ -502,8 +503,7 @@ impl UserData for ScreenBuilderImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::create_table;
-    use crate::events::events::proto_to_lua_value;
+    use crate::{create_table, events::proto_to_lua::proto_to_lua_value};
     use omni_led_derive::IntoProto;
 
     fn assert_tables_equal(lua: &Lua, left: &Table, right: &Table, line: u32) {
