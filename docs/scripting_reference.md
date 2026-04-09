@@ -427,12 +427,17 @@ Given the following enum:
 > Register callbacks for specific events. This, combined with script predicates, is useful when the
 > screen builder with default screen management doesn't quite cut it.
 >
-> > `register: fn(self, event: string, callback: fn(event: string, value: any))`
+> > `register: fn(self, event: string, callback: fn(event: string, value: any)) -> EventHandle`
 > >
 > > Register a callback for any event. When the callback is triggered, the event name and its value
-> > will be passed as callback arguments.
+> > will be passed as callback arguments.  
+> > Returns an EventHandle object that can be used to unsubscribe from the event.
 > >
 > > _Register for `event` `"*"` to match all events._
+>
+> > `unregister: fn(self, handle: EventHandle)`
+> >
+> > Unregister from an event using a handle received when registering.
 
 > ### `SCREEN_BUILDER`
 >

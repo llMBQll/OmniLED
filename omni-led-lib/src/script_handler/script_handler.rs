@@ -70,8 +70,7 @@ impl ScriptHandler {
         let mut events = UserDataRef::<Events>::load(lua);
         events
             .get_mut()
-            .register("*".to_string(), event_handler)
-            .unwrap();
+            .register("*".to_string(), event_handler, true);
 
         load_config(lua, ConfigType::Scripts, &config, environment).unwrap();
     }

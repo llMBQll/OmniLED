@@ -38,8 +38,7 @@ impl Shortcuts {
         let mut events = UserDataRef::<Events>::load(lua);
         events
             .get_mut()
-            .register("OMNILED.Update".to_string(), function)
-            .unwrap();
+            .register("OMNILED.Update".to_string(), function, true);
 
         Self::set_unique(
             lua,
@@ -152,7 +151,7 @@ impl Shortcuts {
 
         let mut events = UserDataRef::<Events>::load(lua);
         for key in keys {
-            events.get_mut().register(key, function.clone())?;
+            events.get_mut().register(key, function.clone(), false);
         }
 
         Ok(())

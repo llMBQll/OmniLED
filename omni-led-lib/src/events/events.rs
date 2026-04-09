@@ -1,4 +1,5 @@
-use mlua::{ErrorContext, Function, Lua, UserData, UserDataMethods, Value};
+use log::warn;
+use mlua::{ErrorContext, FromLua, Function, Lua, UserData, UserDataMethods, Value};
 use omni_led_api::types::{Field, field};
 use omni_led_derive::UniqueUserData;
 
@@ -7,14 +8,35 @@ use crate::events::event_queue::Event;
 use crate::events::proto_to_lua::{get_cleanup_entries_metatable, proto_to_lua_value};
 use crate::keyboard::keyboard::{KeyboardEvent, KeyboardEventEventType};
 
+#[derive(Clone, Copy, PartialEq)]
+pub struct EventHandle(usize);
+
+impl UserData for EventHandle {}
+
+impl FromLua for EventHandle {
+    fn from_lua(value: Value, _lua: &Lua) -> mlua::Result<Self> {
+        match value {
+            Value::UserData(user_data) => user_data.borrow::<Self>().map(|k| k.clone()),
+            other => Err(mlua::Error::FromLuaConversionError {
+                from: other.type_name(),
+                to: "EventHandle".to_string(),
+                message: Some("Expected EventHandle object".to_string()),
+            }),
+        }
+    }
+}
+
 struct EventEntry {
     event: String,
     on_match: Function,
+    handle: EventHandle,
+    persistent: bool,
 }
 
 #[derive(UniqueUserData)]
 pub struct Events {
     entries: Vec<EventEntry>,
+    counter: usize,
 }
 
 impl Events {
@@ -23,14 +45,39 @@ impl Events {
             lua,
             Self {
                 entries: Vec::new(),
+                counter: 0,
             },
         );
     }
 
-    pub fn register(&mut self, event: String, on_match: Function) -> mlua::Result<()> {
-        self.entries.push(EventEntry { event, on_match });
+    pub fn register(&mut self, event: String, on_match: Function, persistent: bool) -> EventHandle {
+        self.counter += 1;
+        let handle = EventHandle(self.counter);
 
+        self.entries.push(EventEntry {
+            event,
+            on_match,
+            persistent,
+            handle,
+        });
+
+        handle
+    }
+
+    pub fn unregister(&mut self, handle: EventHandle) -> mlua::Result<()> {
+        match self.entries.iter().position(|entry| entry.handle == handle) {
+            Some(index) => {
+                self.entries.remove(index);
+            }
+            None => {
+                warn!("Failed to unregister event. Key {} not found", handle.0);
+            }
+        };
         Ok(())
+    }
+
+    pub fn clear_non_persistent(&mut self) {
+        self.entries.retain(|entry| entry.persistent);
     }
 
     pub fn dispatch(&self, lua: &Lua, event: Event) -> mlua::Result<()> {
@@ -99,7 +146,14 @@ impl UserData for Events {
     fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
-            |_lua, this, (event, on_match): (String, Function)| this.register(event, on_match),
+            |_lua, this, (event, on_match): (String, Function)| {
+                // Registering from user scripts must never be persistent to avoid issues on reloads
+                Ok(this.register(event, on_match, false))
+            },
         );
+
+        methods.add_method_mut("unregister", |_lua, this, key: EventHandle| {
+            this.unregister(key)
+        });
     }
 }
