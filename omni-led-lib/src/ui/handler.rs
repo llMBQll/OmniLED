@@ -224,8 +224,6 @@ pub struct HandlerProxy {
 
 impl HandlerProxy {
     pub fn send(&self, event: Event) {
-        if let Err(err) = self.proxy.send_event(event) {
-            error!("Failed to send event: {}", err);
-        }
+        _ = self.proxy.send_event(event);
     }
 }
