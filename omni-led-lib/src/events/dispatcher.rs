@@ -2,11 +2,13 @@ use log::warn;
 use mlua::{ErrorContext, Lua, Value};
 use omni_led_api::types::{Field, field};
 
+use crate::constants::config::{ConfigType, read_config};
 use crate::events::event_handle::EventHandle;
 use crate::events::event_queue::Event;
 use crate::events::events::EventEntry;
 use crate::events::proto_to_lua::{get_cleanup_entries_metatable, proto_to_lua_value};
 use crate::keyboard::keyboard::{KeyboardEvent, KeyboardEventEventType};
+use crate::script_handler::script_handler::ScriptHandler;
 
 pub struct Dispatcher {
     entries: Vec<EventEntry>,
@@ -35,7 +37,11 @@ impl Dispatcher {
             Event::Keyboard(event) => self.dispatch_keyboard_event(lua, event),
             Event::Register(event_entry) => self.register(event_entry),
             Event::Unregister(event_handle) => self.unregister(event_handle),
-            Event::ClearUserEvents => self.clear_non_persistent(),
+            Event::ReloadScripts => {
+                self.clear_non_persistent();
+                let config = read_config(lua, ConfigType::Scripts).unwrap();
+                ScriptHandler::reload_config(lua, config)
+            }
             Event::Script(script_event) => {
                 self.dispatch_application_event(&script_event.event, script_event.value, None)
             }
@@ -64,9 +70,8 @@ impl Dispatcher {
         Ok(())
     }
 
-    fn clear_non_persistent(&mut self) -> mlua::Result<()> {
+    fn clear_non_persistent(&mut self) {
         self.entries.retain(|entry| entry.persistent);
-        Ok(())
     }
 
     fn dispatch_application_event(

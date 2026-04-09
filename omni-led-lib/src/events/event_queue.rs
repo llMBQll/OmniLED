@@ -13,7 +13,7 @@ pub enum Event {
     Keyboard(KeyboardEvent),
     Register(EventEntry),
     Unregister(EventHandle),
-    ClearUserEvents,
+    ReloadScripts,
     Script(ScriptEvent),
 }
 

@@ -34,8 +34,8 @@ impl Events {
         Self::queue_event(Event::Unregister(handle));
     }
 
-    pub fn clear_non_persistent() {
-        Self::queue_event(Event::ClearUserEvents);
+    pub fn reload_scripts() {
+        Self::queue_event(Event::ReloadScripts);
     }
 
     pub fn send(event: String, value: Value) {

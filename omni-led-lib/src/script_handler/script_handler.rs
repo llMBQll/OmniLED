@@ -84,8 +84,6 @@ impl ScriptHandler {
     }
 
     fn cleanup(&mut self, lua: &Lua) -> mlua::Result<()> {
-        Events::clear_non_persistent();
-
         // Clear device contexts and unload the devices
         let mut devices = UserDataRef::<Devices>::load(lua);
         let mut device_contexts = Vec::new();
