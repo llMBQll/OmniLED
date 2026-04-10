@@ -2,6 +2,7 @@ use log::warn;
 use mlua::{ErrorContext, FromLua, Function, Lua, UserData, UserDataMethods, Value};
 use omni_led_api::types::{Field, field};
 use omni_led_derive::UniqueUserData;
+use regex::Regex;
 
 use crate::common::user_data::UniqueUserData;
 use crate::events::event_queue::Event;
@@ -26,8 +27,34 @@ impl FromLua for EventHandle {
     }
 }
 
+pub enum EventKey {
+    Regex(Regex),
+    String(String),
+}
+
+impl EventKey {
+    fn matches(&self, event: &str) -> bool {
+        match self {
+            EventKey::Regex(regex) => regex.is_match(event),
+            EventKey::String(string) => string == event,
+        }
+    }
+}
+
+impl From<String> for EventKey {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
+impl From<Regex> for EventKey {
+    fn from(value: Regex) -> Self {
+        Self::Regex(value)
+    }
+}
+
 struct EventEntry {
-    event: String,
+    key: EventKey,
     on_match: Function,
     handle: EventHandle,
     persistent: bool,
@@ -50,12 +77,17 @@ impl Events {
         );
     }
 
-    pub fn register(&mut self, event: String, on_match: Function, persistent: bool) -> EventHandle {
+    pub fn register<K: Into<EventKey>>(
+        &mut self,
+        key: K,
+        on_match: Function,
+        persistent: bool,
+    ) -> EventHandle {
         self.counter += 1;
         let handle = EventHandle(self.counter);
 
         self.entries.push(EventEntry {
-            event,
+            key: key.into(),
             on_match,
             persistent,
             handle,
@@ -132,7 +164,7 @@ impl Events {
 
     fn dispatch_event(&self, event: &str, value: &Value) -> mlua::Result<()> {
         for entry in &self.entries {
-            if entry.event == event || entry.event == "*" {
+            if entry.key.matches(event) {
                 entry
                     .on_match
                     .call::<()>((event.to_string(), value.clone()))?;
@@ -149,6 +181,15 @@ impl UserData for Events {
             |_lua, this, (event, on_match): (String, Function)| {
                 // Registering from user scripts must never be persistent to avoid issues on reloads
                 Ok(this.register(event, on_match, false))
+            },
+        );
+
+        methods.add_method_mut(
+            "register_regex",
+            |_lua, this, (event, on_match): (String, Function)| {
+                // Registering from user scripts must never be persistent to avoid issues on reloads
+                let regex = Regex::new(&event).map_err(mlua::Error::external)?;
+                Ok(this.register(regex, on_match, false))
             },
         );
 

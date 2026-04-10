@@ -2,6 +2,7 @@ use log::warn;
 use mlua::{ErrorContext, FromLua, Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
 use omni_led_api::plugin::Plugin;
 use omni_led_derive::{FromLuaValue, UniqueUserData};
+use regex::Regex;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -68,9 +69,9 @@ impl ScriptHandler {
             .unwrap();
 
         let mut events = UserDataRef::<Events>::load(lua);
-        events
-            .get_mut()
-            .register("*".to_string(), event_handler, true);
+        let regex = Regex::new(".*").unwrap();
+        events.get_mut().register(regex, event_handler, true);
+        std::mem::drop(events);
 
         load_config(lua, ConfigType::Scripts, &config, environment).unwrap();
     }
