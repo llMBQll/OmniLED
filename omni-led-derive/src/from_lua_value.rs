@@ -152,7 +152,7 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
         Data::Enum(ref data) => {
             let fields = collect_enum_variants(data, get_enum_attributes);
 
-            let names = fields.iter().map(|(_, ident, attrs)| {
+            let names = fields.iter().map(|(_, ident, _ty, attrs)| {
                 let alias = attrs.alias.as_ref().map(|alias| quote! { #alias, });
                 quote! {
                     stringify!(#ident), #alias
@@ -165,14 +165,14 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
 
             for field in fields {
                 match field {
-                    (EnumFieldType::Unnamed, ident, _attrs) => {
+                    (EnumFieldType::Unnamed, ident, _ty, _attrs) => {
                         unnamed_initializers.push(quote! {
                             else if table.contains_key(stringify!(#ident))? {
                                 Ok(Self::#ident(table.get(stringify!(#ident))?))
                             }
                         });
                     }
-                    (EnumFieldType::Unit, ident, attrs) => {
+                    (EnumFieldType::Unit, ident, _ty, attrs) => {
                         let alias = attrs.alias.map(|alias| {
                             quote! {
                                 #alias => Ok(Self::#ident),

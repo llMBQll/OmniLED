@@ -1,6 +1,7 @@
 use proc_macro2::{Ident, TokenStream};
+use quote::ToTokens;
 use std::collections::HashMap;
-use syn::{Attribute, DataEnum, Token, Type};
+use syn::{Attribute, DataEnum, FieldsUnnamed, Token, Type};
 
 pub fn get_attribute_with_default_value(
     attributes: &mut HashMap<String, Option<TokenStream>>,
@@ -74,21 +75,33 @@ pub enum EnumFieldType {
 pub fn collect_enum_variants<'a, T: 'static, F: Fn(&Vec<Attribute>) -> T>(
     data: &'a DataEnum,
     get_enum_attributes: F,
-) -> Vec<(EnumFieldType, &'a Ident, T)> {
+) -> Vec<(EnumFieldType, &'a Ident, String, T)> {
     data.variants
         .iter()
         .map(|variant| match &variant.fields {
             syn::Fields::Named(_) => unimplemented!(),
-            syn::Fields::Unnamed(_) => (
+            syn::Fields::Unnamed(unnamed) => (
                 EnumFieldType::Unnamed,
                 &variant.ident,
+                get_type(unnamed),
                 get_enum_attributes(&variant.attrs),
             ),
             syn::Fields::Unit => (
                 EnumFieldType::Unit,
                 &variant.ident,
+                String::new(),
                 get_enum_attributes(&variant.attrs),
             ),
         })
         .collect()
+}
+
+fn get_type(unnamed: &FieldsUnnamed) -> String {
+    unnamed
+        .unnamed
+        .first()
+        .unwrap()
+        .ty
+        .to_token_stream()
+        .to_string()
 }
