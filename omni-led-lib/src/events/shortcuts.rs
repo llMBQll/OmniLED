@@ -9,6 +9,7 @@ use std::str::FromStr;
 
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::events::events::Events;
+use crate::script_handler::script_data_types::EventKey;
 use crate::settings::settings::Settings;
 
 #[derive(UniqueUserData)]
@@ -36,9 +37,11 @@ impl Shortcuts {
             .unwrap();
 
         let mut events = UserDataRef::<Events>::load(lua);
-        events
-            .get_mut()
-            .register("OMNILED.Update".to_string(), function, true);
+        events.get_mut().register(
+            EventKey::String("OMNILED.Update".to_string()),
+            function,
+            true,
+        );
 
         Self::set_unique(
             lua,
@@ -151,7 +154,9 @@ impl Shortcuts {
 
         let mut events = UserDataRef::<Events>::load(lua);
         for key in keys {
-            events.get_mut().register(key, function.clone(), false);
+            events
+                .get_mut()
+                .register(EventKey::String(key), function.clone(), false);
         }
 
         Ok(())

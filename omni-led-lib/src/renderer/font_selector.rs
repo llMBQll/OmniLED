@@ -137,7 +137,7 @@ impl Into<font_kit::properties::Stretch> for Stretch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::lua_enum::set_lua_enums;
+    use crate::common::lua_register::set_lua_enums;
     use mlua::{Lua, chunk};
 
     macro_rules! eval {

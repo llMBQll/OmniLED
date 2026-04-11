@@ -2,54 +2,28 @@ use log::warn;
 use mlua::{ErrorContext, FromLua, Function, Lua, UserData, UserDataMethods, Value};
 use omni_led_api::types::{Field, field};
 use omni_led_derive::UniqueUserData;
-use regex::Regex;
 
+use crate::common::lua_traits::{FromUserdata, LuaName};
 use crate::common::user_data::UniqueUserData;
 use crate::events::event_queue::Event;
 use crate::events::proto_to_lua::{get_cleanup_entries_metatable, proto_to_lua_value};
 use crate::keyboard::keyboard::{KeyboardEvent, KeyboardEventEventType};
+use crate::script_handler::script_data_types::EventKey;
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct EventHandle(usize);
 
 impl UserData for EventHandle {}
 
+impl LuaName for EventHandle {
+    const NAME: &str = "EventHandle";
+}
+
+impl FromUserdata for EventHandle {}
+
 impl FromLua for EventHandle {
-    fn from_lua(value: Value, _lua: &Lua) -> mlua::Result<Self> {
-        match value {
-            Value::UserData(user_data) => user_data.borrow::<Self>().map(|k| k.clone()),
-            other => Err(mlua::Error::FromLuaConversionError {
-                from: other.type_name(),
-                to: "EventHandle".to_string(),
-                message: Some("Expected EventHandle object".to_string()),
-            }),
-        }
-    }
-}
-
-pub enum EventKey {
-    Regex(Regex),
-    String(String),
-}
-
-impl EventKey {
-    fn matches(&self, event: &str) -> bool {
-        match self {
-            EventKey::Regex(regex) => regex.is_match(event),
-            EventKey::String(string) => string == event,
-        }
-    }
-}
-
-impl From<String> for EventKey {
-    fn from(value: String) -> Self {
-        Self::String(value)
-    }
-}
-
-impl From<Regex> for EventKey {
-    fn from(value: Regex) -> Self {
-        Self::Regex(value)
+    fn from_lua(value: Value, lua: &Lua) -> mlua::Result<Self> {
+        Self::from_userdata(lua, value)
     }
 }
 
@@ -77,12 +51,7 @@ impl Events {
         );
     }
 
-    pub fn register<K: Into<EventKey>>(
-        &mut self,
-        key: K,
-        on_match: Function,
-        persistent: bool,
-    ) -> EventHandle {
+    pub fn register(&mut self, key: EventKey, on_match: Function, persistent: bool) -> EventHandle {
         self.counter += 1;
         let handle = EventHandle(self.counter);
 
@@ -178,18 +147,9 @@ impl UserData for Events {
     fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut(
             "register",
-            |_lua, this, (event, on_match): (String, Function)| {
+            |_lua, this, (key, on_match): (EventKey, Function)| {
                 // Registering from user scripts must never be persistent to avoid issues on reloads
-                Ok(this.register(event, on_match, false))
-            },
-        );
-
-        methods.add_method_mut(
-            "register_regex",
-            |_lua, this, (event, on_match): (String, Function)| {
-                // Registering from user scripts must never be persistent to avoid issues on reloads
-                let regex = Regex::new(&event).map_err(mlua::Error::external)?;
-                Ok(this.register(regex, on_match, false))
+                Ok(this.register(key, on_match, false))
             },
         );
 

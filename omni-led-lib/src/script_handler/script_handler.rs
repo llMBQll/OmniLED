@@ -2,7 +2,6 @@ use log::warn;
 use mlua::{ErrorContext, FromLua, Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
 use omni_led_api::plugin::Plugin;
 use omni_led_derive::{FromLuaValue, UniqueUserData};
-use regex::Regex;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -19,7 +18,7 @@ use crate::events::shortcuts::Shortcuts;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::renderer::Renderer;
-use crate::script_handler::script_data_types::Widget;
+use crate::script_handler::script_data_types::{EventKey, Regex, Widget};
 
 #[derive(UniqueUserData)]
 pub struct ScriptHandler {
@@ -70,7 +69,9 @@ impl ScriptHandler {
 
         let mut events = UserDataRef::<Events>::load(lua);
         let regex = Regex::new(".*").unwrap();
-        events.get_mut().register(regex, event_handler, true);
+        events
+            .get_mut()
+            .register(EventKey::Regex(regex), event_handler, true);
         std::mem::drop(events);
 
         load_config(lua, ConfigType::Scripts, &config, environment).unwrap();
@@ -116,8 +117,11 @@ impl ScriptHandler {
     fn mark_for_update(&mut self, key: &String) {
         for device in &mut self.devices {
             for (index, layout) in device.layouts.iter().enumerate() {
-                if layout.run_on.contains(key) {
-                    device.layout_update_flags[index] = true;
+                for event_key in &layout.run_on {
+                    if event_key.matches(key) {
+                        device.layout_update_flags[index] = true;
+                        break;
+                    }
                 }
             }
         }
@@ -302,7 +306,7 @@ impl UserData for ScriptHandler {
 struct Layout {
     layout: Function,
     predicate: Option<Function>,
-    run_on: Vec<String>,
+    run_on: Vec<EventKey>,
 }
 
 #[derive(FromLuaValue, Clone)]
