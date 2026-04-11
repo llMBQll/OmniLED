@@ -13,6 +13,10 @@
 > >
 > > Default applications directory path.
 >
+> > `ConfigDir: string`
+> >
+> > Configuration directory path.
+>
 > > `ExeExtension: string`
 > >
 > > Extension used for executable files on current platform
@@ -42,12 +46,16 @@
 >
 > > `Os: string`
 > >
-> > Separator of path components on current platform
+> > Operating system name
 > >
 > > Values:
 > >
 > > - `"windows"` on Windows
 > > - `"linux"` on Linux
+>
+> > `RootDir: string`
+> >
+> > Root directory path
 
 ---
 
@@ -332,7 +340,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 >
 > > `Tiff`
 >
-> > `Webp`
+> > `WebP`
 
 ---
 
@@ -416,7 +424,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 > ### `emulator`
 >
-> Type: `fn(config: EmulatorConfig)`
+> Type: `fn(settings: EmulatorSettings)`
 >
 > Registers emulator with a given configuration.
 
@@ -436,17 +444,33 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
+> ### `hid_device`
+>
+> Type: `fn(settings: HidDeviceSettings)`
+>
+> Registers HID USB device with a given configuration.
+
+---
+
 > ### `load_app`
 >
-> Type: `fn(path: string, args: [string])`
+> Type: `fn(config: Config)`
 >
-> Starts an application at `path` and passes the `args` as command line arguments.
+> Starts an application with the given configuration.
+
+---
+
+> ### `raw_usb_device`
+>
+> Type: `fn(settings: RawUsbDeviceSettings)`
+>
+> Registers raw USB device with a given configuration.
 
 ---
 
 > ### `steelseries_engine_device`
 >
-> Type: `fn(config: SteelSeriesEngineDeviceConfig)`
+> Type: `fn(settings: SteelSeriesEngineDeviceSettings)`
 >
 > Registers SteelSeries device with a given configuration.
 
@@ -454,17 +478,9 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 > ### `transform_data`
 >
-> Type: `fn(extra: ExtraBytes) -> fn(buffer: Buffer) -> [byte]`
+> Type: `fn(extra: ExtraBytes) -> (fn(buffer: Buffer) -> [byte])`
 >
 > Creates a tranform function that will add extra bytes to the rendered buffer.
-
----
-
-> ### `usb_device`
->
-> Type: `fn(config: USBDeviceConfig)`
->
-> Registers USB device with a given configuration.
 
 ## Objects
 
@@ -508,6 +524,34 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > > `unregister: fn(self, handle: EventHandle)`
 > >
 > > Unregister from an event using a handle received when registering.
+
+---
+
+> ### `LOG`
+>
+> Type: `table`
+>
+> Provides logging functions for scripts.
+>
+> > `debug: fn(self, message: string)`
+> >
+> > Log a debug message
+>
+> > `error: fn(self, message: string)`
+> >
+> > Log an error message
+>
+> > `info: fn(self, message: string)`
+> >
+> > Log an info message
+>
+> > `trace: fn(self, message: string)`
+> >
+> > Log a trace message
+>
+> > `warn: fn(self, message: string)`
+> >
+> > Log a warning message
 
 ---
 
@@ -562,6 +606,22 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > > Register a key combination and an action that will be executed when the combination is pressed.
 
 ## Types
+
+> ### `Config`
+>
+> Configuration for starting an application.
+>
+> > `path: string`
+> >
+> > Path to the executable.
+>
+> > `args: [string]`
+> >
+> > _Optional_. Default: `[]`.
+> >
+> > Command line arguments to pass to the executable.
+
+---
 
 > ### `EmulatorConfig`
 >
@@ -737,7 +797,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
-> ### `SteelSeriesEngineDeviceConfig`
+> ### `SteelSeriesEngineDeviceSettings`
 >
 > Configuration for a device managed via SteelSeriesEngine.
 >
@@ -769,7 +829,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > >
 > > Font weight to search for.
 >
-> > `streatch: FontStretch`
+> > `stretch: FontStretch`
 > >
 > > _Optional_. Default: `"Normal"`.
 > >
@@ -777,9 +837,56 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
-> ### `USBDeviceConfig`
+> ### `HidDeviceSettings`
 >
-> Configuration for a USB device.
+> Configuration for an HID USB device.
+>
+> > `name: string`
+> >
+> > Unique name that identifies this configuration.
+>
+> > `screen_size: Size`
+> >
+> > Screen size of the HID device display.
+>
+> > `memory_layout: MemoryLayout`
+> >
+> > Memory layout of the renderer output.
+>
+> > `transform: fn(buffer: Buffer) -> [byte]`
+> >
+> > _Optional_. Default: No transformation of rendered data.
+> >
+> > Function that will transform rendered `buffer` into the final representation expected by the
+> > device. Data inside `buffer` is in a format specified by `memory_layout` field.
+>
+> > `hid_settings: HidSettings`
+> >
+> > HID-specific settings to identify and configure the USB device.
+
+---
+
+> ### `HidSettings`
+>
+> HID USB device settings.
+>
+> > `vendor_id: string`
+> >
+> > Device vendor ID.
+>
+> > `product_id: string`
+> >
+> > Device product ID.
+>
+> > `interface: string`
+> >
+> > USB interface number.
+
+---
+
+> ### `RawUsbDeviceSettings`
+>
+> Configuration for a raw USB device.
 >
 > > `name: string`
 > >
@@ -791,7 +898,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 >
 > > `memory_layout: MemoryLayout`
 > >
-> > Choose memory layout of the renderer output.
+> > Memory layout of the renderer output.
 >
 > > `transform: fn(buffer: Buffer) -> [byte]`
 > >
@@ -800,47 +907,47 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > > Function that will transform rendered `buffer` into the final representation expected by the
 > > device. Data inside `buffer` is in a format specified by `memory_layout` field.
 >
-> > `usb_settings: USBSettings`
+> > `usb_settings: RawUsbSettings`
 > >
-> > Information to identify the USB device and settings for the device's screen USB interface.
+> > Raw USB settings to identify and configure the USB device.
 
 ---
 
-> ### `USBSettings`
+> ### `RawUsbSettings`
 >
-> Configuration for a USB device. All fields relate to the USB configuration.
+> Raw USB device settings.
 >
-> > `vendor_id: integer`
+> > `vendor_id: string`
 > >
-> > Device vendor ID, used to find the USB device.
+> > Device vendor ID.
 >
-> > `product_id: integer`
+> > `product_id: string`
 > >
-> > Device product ID, used to find the USB device.
+> > Device product ID.
 >
-> > `interface: integer`
+> > `interface: string`
 > >
-> > USB interface on which the OLED device will receive data.
+> > USB interface number.
 >
-> > `alternate_setting: integer`
+> > `alternate_setting: string`
 > >
-> > Alternate setting of the interface, used for displaying data on screen.
+> > Alternate setting.
 >
-> > `request_type: integer`
+> > `request_type: string`
 > >
-> > Request type used to send data to the interface on the device.
+> > USB control transfer request type.
 >
-> > `request: integer`
+> > `request: string`
 > >
-> > Request sent to the interface on the device.
+> > USB control transfer request ID.
 >
-> > `value: integer`
+> > `value: string`
 > >
-> > USB configuration value.
+> > USB control transfer value.
 >
-> > `index: integer`
+> > `index: string`
 > >
-> > USB configuration index.
+> > USB control transfer index.
 
 ## Widgets
 
