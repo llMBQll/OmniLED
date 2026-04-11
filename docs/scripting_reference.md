@@ -125,6 +125,52 @@ Given the following enum:
 > local variant_b = MyEnum.VariantB(7)
 > ```
 
+Enum variants marked with _implicit contruct_ can be used to implicitly construct an enum if it's a function argument:
+
+> Given:
+> 
+> > `MyEnum`
+> > > VariantA(string)
+> >
+> > > VariantB(string) _implicit construct_
+> >
+> > > VariantB(integer) _implicit construct_
+> 
+> and a function
+> 
+> > `fn some_fn(my_enum: MyEnum)`
+> 
+> These are all valid:
+> 
+> ```lua
+> -- constructs MyEnum.VariantA:
+> some_fn(MyEnum.VariantA('str')) 
+> 
+> -- constructs MyEnum.VariantB: 
+> some_fn(MyEnum.VariantB('str'))
+> some_fn('str')
+> 
+> -- constructs MyEnum.VariantC: 
+> some_fn(MyEnum.VariantC(1))
+> some_fn(1)
+> ```
+
+---
+
+> ### `EventKey`
+>
+> Used to match events in event handlers
+>
+> > `Regex(Regex)` _implicit construct_
+> >
+> > Match using regex
+> >
+> > `String(string)` _implicit construct_
+>
+> > Match the exact string
+
+---
+
 > ### `FontName`
 >
 > Font name to search for.
@@ -422,26 +468,48 @@ Given the following enum:
 
 ## Objects
 
+> ### `Buffer`
+>
+> Byte buffer that contains the rendered data.
+>
+> > `bytes`: `fn(self) -> [byte]`
+> >
+> > Get a flat array of bytes in a device-specific memory layout.
+
+---
+
+> ### `Regex`
+>
+> Used to check if a string matches a regex pattern
+>
+> > `new`: `fn(pattern: string) -> Regex`
+> >
+> > Creates a new regex object with a given pattern.
+> >
+> > This will return an error if pattern fails to compile.
+>
+> > `matches`: `fn(self, string: string) -> bool`
+> >
+> > Checks if `string` matches the regex pattern
+
+---
+
 > ### `EVENTS`
 >
 > Register callbacks for specific events. This, combined with script predicates, is useful when the
 > screen builder with default screen management doesn't quite cut it.
 >
-> > `register: fn(self, key: string, callback: fn(event: string, value: any)) -> EventHandle`
+> > `register: fn(self, key: EventKey, callback: fn(event: string, value: any)) -> EventHandle`
 > >
 > > Register a callback for any event. When the callback is triggered, the event name and its value
 > > will be passed as callback arguments.  
 > > Returns an EventHandle object that can be used to unsubscribe from the event.
-> >
-> > `register_regex: fn(self, regex_key: string, callback: fn(event: string, value: any)) -> EventHandle`
-> >
-> > Same as `EVENTS:register` but allows matching on regex instead of plain string.
-> >
-> > _Register for `event` `"*"` to match all events._
 >
 > > `unregister: fn(self, handle: EventHandle)`
 > >
 > > Unregister from an event using a handle received when registering.
+
+---
 
 > ### `SCREEN_BUILDER`
 >
@@ -494,16 +562,6 @@ Given the following enum:
 > > Register a key combination and an action that will be executed when the combination is pressed.
 
 ## Types
-
-> ### `Buffer`
->
-> Byte buffer that contains the rendered data.
->
-> > `bytes`: `fn() -> [byte]`
-> >
-> > Get a flat array of bytes in a device-specific memory layout.
-
----
 
 > ### `EmulatorConfig`
 >
