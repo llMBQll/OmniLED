@@ -41,7 +41,8 @@ macro_rules! create_table_with_defaults {
             })
             .eval::<mlua::Table>()
             .unwrap();
-        crate::common::lua_enum::set_lua_enums($lua, &table);
+        crate::common::lua_register::set_lua_enums($lua, &table);
+        crate::common::lua_register::set_lua_types($lua, &table);
         table
     }};
 }

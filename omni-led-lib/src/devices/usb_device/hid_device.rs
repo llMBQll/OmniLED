@@ -51,7 +51,7 @@ impl Device for HidDevice {
             size: settings.screen_size,
             transform: settings.transform,
             handle,
-            layout: settings.memory_layout.unwrap(),
+            layout: settings.memory_layout,
         })
     }
 
@@ -87,7 +87,7 @@ pub struct HidDeviceSettings {
     pub screen_size: Size,
     pub hid_settings: HidSettings,
     pub transform: Option<Function>,
-    pub memory_layout: Option<MemoryLayout>,
+    pub memory_layout: MemoryLayout,
 }
 
 impl Settings for HidDeviceSettings {

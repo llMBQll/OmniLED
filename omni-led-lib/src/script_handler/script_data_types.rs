@@ -1,6 +1,8 @@
-use mlua::{ErrorContext, FromLua, Lua, UserData, UserDataFields};
+use mlua::{ErrorContext, FromLua, Lua, UserData, UserDataFields, UserDataMethods, Value};
 use omni_led_derive::{FromLuaValue, LuaEnum};
 use std::hash::Hash;
+
+use crate::common::lua_traits::{FromUserdata, LuaConstructor, LuaName};
 
 #[derive(Debug, Clone, Copy, FromLuaValue)]
 pub struct Point {
@@ -190,6 +192,7 @@ impl UserData for Text {}
 
 #[derive(Copy, Clone, Debug, LuaEnum)]
 pub enum FontSize {
+    #[mlua(implicit_construct)]
     Value(usize),
     Auto,
     AutoUpper,
@@ -224,3 +227,72 @@ pub enum MemoryLayout {
 }
 
 impl UserData for MemoryLayout {}
+
+#[derive(Clone)]
+pub struct Regex {
+    re: regex::Regex,
+}
+
+impl Regex {
+    pub fn new(re: &str) -> mlua::Result<Self> {
+        let re = regex::Regex::new(re).map_err(mlua::Error::external)?;
+        Ok(Self { re })
+    }
+
+    pub fn matches(&self, string: &str) -> bool {
+        self.re.is_match(string)
+    }
+}
+
+impl LuaName for Regex {
+    const NAME: &str = "Regex";
+}
+
+impl LuaConstructor for Regex {
+    type Args = String;
+
+    fn constructor(_lua: &Lua, re: Self::Args) -> mlua::Result<Self> {
+        Regex::new(&re)
+    }
+}
+
+impl UserData for Regex {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_method("matches", |_, this, string: String| {
+            Ok(this.matches(&string))
+        });
+    }
+}
+
+impl FromUserdata for Regex {}
+
+impl FromLua for Regex {
+    fn from_lua(value: Value, lua: &Lua) -> mlua::Result<Self> {
+        Self::from_userdata(lua, value)
+    }
+}
+
+#[derive(Clone, LuaEnum)]
+pub enum EventKey {
+    #[mlua(implicit_construct)]
+    Regex(Regex),
+    #[mlua(implicit_construct)]
+    String(String),
+}
+
+impl EventKey {
+    pub fn matches(&self, event: &str) -> bool {
+        match self {
+            EventKey::Regex(regex) => regex.matches(event),
+            EventKey::String(string) => string == event,
+        }
+    }
+}
+
+impl UserData for EventKey {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_method("matches", |_, this, string: String| {
+            Ok(this.matches(&string))
+        });
+    }
+}

@@ -11,7 +11,7 @@ local function volume()
             })
             table.insert(widgets, Widget.Text {
                 text = device.IsMuted and ' M ' or string.format("%3d", device.Volume),
-                font_size = FontSize.Value(24),
+                font_size = 24,
                 text_offset = 1,
                 position = { x = SCREEN.Width * 2 / 3, y = offset },
                 size = { width = SCREEN.Width / 3, height = SCREEN.Height / 2 },
@@ -78,14 +78,14 @@ local function clock()
         widgets = {
             Widget.Text {
                 text = string.format("%02d", CLOCK.Hours),
-                font_size = FontSize.Value(50),
+                font_size = 50,
                 text_offset = 1,
                 position = { x = 10, y = 0 },
                 size = { width = SCREEN.Width / 2, height = SCREEN.Height - 3 },
             },
             Widget.Text {
                 text = string.format("%02d", CLOCK.Minutes),
-                font_size = FontSize.Value(37),
+                font_size = 37,
                 text_offset = 1,
                 position = { x = SCREEN.Width / 2 + 3, y = 0 },
                 size = { width = 54, height = 26 },
@@ -126,7 +126,7 @@ local function weather()
             },
             Widget.Text {
                 text = value,
-                font_size = FontSize.Value(30),
+                font_size = 30,
                 text_offset = 1,
                 position = { x = SCREEN.Height, y = 0 },
                 size = { width = SCREEN.Height * 2, height = SCREEN.Height * 2 / 3 },

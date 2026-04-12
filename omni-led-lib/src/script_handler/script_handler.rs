@@ -12,12 +12,13 @@ use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
-use crate::events::events::{Events, get_cleanup_entries_metatable};
+use crate::events::events::Events;
+use crate::events::proto_to_lua::get_cleanup_entries_metatable;
 use crate::events::shortcuts::Shortcuts;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::renderer::Renderer;
-use crate::script_handler::script_data_types::Widget;
+use crate::script_handler::script_data_types::{EventKey, Regex, Widget};
 
 #[derive(UniqueUserData)]
 pub struct ScriptHandler {
@@ -67,10 +68,11 @@ impl ScriptHandler {
             .unwrap();
 
         let mut events = UserDataRef::<Events>::load(lua);
+        let regex = Regex::new(".*").unwrap();
         events
             .get_mut()
-            .register("*".to_string(), event_handler)
-            .unwrap();
+            .register(EventKey::Regex(regex), event_handler, true);
+        std::mem::drop(events);
 
         load_config(lua, ConfigType::Scripts, &config, environment).unwrap();
     }
@@ -115,8 +117,11 @@ impl ScriptHandler {
     fn mark_for_update(&mut self, key: &String) {
         for device in &mut self.devices {
             for (index, layout) in device.layouts.iter().enumerate() {
-                if layout.run_on.contains(key) {
-                    device.layout_update_flags[index] = true;
+                for event_key in &layout.run_on {
+                    if event_key.matches(key) {
+                        device.layout_update_flags[index] = true;
+                        break;
+                    }
                 }
             }
         }
@@ -301,7 +306,7 @@ impl UserData for ScriptHandler {
 struct Layout {
     layout: Function,
     predicate: Option<Function>,
-    run_on: Vec<String>,
+    run_on: Vec<EventKey>,
 }
 
 #[derive(FromLuaValue, Clone)]
@@ -502,8 +507,7 @@ impl UserData for ScreenBuilderImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::create_table;
-    use crate::events::events::proto_to_lua_value;
+    use crate::{create_table, events::proto_to_lua::proto_to_lua_value};
     use omni_led_derive::IntoProto;
 
     fn assert_tables_equal(lua: &Lua, left: &Table, right: &Table, line: u32) {
