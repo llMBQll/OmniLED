@@ -240,7 +240,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > > Calculate font size to fit any text that doesn't have any "descendants". Useful for text that
 > > consists only of uppercase characters or numbers.
 >
-> > `Value(n: integer)`
+> > `Value(n: integer)` _implicit contruct_
 > >
 > > Set font size to be exactly `n`, regardless of widget size.
 

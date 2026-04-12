@@ -192,6 +192,7 @@ impl UserData for Text {}
 
 #[derive(Copy, Clone, Debug, LuaEnum)]
 pub enum FontSize {
+    #[mlua(implicit_construct)]
     Value(usize),
     Auto,
     AutoUpper,
@@ -273,9 +274,9 @@ impl FromLua for Regex {
 
 #[derive(Clone, LuaEnum)]
 pub enum EventKey {
-    #[mlua(construct_from)]
+    #[mlua(implicit_construct)]
     Regex(Regex),
-    #[mlua(construct_from)]
+    #[mlua(implicit_construct)]
     String(String),
 }
 

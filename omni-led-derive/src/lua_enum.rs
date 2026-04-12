@@ -61,7 +61,7 @@ fn generate_initializers(data: &Data) -> TokenStream {
                         };
                         initializers.push(initializer);
 
-                        if attrs.construct_from.is_some() {
+                        if attrs.implicit_construct.is_some() {
                             let constructor = quote! {
                                 .or_else(|_| user_data.borrow::<#ty>().map(|x| Self::#ident(x.clone())))
                             };
@@ -102,7 +102,7 @@ fn generate_constructors(data: &Data) -> (TokenStream, TokenStream) {
             for field in collect_enum_variants(data, get_enum_attributes) {
                 match field {
                     (EnumFieldType::Unnamed, ident, ty, attrs) => {
-                        if attrs.construct_from.is_some() {
+                        if attrs.implicit_construct.is_some() {
                             insert_constructor(&ty, ident, &mut lua_builtin, &mut userdata);
                         }
                     }
@@ -188,7 +188,7 @@ fn insert_constructor(
 
 struct EnumAttributes {
     alias: Option<TokenStream>,
-    construct_from: Option<TokenStream>,
+    implicit_construct: Option<TokenStream>,
 }
 
 fn get_enum_attributes(attributes: &Vec<Attribute>) -> EnumAttributes {
@@ -196,9 +196,9 @@ fn get_enum_attributes(attributes: &Vec<Attribute>) -> EnumAttributes {
 
     EnumAttributes {
         alias: get_attribute(&mut attributes, "alias"),
-        construct_from: get_attribute_with_default_value(
+        implicit_construct: get_attribute_with_default_value(
             &mut attributes,
-            "construct_from",
+            "implicit_construct",
             quote! {},
         ),
     }
