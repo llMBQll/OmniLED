@@ -136,29 +136,29 @@ Given the following enum:
 Enum variants marked with _implicit contruct_ can be used to implicitly construct an enum if it's a function argument:
 
 > Given:
-> 
+>
 > > `MyEnum`
 > > > VariantA(string)
 > >
 > > > VariantB(string) _implicit construct_
 > >
 > > > VariantB(integer) _implicit construct_
-> 
+>
 > and a function
-> 
+>
 > > `fn some_fn(my_enum: MyEnum)`
-> 
+>
 > These are all valid:
-> 
+>
 > ```lua
 > -- constructs MyEnum.VariantA:
-> some_fn(MyEnum.VariantA('str')) 
-> 
-> -- constructs MyEnum.VariantB: 
+> some_fn(MyEnum.VariantA('str'))
+>
+> -- constructs MyEnum.VariantB:
 > some_fn(MyEnum.VariantB('str'))
 > some_fn('str')
-> 
-> -- constructs MyEnum.VariantC: 
+>
+> -- constructs MyEnum.VariantC:
 > some_fn(MyEnum.VariantC(1))
 > some_fn(1)
 > ```
