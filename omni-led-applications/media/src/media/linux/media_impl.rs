@@ -278,20 +278,29 @@ impl MediaImpl {
     fn read_artist(metadata: &HashMap<String, OwnedValue>) -> Option<String> {
         let val = metadata.get("xesam:artist")?;
         let arr = val.downcast_ref::<zbus::zvariant::Array>().ok()?;
-        arr.iter()
-            .next()
-            .map(|v| v.downcast_ref::<String>().ok().unwrap_or_default())
+        match arr.iter().next() {
+            Some(val) => match val.downcast_ref::<String>() {
+                Ok(artist) if !artist.is_empty() => Some(artist),
+                _ => None,
+            },
+            None => None,
+        }
     }
 
     fn read_title(metadata: &HashMap<String, OwnedValue>) -> Option<String> {
         let val = metadata.get("xesam:title")?;
-        val.downcast_ref::<String>().ok()
+        match val.downcast_ref::<String>() {
+            Ok(title) if !title.is_empty() => Some(title),
+            _ => None,
+        }
     }
 
     fn read_duration(metadata: &HashMap<String, OwnedValue>) -> Option<Duration> {
         let val = metadata.get("mpris:length")?;
-        let length = val.downcast_ref::<u64>().ok()?;
-        Some(Duration::from_micros(length))
+        match val.downcast_ref::<u64>() {
+            Ok(length) if length != 0 => Some(Duration::from_micros(length)),
+            _ => None,
+        }
     }
 
     fn update_position(entry: &mut PlayerData) {

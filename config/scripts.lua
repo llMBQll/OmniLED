@@ -38,6 +38,13 @@ local function volume()
 end
 
 local function media(source)
+    local function format_artist_title(title, artist, source)
+        if artist and title then
+            return artist .. ' - ' .. title
+        end
+        return artist or title or source
+    end
+
     return {
         widgets = {
             Widget.Bar {
@@ -47,7 +54,7 @@ local function media(source)
                 size = { width = SCREEN.Width, height = 2 },
             },
             Widget.Text {
-                text = table.concat({ source.Artist, source.Title }, ' - '),
+                text = format_artist_title(source.Artist, source.Title, source.Source),
                 scrolling = true,
                 position = { x = 0, y = 2 },
                 size = { width = SCREEN.Width, height = 20 },
