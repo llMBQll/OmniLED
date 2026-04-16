@@ -81,3 +81,4 @@ Media sends a single type of event, and its name depends on the selected [mode](
 - `Duration`: integer (value in milliseconds) | none,
 - `Playing`: bool,
 - `Rate`: float (Playback speed multiplier - `1.0` for regular speed)
+- `Source`: string ([mapped](#application-name-mapping) source name)

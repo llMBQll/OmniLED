@@ -7,6 +7,7 @@ use windows::Media::Control::{
     GlobalSystemMediaTransportControlsSession,
     GlobalSystemMediaTransportControlsSessionPlaybackStatus as PlaybackStatus,
 };
+use windows::core::HSTRING;
 
 use crate::Data;
 use crate::media::session_data::SessionData;
@@ -132,17 +133,16 @@ impl MediaImpl {
     async fn get_song(
         session: &GlobalSystemMediaTransportControlsSession,
     ) -> (Option<String>, Option<String>) {
+        let convert_string = |string: Result<HSTRING, _>| match string {
+            Ok(string) if !string.is_empty() => Some(string.to_string_lossy()),
+            _ => None,
+        };
+
         match session.TryGetMediaPropertiesAsync() {
             Ok(operation) => match operation.await {
                 Ok(properties) => Ok((
-                    properties
-                        .Artist()
-                        .and_then(|x| Ok(Some(x.to_string_lossy())))
-                        .unwrap_or(None),
-                    properties
-                        .Title()
-                        .and_then(|x| Ok(Some(x.to_string_lossy())))
-                        .unwrap_or(None),
+                    convert_string(properties.Artist()),
+                    convert_string(properties.Title()),
                 )),
                 Err(err) => Err(err),
             },
@@ -167,7 +167,10 @@ impl MediaImpl {
                     .unwrap_or(DEFAULT_POSITION),
                 properties
                     .EndTime()
-                    .and_then(|x| Ok(Some(x.into())))
+                    .and_then(|x| match Duration::from(x) {
+                        Duration::ZERO => Ok(None),
+                        x => Ok(Some(x)),
+                    })
                     .unwrap_or(None),
             ),
             Err(err) => {
