@@ -1,6 +1,7 @@
 use clap::Parser;
 use log::info;
 use omni_led_api::plugin::Plugin;
+use omni_led_api::types::Table;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -28,19 +29,20 @@ async fn main() {
 
     let loop_handle = tokio::task::spawn(async move {
         while let Some((current, name, session_data)) = rx.recv().await {
+            let transformed = match map.get(&name) {
+                Some(transformed) => transformed,
+                None => {
+                    let transformed = transform_name(&name);
+                    map.entry(name).or_insert(transformed)
+                }
+            };
+            let session_data = session_data_with_source(session_data, transformed);
+
             if current && (mode == Focused || mode == Both) {
                 plugin.update(session_data.clone().into()).await.unwrap();
             }
 
             if mode == Individual || mode == Both {
-                let transformed = match map.get(&name) {
-                    Some(transformed) => transformed,
-                    None => {
-                        let transformed = transform_name(&name).await;
-                        map.entry(name).or_insert(transformed)
-                    }
-                };
-
                 plugin
                     .update_with_name(transformed, session_data.into())
                     .await
@@ -56,7 +58,13 @@ async fn main() {
 
 type Data = (bool, String, SessionData);
 
-async fn transform_name(name: &String) -> String {
+fn session_data_with_source(session_data: SessionData, source: &str) -> Table {
+    let mut table: Table = session_data.into();
+    table.items.insert("Source".into(), source.into());
+    table
+}
+
+fn transform_name(name: &String) -> String {
     let mut new_name = String::with_capacity(name.capacity());
 
     for character in name.chars() {
