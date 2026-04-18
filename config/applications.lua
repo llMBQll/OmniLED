@@ -21,7 +21,7 @@ load_app {
     path = get_default_path('system'),
     args = {
         '--address', SERVER.Address,
-        '--interval', 5,
+        '--interval', 2,
     },
 }
 

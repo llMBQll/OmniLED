@@ -33,7 +33,7 @@ struct Options {
     address: String,
 
     /// Interval between getting new system data in seconds
-    #[clap(short, long, default_value = "5")]
+    #[clap(short, long, default_value = "2")]
     interval: u64,
 }
 

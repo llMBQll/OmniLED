@@ -159,6 +159,39 @@ local function weather()
     }
 end
 
+local function system()
+    local function bytes_to_gb(bytes)
+        return bytes / 1024 / 1024 / 1024
+    end
+
+    local cpu = SYSTEM.Cpus[1]
+    local gpu = SYSTEM.Gpus[1]
+    local mem = SYSTEM.Memory
+    return {
+        widgets = {
+            Widget.Text {
+                text = string.format('CPU: %.2f%% %02d°C', cpu.Utilization, cpu.Temperature or 0),
+                font_size = 13,
+                position = { x = 0, y = 0 },
+                size = { width = SCREEN.Width, height = SCREEN.Height / 3 },
+            },
+            Widget.Text {
+                text = string.format('GPU: %.2f%% %02d°C', gpu.Utilization, gpu.Temperature),
+                font_size = 13,
+                position = { x = 0, y = SCREEN.Height / 3 },
+                size = { width = SCREEN.Width, height = SCREEN.Height / 3 },
+            },
+            Widget.Text {
+                text = string.format('MEM: %.1f/%.1fGB', bytes_to_gb(mem.Used), bytes_to_gb(mem.Total)),
+                font_size = 13,
+                position = { x = 0, y = SCREEN.Height * 2 / 3 },
+                size = { width = SCREEN.Width, height = SCREEN.Height / 3 },
+            },
+        },
+        duration = 1000,
+    }
+end
+
 -- Helper function to easily register layout for any media source
 function make_media_layout(source)
     return {
@@ -186,9 +219,15 @@ SCREEN_BUILDER
     })
     :with_layout_group({
         {
+            layout = system,
+            run_on = { 'SYSTEM' },
+        },
+    })
+    :with_layout_group({
+        {
             layout = weather,
             run_on = { 'CLOCK.Seconds' },
         }
     })
-    :with_layout_group_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
+    :with_layout_group_toggle({ 'KEY(RAlt)', 'KEY(RControl)' })
     :register()
