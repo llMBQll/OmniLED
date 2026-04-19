@@ -2,7 +2,7 @@ use all_smi::AllSmi;
 use clap::Parser;
 use omni_led_api::new_plugin;
 use omni_led_derive::IntoProto;
-use std::time;
+use std::time::{Duration, Instant};
 
 mod cpu;
 mod gpu;
@@ -14,7 +14,10 @@ async fn main() {
     let plugin = new_plugin!(&options.address);
 
     let smi = AllSmi::new().unwrap();
+    let interval = Duration::from_secs(options.interval);
     loop {
+        let begin = Instant::now();
+
         let data = SystemData {
             cpus: cpu::read_data(&smi),
             gpus: gpu::read_data(&smi),
@@ -22,7 +25,7 @@ async fn main() {
         };
         plugin.update(data.into()).await.unwrap();
 
-        tokio::time::sleep(time::Duration::from_secs(options.interval)).await;
+        tokio::time::sleep(interval.saturating_sub(begin.elapsed())).await;
     }
 }
 
