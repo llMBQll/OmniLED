@@ -1,10 +1,8 @@
 use clap::{ArgAction, Parser};
 use image::guess_format;
 use log::{debug, error};
-use omni_led_api::plugin::Plugin;
+use omni_led_api::new_plugin;
 use omni_led_api::types::{ImageData, ImageFormat, Table};
-
-const NAME: &str = "IMAGES";
 
 #[tokio::main]
 async fn main() {
@@ -12,7 +10,7 @@ async fn main() {
 
     // TODO verify that all image names are unique
 
-    let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
+    let plugin = new_plugin!(&options.address);
 
     let images = load_images(options.images);
     plugin.update(images).await.unwrap();

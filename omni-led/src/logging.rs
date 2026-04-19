@@ -1,5 +1,6 @@
 use log::{LevelFilter, error};
 use log4rs::append::file::FileAppender;
+use log4rs::config::runtime::ConfigBuilder;
 use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::{Config, Handle};
@@ -38,28 +39,44 @@ pub fn init(lua: &Lua) -> OmniLedLogHandle {
 }
 
 fn create_config(file_path: impl AsRef<Path>, level_filter: LevelFilter) -> Config {
+    const LOGFILE: &str = "logfile";
+
     let logfile = FileAppender::builder()
         .encoder(Box::new(PatternEncoder::new(
             "[{d(%Y-%m-%d %H:%M:%S:%3f)}][{l}][{t}] {m}\n",
         )))
         .build(file_path)
         .unwrap();
-    let config = Config::builder()
-        .appender(Appender::builder().build("logfile", Box::new(logfile)))
-        .logger(log4rs::config::Logger::builder().build("hyper", LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("mio", LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("naga", LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("rustls", LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("tracing", LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("ureq", LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("ureq_proto", LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("warp", LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("wgpu_core", LevelFilter::Error))
-        .logger(log4rs::config::Logger::builder().build("wgpu_hal", LevelFilter::Error))
-        .build(Root::builder().appender("logfile").build(level_filter))
-        .unwrap();
 
-    config
+    let add_config = |builder: ConfigBuilder, name: &'static str| -> ConfigBuilder {
+        builder.logger(
+            log4rs::config::Logger::builder()
+                .appender(LOGFILE)
+                .additive(false)
+                .build(name, level_filter),
+        )
+    };
+
+    let builder = Config::builder().appender(Appender::builder().build(LOGFILE, Box::new(logfile)));
+
+    // OmniLED implementation files
+    let builder = add_config(builder, "omni_led");
+    let builder = add_config(builder, "omni_led_api");
+    let builder = add_config(builder, "omni_led_lib");
+
+    // Script files (+ 'script' as fallback if it failed to get script name)
+    let builder = add_config(builder, "applications.lua");
+    let builder = add_config(builder, "devices.lua");
+    let builder = add_config(builder, "scripts.lua");
+    let builder = add_config(builder, "settings.lua");
+    let builder = add_config(builder, "script");
+
+    // Plugin applications
+    let builder = add_config(builder, "plugin");
+
+    builder
+        .build(Root::builder().appender(LOGFILE).build(LevelFilter::Error))
+        .unwrap()
 }
 
 #[cfg(debug_assertions)]
