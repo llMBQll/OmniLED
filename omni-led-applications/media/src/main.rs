@@ -1,5 +1,6 @@
 use clap::Parser;
 use log::info;
+use omni_led_api::new_plugin;
 use omni_led_api::plugin::Plugin;
 use omni_led_api::types::Table;
 use std::collections::HashMap;
@@ -12,15 +13,10 @@ use crate::media::session_data::SessionData;
 
 mod media;
 
-const NAME: &str = "MEDIA";
-const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
-
 #[tokio::main]
 async fn main() {
     let options = Options::parse();
-    let plugin = Plugin::new(NAME, CRATE_NAME, &options.address)
-        .await
-        .unwrap();
+    let plugin = new_plugin!(&options.address);
 
     let (tx, mut rx): (Sender<Data>, Receiver<Data>) = mpsc::channel(256);
 

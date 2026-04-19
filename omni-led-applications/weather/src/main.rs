@@ -1,26 +1,21 @@
 use clap::Parser;
 use log::debug;
-use omni_led_api::plugin::Plugin;
 use omni_led_api::types::Table;
+use omni_led_api::{new_plugin, plugin::Plugin};
 use omni_led_derive::IntoProto;
 use std::{collections::HashMap, time};
 use ureq::Agent;
 
 mod weather_api;
 
-const NAME: &str = "WEATHER";
-const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
-
 #[tokio::main]
 async fn main() {
     let options = Options::parse();
-    let mut plugin = Plugin::new(NAME, CRATE_NAME, &options.address)
-        .await
-        .unwrap();
+    let plugin = new_plugin!(&options.address);
 
     debug!("{:?}", options);
 
-    load_and_send_images(&mut plugin).await;
+    load_and_send_images(&plugin).await;
 
     let (coordinates, name) = match &options.selector {
         Selector::In(name) => (get_coordinates_from_name(name), &name.city),
@@ -39,7 +34,7 @@ async fn main() {
     }
 }
 
-async fn load_and_send_images(plugin: &mut Plugin) {
+async fn load_and_send_images(plugin: &Plugin) {
     let images = weather_api::load_images();
 
     let mut table = Table::default();

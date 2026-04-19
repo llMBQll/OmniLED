@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use clap::Parser;
-use omni_led_api::plugin::Plugin;
+use omni_led_api::new_plugin;
 use omni_led_derive::IntoProto;
 use tokio::time::{Duration, Instant};
 
@@ -53,15 +53,10 @@ struct Time {
     year: i32,
 }
 
-const NAME: &str = "CLOCK";
-const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
-
 #[tokio::main]
 async fn main() {
     let options = Options::parse();
-    let plugin = Plugin::new(NAME, CRATE_NAME, &options.address)
-        .await
-        .unwrap();
+    let plugin = new_plugin!(&options.address);
 
     // Send initial data that will not be updated
     plugin.update(Names::new().into()).await.unwrap();

@@ -1,7 +1,7 @@
 use audio::Audio;
 use clap::Parser;
 use log::debug;
-use omni_led_api::plugin::Plugin;
+use omni_led_api::new_plugin;
 use omni_led_api::types::Table;
 use omni_led_derive::IntoProto;
 use tokio::runtime::Handle;
@@ -10,15 +10,10 @@ use tokio::sync::mpsc::{Receiver, Sender};
 
 mod audio;
 
-const NAME: &str = "AUDIO";
-const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
-
 #[tokio::main]
 async fn main() {
     let options = Options::parse();
-    let plugin = Plugin::new(NAME, CRATE_NAME, &options.address)
-        .await
-        .unwrap();
+    let plugin = new_plugin!(&options.address);
 
     let (tx, mut rx): (
         Sender<(DeviceData, DeviceType)>,

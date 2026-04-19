@@ -101,3 +101,23 @@ impl Plugin {
         true
     }
 }
+
+#[macro_export]
+macro_rules! new_plugin {
+    ($address:expr) => {{
+        let crate_name = env!("CARGO_PKG_NAME");
+        let plugin_name: String = crate_name
+            .chars()
+            .map(|c| {
+                if c == '-' {
+                    '_'
+                } else {
+                    c.to_ascii_uppercase()
+                }
+            })
+            .collect();
+        omni_led_api::plugin::Plugin::new(&plugin_name, crate_name, $address)
+            .await
+            .unwrap()
+    }};
+}
