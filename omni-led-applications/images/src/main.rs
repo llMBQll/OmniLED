@@ -5,6 +5,7 @@ use omni_led_api::plugin::Plugin;
 use omni_led_api::types::{ImageData, ImageFormat, Table};
 
 const NAME: &str = "IMAGES";
+const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 
 #[tokio::main]
 async fn main() {
@@ -12,7 +13,9 @@ async fn main() {
 
     // TODO verify that all image names are unique
 
-    let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
+    let plugin = Plugin::new(NAME, CRATE_NAME, &options.address)
+        .await
+        .unwrap();
 
     let images = load_images(options.images);
     plugin.update(images).await.unwrap();

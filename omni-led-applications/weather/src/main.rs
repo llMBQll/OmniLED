@@ -9,11 +9,14 @@ use ureq::Agent;
 mod weather_api;
 
 const NAME: &str = "WEATHER";
+const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 
 #[tokio::main]
 async fn main() {
     let options = Options::parse();
-    let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
+    let mut plugin = Plugin::new(NAME, CRATE_NAME, &options.address)
+        .await
+        .unwrap();
 
     debug!("{:?}", options);
 

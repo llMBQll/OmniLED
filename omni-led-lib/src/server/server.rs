@@ -8,9 +8,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::net::TcpListener;
 use tokio::runtime::Runtime;
 use tokio::sync::oneshot;
-use tokio_stream::StreamExt;
 use tonic::transport::Server;
-use tonic::{Code, Request, Response, Status, Streaming};
+use tonic::{Code, Request, Response, Status};
 
 use crate::common::user_data::UserDataRef;
 use crate::constants::constants::Constants;
@@ -20,7 +19,6 @@ use crate::settings::settings::Settings;
 
 pub struct PluginServer {
     event_queue: Arc<Mutex<EventQueue>>,
-    log_level_filter: log::LevelFilter,
 }
 
 impl PluginServer {
@@ -38,17 +36,13 @@ impl PluginServer {
         let address = listener.local_addr().unwrap();
         let bound_port = address.port();
 
-        let log_level_filter = settings.get().log_level.into();
-
         let (tx, rx) = oneshot::channel();
         rt.spawn(
             Server::builder()
                 .add_service(
-                    omni_led_api::types::plugin_server::PluginServer::new(Self::new(
-                        log_level_filter,
-                    ))
-                    .max_decoding_message_size(64 * 1024 * 1024)
-                    .max_encoding_message_size(64 * 1024 * 1024),
+                    omni_led_api::types::plugin_server::PluginServer::new(Self::new())
+                        .max_decoding_message_size(64 * 1024 * 1024)
+                        .max_encoding_message_size(64 * 1024 * 1024),
                 )
                 .serve_with_incoming_shutdown(
                     tokio_stream::wrappers::TcpListenerStream::new(listener),
@@ -86,10 +80,9 @@ impl PluginServer {
         tx
     }
 
-    fn new(log_level_filter: log::LevelFilter) -> Self {
+    fn new() -> Self {
         Self {
             event_queue: EventQueue::instance(),
-            log_level_filter,
         }
     }
 }
@@ -144,33 +137,19 @@ impl omni_led_api::types::plugin_server::Plugin for PluginServer {
         Ok(Response::new(EventResponse {}))
     }
 
-    async fn log(
-        &self,
-        request: Request<Streaming<LogData>>,
-    ) -> Result<Response<LogResponse>, Status> {
-        let mut in_stream = request.into_inner();
+    async fn log(&self, request: Request<LogData>) -> Result<Response<LogResponse>, Status> {
+        let data = request.get_ref();
 
-        tokio::spawn(async move {
-            while let Some(result) = in_stream.next().await {
-                match result {
-                    Ok(data) => match data.log_level() {
-                        LogLevel::Unknown => {
-                            debug!(target: &data.location, "Received unknown log level. Original log message: '{}'", data.message)
-                        }
-                        level => {
-                            log!(target: &data.location, level.into(), "{}", data.message);
-                        }
-                    },
-                    Err(status) => {
-                        debug!("Connection closed: {}", status);
-                        break;
-                    }
-                }
+        let location = format!("plugin::{}", data.location);
+        match data.log_level() {
+            LogLevel::Unknown => {
+                error!(target: &location, "Received unknown log level. Original log message: '{}'", data.message)
             }
-        });
+            level => {
+                log!(target: &location, level.into(), "{}", data.message);
+            }
+        };
 
-        let mut response = LogResponse::default();
-        response.set_log_level_filter(self.log_level_filter.into());
-        Ok(Response::new(response))
+        Ok(Response::new(LogResponse {}))
     }
 }

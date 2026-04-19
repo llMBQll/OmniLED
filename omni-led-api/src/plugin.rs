@@ -1,53 +1,82 @@
-use tokio::runtime::Handle;
-use tokio::sync::mpsc::channel;
-use tokio_stream::wrappers::ReceiverStream;
+use std::sync::Arc;
+use tokio::{runtime::Handle, sync::Mutex};
 
-use crate::logging;
-use crate::types::{EventData, Table, plugin_client};
+use crate::{
+    logging,
+    types::{EventData, LogData, LogLevel, Table, plugin_client::PluginClient},
+};
 
-#[derive(Debug)]
+#[derive(Clone)]
 pub struct Plugin {
+    inner: Arc<Mutex<PluginInner>>,
+}
+
+struct PluginInner {
     name: String,
-    client: plugin_client::PluginClient<tonic::transport::Channel>,
+    client: PluginClient<tonic::transport::Channel>,
 }
 
 impl Plugin {
-    pub async fn new(name: &str, url: &str) -> Result<Self, tonic::transport::Error> {
-        let mut client = plugin_client::PluginClient::connect(format!("http://{url}")).await?;
+    pub async fn new(
+        name: &str,
+        crate_name: &'static str,
+        url: &str,
+    ) -> Result<Self, tonic::transport::Error> {
+        let client = PluginClient::connect(format!("http://{url}")).await?;
 
-        let (tx, rx) = channel(128);
-        let stream = ReceiverStream::new(rx);
-
-        let log_level: log::LevelFilter = match client.log(stream).await {
-            Ok(response) => response.into_inner().log_level_filter().into(),
-            Err(_) => todo!(),
+        let plugin = Self {
+            inner: Arc::new(Mutex::new(PluginInner {
+                name: name.to_string(),
+                client: client,
+            })),
         };
-        logging::init(Handle::current(), tx, log_level);
 
-        Ok(Self {
-            name: name.to_string(),
-            client,
-        })
+        logging::init(Handle::current(), plugin.clone(), crate_name);
+
+        Ok(plugin)
     }
 
-    pub async fn update_with_name(
-        &mut self,
-        name: &str,
-        fields: Table,
+    pub async fn log(
+        &self,
+        log_level: LogLevel,
+        location: String,
+        message: String,
     ) -> Result<(), tonic::Status> {
-        let data = EventData {
-            name: name.to_string(),
-            fields: Some(fields),
-        };
-
-        self.client.event(data).await?;
+        self.inner
+            .lock()
+            .await
+            .client
+            .log(LogData {
+                log_level: log_level as i32,
+                location: location,
+                message: message,
+            })
+            .await?;
         Ok(())
     }
 
-    pub async fn update(&mut self, fields: Table) -> Result<(), tonic::Status> {
-        let name = self.name.clone();
+    pub async fn update_with_name(&self, name: &str, fields: Table) -> Result<(), tonic::Status> {
+        let mut inner = self.inner.lock().await;
+        Self::update_impl(&mut inner.client, name.to_string(), fields).await
+    }
 
-        self.update_with_name(&name, fields).await?;
+    pub async fn update(&self, fields: Table) -> Result<(), tonic::Status> {
+        let mut inner = self.inner.lock().await;
+        let name = inner.name.clone();
+        Self::update_impl(&mut inner.client, name, fields).await
+    }
+
+    async fn update_impl(
+        client: &mut PluginClient<tonic::transport::Channel>,
+        name: String,
+        fields: Table,
+    ) -> Result<(), tonic::Status> {
+        client
+            .event(EventData {
+                name,
+                fields: Some(fields),
+            })
+            .await?;
         Ok(())
     }
 

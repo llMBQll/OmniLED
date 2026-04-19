@@ -29,33 +29,6 @@ impl Into<log::Level> for LogLevel {
     }
 }
 
-impl From<log::LevelFilter> for LogLevelFilter {
-    fn from(value: log::LevelFilter) -> Self {
-        match value {
-            log::LevelFilter::Off => LogLevelFilter::Off,
-            log::LevelFilter::Error => LogLevelFilter::Error,
-            log::LevelFilter::Warn => LogLevelFilter::Warn,
-            log::LevelFilter::Info => LogLevelFilter::Info,
-            log::LevelFilter::Debug => LogLevelFilter::Debug,
-            log::LevelFilter::Trace => LogLevelFilter::Trace,
-        }
-    }
-}
-
-impl Into<log::LevelFilter> for LogLevelFilter {
-    fn into(self) -> log::LevelFilter {
-        match self {
-            LogLevelFilter::Unknown => todo!(),
-            LogLevelFilter::Off => log::LevelFilter::Off,
-            LogLevelFilter::Error => log::LevelFilter::Error,
-            LogLevelFilter::Warn => log::LevelFilter::Warn,
-            LogLevelFilter::Info => log::LevelFilter::Info,
-            LogLevelFilter::Debug => log::LevelFilter::Debug,
-            LogLevelFilter::Trace => log::LevelFilter::Trace,
-        }
-    }
-}
-
 macro_rules! cast_and_into_field {
     ($from:ty, $to:ty, $variant:expr) => {
         impl Into<Field> for $from {

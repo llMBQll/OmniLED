@@ -11,11 +11,14 @@ use tokio::sync::mpsc::{Receiver, Sender};
 mod audio;
 
 const NAME: &str = "AUDIO";
+const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 
 #[tokio::main]
 async fn main() {
     let options = Options::parse();
-    let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
+    let plugin = Plugin::new(NAME, CRATE_NAME, &options.address)
+        .await
+        .unwrap();
 
     let (tx, mut rx): (
         Sender<(DeviceData, DeviceType)>,

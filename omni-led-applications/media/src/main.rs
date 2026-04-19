@@ -13,11 +13,14 @@ use crate::media::session_data::SessionData;
 mod media;
 
 const NAME: &str = "MEDIA";
+const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 
 #[tokio::main]
 async fn main() {
     let options = Options::parse();
-    let mut plugin = Plugin::new(NAME, &options.address).await.unwrap();
+    let plugin = Plugin::new(NAME, CRATE_NAME, &options.address)
+        .await
+        .unwrap();
 
     let (tx, mut rx): (Sender<Data>, Receiver<Data>) = mpsc::channel(256);
 

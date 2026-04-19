@@ -1,13 +1,12 @@
-use log::{LevelFilter, Log, Metadata, Record, error};
+use log::{Log, Metadata, Record, error};
 use tokio::runtime::Handle;
-use tokio::sync::mpsc::Sender;
 
-use crate::types::{LogData, LogLevel};
+use crate::plugin::Plugin;
 
-pub fn init(runtime_handle: Handle, log_sink: Sender<LogData>, log_level_filter: LevelFilter) {
-    let logger = Logger::new(runtime_handle, log_sink, log_level_filter);
+pub fn init(runtime_handle: Handle, plugin: Plugin, crate_name: &'static str) {
+    let logger = Logger::new(runtime_handle, plugin, crate_name);
     log::set_boxed_logger(Box::new(logger))
-        .map(|()| log::set_max_level(log_level_filter))
+        .map(|()| log::set_max_level(log::LevelFilter::Trace))
         .unwrap();
 
     let default_hook = std::panic::take_hook();
@@ -19,27 +18,24 @@ pub fn init(runtime_handle: Handle, log_sink: Sender<LogData>, log_level_filter:
 
 struct Logger {
     runtime_handle: Handle,
-    log_sink: Sender<LogData>,
-    log_level_filter: LevelFilter,
+    plugin: Plugin,
+    crate_name: &'static str,
 }
 
 impl Logger {
-    pub fn new(
-        runtime_handle: Handle,
-        log_sink: Sender<LogData>,
-        log_level_filter: LevelFilter,
-    ) -> Self {
+    pub fn new(runtime_handle: Handle, plugin: Plugin, crate_name: &'static str) -> Self {
         Self {
             runtime_handle,
-            log_sink,
-            log_level_filter,
+            plugin,
+            crate_name,
         }
     }
 }
 
 impl Log for Logger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= self.log_level_filter
+        let target = metadata.target();
+        target.starts_with(self.crate_name) || target.starts_with("omni_led")
     }
 
     fn log(&self, record: &Record) {
@@ -47,16 +43,13 @@ impl Log for Logger {
             return;
         }
 
-        let log_level: LogLevel = record.level().into();
-        let data = LogData {
-            log_level: log_level as i32,
-            location: record.target().to_string(),
-            message: format!("{}", record.args()),
-        };
-
-        let log_sink = self.log_sink.clone();
-        self.runtime_handle
-            .spawn(async move { log_sink.send(data).await.unwrap() });
+        let log_level = record.level();
+        let target = record.target().to_string();
+        let message = format!("{}", record.args());
+        let plugin = self.plugin.clone();
+        self.runtime_handle.spawn(async move {
+            _ = plugin.log(log_level.into(), target, message).await;
+        });
     }
 
     fn flush(&self) {}
