@@ -187,6 +187,7 @@ fn install(options: InstallOptions) {
     install_binary!(CLOCK);
     install_binary!(IMAGES);
     install_binary!(MEDIA);
+    install_binary!(SYSTEM);
     install_binary!(WEATHER);
 
     let override_config = options.override_config == Some(true)
