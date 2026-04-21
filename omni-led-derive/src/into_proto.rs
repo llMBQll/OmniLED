@@ -1,7 +1,7 @@
 use convert_case::{Case, Casing};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Attribute, Data, DeriveInput};
+use syn::{Attribute, Data, DeriveInput, ext::IdentExt};
 
 use crate::common::{get_attribute, get_attribute_with_default_value, is_option, parse_attributes};
 
@@ -38,7 +38,7 @@ fn generate_assignments(data: &Data, struct_attrs: &StructAttributes) -> TokenSt
                 let assignments = fields.named.iter().map(|field| {
                     let field_identifier = &field.ident;
                     let field_name = match field_identifier {
-                        Some(field) => format!("{}", field),
+                        Some(field) => format!("{}", field.unraw()),
                         None => String::new(),
                     };
 

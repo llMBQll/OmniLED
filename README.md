@@ -4,12 +4,13 @@ OmniLED is a program allowing you to control devices with an OLED screen. It's d
 Windows, while supporting all SteelSeries devices, virtually any custom USB device, and allowing for in-depth
 customization.
 
+## Example layouts on device and in emulator
+
 ![Time and date](docs/images/clock.gif "Time and date")
 ![Currently playing media](docs/images/music.gif "Currently playing media")
 ![Changing volume](docs/images/volume.gif "Changing volume")
 ![Current Weather](docs/images/weather.gif "Current weather")
-
-![Emulator](docs/images/emulator.png "Emulator")
+![System](docs/images/system.gif "System")
 
 ## Features
 
@@ -22,6 +23,7 @@ customization.
   - Date and time via [clock](omni-led-applications/clock/README.md)
   - Load images into OmniLED via [images](omni-led-applications/images/README.md)
   - Currently playing media information via [media](omni-led-applications/media/README.md)
+  - System resource usage and temperatures via [system](omni-led-applications/system/README.md)
   - Weather via [weather](omni-led-applications/weather/README.md)
 - Extensibility:
   - Create custom applications using the [gRPC interface](omni-led-api/proto/plugin.proto)
@@ -124,7 +126,7 @@ All contributions are welcome! See the [contributing guide](CONTRIBUTING.md) for
 
 - [x] GIF support
 - [x] Loading custom images (Load images and GIFs from disk)
-- [ ] Hardware info (CPU usage, temps, RAM usage, etc.)
+- [x] Hardware info (CPU usage, temps, RAM usage, etc.)
 - [ ] Discord info (Mic status, currently speaking user, etc.)
 - [ ] Graphical interface for installer and settings
 
