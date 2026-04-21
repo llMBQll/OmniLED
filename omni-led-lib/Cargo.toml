@@ -6,11 +6,11 @@ license = "GPL-3.0-only"
 edition = "2024"
 
 [dependencies]
-convert_case = "0.10"
+convert_case = "0.11"
 device_query = "4.0"
 dirs-next = "2.0"
 font-kit = "0.14"
-freetype-rs = "*"
+freetype-rs = "0.36"
 hidapi = "2.6"
 image = "0.25"
 lazy_static = "1.4"
@@ -29,7 +29,7 @@ omni-led-derive = { path = "../omni-led-derive", features = ["from-lua-value", "
 tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
 tokio-stream = "0.1"
 tonic = "0.14"
-tray-icon = "0.21"
+tray-icon = "0.22"
 ureq = { version = "3.1", features = ["json"] }
 winit = "0.30"
 
