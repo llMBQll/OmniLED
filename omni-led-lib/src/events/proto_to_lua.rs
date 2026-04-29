@@ -14,6 +14,17 @@ pub fn get_cleanup_entries_metatable(table: &Table) -> mlua::Result<Option<Table
     }
 }
 
+pub fn marked_table(lua: &Lua, table: Table) -> mlua::Result<Table> {
+    set_cleanup_entries_metatable(lua, &table, lua.create_table()?)?;
+    Ok(table)
+}
+
+fn set_cleanup_entries_metatable(lua: &Lua, table: &Table, entries: Table) -> mlua::Result<()> {
+    let meta = lua.create_table_with_capacity(0, 1)?;
+    meta.set(CLEANUP_ENTRIES, entries)?;
+    table.set_metatable(Some(meta))
+}
+
 pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
     match field.field {
         Some(FieldEntry::FNone(_)) | None => Ok(mlua::Nil),
@@ -45,9 +56,7 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
                 }
             }
 
-            let meta = lua.create_table_with_capacity(0, 1)?;
-            meta.set(CLEANUP_ENTRIES, cleanup_entries)?;
-            _ = table.set_metatable(Some(meta));
+            set_cleanup_entries_metatable(&lua, &table, cleanup_entries)?;
 
             Ok(Value::Table(table))
         }
