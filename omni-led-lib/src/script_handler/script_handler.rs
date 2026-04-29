@@ -67,12 +67,8 @@ impl ScriptHandler {
             })
             .unwrap();
 
-        let mut events = UserDataRef::<Events>::load(lua);
         let regex = Regex::new(".*").unwrap();
-        events
-            .get_mut()
-            .register(EventKey::Regex(regex), event_handler, true);
-        std::mem::drop(events);
+        Events::register(EventKey::Regex(regex), event_handler, true);
 
         load_config(lua, ConfigType::Scripts, &config, environment).unwrap();
     }

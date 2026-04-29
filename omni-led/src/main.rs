@@ -9,6 +9,7 @@ use omni_led_lib::{
     constants::config::{ConfigType, read_config},
     constants::constants::Constants,
     devices::devices::Devices,
+    events::dispatcher::Dispatcher,
     events::event_loop::EventLoop,
     events::events::Events,
     events::shortcuts::Shortcuts,
@@ -63,6 +64,7 @@ fn main() {
 
         Settings::load(&lua, settings_config);
         let server_shutdown_tx = PluginServer::load(&lua, &rt);
+        let mut dispatcher = Dispatcher::load(&lua);
         Events::load(&lua);
         Shortcuts::load(&lua);
         Devices::load(&lua, devices_config);
@@ -76,9 +78,8 @@ fn main() {
         let interval = settings.get().update_interval;
         let event_loop = EventLoop::new();
         event_loop.run(interval, &RUNNING, |events| {
-            let dispatcher = UserDataRef::<Events>::load(&lua);
             for event in events {
-                dispatcher.get().dispatch(&lua, event).unwrap();
+                dispatcher.dispatch(&lua, event).unwrap();
             }
 
             let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
