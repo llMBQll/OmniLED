@@ -1,31 +1,14 @@
 use log::warn;
-use mlua::{ErrorContext, FromLua, Function, Lua, UserData, UserDataMethods, Value};
+use mlua::{ErrorContext, Function, Lua, UserData, UserDataMethods, Value};
 use omni_led_api::types::{Field, field};
 use omni_led_derive::UniqueUserData;
 
-use crate::common::lua_traits::{FromUserdata, LuaName};
 use crate::common::user_data::UniqueUserData;
+use crate::events::event_handle::EventHandle;
 use crate::events::event_queue::Event;
 use crate::events::proto_to_lua::{get_cleanup_entries_metatable, proto_to_lua_value};
 use crate::keyboard::keyboard::{KeyboardEvent, KeyboardEventEventType};
 use crate::script_handler::script_data_types::EventKey;
-
-#[derive(Clone, Copy, PartialEq)]
-pub struct EventHandle(usize);
-
-impl UserData for EventHandle {}
-
-impl LuaName for EventHandle {
-    const NAME: &str = "EventHandle";
-}
-
-impl FromUserdata for EventHandle {}
-
-impl FromLua for EventHandle {
-    fn from_lua(value: Value, lua: &Lua) -> mlua::Result<Self> {
-        Self::from_userdata(lua, value)
-    }
-}
 
 struct EventEntry {
     key: EventKey,
@@ -37,7 +20,6 @@ struct EventEntry {
 #[derive(UniqueUserData)]
 pub struct Events {
     entries: Vec<EventEntry>,
-    counter: usize,
 }
 
 impl Events {
@@ -46,20 +28,18 @@ impl Events {
             lua,
             Self {
                 entries: Vec::new(),
-                counter: 0,
             },
         );
     }
 
     pub fn register(&mut self, key: EventKey, on_match: Function, persistent: bool) -> EventHandle {
-        self.counter += 1;
-        let handle = EventHandle(self.counter);
+        let handle = EventHandle::new();
 
         self.entries.push(EventEntry {
             key: key.into(),
             on_match,
             persistent,
-            handle,
+            handle: handle.clone(),
         });
 
         handle
@@ -71,7 +51,10 @@ impl Events {
                 self.entries.remove(index);
             }
             None => {
-                warn!("Failed to unregister event. Key {} not found", handle.0);
+                warn!(
+                    "Failed to unregister event. Key {} not found",
+                    handle.get_id()
+                );
             }
         };
         Ok(())
