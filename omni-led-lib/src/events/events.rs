@@ -1,4 +1,6 @@
+use log::error;
 use mlua::{Function, Lua, UserData, UserDataMethods, Value};
+use omni_led_api::plugin::Plugin;
 use omni_led_derive::UniqueUserData;
 
 use crate::common::user_data::UniqueUserData;
@@ -37,7 +39,11 @@ impl Events {
     }
 
     pub fn send(event: String, value: Value) {
-        Self::queue_event(Event::Script(ScriptEvent { event, value }));
+        if Plugin::is_valid_identifier(&event) {
+            Self::queue_event(Event::Script(ScriptEvent { event, value }));
+        } else {
+            error!("'{event}' is not a valid event name");
+        }
     }
 
     fn queue_event(event: Event) {
