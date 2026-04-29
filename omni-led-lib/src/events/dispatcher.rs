@@ -36,6 +36,9 @@ impl Dispatcher {
             Event::Register(event_entry) => self.register(event_entry),
             Event::Unregister(event_handle) => self.unregister(event_handle),
             Event::ClearUserEvents => self.clear_non_persistent(),
+            Event::Script(script_event) => {
+                self.dispatch_application_event(&script_event.event, script_event.value, None)
+            }
         }
     }
 

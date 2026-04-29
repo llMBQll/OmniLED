@@ -1,20 +1,10 @@
-use mlua::{Function, Lua, UserData, UserDataMethods};
+use mlua::{Function, Lua, UserData, UserDataMethods, Value};
 use omni_led_derive::UniqueUserData;
 
 use crate::common::user_data::UniqueUserData;
 use crate::events::event_handle::EventHandle;
 use crate::events::event_queue::{Event, EventQueue};
 use crate::script_handler::script_data_types::EventKey;
-
-pub struct EventEntry {
-    pub key: EventKey,
-    pub on_match: Function,
-    pub handle: EventHandle,
-    pub persistent: bool,
-}
-
-// SAFETY: This struct will always be created and read from lua interpreter thread
-unsafe impl Send for EventEntry {}
 
 #[derive(UniqueUserData)]
 pub struct Events;
@@ -33,26 +23,25 @@ impl Events {
             handle: handle.clone(),
         };
 
-        EventQueue::instance()
-            .lock()
-            .unwrap()
-            .push_front(Event::Register(entry));
+        Self::queue_event(Event::Register(entry));
 
         handle
     }
 
     pub fn unregister(handle: EventHandle) {
-        EventQueue::instance()
-            .lock()
-            .unwrap()
-            .push_front(Event::Unregister(handle));
+        Self::queue_event(Event::Unregister(handle));
     }
 
     pub fn clear_non_persistent() {
-        EventQueue::instance()
-            .lock()
-            .unwrap()
-            .push_front(Event::ClearUserEvents);
+        Self::queue_event(Event::ClearUserEvents);
+    }
+
+    pub fn send(event: String, value: Value) {
+        Self::queue_event(Event::Script(ScriptEvent { event, value }));
+    }
+
+    fn queue_event(event: Event) {
+        EventQueue::instance().lock().unwrap().push_front(event);
     }
 }
 
@@ -69,5 +58,27 @@ impl UserData for Events {
         methods.add_method("unregister", |_lua, _this, handle: EventHandle| {
             Ok(Self::unregister(handle))
         });
+
+        methods.add_method("send", |_lua, _this, (event, value): (String, Value)| {
+            Ok(Self::send(event, value))
+        });
     }
 }
+
+pub struct EventEntry {
+    pub key: EventKey,
+    pub on_match: Function,
+    pub handle: EventHandle,
+    pub persistent: bool,
+}
+
+// SAFETY: This struct will always be created and read from lua interpreter thread
+unsafe impl Send for EventEntry {}
+
+pub struct ScriptEvent {
+    pub event: String,
+    pub value: Value,
+}
+
+// SAFETY: This struct will always be created and read from lua interpreter thread
+unsafe impl Send for ScriptEvent {}
