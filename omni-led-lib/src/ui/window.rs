@@ -63,6 +63,13 @@ impl Window {
     }
 }
 
+impl Drop for Window {
+    fn drop(&mut self) {
+        self.proxy
+            .send(Event::CloseWindow(self.id.load(Ordering::Acquire)));
+    }
+}
+
 pub struct WindowHandle {
     pub size: Size,
     pub name: String,

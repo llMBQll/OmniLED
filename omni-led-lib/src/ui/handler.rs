@@ -156,6 +156,9 @@ impl ApplicationHandler<Event> for Handler {
                     ctx.window.request_redraw();
                 }
             }
+            Event::CloseWindow(id) => {
+                self.windows.remove(&id.into());
+            }
             Event::Quit => event_loop.exit(),
         }
     }
@@ -221,8 +224,6 @@ pub struct HandlerProxy {
 
 impl HandlerProxy {
     pub fn send(&self, event: Event) {
-        if let Err(err) = self.proxy.send_event(event) {
-            error!("Failed to send event: {}", err);
-        }
+        _ = self.proxy.send_event(event);
     }
 }

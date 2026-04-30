@@ -32,39 +32,47 @@ impl Devices {
     }
 
     pub fn device_status(&self, name: &str) -> Option<DeviceStatus> {
-        self.devices.get(name).map(|entry| match entry {
-            DeviceEntry::Initializer(_) => DeviceStatus::Available,
-            DeviceEntry::Loaded => DeviceStatus::Loaded,
-        })
+        self.devices.get(name).map(|entry| entry.status)
     }
 
     pub fn load_device(&mut self, lua: &Lua, name: String) -> mlua::Result<Box<dyn Device>> {
-        let entry = self.devices.entry(name);
-        let entry = match entry {
-            Entry::Occupied(entry) => entry,
-            Entry::Vacant(entry) => {
-                return Err(mlua::Error::runtime(format!(
-                    "Device {} not found",
-                    entry.key()
-                )));
+        let entry = self.devices.entry(name.clone());
+        match entry {
+            Entry::Occupied(mut entry) => {
+                let device_entry = entry.get_mut();
+                match device_entry.status {
+                    DeviceStatus::Available => {
+                        let constructor = device_entry.initializer.constructor;
+                        let settings = device_entry.initializer.settings.clone();
+
+                        let device = (constructor)(lua, settings);
+                        device_entry.status = DeviceStatus::Loaded;
+                        Ok(device)
+                    }
+                    DeviceStatus::Loaded => Err(mlua::Error::runtime(format!(
+                        "Device '{name}' was already loaded",
+                    ))),
+                }
             }
-        };
-        let name = entry.key().clone();
-        let entry = entry.remove();
-        let device = match entry {
-            DeviceEntry::Initializer(initializer) => {
-                let device = (initializer.constructor)(lua, initializer.settings);
-                device
-            }
-            DeviceEntry::Loaded => {
-                return Err(mlua::Error::runtime(format!(
-                    "Device {} was already loaded",
-                    name
-                )));
-            }
-        };
-        self.devices.insert(name, DeviceEntry::Loaded);
-        Ok(device)
+            Entry::Vacant(entry) => Err(mlua::Error::runtime(format!(
+                "Device '{}' not found",
+                entry.key()
+            ))),
+        }
+    }
+
+    pub fn unload_device(&mut self, lua: &Lua, mut device: Box<dyn Device>) -> mlua::Result<()> {
+        let name = device.name(lua)?;
+
+        // Explicitly drop the device so it's more clear this function will infact unload it
+        std::mem::drop(device);
+
+        self.devices.entry(name.clone()).and_modify(|entry| {
+            debug!("Unloaded device '{name}'");
+            entry.status = DeviceStatus::Available;
+        });
+
+        Ok(())
     }
 
     fn new(constructors: HashMap<String, Constructor>) -> Self {
@@ -155,10 +163,13 @@ impl Devices {
 
                 debug!("Added config for {} '{}'", kind, name);
 
-                entry.insert(DeviceEntry::Initializer(Initializer {
-                    settings,
-                    constructor,
-                }));
+                entry.insert(DeviceEntry {
+                    initializer: Initializer {
+                        settings,
+                        constructor,
+                    },
+                    status: DeviceStatus::Available,
+                });
             }
         }
 
@@ -168,17 +179,18 @@ impl Devices {
 
 impl UserData for Devices {}
 
-enum DeviceEntry {
-    Initializer(Initializer),
-    Loaded,
-}
-
 struct Initializer {
     settings: Value,
     constructor: Constructor,
 }
 
+#[derive(Clone, Copy)]
 pub enum DeviceStatus {
     Available,
     Loaded,
+}
+
+struct DeviceEntry {
+    initializer: Initializer,
+    status: DeviceStatus,
 }

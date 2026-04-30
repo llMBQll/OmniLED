@@ -3,6 +3,7 @@ use tray_icon::TrayIconBuilder;
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
 
 use crate::constants::constants::Constants;
+use crate::events::events::Events;
 use crate::ui::event::Event;
 use crate::ui::handler::HandlerProxy;
 use crate::ui::icon_image::tray_icon_image;
@@ -20,11 +21,13 @@ impl TrayIcon {
         #[cfg(not(feature = "dev"))]
         const TITLE: &str = "OmniLED";
 
+        const RELOAD_SCRIPTS: &str = "Reload scripts";
         const CONFIG_ID: &str = "Config";
         const LICENSE_ID: &str = "License";
         const QUIT_ID: &str = "Quit";
 
         let menu = Menu::with_items(&[
+            &MenuItem::with_id(RELOAD_SCRIPTS, "Reload scripts", true, None),
             &MenuItem::with_id(CONFIG_ID, "Config", true, None),
             &MenuItem::with_id(LICENSE_ID, "License", true, None),
             &MenuItem::with_id(QUIT_ID, "Quit", true, None),
@@ -33,6 +36,9 @@ impl TrayIcon {
 
         MenuEvent::set_event_handler(Some(move |e: MenuEvent| {
             match e.id.as_ref() {
+                RELOAD_SCRIPTS => {
+                    Events::reload_scripts();
+                }
                 CONFIG_ID => {
                     if let Err(err) = opener::reveal(&constants.config_dir) {
                         error!("Failed to reveal config directory: {}", err);
