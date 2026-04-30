@@ -18,6 +18,7 @@ macro_rules! create_table_with_defaults {
                 new_table.dump = internal.dump
                 new_table.getmetatable = getmetatable
                 new_table.ipairs = ipairs
+                new_table.marked_table = internal.marked_table
                 new_table.math = internal.table_copy(math)
                 new_table.math.round = internal.round
                 new_table.next = next
@@ -55,6 +56,10 @@ pub fn load_internal_functions(lua: &Lua) {
         })
         .unwrap();
 
+    let marked_table = lua
+        .create_function(|lua, table: Table| crate::events::proto_to_lua::marked_table(lua, table))
+        .unwrap();
+
     let round = lua
         .create_function(|_, value: f64| {
             let value = value.round() as i64;
@@ -78,6 +83,7 @@ pub fn load_internal_functions(lua: &Lua) {
             "internal",
             create_table!(lua, {
                 dump = $dump,
+                marked_table = $marked_table,
                 round = $round,
                 table_copy = $table_copy
             }),

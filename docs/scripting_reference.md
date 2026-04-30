@@ -460,6 +460,15 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
+> ### `marked_table`
+>
+> Type: `fn(table: table) -> table`
+>
+> Sets a metatable that marks this table as a key-value table.
+> Returns the passed table for convenience.
+
+---
+
 > ### `raw_usb_device`
 >
 > Type: `fn(settings: RawUsbDeviceSettings)`
@@ -524,6 +533,25 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > > `unregister: fn(self, handle: EventHandle)`
 > >
 > > Unregister from an event using a handle received when registering.
+>
+> > `send: fn(self, event: string, value: any)`
+> >
+> > Send any event from user scripts. Due to lua limitations, for
+> > [recursive updates](user_scripts.md#application_update_events) each table must be marked using `marked_table`
+> > function.
+> >
+> > `event` must only consist of uppercase aplhanumeric characters and cannot start with a number.
+> >
+> > Example
+> >
+> > ```lua
+> > EVENTS:send('MY_EVENT', marked_table {
+> >   Data = 1,
+> >   Nested = marked_table {
+> >     MoreData = 2,
+> >   },
+> > }
+> > ```
 
 ---
 
