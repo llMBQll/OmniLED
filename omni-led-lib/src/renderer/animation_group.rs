@@ -3,16 +3,9 @@ use crate::script_handler::script_data_types::Repeat;
 
 #[derive(Clone)]
 pub struct AnimationGroup {
-    items: Vec<Item>,
+    items: Vec<AnimationEntry>,
     new_data: bool,
     keep_in_sync: bool,
-}
-
-#[derive(Clone)]
-struct Item {
-    hash: u64,
-    animation: Animation,
-    accessed: bool,
 }
 
 impl AnimationGroup {
@@ -53,6 +46,7 @@ impl AnimationGroup {
             if self.new_data && self.keep_in_sync {
                 item.animation.reset();
             }
+            item.current_step = None;
             std::mem::replace(&mut item.accessed, false)
         });
         self.new_data = false;
@@ -85,6 +79,22 @@ impl AnimationGroup {
     }
 }
 
+#[derive(Clone)]
+pub struct AnimationEntry {
+    hash: u64,
+    animation: Animation,
+    accessed: bool,
+    current_step: Option<usize>,
+}
+
+impl AnimationEntry {
+    pub fn step(&mut self) -> usize {
+        *self
+            .current_step
+            .get_or_insert_with(|| self.animation.step())
+    }
+}
+
 pub enum Entry<'a> {
     Occupied(OccupiedEntry<'a>),
     Vacant(VacantEntry<'a>),
@@ -99,10 +109,11 @@ impl<'a> Entry<'a> {
             }
             Entry::Vacant(entry) => {
                 entry.group.new_data = true;
-                entry.group.items.push(Item {
+                entry.group.items.push(AnimationEntry {
                     hash: entry.hash,
                     animation: f(),
                     accessed: true,
+                    current_step: None,
                 });
                 let index = entry.group.items.len() - 1;
                 &mut entry.group.items[index].animation
@@ -110,11 +121,11 @@ impl<'a> Entry<'a> {
         }
     }
 
-    pub fn unwrap(self) -> &'a mut Animation {
+    pub fn unwrap(self) -> &'a mut AnimationEntry {
         match self {
             Entry::Occupied(entry) => {
                 entry.item.accessed = true;
-                &mut entry.item.animation
+                entry.item
             }
             Entry::Vacant(entry) => {
                 panic!("Entry with hash {} doesn't exist", entry.hash);
@@ -125,7 +136,7 @@ impl<'a> Entry<'a> {
 
 pub struct OccupiedEntry<'a> {
     _hash: u64,
-    item: &'a mut Item,
+    item: &'a mut AnimationEntry,
 }
 
 pub struct VacantEntry<'a> {
@@ -145,12 +156,16 @@ mod tests {
         for _ in 0..n {
             let mut current_step_data = Vec::new();
             group.pre_sync();
-            for item in &mut group.items {
-                let step = item.animation.step();
-                let state = item.animation.state();
+            for entry in &mut group.items {
+                // Simulate multiple entries with the same hash
+                for _ in 0..5 {
+                    _ = entry.step();
+                }
+                let step = entry.step();
+                let state = entry.animation.state();
                 current_step_data.push((step, state));
 
-                item.accessed = true;
+                entry.accessed = true;
             }
             group.sync();
             data.push(current_step_data);
