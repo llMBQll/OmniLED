@@ -8,15 +8,11 @@ use ureq::Agent;
 
 use crate::{Coordinates, Options, WeatherData};
 
-pub fn get_weather(
-    agent: &Agent,
-    coordinates: &Coordinates,
-    city: &String,
-    options: &Options,
-) -> WeatherData {
+pub fn get_weather(coordinates: &Coordinates, city: &String, options: &Options) -> WeatherData {
     const OPEN_METEO_BASE: &str = "https://api.open-meteo.com/v1/forecast";
 
-    let mut res = agent
+    let agent = Agent::new_with_defaults();
+    let mut response = agent
         .get(OPEN_METEO_BASE)
         .query("current_weather", "true")
         .query("latitude", &coordinates.latitude.to_string())
@@ -31,7 +27,7 @@ pub fn get_weather(
         )
         .call()
         .unwrap();
-    let result: WeatherResult = res.body_mut().read_json().unwrap();
+    let result: WeatherResult = response.body_mut().read_json().unwrap();
 
     let time = format!("{}:00-00:00", result.current_weather.time);
     let time: chrono::DateTime<chrono::Local> = chrono::DateTime::parse_from_rfc3339(time.as_str())

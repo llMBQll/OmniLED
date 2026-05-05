@@ -24,10 +24,8 @@ async fn main() {
 
     debug!("Mapped to {} at {:?}", name, coordinates);
 
-    let agent = Agent::new_with_defaults();
-
     loop {
-        let weather = weather_api::get_weather(&agent, &coordinates, name, &options);
+        let weather = weather_api::get_weather(&coordinates, name, &options);
         plugin.update(weather.into()).await.unwrap();
 
         tokio::time::sleep(time::Duration::from_secs(options.interval * 60)).await;
