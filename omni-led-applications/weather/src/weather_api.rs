@@ -142,7 +142,7 @@ impl Weather {
     fn to_desc(&self) -> String {
         let string = format!("{:?}", self);
         let mut desc = String::new();
-        let mut was_upper = true;
+        let mut was_upper = false;
         for c in string.chars() {
             let is_upper = c.is_ascii_uppercase();
             if is_upper && was_upper {
