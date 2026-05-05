@@ -105,7 +105,8 @@ Now you can proceed to actually make OmniLED send data to your device.
         :register()
     ```
 
-5. Run the application again. You should now see the data on your device's screen.
+5. Select 'Reload scripts' entry from the tray icon menu or restart the application.
+   You should now see the data on your device's screen.
 6. Now you can customize the layout to your liking or keep it as is.
 
 ## Troubleshooting
