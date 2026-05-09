@@ -33,7 +33,7 @@ local function volume()
     display_device(widgets, SCREEN.Height / 2, AUDIO.Input, 'input')
     return {
         widgets = widgets,
-        duration = 2000,
+        duration = Duration.from_secs(2),
     }
 end
 
@@ -76,7 +76,7 @@ local function media(source)
                 size = { width = SCREEN.Width, height = 2 },
             },
         },
-        duration = 1000,
+        duration = Duration.from_secs(1),
     }
 end
 
@@ -109,7 +109,7 @@ local function clock()
                 size = { width = SCREEN.Width, height = 2 },
             }
         },
-        duration = 1000,
+        duration = Duration.from_secs(1),
     }
 end
 
@@ -155,7 +155,7 @@ local function weather()
                 size = { width = SCREEN.Width, height = 2 },
             },
         },
-        duration = 1000,
+        duration = Duration.from_secs(1),
     }
 end
 
@@ -188,7 +188,7 @@ local function system()
                 size = { width = SCREEN.Width, height = SCREEN.Height / 3 },
             },
         },
-        duration = 1000,
+        duration = Duration.from_secs(1),
     }
 end
 

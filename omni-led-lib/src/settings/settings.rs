@@ -8,6 +8,7 @@ use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
+use crate::script_handler::script_data_types::DurationWrapper;
 
 #[derive(Debug, Clone, UniqueUserData, FromLuaValue)]
 pub struct Settings {
@@ -32,7 +33,7 @@ pub struct Settings {
     #[mlua(default = 0)]
     pub server_port: u16,
 
-    #[mlua(transform = Self::from_millis)]
+    #[mlua(transform = DurationWrapper::transform)]
     #[mlua(default = Duration::from_millis(100))]
     pub update_interval: Duration,
 }
@@ -58,10 +59,6 @@ impl Settings {
         logger.get().set_level_filter(settings.get().log_level);
 
         debug!("Loaded settings {:?}", settings.get());
-    }
-
-    fn from_millis(millis: u64, _: &Lua) -> mlua::Result<Duration> {
-        Ok(Duration::from_millis(millis))
     }
 }
 

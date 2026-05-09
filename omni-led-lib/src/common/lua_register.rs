@@ -5,7 +5,9 @@ use crate::{
     devices::device::MemoryLayout,
     logging::logger::LevelFilter,
     renderer::font_selector::{FamilyName, FontSelector, Stretch, Style, Weight},
-    script_handler::script_data_types::{EventKey, FontSize, ImageFormat, Regex, Repeat, Widget},
+    script_handler::script_data_types::{
+        DurationWrapper, EventKey, FontSize, ImageFormat, Regex, Repeat, Widget,
+    },
 };
 
 pub fn set_lua_enums(lua: &Lua, env: &Table) {
@@ -24,5 +26,6 @@ pub fn set_lua_enums(lua: &Lua, env: &Table) {
 }
 
 pub fn set_lua_types(lua: &Lua, env: &Table) {
+    DurationWrapper::register_members(lua, env).unwrap();
     Regex::register_members(lua, env).unwrap();
 }
