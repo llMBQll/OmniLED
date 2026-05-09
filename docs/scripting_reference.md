@@ -503,6 +503,48 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
+> ### `Duration`
+>
+> Create strongly typed duration objects.
+>
+> > `from_nanos`: `fn(value: integer) -> Duration`  
+> > `from_micros`: `fn(value: integer) -> Duration`  
+> > `from_millis`: `fn(value: integer) -> Duration`  
+> > `from_secs`: `fn(value: integer) -> Duration`  
+> > `from_mins`: `fn(value: integer) -> Duration`  
+> > `from_hours`: `fn(value: integer) -> Duration`  
+> >
+> > Creates a new duration object from given value and time unit.
+>
+> > `MAX`: `Duration`
+> >
+> > Constant with the maximum duration value.
+>
+> > `MIN`: `Duration`
+> >
+> > Constant with the minimum (zero) duration value.
+>
+> > `as_nanos`: `fn(self) -> integer`  
+> > `as_micros`: `fn(self) -> integer`  
+> > `as_millis`: `fn(self) -> integer`  
+> > `as_secs`: `fn(self) -> integer`  
+> >
+> > Returns the duration truncated to a given time unit.
+>
+> > `__add`: `fn(lhs: Duration, rhs: Duration) -> Duration`
+> >
+> > "Add" metamethod. Duration will never overflow, instead will be capped at `Duration.MAX`
+>
+> > `__sub`: `fn(lhs: Duration, rhs: Duration) -> Duration`
+> >
+> > "Sub" metamethod. Duration will never underflow, instead will be capped at `Duration.ZERO`
+>
+> > _This type supports all relational operators._
+> >
+> > _This type can be stringified (representation is compatible with string format expected by OmniLED applications)._
+
+---
+
 > ### `Regex`
 >
 > Used to check if a string matches a regex pattern
