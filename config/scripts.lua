@@ -170,13 +170,13 @@ local function system()
     return {
         widgets = {
             Widget.Text {
-                text = string.format('CPU: %.2f%% %02d°C', cpu.Utilization, cpu.Temperature or 0),
+                text = string.format('CPU: %.1f%% %d°%s', cpu.Utilization, math.round(cpu.Temperature or 0), SYSTEM.TemperatureUnit),
                 font_size = 13,
                 position = { x = 0, y = 0 },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 3 },
             },
             Widget.Text {
-                text = string.format('GPU: %.2f%% %02d°C', gpu.Utilization, gpu.Temperature),
+                text = string.format('GPU: %.1f%% %d°%s', gpu.Utilization, math.round(gpu.Temperature), SYSTEM.TemperatureUnit),
                 font_size = 13,
                 position = { x = 0, y = SCREEN.Height / 3 },
                 size = { width = SCREEN.Width, height = SCREEN.Height / 3 },

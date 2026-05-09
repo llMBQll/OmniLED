@@ -86,6 +86,14 @@ impl Into<Field> for &str {
     }
 }
 
+impl Into<Field> for char {
+    fn into(self) -> Field {
+        Field {
+            field: Some(field::Field::FString(self.to_string())),
+        }
+    }
+}
+
 // Array values
 into_field!(Array, field::Field::FArray);
 

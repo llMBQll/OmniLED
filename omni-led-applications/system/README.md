@@ -1,4 +1,4 @@
-# Systen
+# System
 
 System application provides information about the following system resources:
 
@@ -19,6 +19,8 @@ Media expects three arguments
 - Optional:
   - `i`/`interval` - update interval  
     Default: `2sec`.
+  - `t`/`temperature-unit` - temperature unit ("C" | "Celsius" | "F" | "Fahrenheit")  
+    Default: `Celsius`
   
 ## Available information
 
