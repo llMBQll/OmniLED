@@ -3,7 +3,7 @@ use log::debug;
 use omni_led_api::types::Table;
 use omni_led_api::{new_plugin, plugin::Plugin};
 use omni_led_derive::IntoProto;
-use std::{collections::HashMap, time};
+use std::time;
 use ureq::Agent;
 
 mod weather_api;
@@ -53,30 +53,55 @@ fn get_coordinates_from_name(name: &Name) -> Coordinates {
         .unwrap();
     let results: Results = res.body_mut().read_json().unwrap();
 
-    let mut results = results.results.into_iter().filter_map(|data| {
-        let admin_matches = name.administrative.is_none()
-            || name.administrative == data.admin1
-            || name.administrative == data.admin2
-            || name.administrative == data.admin3
-            || name.administrative == data.admin4;
+    let mut mapped = results
+        .results
+        .iter()
+        .enumerate()
+        .filter_map(|(index, data)| {
+            let admin_matches = name.administrative.is_none()
+                || name.administrative == data.admin1
+                || name.administrative == data.admin2
+                || name.administrative == data.admin3
+                || name.administrative == data.admin4;
 
-        let code_matches = match &name.country_code {
-            Some(country_code) => *country_code == data.country_code,
-            None => true,
-        };
+            let code_matches = match &name.country_code {
+                Some(country_code) => *country_code == data.country_code,
+                None => true,
+            };
 
-        match admin_matches && code_matches {
-            true => Some(Coordinates {
-                latitude: data.latitude,
-                longitude: data.longitude,
-            }),
-            false => None,
+            match admin_matches && code_matches {
+                true => Some((
+                    index,
+                    Coordinates {
+                        latitude: data.latitude,
+                        longitude: data.longitude,
+                    },
+                )),
+                false => None,
+            }
+        });
+
+    match mapped.next() {
+        Some((index, coordinates)) => {
+            debug!("Found '{}': {:?}", name.city, results.results[index]);
+            coordinates
         }
-    });
-
-    results
-        .next()
-        .expect("Couldn't find coordinates for the given query")
+        None => {
+            if results.results.is_empty() {
+                panic!("Didn't find city '{}'", name.city);
+            } else {
+                let mut found_entries = String::new();
+                for (index, entry) in results.results.iter().enumerate() {
+                    found_entries +=
+                        &format!("\n  [{}/{}] {:?}", index + 1, results.results.len(), entry);
+                }
+                panic!(
+                    "Didn't match any entries for {:?}. Entries:{}",
+                    name, found_entries
+                );
+            }
+        }
+    }
 }
 
 #[derive(IntoProto)]
@@ -146,27 +171,6 @@ struct Options {
     wind_speed_unit: String,
 }
 
-/// All GeocodingData fields, some (all?) of which are optional
-/// Data not required for this application is stored in the HashMap 'other'
-///     id          : i64
-///     name        : String
-///     latitude    : f64
-///     longitude   : f64
-///     elevation   : f64
-///     timezone    : String
-///     feature_code: String
-///     country_code: String
-///     country_id  : i64
-///     population  : i64
-///     postcodes   : Vec<String>
-///     admin1      : String
-///     admin2      : String
-///     admin3      : String
-///     admin4      : String
-///     admin1_id   : i64
-///     admin2_id   : i64
-///     admin3_id   : i64
-///     admin4_id   : i64
 #[derive(serde::Deserialize, Debug)]
 struct GeocodingData {
     pub latitude: f64,
@@ -176,9 +180,6 @@ struct GeocodingData {
     pub admin2: Option<String>,
     pub admin3: Option<String>,
     pub admin4: Option<String>,
-
-    #[serde(flatten)]
-    pub _other: HashMap<String, serde_json::Value>,
 }
 
 #[derive(serde::Deserialize, Debug)]
