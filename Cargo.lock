@@ -3851,6 +3851,7 @@ dependencies = [
  "freetype-rs",
  "gtk",
  "hidapi",
+ "humantime",
  "image",
  "lazy_static",
  "libc",
@@ -5480,6 +5481,7 @@ version = "0.9.1"
 dependencies = [
  "all-smi",
  "clap",
+ "humantime",
  "log",
  "omni-led-api",
  "omni-led-derive",
@@ -6541,6 +6543,7 @@ version = "0.9.1"
 dependencies = [
  "chrono",
  "clap",
+ "humantime",
  "image",
  "log",
  "omni-led-api",

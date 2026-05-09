@@ -9,7 +9,7 @@ System application provides information about the following system resources:
 ## Running
 
 ```shell
-media --address <ADDRESS> [--interval <SECONDS>]
+media --address <ADDRESS> [--interval <TIME_STRING>]
 ```
 
 Media expects three arguments
@@ -17,8 +17,8 @@ Media expects three arguments
 - Required:
   - `a`/`address` - server address
 - Optional:
-  - `i`/`interval` - update interval in seconds.  
-    Default: `2`.
+  - `i`/`interval` - update interval  
+    Default: `2sec`.
   
 ## Available information
 

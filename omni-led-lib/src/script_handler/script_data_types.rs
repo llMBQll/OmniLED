@@ -362,7 +362,7 @@ impl UserData for DurationWrapper {
             Ok(Self(lhs.0.saturating_sub(rhs.0)))
         });
         methods.add_meta_method(MetaMethod::ToString, |_, this, _: ()| {
-            Ok(format!("{:#?}", this.0))
+            Ok(humantime::format_duration(this.0).to_string())
         });
     }
 }

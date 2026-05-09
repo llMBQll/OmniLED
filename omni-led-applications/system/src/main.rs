@@ -14,7 +14,6 @@ async fn main() {
     let plugin = new_plugin!(&options.address);
 
     let smi = AllSmi::new().unwrap();
-    let interval = Duration::from_secs(options.interval);
     loop {
         let begin = Instant::now();
 
@@ -25,7 +24,7 @@ async fn main() {
         };
         plugin.update(data.into()).await.unwrap();
 
-        tokio::time::sleep(interval.saturating_sub(begin.elapsed())).await;
+        tokio::time::sleep(options.interval.saturating_sub(begin.elapsed())).await;
     }
 }
 
@@ -35,9 +34,9 @@ struct Options {
     #[clap(short, long)]
     address: String,
 
-    /// Interval between getting new system data in seconds
-    #[clap(short, long, default_value = "2")]
-    interval: u64,
+    /// Interval between getting new system data
+    #[clap(short, long, value_parser = humantime::parse_duration, default_value = "2sec")]
+    interval: Duration,
 }
 
 #[derive(IntoProto)]

@@ -12,6 +12,7 @@ dirs-next = "2.0"
 font-kit = "0.14"
 freetype-rs = "0.36"
 hidapi = "2.6"
+humantime = "2.3"
 image = "0.25"
 lazy_static = "1.4"
 log = { version = "0.4", features = ["std"] }
