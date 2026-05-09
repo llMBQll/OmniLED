@@ -1,6 +1,7 @@
 use chrono::Timelike;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
+use omni_led_api::cli_types::TemperatureUnit;
 use omni_led_api::types::{ImageData, ImageFormat};
 use serde::de;
 use std::collections::HashMap;
@@ -64,20 +65,12 @@ fn speed_unit_param(unit: &str) -> &'static str {
     }
 }
 
-fn temperature_unit_param(unit: &str) -> &'static str {
-    match unit {
-        "C" | "Celsius" => "celsius",
-        "F" | "Fahrenheit" => "fahrenheit",
-        _ => std::unreachable!(),
-    }
+fn temperature_unit_param(unit: &str) -> String {
+    TemperatureUnit::from(unit).name().to_ascii_lowercase()
 }
 
-fn temperature_unit_data(unit: &str) -> &'static str {
-    match unit {
-        "C" | "Celsius" => "C",
-        "F" | "Fahrenheit" => "F",
-        _ => std::unreachable!(),
-    }
+fn temperature_unit_data(unit: &str) -> String {
+    TemperatureUnit::from(unit).unit().to_string()
 }
 
 #[derive(serde::Deserialize)]

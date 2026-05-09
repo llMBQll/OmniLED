@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use clap::Parser;
 use log::debug;
+use omni_led_api::cli_types::{TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS};
 use omni_led_api::types::Table;
 use omni_led_api::{new_plugin, plugin::Plugin};
 use omni_led_derive::IntoProto;
@@ -164,7 +165,7 @@ struct Options {
     interval: Duration,
 
     /// Temperature unit
-    #[clap(short, long, value_parser = ["C", "Celsius", "F", "Fahrenheit"], default_value = "Celsius")]
+    #[clap(short, long, value_parser = TEMPERATURE_UNIT_OPTIONS, default_value = TEMPERATURE_UNIT_DEFAULT)]
     temperature_unit: String,
 
     /// Wind speed unit
