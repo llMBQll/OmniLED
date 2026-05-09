@@ -34,6 +34,6 @@ load_app {
         '--temperature-unit', 'Celsius',
         'in', 'Warsaw',
         '--country-code', 'PL',
-        '--administrative', 'Masovian',
+        '--administrative', 'Mazovia',
     }
 }
