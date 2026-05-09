@@ -1,7 +1,7 @@
 use mlua::{Lua, Table};
 
 use crate::{
-    common::lua_traits::LuaConstructor,
+    common::lua_traits::LuaTypeStaticMembers,
     devices::device::MemoryLayout,
     logging::logger::LevelFilter,
     renderer::font_selector::{FamilyName, FontSelector, Stretch, Style, Weight},
@@ -24,5 +24,5 @@ pub fn set_lua_enums(lua: &Lua, env: &Table) {
 }
 
 pub fn set_lua_types(lua: &Lua, env: &Table) {
-    Regex::register_constructor(lua, env).unwrap();
+    Regex::register_members(lua, env).unwrap();
 }

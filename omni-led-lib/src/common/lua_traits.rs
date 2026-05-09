@@ -1,18 +1,46 @@
-use mlua::{FromLuaMulti, Lua, Table, UserData, Value};
+use mlua::{FromLuaMulti, IntoLua, IntoLuaMulti, Lua, Table, UserData, Value};
 
 pub trait LuaName {
     const NAME: &str;
 }
 
-pub trait LuaConstructor: UserData + LuaName + 'static {
-    type Args: FromLuaMulti;
+pub trait LuaTypeStaticMembers: UserData + LuaName + 'static {
+    fn add_members(functions: &mut StaticMembers<'_>);
 
-    fn constructor(lua: &Lua, args: Self::Args) -> mlua::Result<Self>;
+    fn register_members(lua: &Lua, env: &Table) -> mlua::Result<()> {
+        let mut members = StaticMembers {
+            lua,
+            members: Vec::new(),
+        };
+        Self::add_members(&mut members);
 
-    fn register_constructor(lua: &Lua, env: &Table) -> mlua::Result<()> {
         let table = lua.create_table()?;
-        table.set("new", lua.create_function(Self::constructor)?)?;
+        for (name, member) in members.members {
+            table.set(name, member)?;
+        }
         env.set(Self::NAME, table)
+    }
+}
+
+pub struct StaticMembers<'a> {
+    lua: &'a Lua,
+    members: Vec<(String, Value)>,
+}
+
+impl<'a> StaticMembers<'a> {
+    pub fn add_function<F, A, R>(&mut self, name: impl Into<String>, function: F)
+    where
+        F: Fn(&Lua, A) -> mlua::Result<R> + 'static,
+        A: FromLuaMulti,
+        R: IntoLuaMulti,
+    {
+        let function = self.lua.create_function(function).unwrap();
+        self.add_member(name, function);
+    }
+
+    pub fn add_member(&mut self, name: impl Into<String>, value: impl IntoLua) {
+        self.members
+            .push((name.into(), value.into_lua(self.lua).unwrap()));
     }
 }
 

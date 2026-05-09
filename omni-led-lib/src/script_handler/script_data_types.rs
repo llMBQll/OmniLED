@@ -2,7 +2,7 @@ use mlua::{ErrorContext, FromLua, Lua, UserData, UserDataFields, UserDataMethods
 use omni_led_derive::{FromLuaValue, LuaEnum};
 use std::hash::Hash;
 
-use crate::common::lua_traits::{FromUserdata, LuaConstructor, LuaName};
+use crate::common::lua_traits::{FromUserdata, LuaName, LuaTypeStaticMembers, StaticMembers};
 
 #[derive(Debug, Clone, Copy, FromLuaValue)]
 pub struct Point {
@@ -248,11 +248,9 @@ impl LuaName for Regex {
     const NAME: &str = "Regex";
 }
 
-impl LuaConstructor for Regex {
-    type Args = String;
-
-    fn constructor(_lua: &Lua, re: Self::Args) -> mlua::Result<Self> {
-        Regex::new(&re)
+impl LuaTypeStaticMembers for Regex {
+    fn add_members(members: &mut StaticMembers<'_>) {
+        members.add_function("new", |_, re: String| Regex::new(&re))
     }
 }
 
