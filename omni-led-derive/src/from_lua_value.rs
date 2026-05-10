@@ -11,7 +11,10 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
     let (_impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let struct_attrs = get_struct_attributes(&input.attrs);
-    let (initializer, handle_deprecated) = generate_initializer(&name, &input.data);
+
+    let impl_default = struct_attrs.impl_default.is_some();
+    let (initializer, handle_deprecated, default_initializer) =
+        generate_initializer(&name, &input.data, impl_default);
 
     let validate = match struct_attrs.validate {
         Some(validate) => quote! {
@@ -26,7 +29,7 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
         None => quote! { result },
     };
 
-    let expanded = quote! {
+    let mut expanded = quote! {
         impl FromLua for #name #ty_generics {
             fn from_lua(value: mlua::Value, lua: &mlua::Lua) -> mlua::Result<#name #ty_generics #where_clause> {
                 let result = match value {
@@ -47,16 +50,38 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
         }
     };
 
+    if let Some(default_initializer) = default_initializer {
+        expanded = quote! {
+            #expanded
+
+            impl Default for #name {
+                fn default() -> Self {
+                    Self {
+                        #default_initializer
+                        ..Default::default()
+                    }
+                }
+            }
+        }
+    }
+
     proc_macro::TokenStream::from(expanded)
 }
 
-fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<TokenStream>) {
+fn generate_initializer(
+    name: &Ident,
+    data: &Data,
+    impl_default: bool,
+) -> (TokenStream, Option<TokenStream>, Option<TokenStream>) {
     match *data {
         Data::Struct(ref data) => match data.fields {
             syn::Fields::Named(ref fields) => {
                 let mut deprecated_field_handlers = Vec::new();
 
-                let names = fields.named.iter().map(|f| {
+                let mut names: Vec<TokenStream> = Vec::new();
+                let mut defaults: Vec<TokenStream> = Vec::new();
+
+                for f in &fields.named {
                     let field = &f.ident;
 
                     let attrs = get_field_attributes(&f.attrs);
@@ -104,11 +129,19 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
                         None => quote! { Ok(x) },
                     };
 
-                    let default = match (attrs.default, is_option(&f.ty)) {
+                    let default = match (attrs.default.clone(), is_option(&f.ty)) {
                         (Some(default), _) => quote! { Ok(#default) },
                         (None, true) => quote! { Ok(None) },
-                        (None, false) => quote! { Err(mlua::Error::runtime("Key not found".to_string())) },
+                        (None, false) => {
+                            quote! { Err(mlua::Error::runtime("Key not found".to_string())) }
+                        }
                     };
+
+                    if let Some(default) = attrs.default
+                        && impl_default
+                    {
+                        defaults.push(quote! { #field: #default, });
+                    }
 
                     let initializer = quote! {
                         table.get::<Option<_>>(stringify!(#field))
@@ -121,15 +154,21 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
                             })?
                     };
 
-                    quote! {
+                    names.push(quote! {
                         #field: #initializer,
-                    }
-                });
+                    });
+                }
 
                 let initializer = quote! {
                     mlua::Value::Table(table) => Ok(#name {
                         #(#names)*
                     })
+                };
+
+                let default_initializers = if impl_default {
+                    Some(quote! { #(#defaults)* })
+                } else {
+                    None
                 };
 
                 let handle_deprecated = if deprecated_field_handlers.is_empty() {
@@ -144,7 +183,7 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
                     })
                 };
 
-                (initializer, handle_deprecated)
+                (initializer, handle_deprecated, default_initializers)
             }
             syn::Fields::Unnamed(_) | syn::Fields::Unit => unimplemented!(),
         },
@@ -215,13 +254,14 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
                 }
             };
 
-            (initializer, None)
+            (initializer, None, None)
         }
         Data::Union(_) => unimplemented!(),
     }
 }
 
 struct StructAttributes {
+    impl_default: Option<TokenStream>,
     validate: Option<TokenStream>,
 }
 
@@ -229,6 +269,7 @@ fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
     let mut attributes = parse_attributes("mlua", attributes);
 
     StructAttributes {
+        impl_default: get_attribute_with_default_value(&mut attributes, "impl_default", quote! {}),
         validate: get_attribute(&mut attributes, "validate"),
     }
 }

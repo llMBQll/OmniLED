@@ -1,8 +1,10 @@
-use mlua::{ErrorContext, FromLua, Lua, UserData, UserDataFields, UserDataMethods, Value};
+use mlua::{
+    ErrorContext, FromLua, Lua, MetaMethod, UserData, UserDataFields, UserDataMethods, Value,
+};
 use omni_led_derive::{FromLuaValue, LuaEnum};
-use std::hash::Hash;
+use std::{hash::Hash, time::Duration};
 
-use crate::common::lua_traits::{FromUserdata, LuaConstructor, LuaName};
+use crate::common::lua_traits::{FromUserdata, LuaName, LuaTypeStaticMembers, StaticMembers};
 
 #[derive(Debug, Clone, Copy, FromLuaValue)]
 pub struct Point {
@@ -248,11 +250,9 @@ impl LuaName for Regex {
     const NAME: &str = "Regex";
 }
 
-impl LuaConstructor for Regex {
-    type Args = String;
-
-    fn constructor(_lua: &Lua, re: Self::Args) -> mlua::Result<Self> {
-        Regex::new(&re)
+impl LuaTypeStaticMembers for Regex {
+    fn add_members(functions: &mut StaticMembers<'_>) {
+        functions.add_function("new", |_, re: String| Regex::new(&re))
     }
 }
 
@@ -294,5 +294,83 @@ impl UserData for EventKey {
         methods.add_method("matches", |_, this, string: String| {
             Ok(this.matches(&string))
         });
+    }
+}
+
+#[derive(Clone)]
+pub struct DurationWrapper(pub Duration);
+
+impl DurationWrapper {
+    pub fn transform(wrapper: Self, _: &Lua) -> mlua::Result<Duration> {
+        Ok(wrapper.0)
+    }
+}
+
+impl LuaName for DurationWrapper {
+    const NAME: &str = "Duration";
+}
+
+impl LuaTypeStaticMembers for DurationWrapper {
+    fn add_members(members: &mut StaticMembers<'_>) {
+        macro_rules! construct {
+            ($from:ident) => {
+                members.add_function(stringify!($from), |_, value: u64| {
+                    Ok(DurationWrapper(Duration::$from(value)))
+                })
+            };
+        }
+
+        construct!(from_nanos);
+        construct!(from_micros);
+        construct!(from_millis);
+        construct!(from_secs);
+        construct!(from_mins);
+        construct!(from_hours);
+
+        members.add_member("MAX", DurationWrapper(Duration::MAX));
+        members.add_member("ZERO", DurationWrapper(Duration::ZERO));
+    }
+}
+
+impl UserData for DurationWrapper {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
+        macro_rules! get {
+            ($getter:ident) => {
+                methods.add_method(stringify!($getter), |_, this, _: ()| Ok(this.0.$getter()))
+            };
+        }
+        macro_rules! comparison {
+            ($meta:expr, $op:tt) => {
+                methods.add_meta_function(
+                    $meta,
+                    |_, (lhs, rhs): (Self, Self)| Ok(lhs.0 $op rhs.0),
+                )
+            };
+        }
+
+        get!(as_nanos);
+        get!(as_micros);
+        get!(as_millis);
+        get!(as_secs);
+        comparison!(MetaMethod::Lt, <);
+        comparison!(MetaMethod::Le, <=);
+        comparison!(MetaMethod::Eq, ==);
+        methods.add_meta_function(MetaMethod::Add, |_, (lhs, rhs): (Self, Self)| {
+            Ok(Self(lhs.0.saturating_add(rhs.0)))
+        });
+        methods.add_meta_function(MetaMethod::Sub, |_, (lhs, rhs): (Self, Self)| {
+            Ok(Self(lhs.0.saturating_sub(rhs.0)))
+        });
+        methods.add_meta_method(MetaMethod::ToString, |_, this, _: ()| {
+            Ok(humantime::format_duration(this.0).to_string())
+        });
+    }
+}
+
+impl FromUserdata for DurationWrapper {}
+
+impl FromLua for DurationWrapper {
+    fn from_lua(value: Value, lua: &Lua) -> mlua::Result<Self> {
+        Self::from_userdata(lua, value)
     }
 }

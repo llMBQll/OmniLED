@@ -18,7 +18,7 @@ use crate::events::shortcuts::Shortcuts;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::renderer::Renderer;
-use crate::script_handler::script_data_types::{EventKey, Regex, Widget};
+use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Regex, Widget};
 
 #[derive(UniqueUserData)]
 pub struct ScriptHandler {
@@ -336,9 +336,9 @@ struct LayoutData {
 }
 
 impl LayoutData {
-    fn transform_duration(duration: Option<u64>, _lua: &Lua) -> mlua::Result<Duration> {
+    fn transform_duration(duration: Option<DurationWrapper>, _lua: &Lua) -> mlua::Result<Duration> {
         let duration = duration
-            .and_then(|duration| Some(Duration::from_millis(duration)))
+            .and_then(|duration| Some(duration.0))
             .unwrap_or(DEFAULT_UPDATE_TIME);
         Ok(duration)
     }

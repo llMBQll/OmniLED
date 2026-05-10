@@ -21,7 +21,7 @@ load_app {
     path = get_default_path('system'),
     args = {
         '--address', SERVER.Address,
-        '--interval', 2,
+        '--interval', '2sec',
     },
 }
 
@@ -29,7 +29,7 @@ load_app {
     path = get_default_path('weather'),
     args = {
         '--address', SERVER.Address,
-        '--interval', 10,
+        '--interval', '10min',
         '--wind-speed-unit', 'm/s',
         '--temperature-unit', 'Celsius',
         'in', 'Warsaw',

@@ -1,12 +1,15 @@
 use all_smi::{AllSmi, device::CoreType};
+use omni_led_api::cli_types::TemperatureUnit;
 use omni_led_derive::IntoProto;
+
+use crate::util::convert;
 
 #[derive(IntoProto)]
 #[proto(rename_all = PascalCase)]
 pub struct Data {
     name: String,
     utilization: f64,
-    temperature: Option<u32>,
+    temperature: Option<f64>,
     power_consumption: Option<f64>,
     cores: Vec<CoreData>,
 }
@@ -19,13 +22,15 @@ pub struct CoreData {
     r#type: &'static str,
 }
 
-pub fn read_data(smi: &AllSmi) -> Vec<Data> {
+pub fn read_data(smi: &AllSmi, temperature_unit: TemperatureUnit) -> Vec<Data> {
     smi.get_cpu_info()
         .into_iter()
         .map(|data| Data {
             name: data.cpu_model,
             utilization: data.utilization,
-            temperature: data.temperature,
+            temperature: data
+                .temperature
+                .and_then(|temperature| Some(convert(temperature, temperature_unit))),
             power_consumption: data.power_consumption,
             cores: data
                 .per_core_utilization

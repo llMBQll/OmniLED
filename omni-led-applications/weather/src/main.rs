@@ -1,9 +1,11 @@
+use std::time::Duration;
+
 use clap::Parser;
 use log::debug;
+use omni_led_api::cli_types::{TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS};
 use omni_led_api::types::Table;
 use omni_led_api::{new_plugin, plugin::Plugin};
 use omni_led_derive::IntoProto;
-use std::time;
 use ureq::Agent;
 
 mod weather_api;
@@ -28,7 +30,7 @@ async fn main() {
         let weather = weather_api::get_weather(&coordinates, name, &options);
         plugin.update(weather.into()).await.unwrap();
 
-        tokio::time::sleep(time::Duration::from_secs(options.interval * 60)).await;
+        tokio::time::sleep(options.interval).await;
     }
 }
 
@@ -158,12 +160,12 @@ struct Options {
     #[clap(short, long)]
     address: String,
 
-    /// Interval between getting new weather data in minutes
-    #[clap(short, long, default_value = "15")]
-    interval: u64,
+    /// Interval between getting new weather data
+    #[clap(short, long, value_parser = humantime::parse_duration, default_value = "15min")]
+    interval: Duration,
 
     /// Temperature unit
-    #[clap(short, long, value_parser = ["C", "Celsius", "F", "Fahrenheit"], default_value = "Celsius")]
+    #[clap(short, long, value_parser = TEMPERATURE_UNIT_OPTIONS, default_value = TEMPERATURE_UNIT_DEFAULT)]
     temperature_unit: String,
 
     /// Wind speed unit
