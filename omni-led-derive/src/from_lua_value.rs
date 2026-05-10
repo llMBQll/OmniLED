@@ -13,8 +13,7 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let struct_attrs = get_struct_attributes(&input.attrs);
 
     let impl_default = struct_attrs.impl_default.is_some();
-    let (initializer, handle_deprecated, default_initializer) =
-        generate_initializer(&name, &input.data, impl_default);
+    let (initializer, default_initializer) = generate_initializer(&name, &input.data, impl_default);
 
     let validate = match struct_attrs.validate {
         Some(validate) => quote! {
@@ -44,7 +43,6 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
                         message: None,
                     }),
                 };
-                #handle_deprecated
                 #validate
             }
         }
@@ -72,12 +70,10 @@ fn generate_initializer(
     name: &Ident,
     data: &Data,
     impl_default: bool,
-) -> (TokenStream, Option<TokenStream>, Option<TokenStream>) {
+) -> (TokenStream, Option<TokenStream>) {
     match *data {
         Data::Struct(ref data) => match data.fields {
             syn::Fields::Named(ref fields) => {
-                let mut deprecated_field_handlers = Vec::new();
-
                 let mut names: Vec<TokenStream> = Vec::new();
                 let mut defaults: Vec<TokenStream> = Vec::new();
 
@@ -85,44 +81,6 @@ fn generate_initializer(
                     let field = &f.ident;
 
                     let attrs = get_field_attributes(&f.attrs);
-
-                    attrs.deprecated.map(|target| {
-                        deprecated_field_handlers.push(quote! {
-                            match (value.#field.is_some(), value.#target.is_some()) {
-                                (true, true) => {
-                                    Err(mlua::Error::runtime(format!(
-                                        "Both '{}' and '{}' are set, use '{}'",
-                                        stringify!(#field),
-                                        stringify!(#target),
-                                        stringify!(#target)
-                                    )))
-                                }
-                                (true, false) => {
-                                    warn!(
-                                        "'{}' field is deprecated, use '{}'",
-                                        stringify!(#field),
-                                        stringify!(#target)
-                                    );
-                                    std::mem::swap(&mut value.#field, &mut value.#target);
-                                    Ok(())
-                                }
-                                (false, true) => {
-                                    Ok(())
-                                }
-                                (false, false) => {
-                                    Err(mlua::Error::runtime(
-                                        "Key not found".to_string()
-                                    ))
-                                }
-                            }.with_context(|_| {
-                                format!(
-                                    "Error occurred when parsing {}.{}",
-                                    stringify!(#name),
-                                    stringify!(#target)
-                                )
-                            })?;
-                        });
-                    });
 
                     let transform = match attrs.transform {
                         Some(transform) => quote! { #transform(x, lua) },
@@ -171,19 +129,7 @@ fn generate_initializer(
                     None
                 };
 
-                let handle_deprecated = if deprecated_field_handlers.is_empty() {
-                    None
-                } else {
-                    let handlers = quote! { #(#deprecated_field_handlers)* };
-                    Some(quote! {
-                        let result = result.and_then(|mut value| {
-                            #handlers
-                            Ok(value)
-                        });
-                    })
-                };
-
-                (initializer, handle_deprecated, default_initializers)
+                (initializer, default_initializers)
             }
             syn::Fields::Unnamed(_) | syn::Fields::Unit => unimplemented!(),
         },
@@ -254,7 +200,7 @@ fn generate_initializer(
                 }
             };
 
-            (initializer, None, None)
+            (initializer, None)
         }
         Data::Union(_) => unimplemented!(),
     }
@@ -276,7 +222,6 @@ fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
 
 struct FieldAttributes {
     default: Option<TokenStream>,
-    deprecated: Option<TokenStream>,
     transform: Option<TokenStream>,
 }
 
@@ -289,7 +234,6 @@ fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
             "default",
             quote!(Default::default()),
         ),
-        deprecated: get_attribute(&mut attributes, "deprecated"),
         transform: get_attribute(&mut attributes, "transform"),
     }
 }
