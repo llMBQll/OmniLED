@@ -1,4 +1,4 @@
-use mlua::{ErrorContext, FromLua, Lua, Table};
+use mlua::{Lua, Table};
 use omni_led_derive::FromLuaValue;
 
 use crate::devices::device::Buffer;

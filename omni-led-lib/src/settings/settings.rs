@@ -1,5 +1,5 @@
 use log::debug;
-use mlua::{ErrorContext, FromLua, Lua, UserData, chunk};
+use mlua::{Lua, UserData, chunk};
 use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::time::Duration;
 

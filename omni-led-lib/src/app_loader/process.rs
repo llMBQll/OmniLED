@@ -1,5 +1,5 @@
 use log::error;
-use mlua::{ErrorContext, FromLua, UserData};
+use mlua::UserData;
 use omni_led_derive::FromLuaValue;
 use std::process::{Child, Command, Stdio};
 

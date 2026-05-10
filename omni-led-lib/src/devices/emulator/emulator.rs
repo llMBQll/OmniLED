@@ -1,4 +1,4 @@
-use mlua::{ErrorContext, FromLua, Lua, Value};
+use mlua::{FromLua, Lua, Value};
 use omni_led_derive::FromLuaValue;
 
 use crate::devices::device::{Buffer, Device, MemoryLayout, Settings as DeviceSettings, Size};
