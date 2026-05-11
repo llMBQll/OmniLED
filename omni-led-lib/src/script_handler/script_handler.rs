@@ -1,5 +1,5 @@
 use log::{debug, warn};
-use mlua::{ErrorContext, FromLua, Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
+use mlua::{Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
 use omni_led_api::plugin::Plugin;
 use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::cell::RefCell;

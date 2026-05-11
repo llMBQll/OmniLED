@@ -3835,8 +3835,10 @@ name = "omni-led-derive"
 version = "0.9.1"
 dependencies = [
  "convert_case 0.11.0",
+ "mlua",
  "proc-macro2",
  "quote",
+ "regex",
  "syn 2.0.117",
 ]
 

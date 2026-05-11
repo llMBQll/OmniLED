@@ -1,5 +1,5 @@
 use log::{debug, warn};
-use mlua::{ErrorContext, FromLua, Function, Lua, UserData, Value};
+use mlua::{FromLua, Function, Lua, UserData, Value};
 use omni_led_derive::FromLuaValue;
 use rusb::{DeviceHandle, GlobalContext};
 use std::time::Duration;

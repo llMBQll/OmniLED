@@ -1,6 +1,4 @@
-use mlua::{
-    ErrorContext, FromLua, Lua, MetaMethod, UserData, UserDataFields, UserDataMethods, Value,
-};
+use mlua::{FromLua, Lua, MetaMethod, UserData, UserDataFields, UserDataMethods, Value};
 use omni_led_derive::{FromLuaValue, LuaEnum};
 use std::{hash::Hash, time::Duration};
 

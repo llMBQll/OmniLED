@@ -1,5 +1,6 @@
+use convert_case::Casing;
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{Attribute, Data, DeriveInput};
 
 use crate::common::{
@@ -13,7 +14,7 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let struct_attrs = get_struct_attributes(&input.attrs);
 
     let impl_default = struct_attrs.impl_default.is_some();
-    let (initializer, handle_deprecated, default_initializer) =
+    let (initializer, default_initializer, helper_impl) =
         generate_initializer(&name, &input.data, impl_default);
 
     let validate = match struct_attrs.validate {
@@ -30,7 +31,9 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     };
 
     let mut expanded = quote! {
-        impl FromLua for #name #ty_generics {
+        #helper_impl
+
+        impl mlua::FromLua for #name #ty_generics {
             fn from_lua(value: mlua::Value, lua: &mlua::Lua) -> mlua::Result<#name #ty_generics #where_clause> {
                 let result = match value {
                     #initializer,
@@ -44,7 +47,6 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
                         message: None,
                     }),
                 };
-                #handle_deprecated
                 #validate
             }
         }
@@ -58,7 +60,6 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
                 fn default() -> Self {
                     Self {
                         #default_initializer
-                        ..Default::default()
                     }
                 }
             }
@@ -76,114 +77,212 @@ fn generate_initializer(
     match *data {
         Data::Struct(ref data) => match data.fields {
             syn::Fields::Named(ref fields) => {
-                let mut deprecated_field_handlers = Vec::new();
+                let mut init_field: Vec<TokenStream> = Vec::new();
+                let mut init_default: Vec<TokenStream> = Vec::new();
+                let mut drop_initialized: Vec<TokenStream> = Vec::new();
+                let mut impl_defaults: Vec<TokenStream> = Vec::new();
+                let mut mask_defs: Vec<TokenStream> = Vec::new();
+                let mut mask_refs: Vec<TokenStream> = Vec::new();
+                let mut field_names: Vec<TokenStream> = Vec::new();
 
-                let mut names: Vec<TokenStream> = Vec::new();
-                let mut defaults: Vec<TokenStream> = Vec::new();
-
-                for f in &fields.named {
-                    let field = &f.ident;
-
+                for (index, f) in fields.named.iter().enumerate() {
+                    let index = index as u64;
+                    let field = f.ident.as_ref().unwrap();
                     let attrs = get_field_attributes(&f.attrs);
 
-                    attrs.deprecated.map(|target| {
-                        deprecated_field_handlers.push(quote! {
-                            match (value.#field.is_some(), value.#target.is_some()) {
-                                (true, true) => {
-                                    Err(mlua::Error::runtime(format!(
-                                        "Both '{}' and '{}' are set, use '{}'",
-                                        stringify!(#field),
-                                        stringify!(#target),
-                                        stringify!(#target)
-                                    )))
-                                }
-                                (true, false) => {
-                                    warn!(
-                                        "'{}' field is deprecated, use '{}'",
-                                        stringify!(#field),
-                                        stringify!(#target)
-                                    );
-                                    std::mem::swap(&mut value.#field, &mut value.#target);
-                                    Ok(())
-                                }
-                                (false, true) => {
-                                    Ok(())
-                                }
-                                (false, false) => {
-                                    Err(mlua::Error::runtime(
-                                        "Key not found".to_string()
-                                    ))
-                                }
-                            }.with_context(|_| {
-                                format!(
-                                    "Error occurred when parsing {}.{}",
-                                    stringify!(#name),
-                                    stringify!(#target)
-                                )
-                            })?;
-                        });
+                    let mask_name = format_ident!(
+                        "__FIELD_MASK_{}",
+                        field.to_string().to_case(convert_case::Case::UpperSnake)
+                    );
+                    let mask_def = quote! { const #mask_name: u64 = 1 << #index };
+                    let mask_ref = quote! { Self::#mask_name };
+
+                    // for `impl Default for <TYPE>`
+                    match (&attrs.default, impl_default) {
+                        (Some(default), true) => impl_defaults.push(quote! { #field: #default, }),
+                        (None, true) => panic!(
+                            "Must specify default for '{name}.{field}' when using [mlua(impl_default)]"
+                        ),
+                        _ => {}
+                    };
+
+                    // for `init_field`
+                    let write_value = quote! { <_ as mlua::FromLua>::from_lua(value, lua) };
+                    let write_value = match attrs.transform {
+                        Some(transform) => {
+                            quote! { #write_value.and_then(|value| #transform(value, lua)) }
+                        }
+                        None => write_value,
+                    };
+                    let write_value = quote! {
+                        #write_value.with_context(|_| {
+                            format!(
+                                "Error occurred when parsing '{}.{}'",
+                                stringify!(#name), stringify!(#field)
+                            )
+                        })?
+                    };
+
+                    init_field.push(quote! {
+                        stringify!(#field) => unsafe {
+                            (&raw mut (*ptr).#field).write(#write_value);
+                            *initialized |= #mask_ref;
+                        }
                     });
 
-                    let transform = match attrs.transform {
-                        Some(transform) => quote! { #transform(x, lua) },
-                        None => quote! { Ok(x) },
+                    // for `init_defaults`
+                    let default = match (attrs.default, is_option(&f.ty)) {
+                        (Some(default), _) => Some(default),
+                        (None, true) => Some(quote! { None }),
+                        (None, false) => None,
                     };
 
-                    let default = match (attrs.default.clone(), is_option(&f.ty)) {
-                        (Some(default), _) => quote! { Ok(#default) },
-                        (None, true) => quote! { Ok(None) },
-                        (None, false) => {
-                            quote! { Err(mlua::Error::runtime("Key not found".to_string())) }
-                        }
-                    };
-
-                    if let Some(default) = attrs.default
-                        && impl_default
-                    {
-                        defaults.push(quote! { #field: #default, });
+                    if let Some(default) = default {
+                        init_default.push(quote! {
+                            if *initialized & #mask_ref == 0 {
+                                unsafe {
+                                    (&raw mut (*ptr).#field).write(#default);
+                                    *initialized |= #mask_ref;
+                                }
+                            }
+                        });
                     }
 
-                    let initializer = quote! {
-                        table.get::<Option<_>>(stringify!(#field))
-                            .and_then(|optional| match optional {
-                                Some(x) => #transform,
-                                None => #default,
-                            })
-                            .with_context(|_| {
-                                format!("Error occurred when parsing {}.{}", stringify!(#name), stringify!(#field))
-                            })?
-                    };
-
-                    names.push(quote! {
-                        #field: #initializer,
+                    // for `drop_initialized`
+                    drop_initialized.push(quote! {
+                        if initialized & #mask_ref != 0 {
+                            unsafe {
+                                (&raw mut (*ptr).#field).drop_in_place();
+                            }
+                        }
                     });
+
+                    // for constant definitions
+                    mask_defs.push(mask_def);
+                    mask_refs.push(mask_ref);
+                    field_names.push(quote! { stringify!(#field) });
                 }
 
-                let initializer = quote! {
-                    mlua::Value::Table(table) => Ok(#name {
-                        #(#names)*
+                let num_masks = mask_refs.len();
+                let mask_all = quote! {
+                    const __MASK_ALL: u64 = (1 << #num_masks) - 1
+                };
+                let mask_map = quote! {
+                    const __MASK_MAP: [(u64, &str); #num_masks] = [
+                        #( (#mask_refs, #field_names) ),*
+                    ]
+                };
+                let mask_defs = quote! { #(#mask_defs);* };
+
+                let init_field = quote! { #(#init_field)* };
+                let init_default = quote! { #(#init_default)* };
+                let drop_initialized = quote! { #(#drop_initialized)* };
+
+                let helper_impl = quote! {
+                    impl #name {
+                        #mask_defs;
+                        #mask_all;
+                        #mask_map;
+
+                        fn init_field(
+                            ptr: *mut Self,
+                            initialized: &mut u64,
+                            lua: &mlua::Lua,
+                            field: &str,
+                            value: mlua::Value,
+                            unknown: &mut Vec<String>,
+                        ) -> mlua::Result<()> {
+                            use mlua::ErrorContext as _;
+                            match field {
+                                #init_field
+                                other => {
+                                    unknown.push(other.to_string());
+                                }
+                            }
+                            Ok(())
+                        }
+
+                        fn init_default(ptr: *mut Self, initialized: &mut u64) {
+                            #init_default
+                        }
+
+                        fn drop_initialized(ptr: *mut Self, initialized: *const u64) {
+                            let initialized = unsafe { *initialized };
+                            #drop_initialized
+                        }
+                    }
+                };
+
+                let wrong_fields_error_context = quote! {
+                    with_context(|_| {
+                        format!("Error occurred when parsing '{}'",stringify!(#name))
                     })
+                };
+
+                let initializer = quote! {
+                    mlua::Value::Table(table) => {
+                        struct DropGuard {
+                            ptr: *mut #name,
+                            initialized: *const u64,
+                        }
+                        impl Drop for DropGuard {
+                            fn drop(&mut self) {
+                                #name::drop_initialized(self.ptr, self.initialized);
+                            }
+                        }
+
+                        let mut uninit: std::mem::MaybeUninit<Self> = std::mem::MaybeUninit::uninit();
+                        let ptr = uninit.as_mut_ptr();
+                        let mut initialized = 0;
+                        let mut unknown_fields = Vec::new();
+
+                        let drop_guard = DropGuard {
+                            ptr,
+                            initialized: &mut initialized as *mut _,
+                        };
+
+                        for pair in table.pairs() {
+                            let (key, value): (String, mlua::Value) = pair?;
+                            Self::init_field(ptr, &mut initialized, lua, &key, value, &mut unknown_fields)?;
+                        }
+
+                        Self::init_default(ptr, &mut initialized);
+
+                        if !unknown_fields.is_empty() {
+                            use mlua::ErrorContext as _;
+                            let unknown_fields = unknown_fields.join(", ");
+                            return Err(mlua::Error::runtime(format!(
+                                "Unknown fields: [{}]", unknown_fields
+                            )).#wrong_fields_error_context);
+                        }
+
+                        if initialized != Self::__MASK_ALL {
+                            use mlua::ErrorContext as _;
+                            let missing_fields = Self::__MASK_MAP
+                                .iter()
+                                .filter(|(mask, _)| initialized & mask == 0)
+                                .map(|(_, field)| *field)
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            return Err(mlua::Error::runtime(format!(
+                                "Missing fields: [{}]", missing_fields
+                            )).#wrong_fields_error_context);
+                        }
+
+                        // All errors handled, no need to cleanup the data now
+                        std::mem::forget(drop_guard);
+
+                        unsafe { Ok(uninit.assume_init()) }
+                    }
                 };
 
                 let default_initializers = if impl_default {
-                    Some(quote! { #(#defaults)* })
+                    Some(quote! { #(#impl_defaults)* })
                 } else {
                     None
                 };
 
-                let handle_deprecated = if deprecated_field_handlers.is_empty() {
-                    None
-                } else {
-                    let handlers = quote! { #(#deprecated_field_handlers)* };
-                    Some(quote! {
-                        let result = result.and_then(|mut value| {
-                            #handlers
-                            Ok(value)
-                        });
-                    })
-                };
-
-                (initializer, handle_deprecated, default_initializers)
+                (initializer, default_initializers, Some(helper_impl))
             }
             syn::Fields::Unnamed(_) | syn::Fields::Unit => unimplemented!(),
         },
@@ -276,7 +375,6 @@ fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
 
 struct FieldAttributes {
     default: Option<TokenStream>,
-    deprecated: Option<TokenStream>,
     transform: Option<TokenStream>,
 }
 
@@ -289,7 +387,6 @@ fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
             "default",
             quote!(Default::default()),
         ),
-        deprecated: get_attribute(&mut attributes, "deprecated"),
         transform: get_attribute(&mut attributes, "transform"),
     }
 }
