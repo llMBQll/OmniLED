@@ -13,6 +13,7 @@ describes their usage and purpose.
 - [clock](../omni-led-applications/clock/README.md)
 - [images](../omni-led-applications/images/README.md)
 - [media](../omni-led-applications/media/README.md)
+- [system](../omni-led-applications/system/README.md)
 - [weather](../omni-led-applications/weather/README.md)
 
 ## Custom Applications

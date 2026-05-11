@@ -48,7 +48,8 @@ See [user scripts](user_scripts.md).
 ---
 
 > _Note: All configuration files are loaded on startup and will any changes will only be visible
-> after restarting OmniLED._
+> after restarting OmniLED. One exception is the user scripts file which can be reloaded using
+> 'Reload scripts' tray icon button._
 
 > _Note: When running the development build (`dev` feature enabled), `config` directory will be set
 > to `./config`, relative to cargo workspace root. This allows to do testing without affecting the

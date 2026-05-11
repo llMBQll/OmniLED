@@ -10,21 +10,56 @@ that every name in the config is unique._
 
 ## Add device config
 
-OmniLED supports 3 ways to display data on the screen. Each one just requires registering the
-device in `devices.lua` file. Regardless of the chosen configuration type, the rendered data will
+OmniLED supports multiple device registration methods. Each one just requires registering the
+device in `devices.lua`. Regardless of the chosen configuration type, the rendered data will
 look exactly the same and only the way the data is delivered to the screen will differ.
 
-### USB Device (Recommended)
+### HID USB Device (Recommended)
 
-Register any USB device using [`usb_device`](scripting_reference.md#usb_device). This is the most
-flexible approach as it should work for any device. Rendered data can also be transformed via a
-script to match the format expected by the device.
+Register an HID USB device using [`hid_device`](scripting_reference.md#hid_device). This is the most
+flexible approach for many USB devices and is usually the simplest path for SteelSeries-style
+devices.
 
 > Example `devices.lua` file:
 >
 > ```lua
-> usb_device {
+> hid_device {
 >     name = 'SteelSeries Apex 7 TKL',
+>     screen_size = {
+>         width = 128,
+>         height = 40,
+>     },
+>     hid_settings = {
+>         vendor_id = '0x1038',
+>         product_id = '0x1618',
+>         interface = '0x01',
+>     },
+>     transform = transform_data({ prepend = {0x61}, append = {0x00} }),
+>     memory_layout = MemoryLayout.SteelSeries,
+> }
+> ```
+>
+> In the above example a single HID device config was added for "SteelSeries Apex 7 TKL".
+>
+> It is necessary to provide the HID settings so the device can be found and opened. The
+> `memory_layout` field controls how the renderer formats output for the device.
+>
+> The optional `transform` function can be used to modify or wrap the rendered bytes before they
+> are sent to the device. `transform_data` is a helper that creates a function which appends or
+> prepends bytes for you. This will vary from device to device and requires having the device
+> documentation or reverse engineering the device's USB protocol.
+
+### Raw USB Device (Advanced)
+
+Register a raw USB device using [`raw_usb_device`](scripting_reference.md#raw_usb_device) when you
+need control transfer settings such as `alternate_setting`, `request_type`, `request`, `value`, and
+`index`.
+
+> Example `devices.lua` file:
+>
+> ```lua
+> raw_usb_device {
+>     name = 'Custom USB Device',
 >     screen_size = {
 >         width = 128,
 >         height = 40,
@@ -39,29 +74,13 @@ script to match the format expected by the device.
 >         value = '0x0300',
 >         index = '0x01',
 >     },
->     transform = function(buffer)
->         local bytes = buffer:bytes()
->         table.insert(bytes, 1, 0x61)
->         table.insert(bytes, 0x00)
->         return bytes
->     end,
->     memory_representation = 'BitPerPixel',
+>     transform = transform_data({ prepend = {0x61}, append = {0x00} }),
+>     memory_layout = MemoryLayout.SteelSeries,
 > }
 > ```
 >
-> In the above example a single usb device config was added for "SteelSeries Apex 7 TKL".
->
-> It is necessary to provide all usb settings, so the device can be found, and the data is sent to
-> the correct endpoint.  
-> This device also expects data represent 8 bits with a single byte, thus `memory_representation`
-> is set to `BitPerPixel`.  
-> Additionally, the final rendered byte array is prefixed with byte `0x61` and suffixed with byte
-> `0x00` to match the device's usb protocol.
->
-> Finding this data as well as the data format needed for the `tranform` function, requires
-> having the device documentation, or reverse engineering the USB protocol. If you have a
-> SteelSeries device there is a chance the above example will work, with only difference being
-> the `product_id` field.
+> This config is useful for devices that require raw USB control transfers instead of HID feature
+> reports.
 
 ### SteelSeries Devices (Windows Only)
 
@@ -86,9 +105,9 @@ will take the rendered data and send it to the device.
 >
 > In the above example a single SteelSeries device config was added for "SteelSeries Apex 7 TKL".
 >
-> Compared to the USB device example it's quite a bit simpler as it does not require knowing the
-> usb configuration nor knowing the usb data protocol.
-
+> Compared to the USB device examples it's simpler because it does not require knowing the USB
+> configuration or device-specific protocol.
+>
 > Note: I was only able to test SteelSeries Engine with a single device. Handing multiple devices
 > via SSE may turn out to be broken.
 
@@ -103,7 +122,7 @@ available, or you just want to test on a bigger screen.
 >
 > ```lua
 > emulator {
->     name = 'SteelSeries Apex 7 TKL',
+>     name = 'Emulator',
 >     screen_size = {
 >         width = 128,
 >         height = 40,
@@ -111,4 +130,4 @@ available, or you just want to test on a bigger screen.
 > }
 > ```
 >
-> In the above example a single emulator config was added for "SteelSeries Apex 7 TKL".
+> In the above example a single emulator config was added for "Emulator".
