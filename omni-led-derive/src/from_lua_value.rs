@@ -60,7 +60,6 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
                 fn default() -> Self {
                     Self {
                         #default_initializer
-                        ..Default::default()
                     }
                 }
             }
@@ -99,11 +98,13 @@ fn generate_initializer(
                     let mask_ref = quote! { Self::#mask_name };
 
                     // for `impl Default for <TYPE>`
-                    if let Some(default) = &attrs.default
-                        && impl_default
-                    {
-                        impl_defaults.push(quote! { #field: #default, });
-                    }
+                    match (&attrs.default, impl_default) {
+                        (Some(default), true) => impl_defaults.push(quote! { #field: #default, }),
+                        (None, true) => panic!(
+                            "Must specify default for '{name}.{field}' when using [mlua(impl_default)]"
+                        ),
+                        _ => {}
+                    };
 
                     // for `init_field`
                     let write_value = quote! { <_ as mlua::FromLua>::from_lua(value, lua) };
@@ -116,7 +117,7 @@ fn generate_initializer(
                     let write_value = quote! {
                         #write_value.with_context(|_| {
                             format!(
-                                "Error occurred when parsing {}.{}",
+                                "Error occurred when parsing '{}.{}'",
                                 stringify!(#name), stringify!(#field)
                             )
                         })?
@@ -212,6 +213,12 @@ fn generate_initializer(
                     }
                 };
 
+                let wrong_fields_error_context = quote! {
+                    with_context(|_| {
+                        format!("Error occurred when parsing '{}'",stringify!(#name))
+                    })
+                };
+
                 let initializer = quote! {
                     mlua::Value::Table(table) => {
                         struct DropGuard {
@@ -242,13 +249,15 @@ fn generate_initializer(
                         Self::init_default(ptr, &mut initialized);
 
                         if !unknown_fields.is_empty() {
+                            use mlua::ErrorContext as _;
                             let unknown_fields = unknown_fields.join(", ");
                             return Err(mlua::Error::runtime(format!(
                                 "Unknown fields: [{}]", unknown_fields
-                            )));
+                            )).#wrong_fields_error_context);
                         }
 
                         if initialized != Self::__MASK_ALL {
+                            use mlua::ErrorContext as _;
                             let missing_fields = Self::__MASK_MAP
                                 .iter()
                                 .filter(|(mask, _)| initialized & mask == 0)
@@ -257,7 +266,7 @@ fn generate_initializer(
                                 .join(", ");
                             return Err(mlua::Error::runtime(format!(
                                 "Missing fields: [{}]", missing_fields
-                            )));
+                            )).#wrong_fields_error_context);
                         }
 
                         // All errors handled, no need to cleanup the data now
