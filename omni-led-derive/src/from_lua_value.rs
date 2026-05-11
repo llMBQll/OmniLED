@@ -106,12 +106,20 @@ fn generate_initializer(
                     }
 
                     // for `init_field`
-                    let write_value = quote! { <_ as mlua::FromLua>::from_lua(value, lua)? };
+                    let write_value = quote! { <_ as mlua::FromLua>::from_lua(value, lua) };
                     let write_value = match attrs.transform {
                         Some(transform) => {
-                            quote! { #transform(#write_value, lua)? }
+                            quote! { #write_value.and_then(|value| #transform(value, lua)) }
                         }
                         None => write_value,
+                    };
+                    let write_value = quote! {
+                        #write_value.with_context(|_| {
+                            format!(
+                                "Error occurred when parsing {}.{}",
+                                stringify!(#name), stringify!(#field)
+                            )
+                        })?
                     };
 
                     init_field.push(quote! {
@@ -183,6 +191,7 @@ fn generate_initializer(
                             value: mlua::Value,
                             unknown: &mut Vec<String>,
                         ) -> mlua::Result<()> {
+                            use mlua::ErrorContext as _;
                             match field {
                                 #init_field
                                 other => {
