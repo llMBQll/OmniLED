@@ -1,8 +1,11 @@
 use chrono::prelude::*;
-use clap::Parser;
+use std::time::{Duration, Instant};
+
+// TODO remove after full transition
+use omni_led_new_api as omni_led_api;
+
 use omni_led_api::new_plugin;
 use omni_led_derive::IntoProto;
-use tokio::time::{Duration, Instant};
 
 #[derive(IntoProto)]
 #[proto(rename_all = PascalCase)]
@@ -53,13 +56,17 @@ struct Time {
     year: i32,
 }
 
-#[tokio::main]
-async fn main() {
-    let options = Options::parse();
-    let plugin = new_plugin!(&options.address);
+// TODO wrap entry poing into a macro
+#[unsafe(no_mangle)]
+pub extern "C" fn omni_led_run(
+    api: omni_led_api::c_api::OmniLedApi,
+    _argc: ::std::os::raw::c_int,
+    _argv: *mut *mut ::std::os::raw::c_char,
+) {
+    let plugin = new_plugin!(api);
 
     // Send initial data that will not be updated
-    plugin.update(Names::new().into()).await.unwrap();
+    plugin.update(Names::new().into()).unwrap();
 
     let mut expected_update_time = Instant::now() + Duration::from_secs(1);
     loop {
@@ -74,16 +81,10 @@ async fn main() {
             year: local.year(),
         };
 
-        plugin.update(time.into()).await.unwrap();
+        plugin.update(time.into()).unwrap();
 
-        tokio::time::sleep_until(expected_update_time).await;
+        let sleep_duration = expected_update_time - Instant::now();
+        std::thread::sleep(sleep_duration);
         expected_update_time += Duration::from_secs(1);
     }
-}
-
-#[derive(Parser, Debug)]
-#[command(author, version, about)]
-struct Options {
-    #[clap(short, long)]
-    address: String,
 }

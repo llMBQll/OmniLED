@@ -977,10 +977,8 @@ name = "clock"
 version = "0.9.1"
 dependencies = [
  "chrono",
- "clap",
- "omni-led-api",
  "omni-led-derive",
- "tokio",
+ "omni-led-new-api",
 ]
 
 [[package]]
