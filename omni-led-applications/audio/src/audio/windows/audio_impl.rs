@@ -1,6 +1,5 @@
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-use tokio::runtime::Handle;
 use windows::Win32::Media::Audio::{
     IMMDeviceEnumerator, IMMNotificationClient, MMDeviceEnumerator,
 };
@@ -18,27 +17,24 @@ pub struct AudioImpl {
 }
 
 impl AudioImpl {
-    pub fn new(tx: tokio::sync::mpsc::Sender<(DeviceData, DeviceType)>, handle: Handle) -> Self {
+    pub fn new(tx: Sender<(DeviceData, DeviceType)>) -> Self {
         let (endpoint_thread_tx, endpoint_thread_rx): (Sender<DeviceType>, Receiver<DeviceType>) =
             mpsc::channel();
 
         std::thread::spawn(move || {
             let _com_guard = ComGuard::new();
 
-            let mut _input_endpoint_volume =
-                EndpointVolume::new(tx.clone(), handle.clone(), DeviceType::Input);
-            let mut _output_endpoint_volume =
-                EndpointVolume::new(tx.clone(), handle.clone(), DeviceType::Output);
+            let mut _input_endpoint_volume = EndpointVolume::new(tx.clone(), DeviceType::Input);
+            let mut _output_endpoint_volume = EndpointVolume::new(tx.clone(), DeviceType::Output);
 
             while let Ok(device_type) = endpoint_thread_rx.recv() {
                 match device_type {
                     DeviceType::Input => {
-                        _input_endpoint_volume =
-                            EndpointVolume::new(tx.clone(), handle.clone(), DeviceType::Input);
+                        _input_endpoint_volume = EndpointVolume::new(tx.clone(), DeviceType::Input);
                     }
                     DeviceType::Output => {
                         _output_endpoint_volume =
-                            EndpointVolume::new(tx.clone(), handle.clone(), DeviceType::Output);
+                            EndpointVolume::new(tx.clone(), DeviceType::Output);
                     }
                 }
             }
