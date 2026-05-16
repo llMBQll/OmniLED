@@ -1,6 +1,5 @@
 use all_smi::AllSmi;
 use clap::Parser;
-use log::debug;
 use omni_led_api::{
     cli_types::{TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS, TemperatureUnit},
     new_plugin,
@@ -23,8 +22,6 @@ pub extern "C" fn omni_led_run(
     let plugin = new_plugin!(api);
 
     let args = omni_led_api::rust_api::argv_to_slice(argc, argv);
-    debug!("{:?}", args);
-
     let options = Options::parse_from(args);
 
     let temperature_unit: TemperatureUnit = options.temperature_unit.into();

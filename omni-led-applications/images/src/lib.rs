@@ -4,16 +4,22 @@ use log::{debug, error};
 use omni_led_api::new_plugin;
 use omni_led_api::types::{ImageData, ImageFormat, Table};
 
-#[tokio::main]
-async fn main() {
-    let options = Options::parse();
+// TODO wrap entry poing into a macro
+#[unsafe(no_mangle)]
+pub extern "C" fn omni_led_run(
+    api: omni_led_api::c_api::OmniLedApi,
+    argc: ::std::os::raw::c_int,
+    argv: *mut *mut ::std::os::raw::c_char,
+) {
+    let plugin = new_plugin!(api);
+
+    let args = omni_led_api::rust_api::argv_to_slice(argc, argv);
+    let options = Options::parse_from(args);
 
     // TODO verify that all image names are unique
 
-    let plugin = new_plugin!(&options.address);
-
     let images = load_images(options.images);
-    plugin.update(images).await.unwrap();
+    plugin.update(images).unwrap();
 }
 
 fn load_images(image_options: Vec<ImageOptions>) -> Table {
