@@ -1,0 +1,58 @@
+syntax = 'proto3';
+
+package plugin;
+
+message EventData {
+  string name = 1;
+  Table fields = 2;
+}
+
+message EventResponse {}
+
+message Field {
+  oneof field {
+    None f_none = 1;
+    bool f_bool = 2;
+    int64 f_integer = 3;
+    double f_float = 4;
+    string f_string = 5;
+    Array f_array = 6;
+    Table f_table = 7;
+    ImageData f_image_data = 8;
+  }
+}
+
+message None {}
+
+message Array {
+  repeated Field items = 1;
+}
+
+message Table {
+  map<string, Field> items = 1;
+}
+
+message ImageData {
+  ImageFormat format = 1;
+  bytes data = 2;
+}
+
+enum ImageFormat {
+  IMAGE_FORMAT_UNSPECIFIED = 0;
+  IMAGE_FORMAT_PNG = 1;
+  IMAGE_FORMAT_JPEG = 2;
+  IMAGE_FORMAT_GIF = 3;
+  IMAGE_FORMAT_WEBP = 4;
+  IMAGE_FORMAT_PNM = 5;
+  IMAGE_FORMAT_TIFF = 6;
+  IMAGE_FORMAT_TGA = 7;
+  IMAGE_FORMAT_DDS = 8;
+  IMAGE_FORMAT_BMP = 9;
+  IMAGE_FORMAT_ICO = 10;
+  IMAGE_FORMAT_HDR = 11;
+  IMAGE_FORMAT_OPEN_EXR = 12;
+  IMAGE_FORMAT_FARBFELD = 13;
+  IMAGE_FORMAT_AVIF = 14;
+  IMAGE_FORMAT_QOI = 15;
+  IMAGE_FORMAT_PCX = 16 [deprecated = true];
+}

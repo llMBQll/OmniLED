@@ -1,0 +1,13 @@
+[package]
+name = "omni-led-new-api"
+version = "0.9.1"
+edition = "2024"
+
+[dependencies]
+image = "0.25"
+log = { version = "0.4", features = ["std"] }
+prost = "0.14"
+
+[build-dependencies]
+bindgen = "0.71.0"
+prost-build = "0.14"
