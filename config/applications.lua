@@ -22,15 +22,14 @@ load_plugin {
     args = { '--interval', '2sec' },
 }
 
--- load_app {
---     path = get_default_path('weather'),
---     args = {
---         '--address', SERVER.Address,
---         '--interval', '10min',
---         '--wind-speed-unit', 'm/s',
---         '--temperature-unit', 'Celsius',
---         'in', 'Warsaw',
---         '--country-code', 'PL',
---         '--administrative', 'Mazovia',
---     }
--- }
+load_plugin {
+    path = get_default_plugin_path('weather'),
+    args = {
+        '--interval', '10min',
+        '--wind-speed-unit', 'm/s',
+        '--temperature-unit', 'Celsius',
+        'in', 'Warsaw',
+        '--country-code', 'PL',
+        '--administrative', 'Mazovia',
+    }
+}
