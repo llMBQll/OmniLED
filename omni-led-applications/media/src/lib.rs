@@ -2,7 +2,9 @@ use clap::Parser;
 use log::info;
 use omni_led_api::new_plugin;
 use omni_led_api::plugin::Plugin;
+use omni_led_api::rust_api::OmniLedApi;
 use omni_led_api::types::Table;
+use omni_led_derive::plugin_entry;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -13,10 +15,10 @@ use crate::media::session_data::SessionData;
 
 mod media;
 
-#[tokio::main]
-async fn main() {
-    let options = Options::parse();
-    let plugin = new_plugin!(&options.address);
+#[plugin_entry]
+pub async fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
+    let plugin = new_plugin!(api);
+    let options = Options::parse_from(args);
 
     let (tx, mut rx): (Sender<Data>, Receiver<Data>) = mpsc::channel(256);
 
@@ -38,13 +40,12 @@ async fn main() {
             let session_data = session_data_with_source(session_data, transformed);
 
             if current && (mode == Focused || mode == Both) {
-                plugin.update(session_data.clone().into()).await.unwrap();
+                plugin.update(session_data.clone().into()).unwrap();
             }
 
             if mode == Individual || mode == Both {
                 plugin
                     .update_with_name(transformed, session_data.into())
-                    .await
                     .unwrap();
             }
         }
@@ -90,9 +91,6 @@ fn log_mapping(old: &str, new: &str) {
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about)]
 struct Options {
-    #[clap(short, long)]
-    address: String,
-
     #[clap(long, value_parser = parse_pair)]
     map: Vec<(String, String)>,
 

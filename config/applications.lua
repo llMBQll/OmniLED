@@ -7,15 +7,14 @@ load_plugin {
 --     path = get_default_path('audio'),
 --     args = { '--address', SERVER.Address },
 -- }
---
--- load_app {
---     path = get_default_path('media'),
---     args = {
---         '--address', SERVER.Address,
---         '--mode', 'individual',
---         '--map', 'Spotify.exe=SPOTIFY',
---     },
--- }
+
+load_plugin {
+    path = get_default_plugin_path('media'),
+    args = {
+        '--mode', 'individual',
+        '--map', 'Spotify.exe=SPOTIFY',
+    },
+}
 
 load_plugin {
     path = get_default_plugin_path('system'),
