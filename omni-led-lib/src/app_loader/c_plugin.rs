@@ -4,13 +4,12 @@ use std::slice;
 use std::str::FromStr;
 
 use log::debug;
+use mlua::UserData;
 use omni_led_api::{c_api, types::EventData};
+use omni_led_derive::FromLuaValue;
 use prost::Message;
 
-use crate::{
-    app_loader::process::Config,
-    events::event_queue::{Event, EventQueue},
-};
+use crate::events::event_queue::{Event, EventQueue};
 
 pub struct CPlugin;
 
@@ -112,3 +111,12 @@ unsafe extern "C" fn plugin_log(
 
     log::log!(target: &target, level, "{}", message);
 }
+
+#[derive(Debug, Clone, FromLuaValue)]
+pub struct Config {
+    path: String,
+    #[mlua(default)]
+    args: Vec<String>,
+}
+
+impl UserData for Config {}
