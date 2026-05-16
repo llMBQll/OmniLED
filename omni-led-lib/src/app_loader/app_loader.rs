@@ -2,6 +2,7 @@ use log::{debug, error, warn};
 use mlua::{Lua, UserData, chunk};
 use omni_led_derive::UniqueUserData;
 
+use crate::app_loader::c_plugin::CPlugin;
 use crate::app_loader::process::{Config, Process};
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::config::{ConfigType, load_config};
@@ -11,6 +12,7 @@ use crate::create_table_with_defaults;
 #[derive(UniqueUserData)]
 pub struct AppLoader {
     processes: Vec<Process>,
+    plugins: Vec<CPlugin>,
 }
 
 impl AppLoader {
@@ -19,6 +21,7 @@ impl AppLoader {
             lua,
             Self {
                 processes: Vec::new(),
+                plugins: Vec::new(),
             },
         );
 
@@ -39,9 +42,33 @@ impl AppLoader {
             })
             .unwrap();
 
+        let load_plugin_fn = lua
+            .create_function(|lua, config: Config| {
+                let mut loader = UserDataRef::<AppLoader>::load(lua);
+                loader.get_mut().start_plugin(config);
+                Ok(())
+            })
+            .unwrap();
+
+        let get_default_plugin_path_fn = lua
+            .create_function(|lua, app_name: String| {
+                let executable = format!(
+                    "{}{}{}",
+                    std::env::consts::DLL_PREFIX,
+                    app_name,
+                    std::env::consts::DLL_SUFFIX
+                );
+                let constants = UserDataRef::<Constants>::load(lua);
+                let path = constants.get().applications_dir.join(executable);
+                Ok(path.to_string_lossy().to_string())
+            })
+            .unwrap();
+
         let env = create_table_with_defaults!(lua, {
             load_app = $load_app_fn,
             get_default_path = $get_default_path_fn,
+            load_plugin = $load_plugin_fn,
+            get_default_plugin_path = $get_default_plugin_path_fn,
             LOG = LOG,
             PLATFORM = PLATFORM,
             SERVER = SERVER,
@@ -60,6 +87,18 @@ impl AppLoader {
             Ok(process) => {
                 debug!("Starting process: {:?}", app_config);
                 self.processes.push(process);
+            }
+            Err(err) => {
+                error!("Failed to run {:?}: '{}'", app_config, err);
+            }
+        }
+    }
+
+    fn start_plugin(&mut self, app_config: Config) {
+        match CPlugin::new(&app_config) {
+            Ok(plugin) => {
+                debug!("Starting plugin: {:?}", app_config);
+                self.plugins.push(plugin);
             }
             Err(err) => {
                 error!("Failed to run {:?}: '{}'", app_config, err);

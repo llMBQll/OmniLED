@@ -49,9 +49,9 @@ impl Drop for Process {
 
 #[derive(Debug, Clone, FromLuaValue)]
 pub struct Config {
-    path: String,
+    pub path: String,
     #[mlua(default)]
-    args: Vec<String>,
+    pub args: Vec<String>,
 }
 
 impl UserData for Config {}

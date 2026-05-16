@@ -1,5 +1,5 @@
-load_app {
-    path = get_default_path('clock'),
+load_plugin {
+    path = get_default_plugin_path('clock'),
     args = { '--address', SERVER.Address },
 }
 
