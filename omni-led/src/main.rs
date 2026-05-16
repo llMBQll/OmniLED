@@ -3,7 +3,6 @@
 use log::debug;
 use mlua::Lua;
 use omni_led_lib::{
-    app_loader::app_loader::AppLoader,
     common::common::load_internal_functions,
     common::user_data::UserDataRef,
     constants::config::{ConfigType, read_config},
@@ -15,6 +14,7 @@ use omni_led_lib::{
     events::shortcuts::Shortcuts,
     keyboard::keyboard::process_events,
     logging::logger::Log,
+    plugin_loader::plugin_loader::PluginLoader,
     script_handler::script_handler::ScriptHandler,
     settings::settings::Settings,
     ui::event::Event,
@@ -51,8 +51,8 @@ fn main() {
         let log_handle = logging::init(&lua);
         Log::load(&lua, log_handle);
 
-        let applications_config = read_config(&lua, ConfigType::Applications).unwrap();
         let devices_config = read_config(&lua, ConfigType::Devices).unwrap();
+        let plugins_config = read_config(&lua, ConfigType::Plugins).unwrap();
         let scripts_config = read_config(&lua, ConfigType::Scripts).unwrap();
         let settings_config = read_config(&lua, ConfigType::Settings).unwrap();
 
@@ -62,7 +62,7 @@ fn main() {
         Shortcuts::load(&lua);
         Devices::load(&lua, devices_config);
         ScriptHandler::load(&lua, scripts_config);
-        AppLoader::load(&lua, applications_config);
+        PluginLoader::load(&lua, plugins_config);
 
         let init_end = Instant::now();
         debug!("Initialized in {:?}", init_end - init_begin);

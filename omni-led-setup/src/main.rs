@@ -196,8 +196,8 @@ fn install(options: InstallOptions) {
                 "Do you wish to override your config? (Current configuration will be backed up.)",
             ));
 
-    install_config!(APPLICATIONS, override_config);
     install_config!(DEVICES, override_config);
+    install_config!(PLUGINS, override_config);
     install_config!(SCRIPTS, override_config);
     install_config!(SETTINGS, override_config);
 

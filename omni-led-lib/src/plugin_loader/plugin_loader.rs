@@ -2,18 +2,18 @@ use log::{debug, error, warn};
 use mlua::{Lua, UserData, chunk};
 use omni_led_derive::UniqueUserData;
 
-use crate::app_loader::c_plugin::{CPlugin, Config};
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::config::{ConfigType, load_config};
 use crate::constants::constants::Constants;
 use crate::create_table_with_defaults;
+use crate::plugin_loader::c_plugin::{CPlugin, Config};
 
 #[derive(UniqueUserData)]
-pub struct AppLoader {
+pub struct PluginLoader {
     plugins: Vec<CPlugin>,
 }
 
-impl AppLoader {
+impl PluginLoader {
     pub fn load(lua: &Lua, config: String) {
         Self::set_unique(
             lua,
@@ -24,22 +24,22 @@ impl AppLoader {
 
         let load_plugin_fn = lua
             .create_function(|lua, config: Config| {
-                let mut loader = UserDataRef::<AppLoader>::load(lua);
+                let mut loader = UserDataRef::<PluginLoader>::load(lua);
                 loader.get_mut().start_plugin(config);
                 Ok(())
             })
             .unwrap();
 
         let get_default_plugin_path_fn = lua
-            .create_function(|lua, app_name: String| {
+            .create_function(|lua, plugin_name: String| {
                 let executable = format!(
                     "{}{}{}",
                     std::env::consts::DLL_PREFIX,
-                    app_name,
+                    plugin_name,
                     std::env::consts::DLL_SUFFIX
                 );
                 let constants = UserDataRef::<Constants>::load(lua);
-                let path = constants.get().applications_dir.join(executable);
+                let path = constants.get().plugins_dir.join(executable);
                 Ok(path.to_string_lossy().to_string())
             })
             .unwrap();
@@ -52,11 +52,11 @@ impl AppLoader {
             SERVER = SERVER,
         });
 
-        load_config(lua, ConfigType::Applications, &config, env).unwrap();
+        load_config(lua, ConfigType::Plugins, &config, env).unwrap();
 
-        let app_loader = UserDataRef::<AppLoader>::load(lua);
-        if app_loader.get().plugins.len() == 0 {
-            warn!("App loader didn't load any plugins");
+        let plugin_loader = UserDataRef::<PluginLoader>::load(lua);
+        if plugin_loader.get().plugins.len() == 0 {
+            warn!("Plugin loader didn't load any plugins");
         }
     }
 
@@ -73,4 +73,4 @@ impl AppLoader {
     }
 }
 
-impl UserData for AppLoader {}
+impl UserData for PluginLoader {}
