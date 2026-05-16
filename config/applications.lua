@@ -3,10 +3,10 @@ load_plugin {
     args = { },
 }
 
--- load_app {
---     path = get_default_path('audio'),
---     args = { '--address', SERVER.Address },
--- }
+load_plugin {
+    path = get_default_plugin_path('audio'),
+    args = { },
+}
 
 load_plugin {
     path = get_default_plugin_path('media'),

@@ -1,19 +1,18 @@
 use audio::Audio;
-use clap::Parser;
 use log::debug;
 use omni_led_api::new_plugin;
+use omni_led_api::rust_api::OmniLedApi;
 use omni_led_api::types::Table;
-use omni_led_derive::IntoProto;
+use omni_led_derive::{IntoProto, plugin_entry};
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 mod audio;
 
-#[tokio::main]
-async fn main() {
-    let options = Options::parse();
-    let plugin = new_plugin!(&options.address);
+#[plugin_entry]
+pub async fn omni_led_run(api: OmniLedApi, _args: Vec<&str>) {
+    let plugin = new_plugin!(api);
 
     let (tx, mut rx): (
         Sender<(DeviceData, DeviceType)>,
@@ -46,7 +45,7 @@ async fn main() {
             DeviceType::Output => OutputAudioEvent { output: event_data }.into(),
         };
 
-        plugin.update(event.into()).await.unwrap();
+        plugin.update(event.into()).unwrap();
     }
 }
 
@@ -94,11 +93,4 @@ impl DeviceData {
             name,
         }
     }
-}
-
-#[derive(Parser, Debug)]
-#[command(author, version, about)]
-struct Options {
-    #[clap(short, long)]
-    address: String,
 }
