@@ -13,4 +13,5 @@ clap = { version = "4.5", features = ["derive"] }
 image = "0.25"
 log = { version = "0.4", features = ["std"] }
 omni-led-api = { path = "../../omni-led-api" }
+omni-led-derive = { path = "../../omni-led-derive", features = ["plugin-entry"] }
 shlex = "1.3"

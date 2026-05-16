@@ -11,4 +11,4 @@ crate-type = ["cdylib"]
 [dependencies]
 chrono = { version = "0.4", features = ["clock"] }
 omni-led-api = { path = "../../omni-led-api" }
-omni-led-derive = { path = "../../omni-led-derive", features = ["into-proto"] }
+omni-led-derive = { path = "../../omni-led-derive", features = ["into-proto", "plugin-entry"] }

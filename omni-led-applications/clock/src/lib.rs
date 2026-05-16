@@ -1,6 +1,6 @@
 use chrono::prelude::*;
-use omni_led_api::new_plugin;
-use omni_led_derive::IntoProto;
+use omni_led_api::{new_plugin, rust_api::OmniLedApi};
+use omni_led_derive::{IntoProto, plugin_entry};
 use std::time::{Duration, Instant};
 
 #[derive(IntoProto)]
@@ -52,13 +52,8 @@ struct Time {
     year: i32,
 }
 
-// TODO wrap entry poing into a macro
-#[unsafe(no_mangle)]
-pub extern "C" fn omni_led_run(
-    api: omni_led_api::c_api::OmniLedApi,
-    _argc: ::std::os::raw::c_int,
-    _argv: *mut *mut ::std::os::raw::c_char,
-) {
+#[plugin_entry]
+pub fn omni_led_run(api: OmniLedApi, _args: Vec<&str>) {
     let plugin = new_plugin!(api);
 
     // Send initial data that will not be updated

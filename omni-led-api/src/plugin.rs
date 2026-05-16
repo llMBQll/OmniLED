@@ -59,8 +59,7 @@ impl Plugin {
 
 #[macro_export]
 macro_rules! new_plugin {
-    ($c_api:ident) => {{
-        let api = omni_led_api::rust_api::OmniLedApi::new($c_api);
+    ($api:ident) => {{
         let crate_name = env!("CARGO_PKG_NAME");
         let plugin_name: String = crate_name
             .chars()
@@ -72,6 +71,6 @@ macro_rules! new_plugin {
                 }
             })
             .collect();
-        omni_led_api::plugin::Plugin::new(api, plugin_name, crate_name)
+        omni_led_api::plugin::Plugin::new($api, plugin_name, crate_name)
     }};
 }

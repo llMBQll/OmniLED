@@ -1,10 +1,11 @@
 use all_smi::AllSmi;
 use clap::Parser;
-use omni_led_api::{
-    cli_types::{TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS, TemperatureUnit},
-    new_plugin,
+use omni_led_api::cli_types::{
+    TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS, TemperatureUnit,
 };
-use omni_led_derive::IntoProto;
+use omni_led_api::new_plugin;
+use omni_led_api::rust_api::OmniLedApi;
+use omni_led_derive::{IntoProto, plugin_entry};
 use std::time::{Duration, Instant};
 
 mod cpu;
@@ -12,16 +13,9 @@ mod gpu;
 mod mem;
 mod util;
 
-// TODO wrap entry poing into a macro
-#[unsafe(no_mangle)]
-pub extern "C" fn omni_led_run(
-    api: omni_led_api::c_api::OmniLedApi,
-    argc: ::std::os::raw::c_int,
-    argv: *mut *mut ::std::os::raw::c_char,
-) {
+#[plugin_entry]
+pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
     let plugin = new_plugin!(api);
-
-    let args = omni_led_api::rust_api::argv_to_slice(argc, argv);
     let options = Options::parse_from(args);
 
     let temperature_unit: TemperatureUnit = options.temperature_unit.into();

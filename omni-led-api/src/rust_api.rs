@@ -1,17 +1,6 @@
 use log::Level;
-use std::ffi::CStr;
-use std::os::raw::{c_char, c_int};
-use std::slice;
 
 use crate::c_api;
-
-pub fn argv_to_slice<'a>(argc: c_int, argv: *mut *mut c_char) -> Vec<&'a str> {
-    let args = unsafe { slice::from_raw_parts(argv, argc as usize) };
-
-    args.iter()
-        .map(|arg| unsafe { CStr::from_ptr(*arg).to_str().expect("Invalid UTF-8") })
-        .collect()
-}
 
 #[derive(Clone, Copy)]
 pub struct OmniLedApi {
