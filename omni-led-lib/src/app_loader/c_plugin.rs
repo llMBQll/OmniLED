@@ -1,5 +1,9 @@
-use std::{io::Cursor, slice};
+use std::ffi::{CString, c_char, c_int};
+use std::io::Cursor;
+use std::slice;
+use std::str::FromStr;
 
+use log::debug;
 use omni_led_api::{c_api, types::EventData};
 use prost::Message;
 
@@ -20,15 +24,31 @@ impl CPlugin {
             let omni_led_run_fn: libloading::Symbol<<c_api::omni_led_run_t as FnPtr>::Type> =
                 lib.get(b"omni_led_run").unwrap();
 
-            // TODO pass args
-            (omni_led_run_fn)(
+            let mut args = config.args.clone();
+            args.insert(0, config.path.clone());
+
+            let args = args
+                .iter()
+                .map(|arg| CString::from_str(&arg).unwrap())
+                .collect::<Vec<_>>();
+
+            let ptr_args = args
+                .iter()
+                .map(|arg| arg.as_ptr() as *mut c_char)
+                .collect::<Vec<_>>();
+
+            let argc = args.len() as c_int;
+            let argv = ptr_args.as_ptr() as *mut *mut c_char;
+
+            let result = (omni_led_run_fn)(
                 c_api::OmniLedApi {
                     event: Some(plugin_event),
                     log: Some(plugin_log),
                 },
-                0,
-                std::ptr::null_mut(),
+                argc,
+                argv,
             );
+            debug!("{:?} finished with code {}", config, result);
         });
 
         Ok(Self)
@@ -84,10 +104,11 @@ unsafe extern "C" fn plugin_log(
     let target = unsafe { slice::from_raw_parts(target as *const u8, target_length as usize) };
     // TODO error handling
     let target = str::from_utf8(target).unwrap();
+    let target = format!("plugin::{}", target);
 
     let message = unsafe { slice::from_raw_parts(message as *const u8, message_length as usize) };
     // TODO error handling
     let message = str::from_utf8(message).unwrap();
 
-    log::log!(target: target, level, "{}", message);
+    log::log!(target: &target, level, "{}", message);
 }
