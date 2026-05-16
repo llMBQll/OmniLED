@@ -1,11 +1,7 @@
 use chrono::prelude::*;
-use std::time::{Duration, Instant};
-
-// TODO remove after full transition
-use omni_led_new_api as omni_led_api;
-
 use omni_led_api::new_plugin;
 use omni_led_derive::IntoProto;
+use std::time::{Duration, Instant};
 
 #[derive(IntoProto)]
 #[proto(rename_all = PascalCase)]

@@ -1,5 +1,6 @@
-pub mod cli_types;
+pub mod c_api;
+pub mod logging;
 pub mod plugin;
+pub mod rust_api;
 pub mod types;
-
-mod logging;
+pub mod cli_types;

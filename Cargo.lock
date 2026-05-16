@@ -977,8 +977,8 @@ name = "clock"
 version = "0.9.1"
 dependencies = [
  "chrono",
+ "omni-led-api",
  "omni-led-derive",
- "omni-led-new-api",
 ]
 
 [[package]]
@@ -3883,20 +3883,17 @@ dependencies = [
  "log4rs",
  "mlua",
  "omni-led-lib",
- "tokio",
 ]
 
 [[package]]
 name = "omni-led-api"
 version = "0.9.1"
 dependencies = [
+ "bindgen",
  "image",
  "log",
  "prost 0.14.3",
- "tokio",
- "tonic",
- "tonic-prost",
- "tonic-prost-build",
+ "prost-build 0.14.3",
 ]
 
 [[package]]
@@ -3932,7 +3929,6 @@ dependencies = [
  "num-traits",
  "omni-led-api",
  "omni-led-derive",
- "omni-led-new-api",
  "opener",
  "prost 0.14.3",
  "regex",
@@ -3941,25 +3937,11 @@ dependencies = [
  "serde_json",
  "softbuffer",
  "test-case",
- "tokio",
- "tokio-stream",
- "tonic",
  "tray-icon",
  "ureq",
  "windows 0.62.2",
  "windres",
  "winit",
-]
-
-[[package]]
-name = "omni-led-new-api"
-version = "0.9.1"
-dependencies = [
- "bindgen",
- "image",
- "log",
- "prost 0.14.3",
- "prost-build 0.14.3",
 ]
 
 [[package]]

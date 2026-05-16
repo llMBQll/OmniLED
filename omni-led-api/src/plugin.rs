@@ -1,83 +1,38 @@
-use std::sync::Arc;
-use tokio::{runtime::Handle, sync::Mutex};
+use prost::{EncodeError, Message};
 
-use crate::{
-    logging,
-    types::{EventData, LogData, LogLevel, Table, plugin_client::PluginClient},
-};
+use crate::logging;
+use crate::rust_api::OmniLedApi;
+use crate::types::{EventData, Table};
 
 #[derive(Clone)]
 pub struct Plugin {
-    inner: Arc<Mutex<PluginInner>>,
-}
-
-struct PluginInner {
+    api: OmniLedApi,
     name: String,
-    client: PluginClient<tonic::transport::Channel>,
 }
 
 impl Plugin {
-    pub async fn new(
-        name: &str,
-        crate_name: &'static str,
-        url: &str,
-    ) -> Result<Self, tonic::transport::Error> {
-        let client = PluginClient::connect(format!("http://{url}")).await?;
+    pub fn new(api: OmniLedApi, name: String, crate_name: &'static str) -> Self {
+        logging::init(api, crate_name);
 
-        let plugin = Self {
-            inner: Arc::new(Mutex::new(PluginInner {
-                name: name.to_string(),
-                client: client,
-            })),
+        Self { api, name }
+    }
+
+    pub fn update_with_name(&self, name: &str, fields: Table) -> Result<(), EncodeError> {
+        let event_data = EventData {
+            name: name.to_string(),
+            fields: Some(fields),
         };
 
-        logging::init(Handle::current(), plugin.clone(), crate_name);
+        let mut message = Vec::new();
+        event_data.encode(&mut message)?;
 
-        Ok(plugin)
-    }
+        self.api.event(&message);
 
-    pub async fn log(
-        &self,
-        log_level: LogLevel,
-        location: String,
-        message: String,
-    ) -> Result<(), tonic::Status> {
-        self.inner
-            .lock()
-            .await
-            .client
-            .log(LogData {
-                log_level: log_level as i32,
-                location: location,
-                message: message,
-            })
-            .await?;
         Ok(())
     }
 
-    pub async fn update_with_name(&self, name: &str, fields: Table) -> Result<(), tonic::Status> {
-        let mut inner = self.inner.lock().await;
-        Self::update_impl(&mut inner.client, name.to_string(), fields).await
-    }
-
-    pub async fn update(&self, fields: Table) -> Result<(), tonic::Status> {
-        let mut inner = self.inner.lock().await;
-        let name = inner.name.clone();
-        Self::update_impl(&mut inner.client, name, fields).await
-    }
-
-    async fn update_impl(
-        client: &mut PluginClient<tonic::transport::Channel>,
-        name: String,
-        fields: Table,
-    ) -> Result<(), tonic::Status> {
-        client
-            .event(EventData {
-                name,
-                fields: Some(fields),
-            })
-            .await?;
-        Ok(())
+    pub fn update(&self, fields: Table) -> Result<(), EncodeError> {
+        self.update_with_name(&self.name, fields)
     }
 
     pub fn is_valid_identifier(identifier: &str) -> bool {
@@ -104,7 +59,8 @@ impl Plugin {
 
 #[macro_export]
 macro_rules! new_plugin {
-    ($address:expr) => {{
+    ($c_api:ident) => {{
+        let api = omni_led_api::rust_api::OmniLedApi::new($c_api);
         let crate_name = env!("CARGO_PKG_NAME");
         let plugin_name: String = crate_name
             .chars()
@@ -116,8 +72,6 @@ macro_rules! new_plugin {
                 }
             })
             .collect();
-        omni_led_api::plugin::Plugin::new(&plugin_name, crate_name, $address)
-            .await
-            .unwrap()
+        omni_led_api::plugin::Plugin::new(api, plugin_name, crate_name)
     }};
 }

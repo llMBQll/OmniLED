@@ -1,9 +1,12 @@
 use std::{io::Cursor, slice};
 
-use omni_led_new_api::{c_api, types::EventData};
+use omni_led_api::{c_api, types::EventData};
 use prost::Message;
 
-use crate::app_loader::process::Config;
+use crate::{
+    app_loader::process::Config,
+    events::event_queue::{Event, EventQueue},
+};
 
 pub struct CPlugin;
 
@@ -53,7 +56,10 @@ unsafe extern "C" fn plugin_event(
     let name = event_data.name;
     let fields = event_data.fields.unwrap();
 
-    println!("{}: {:#?}", name, fields);
+    EventQueue::instance()
+        .lock()
+        .unwrap()
+        .push(Event::Application((name, fields)));
 }
 
 unsafe extern "C" fn plugin_log(

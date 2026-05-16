@@ -12,7 +12,6 @@ members = [
     "omni-led-applications/media",
     "omni-led-applications/system",
     "omni-led-applications/weather",
-    "omni-led-new-api",
 ]
 
 resolver = "2"
