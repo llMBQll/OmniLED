@@ -6613,7 +6613,6 @@ dependencies = [
  "omni-led-derive",
  "serde",
  "serde_json",
- "tokio",
  "ureq",
 ]
 

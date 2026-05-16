@@ -12,7 +12,7 @@ use ureq::Agent;
 mod weather_api;
 
 #[plugin_entry]
-pub async fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
+pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
     let plugin = new_plugin!(api);
     let options = Options::parse_from(args);
 
@@ -31,7 +31,7 @@ pub async fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
         let weather = weather_api::get_weather(&coordinates, name, &options);
         plugin.update(weather.into()).unwrap();
 
-        tokio::time::sleep(options.interval).await;
+        std::thread::sleep(options.interval);
     }
 }
 
