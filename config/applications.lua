@@ -16,15 +16,12 @@ load_plugin {
 --         '--map', 'Spotify.exe=SPOTIFY',
 --     },
 -- }
---
--- load_app {
---     path = get_default_path('system'),
---     args = {
---         '--address', SERVER.Address,
---         '--interval', '2sec',
---     },
--- }
---
+
+load_plugin {
+    path = get_default_plugin_path('system'),
+    args = { '--interval', '2sec' },
+}
+
 -- load_app {
 --     path = get_default_path('weather'),
 --     args = {

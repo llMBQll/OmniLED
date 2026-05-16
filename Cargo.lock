@@ -5551,7 +5551,6 @@ dependencies = [
  "log",
  "omni-led-api",
  "omni-led-derive",
- "tokio",
 ]
 
 [[package]]

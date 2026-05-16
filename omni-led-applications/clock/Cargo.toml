@@ -6,7 +6,6 @@ license = "GPL-3.0-only"
 edition = "2024"
 
 [lib]
-name = "clock"
 crate-type = ["cdylib"]
 
 [dependencies]
