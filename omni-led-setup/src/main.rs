@@ -91,6 +91,16 @@ fn install_binary_impl(name: &str, bytes: &[u8]) -> std::io::Result<()> {
     os::set_exe_permissions(&mut file)
 }
 
+fn install_dll_impl(name: &str, bytes: &[u8]) -> std::io::Result<()> {
+    let target = get_bin_dir()
+        .join(format!("{}{}", env::consts::DLL_PREFIX, name))
+        .with_extension(env::consts::DLL_EXTENSION);
+    println!("Copying dll: {}", target.display());
+
+    let mut file = File::create(target)?;
+    file.write_all(bytes)
+}
+
 fn install_config_impl(name: &str, bytes: &[u8], override_config: bool) {
     let target = get_config_dir().join(name).with_extension("lua");
     let target_new = get_config_dir().join(name).with_extension("lua.new");
@@ -126,6 +136,12 @@ fn install_config_impl(name: &str, bytes: &[u8], override_config: bool) {
 macro_rules! install_binary {
     ($name:expr) => {
         install_binary_impl(&stringify!($name).to_case(Case::Snake), $name).unwrap()
+    };
+}
+
+macro_rules! install_dll {
+    ($name:expr) => {
+        install_dll_impl(&stringify!($name).to_case(Case::Snake), $name).unwrap()
     };
 }
 
@@ -183,12 +199,12 @@ fn install(options: InstallOptions) {
     install_license();
 
     install_binary!(OMNI_LED);
-    install_binary!(AUDIO);
-    install_binary!(CLOCK);
-    install_binary!(IMAGES);
-    install_binary!(MEDIA);
-    install_binary!(SYSTEM);
-    install_binary!(WEATHER);
+    install_dll!(AUDIO);
+    install_dll!(CLOCK);
+    install_dll!(IMAGES);
+    install_dll!(MEDIA);
+    install_dll!(SYSTEM);
+    install_dll!(WEATHER);
 
     let override_config = options.override_config == Some(true)
         || (options.interactive
@@ -196,8 +212,8 @@ fn install(options: InstallOptions) {
                 "Do you wish to override your config? (Current configuration will be backed up.)",
             ));
 
-    install_config!(APPLICATIONS, override_config);
     install_config!(DEVICES, override_config);
+    install_config!(PLUGINS, override_config);
     install_config!(SCRIPTS, override_config);
     install_config!(SETTINGS, override_config);
 

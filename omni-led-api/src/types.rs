@@ -1,33 +1,8 @@
 mod plugin {
-    tonic::include_proto!("plugin");
+    include!(concat!(env!("OUT_DIR"), "/plugin.rs"));
 }
 
 pub use plugin::*;
-
-impl From<log::Level> for LogLevel {
-    fn from(value: log::Level) -> Self {
-        match value {
-            log::Level::Error => LogLevel::Error,
-            log::Level::Warn => LogLevel::Warn,
-            log::Level::Info => LogLevel::Info,
-            log::Level::Debug => LogLevel::Debug,
-            log::Level::Trace => LogLevel::Trace,
-        }
-    }
-}
-
-impl Into<log::Level> for LogLevel {
-    fn into(self) -> log::Level {
-        match self {
-            LogLevel::Unknown => todo!(),
-            LogLevel::Error => log::Level::Error,
-            LogLevel::Warn => log::Level::Warn,
-            LogLevel::Info => log::Level::Info,
-            LogLevel::Debug => log::Level::Debug,
-            LogLevel::Trace => log::Level::Trace,
-        }
-    }
-}
 
 macro_rules! cast_and_into_field {
     ($from:ty, $to:ty, $variant:expr) => {
@@ -143,7 +118,7 @@ impl TryInto<image::ImageFormat> for ImageFormat {
 
     fn try_into(self) -> Result<image::ImageFormat, Self::Error> {
         let res = match self {
-            ImageFormat::Unknown => todo!(),
+            ImageFormat::Unspecified => todo!(),
             ImageFormat::Png => image::ImageFormat::Png,
             ImageFormat::Jpeg => image::ImageFormat::Jpeg,
             ImageFormat::Gif => image::ImageFormat::Gif,

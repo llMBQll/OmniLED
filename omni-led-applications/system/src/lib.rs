@@ -1,10 +1,11 @@
 use all_smi::AllSmi;
 use clap::Parser;
-use omni_led_api::{
-    cli_types::{TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS, TemperatureUnit},
-    new_plugin,
+use omni_led_api::cli_types::{
+    TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS, TemperatureUnit,
 };
-use omni_led_derive::IntoProto;
+use omni_led_api::new_plugin;
+use omni_led_api::rust_api::OmniLedApi;
+use omni_led_derive::{IntoProto, plugin_entry};
 use std::time::{Duration, Instant};
 
 mod cpu;
@@ -12,10 +13,11 @@ mod gpu;
 mod mem;
 mod util;
 
-#[tokio::main]
-async fn main() {
-    let options = Options::parse();
-    let plugin = new_plugin!(&options.address);
+#[plugin_entry]
+pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
+    let plugin = new_plugin!(api);
+    let options = Options::parse_from(args);
+
     let temperature_unit: TemperatureUnit = options.temperature_unit.into();
 
     let smi = AllSmi::new().unwrap();
@@ -28,18 +30,15 @@ async fn main() {
             memory: mem::read_data(&smi),
             temperature_unit: temperature_unit.unit(),
         };
-        plugin.update(data.into()).await.unwrap();
+        plugin.update(data.into()).unwrap();
 
-        tokio::time::sleep(options.interval.saturating_sub(begin.elapsed())).await;
+        std::thread::sleep(options.interval.saturating_sub(begin.elapsed()));
     }
 }
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Options {
-    #[clap(short, long)]
-    address: String,
-
     /// Interval between getting new system data
     #[clap(short, long, value_parser = humantime::parse_duration, default_value = "2sec")]
     interval: Duration,

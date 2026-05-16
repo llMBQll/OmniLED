@@ -6,8 +6,7 @@ use pulse::proplist::{Proplist, properties};
 use pulse::volume::Volume;
 use std::cell::RefCell;
 use std::rc::Rc;
-use tokio::runtime::Handle;
-use tokio::sync::mpsc::Sender;
+use std::sync::mpsc::Sender;
 
 use crate::{DeviceData, DeviceType};
 
@@ -30,7 +29,7 @@ pub struct AudioImpl {
 }
 
 impl AudioImpl {
-    pub fn new(tx: Sender<(DeviceData, DeviceType)>, handle: Handle) -> Self {
+    pub fn new(tx: Sender<(DeviceData, DeviceType)>) -> Self {
         /**********************|
         | Create the main loop |
         |**********************/
@@ -72,16 +71,15 @@ impl AudioImpl {
         |*******************/
         let devices = Rc::new(RefCell::new(Devices::default()));
 
-        Self::update_devices(ctx.clone(), devices.clone(), tx.clone(), handle.clone());
+        Self::update_devices(ctx.clone(), devices.clone(), tx.clone());
 
         /**************************|
         | Register event callbacks |
         |**************************/
         ctx.borrow_mut().set_subscribe_callback(Some(Box::new({
             macro_rules! update_device_info {
-                ($devices:ident, $device_type:expr, $tx:ident, $handle:ident) => {{
+                ($devices:ident, $device_type:expr, $tx:ident) => {{
                     let tx = $tx.clone();
-                    let handle = $handle.clone();
                     let devices = $devices.clone();
                     move |list| match list {
                         pulse::callbacks::ListResult::Item(info) => {
@@ -96,14 +94,7 @@ impl AudioImpl {
 
                             let volume = Self::normalize_volume(info.volume.get()[0]);
                             let muted = info.mute;
-                            Self::update_state(
-                                device,
-                                muted,
-                                volume,
-                                $device_type,
-                                tx.clone(),
-                                handle.clone(),
-                            );
+                            Self::update_state(device, muted, volume, $device_type, tx.clone());
                         }
                         _ => {}
                     }
@@ -115,17 +106,17 @@ impl AudioImpl {
                 Some(Facility::Sink) => {
                     let introspector = ctx.borrow_mut().introspect();
                     introspector.get_sink_info_by_index(index, {
-                        update_device_info!(devices, DeviceType::Output, tx, handle)
+                        update_device_info!(devices, DeviceType::Output, tx)
                     });
                 }
                 Some(Facility::Source) => {
                     let introspector = ctx.borrow_mut().introspect();
                     introspector.get_source_info_by_index(index, {
-                        update_device_info!(devices, DeviceType::Input, tx, handle)
+                        update_device_info!(devices, DeviceType::Input, tx)
                     });
                 }
                 Some(Facility::Server) => {
-                    Self::update_devices(ctx.clone(), devices.clone(), tx.clone(), handle.clone());
+                    Self::update_devices(ctx.clone(), devices.clone(), tx.clone());
                 }
                 _ => {}
             }
@@ -169,7 +160,6 @@ impl AudioImpl {
         volume: i32,
         device_type: DeviceType,
         tx: Sender<(DeviceData, DeviceType)>,
-        handle: Handle,
     ) {
         if device.muted == muted && device.volume == volume {
             return;
@@ -177,11 +167,8 @@ impl AudioImpl {
         device.muted = muted;
         device.volume = volume;
 
-        handle.spawn(async move {
-            tx.send((DeviceData::new(true, muted, volume, None), device_type))
-                .await
-                .unwrap();
-        });
+        tx.send((DeviceData::new(true, muted, volume, None), device_type))
+            .unwrap();
     }
 
     fn get_device_name(server_info: &ServerInfo, device_type: DeviceType) -> String {
@@ -196,13 +183,11 @@ impl AudioImpl {
         ctx: Rc<RefCell<Context>>,
         devices: Rc<RefCell<Devices>>,
         tx: Sender<(DeviceData, DeviceType)>,
-        handle: Handle,
     ) {
         macro_rules! get_device_info {
             ($ctx:ident, $devices:ident, $device_type:expr, $tx:ident, $handle:ident) => {{
                 let devices = $devices.clone();
                 let tx = $tx.clone();
-                let handle = $handle.clone();
                 move |list| match list {
                     pulse::callbacks::ListResult::Item(info) => {
                         let device = match $device_type {
@@ -222,14 +207,12 @@ impl AudioImpl {
                         device.index = Some(info.index);
                         device.muted = muted;
                         device.volume = volume;
-                        handle.spawn(async move {
-                            tx.send((
-                                DeviceData::new(true, muted, volume, Some(name)),
-                                $device_type,
-                            ))
-                            .await
-                            .unwrap();
-                        });
+
+                        tx.send((
+                            DeviceData::new(true, muted, volume, Some(name)),
+                            $device_type,
+                        ))
+                        .unwrap();
                     }
                     _ => {}
                 }

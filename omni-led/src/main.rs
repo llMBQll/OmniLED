@@ -3,7 +3,6 @@
 use log::debug;
 use mlua::Lua;
 use omni_led_lib::{
-    app_loader::app_loader::AppLoader,
     common::common::load_internal_functions,
     common::user_data::UserDataRef,
     constants::config::{ConfigType, read_config},
@@ -15,15 +14,15 @@ use omni_led_lib::{
     events::shortcuts::Shortcuts,
     keyboard::keyboard::process_events,
     logging::logger::Log,
+    plugin_loader::plugin_loader::PluginLoader,
     script_handler::script_handler::ScriptHandler,
-    server::server::PluginServer,
     settings::settings::Settings,
     ui::event::Event,
     ui::handler::{HandlerBuilder, PROXY},
 };
 use std::sync;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 mod logging;
 
@@ -36,11 +35,6 @@ fn main() {
     let (ready_tx, ready_rx) = sync::mpsc::channel();
 
     let scripting_thread = std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-
         let init_begin = Instant::now();
 
         let lua = Lua::new();
@@ -57,19 +51,18 @@ fn main() {
         let log_handle = logging::init(&lua);
         Log::load(&lua, log_handle);
 
-        let applications_config = read_config(&lua, ConfigType::Applications).unwrap();
         let devices_config = read_config(&lua, ConfigType::Devices).unwrap();
+        let plugins_config = read_config(&lua, ConfigType::Plugins).unwrap();
         let scripts_config = read_config(&lua, ConfigType::Scripts).unwrap();
         let settings_config = read_config(&lua, ConfigType::Settings).unwrap();
 
         Settings::load(&lua, settings_config);
-        let server_shutdown_tx = PluginServer::load(&lua, &rt);
         let mut dispatcher = Dispatcher::load(&lua);
         Events::load(&lua);
         Shortcuts::load(&lua);
         Devices::load(&lua, devices_config);
         ScriptHandler::load(&lua, scripts_config);
-        AppLoader::load(&lua, applications_config);
+        PluginLoader::load(&lua, plugins_config);
 
         let init_end = Instant::now();
         debug!("Initialized in {:?}", init_end - init_begin);
@@ -85,9 +78,6 @@ fn main() {
             let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
             script_handler.get_mut().update(&lua, interval).unwrap();
         });
-
-        server_shutdown_tx.send(()).unwrap();
-        rt.shutdown_timeout(Duration::from_secs(1));
     });
 
     let keyboard_thread = std::thread::spawn(|| process_events(&RUNNING));

@@ -3,21 +3,22 @@ use std::time::Duration;
 use clap::Parser;
 use log::debug;
 use omni_led_api::cli_types::{TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS};
+use omni_led_api::rust_api::OmniLedApi;
 use omni_led_api::types::Table;
 use omni_led_api::{new_plugin, plugin::Plugin};
-use omni_led_derive::IntoProto;
+use omni_led_derive::{IntoProto, plugin_entry};
 use ureq::Agent;
 
 mod weather_api;
 
-#[tokio::main]
-async fn main() {
-    let options = Options::parse();
-    let plugin = new_plugin!(&options.address);
+#[plugin_entry]
+pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
+    let plugin = new_plugin!(api);
+    let options = Options::parse_from(args);
 
     debug!("{:?}", options);
 
-    load_and_send_images(&plugin).await;
+    load_and_send_images(&plugin);
 
     let (coordinates, name) = match &options.selector {
         Selector::In(name) => (get_coordinates_from_name(name), &name.city),
@@ -28,20 +29,20 @@ async fn main() {
 
     loop {
         let weather = weather_api::get_weather(&coordinates, name, &options);
-        plugin.update(weather.into()).await.unwrap();
+        plugin.update(weather.into()).unwrap();
 
-        tokio::time::sleep(options.interval).await;
+        std::thread::sleep(options.interval);
     }
 }
 
-async fn load_and_send_images(plugin: &Plugin) {
+fn load_and_send_images(plugin: &Plugin) {
     let images = weather_api::load_images();
 
     let mut table = Table::default();
     for (name, image) in images {
         table.items.insert(name.into(), image.into());
     }
-    plugin.update(table).await.unwrap();
+    plugin.update(table).unwrap();
 }
 
 fn get_coordinates_from_name(name: &Name) -> Coordinates {
@@ -155,10 +156,6 @@ enum Selector {
 struct Options {
     #[clap(subcommand)]
     selector: Selector,
-
-    /// Server address to which weather information will be sent
-    #[clap(short, long)]
-    address: String,
 
     /// Interval between getting new weather data
     #[clap(short, long, value_parser = humantime::parse_duration, default_value = "15min")]

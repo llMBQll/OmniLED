@@ -5,9 +5,10 @@ authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
 license = "GPL-3.0-only"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 chrono = { version = "0.4", features = ["clock"] }
-clap = { version = "4.5", features = ["derive"] }
 omni-led-api = { path = "../../omni-led-api" }
-omni-led-derive = { path = "../../omni-led-derive", features = ["into-proto"] }
-tokio = { version = "1.38", features = ["full"] }
+omni-led-derive = { path = "../../omni-led-derive", features = ["into-proto", "plugin-entry"] }

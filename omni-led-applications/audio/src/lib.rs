@@ -1,29 +1,23 @@
+use std::sync::mpsc;
+
 use audio::Audio;
-use clap::Parser;
 use log::debug;
 use omni_led_api::new_plugin;
+use omni_led_api::rust_api::OmniLedApi;
 use omni_led_api::types::Table;
-use omni_led_derive::IntoProto;
-use tokio::runtime::Handle;
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::{Receiver, Sender};
+use omni_led_derive::{IntoProto, plugin_entry};
 
 mod audio;
 
-#[tokio::main]
-async fn main() {
-    let options = Options::parse();
-    let plugin = new_plugin!(&options.address);
+#[plugin_entry]
+pub fn omni_led_run(api: OmniLedApi, _args: Vec<&str>) {
+    let plugin = new_plugin!(api);
 
-    let (tx, mut rx): (
-        Sender<(DeviceData, DeviceType)>,
-        Receiver<(DeviceData, DeviceType)>,
-    ) = mpsc::channel(256);
+    let (tx, rx) = mpsc::channel::<(DeviceData, DeviceType)>();
 
-    let handle = Handle::current();
-    let _audio = Audio::new(tx, handle);
+    let _audio = Audio::new(tx);
 
-    while let Some((data, device_type)) = rx.recv().await {
+    while let Ok((data, device_type)) = rx.recv() {
         if let Some(name) = &data.name {
             debug!(
                 "{:?} device: '{}', volume: {}%, muted: {}",
@@ -46,7 +40,7 @@ async fn main() {
             DeviceType::Output => OutputAudioEvent { output: event_data }.into(),
         };
 
-        plugin.update(event.into()).await.unwrap();
+        plugin.update(event.into()).unwrap();
     }
 }
 
@@ -94,11 +88,4 @@ impl DeviceData {
             name,
         }
     }
-}
-
-#[derive(Parser, Debug)]
-#[command(author, version, about)]
-struct Options {
-    #[clap(short, long)]
-    address: String,
 }

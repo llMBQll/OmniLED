@@ -30,9 +30,6 @@ pub struct Settings {
     #[mlua(default = 2)]
     pub keyboard_ticks_repeat_rate: usize,
 
-    #[mlua(default = 0)]
-    pub server_port: u16,
-
     #[mlua(transform = DurationWrapper::transform)]
     #[mlua(default = Duration::from_millis(100))]
     pub update_interval: Duration,

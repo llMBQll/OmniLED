@@ -22,4 +22,5 @@ regex = "1.10"
 from-lua-value = []
 into-proto = []
 lua-enum = []
+plugin-entry = []
 unique-user-data = []

@@ -1,8 +1,7 @@
 use chrono::prelude::*;
-use clap::Parser;
-use omni_led_api::new_plugin;
-use omni_led_derive::IntoProto;
-use tokio::time::{Duration, Instant};
+use omni_led_api::{new_plugin, rust_api::OmniLedApi};
+use omni_led_derive::{IntoProto, plugin_entry};
+use std::time::{Duration, Instant};
 
 #[derive(IntoProto)]
 #[proto(rename_all = PascalCase)]
@@ -53,13 +52,12 @@ struct Time {
     year: i32,
 }
 
-#[tokio::main]
-async fn main() {
-    let options = Options::parse();
-    let plugin = new_plugin!(&options.address);
+#[plugin_entry]
+pub fn omni_led_run(api: OmniLedApi, _args: Vec<&str>) {
+    let plugin = new_plugin!(api);
 
     // Send initial data that will not be updated
-    plugin.update(Names::new().into()).await.unwrap();
+    plugin.update(Names::new().into()).unwrap();
 
     let mut expected_update_time = Instant::now() + Duration::from_secs(1);
     loop {
@@ -74,16 +72,10 @@ async fn main() {
             year: local.year(),
         };
 
-        plugin.update(time.into()).await.unwrap();
+        plugin.update(time.into()).unwrap();
 
-        tokio::time::sleep_until(expected_update_time).await;
+        let sleep_duration = expected_update_time - Instant::now();
+        std::thread::sleep(sleep_duration);
         expected_update_time += Duration::from_secs(1);
     }
-}
-
-#[derive(Parser, Debug)]
-#[command(author, version, about)]
-struct Options {
-    #[clap(short, long)]
-    address: String,
 }

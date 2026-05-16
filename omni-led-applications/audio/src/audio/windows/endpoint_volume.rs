@@ -1,5 +1,4 @@
-use tokio::runtime::Handle;
-use tokio::sync::mpsc::Sender;
+use std::sync::mpsc::Sender;
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Media::Audio::Endpoints::{IAudioEndpointVolume, IAudioEndpointVolumeCallback};
 use windows::Win32::Media::Audio::{
@@ -17,13 +16,8 @@ pub struct EndpointVolume {
 }
 
 impl EndpointVolume {
-    pub fn new(
-        tx: Sender<(DeviceData, DeviceType)>,
-        handle: Handle,
-        device_type: DeviceType,
-    ) -> Option<Self> {
-        let endpoint_volume_callback =
-            AudioEndpointVolumeCallback::new(tx.clone(), handle.clone(), device_type);
+    pub fn new(tx: Sender<(DeviceData, DeviceType)>, device_type: DeviceType) -> Option<Self> {
+        let endpoint_volume_callback = AudioEndpointVolumeCallback::new(tx.clone(), device_type);
         let endpoint_volume = unsafe {
             let enumerator: IMMDeviceEnumerator =
                 CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_INPROC_SERVER).unwrap();
@@ -48,23 +42,18 @@ impl EndpointVolume {
                     let name = PropVariantToStringAlloc(&prop).unwrap();
                     let name = name.to_string().unwrap();
 
-                    handle.spawn(async move {
-                        tx.send((DeviceData::new(true, mute, volume, Some(name)), device_type))
-                            .await
-                            .unwrap()
-                    });
+                    tx.send((DeviceData::new(true, mute, volume, Some(name)), device_type))
+                        .unwrap();
 
                     endpoint_volume
                 }
                 Err(_err) => {
-                    handle.spawn(async move {
-                        tx.send((
-                            DeviceData::new(false, true, 0, Some("".to_string())),
-                            device_type,
-                        ))
-                        .await
-                        .unwrap()
-                    });
+                    tx.send((
+                        DeviceData::new(false, true, 0, Some("".to_string())),
+                        device_type,
+                    ))
+                    .unwrap();
+
                     return None;
                 }
             }

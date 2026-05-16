@@ -30,6 +30,18 @@ pub fn into_proto_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStr
     into_proto::expand_into_proto_derive(input)
 }
 
+#[cfg(feature = "plugin-entry")]
+mod plugin_entry;
+
+#[cfg(feature = "plugin-entry")]
+#[proc_macro_attribute]
+pub fn plugin_entry(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    plugin_entry::expand_plugin_entry_attr(attr.into(), item.into()).into()
+}
+
 #[cfg(feature = "unique-user-data")]
 mod unique_user_data;
 

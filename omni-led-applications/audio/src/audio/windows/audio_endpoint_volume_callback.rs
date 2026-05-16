@@ -1,5 +1,4 @@
-use tokio::runtime::Handle;
-use tokio::sync::mpsc::Sender;
+use std::sync::mpsc::Sender;
 use windows::Win32::Media::Audio::AUDIO_VOLUME_NOTIFICATION_DATA;
 use windows::Win32::Media::Audio::Endpoints::{
     IAudioEndpointVolumeCallback, IAudioEndpointVolumeCallback_Impl,
@@ -11,23 +10,15 @@ use crate::{DeviceData, DeviceType};
 #[implement(IAudioEndpointVolumeCallback)]
 pub struct AudioEndpointVolumeCallback {
     tx: Sender<(DeviceData, DeviceType)>,
-    handle: Handle,
     device_type: DeviceType,
 }
 
 impl AudioEndpointVolumeCallback {
     pub(crate) fn new(
         tx: Sender<(DeviceData, DeviceType)>,
-        handle: Handle,
         device_type: DeviceType,
     ) -> IAudioEndpointVolumeCallback {
-        let this = Self {
-            tx,
-            handle,
-            device_type,
-        };
-
-        this.into()
+        Self { tx, device_type }.into()
     }
 }
 
@@ -43,13 +34,9 @@ impl IAudioEndpointVolumeCallback_Impl for AudioEndpointVolumeCallback_Impl {
         let muted = data.bMuted.into();
         let volume = (data.fMasterVolume * 100.0).round() as i32;
 
-        let tx = self.tx.clone();
-        let device_type = self.device_type;
-        self.handle.spawn(async move {
-            tx.send((DeviceData::new(true, muted, volume, None), device_type))
-                .await
-                .unwrap();
-        });
+        self.tx
+            .send((DeviceData::new(true, muted, volume, None), self.device_type))
+            .unwrap();
 
         Ok(())
     }

@@ -2,18 +2,19 @@ use clap::{ArgAction, Parser};
 use image::guess_format;
 use log::{debug, error};
 use omni_led_api::new_plugin;
+use omni_led_api::rust_api::OmniLedApi;
 use omni_led_api::types::{ImageData, ImageFormat, Table};
+use omni_led_derive::plugin_entry;
 
-#[tokio::main]
-async fn main() {
-    let options = Options::parse();
+#[plugin_entry]
+pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
+    let plugin = new_plugin!(api);
+    let options = Options::parse_from(args);
 
     // TODO verify that all image names are unique
 
-    let plugin = new_plugin!(&options.address);
-
     let images = load_images(options.images);
-    plugin.update(images).await.unwrap();
+    plugin.update(images).unwrap();
 }
 
 fn load_images(image_options: Vec<ImageOptions>) -> Table {
