@@ -1,9 +1,9 @@
-use std::ffi::{CString, c_char, c_int};
+use std::ffi::{CString, c_char, c_int, c_ulonglong};
 use std::io::Cursor;
 use std::slice;
 use std::str::FromStr;
 
-use log::debug;
+use log::{debug, error};
 use mlua::UserData;
 use omni_led_api::{c_api, types::EventData};
 use omni_led_derive::FromLuaValue;
@@ -68,9 +68,13 @@ unsafe extern "C" fn plugin_event(
 ) {
     let event_data =
         unsafe { slice::from_raw_parts(event_data as *const u8, event_data_length as usize) };
-
-    // TODO error handling
-    let event_data = EventData::decode(&mut Cursor::new(event_data)).unwrap();
+    let event_data = match EventData::decode(&mut Cursor::new(event_data)) {
+        Ok(event_data) => event_data,
+        Err(err) => {
+            error!("Failed to parse event_data: '{}'", err);
+            return;
+        }
+    };
 
     let name = event_data.name;
     let fields = event_data.fields.unwrap();
@@ -83,10 +87,10 @@ unsafe extern "C" fn plugin_event(
 
 unsafe extern "C" fn plugin_log(
     level: c_api::LogLevel,
-    target: *const ::std::os::raw::c_char,
-    target_length: ::std::os::raw::c_ulonglong,
-    message: *const ::std::os::raw::c_char,
-    message_length: ::std::os::raw::c_ulonglong,
+    target: *const c_char,
+    target_length: c_ulonglong,
+    message: *const c_char,
+    message_length: c_ulonglong,
 ) {
     let level = match level {
         c_api::LogLevel_LOG_LEVEL_ERROR => log::Level::Error,
@@ -94,20 +98,30 @@ unsafe extern "C" fn plugin_log(
         c_api::LogLevel_LOG_LEVEL_INFO => log::Level::Info,
         c_api::LogLevel_LOG_LEVEL_DEBUG => log::Level::Debug,
         c_api::LogLevel_LOG_LEVEL_TRACE => log::Level::Trace,
-        _ => {
-            // TODO error handling
-            panic!("Unknown log level '{level}'");
+        other => {
+            error!("Unknown log level: '{}'", other);
+            return;
         }
     };
 
     let target = unsafe { slice::from_raw_parts(target as *const u8, target_length as usize) };
-    // TODO error handling
-    let target = str::from_utf8(target).unwrap();
+    let target = match str::from_utf8(target) {
+        Ok(target) => target,
+        Err(err) => {
+            error!("Failed to parse log target: '{}'", err);
+            return;
+        }
+    };
     let target = format!("plugin::{}", target);
 
     let message = unsafe { slice::from_raw_parts(message as *const u8, message_length as usize) };
-    // TODO error handling
-    let message = str::from_utf8(message).unwrap();
+    let message = match str::from_utf8(message) {
+        Ok(message) => message,
+        Err(err) => {
+            error!("Failed to parse log message: '{}'", err);
+            return;
+        }
+    };
 
     log::log!(target: &target, level, "{}", message);
 }
