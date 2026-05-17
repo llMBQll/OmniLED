@@ -2,7 +2,7 @@ use prost::{EncodeError, Message};
 
 use crate::logging;
 use crate::rust_api::OmniLedApi;
-use crate::types::{EventData, Table};
+use crate::types::Table;
 
 #[derive(Clone)]
 pub struct Plugin {
@@ -17,22 +17,19 @@ impl Plugin {
         Self { api, name }
     }
 
-    pub fn update_with_name(&self, name: &str, fields: Table) -> Result<(), EncodeError> {
-        let event_data = EventData {
-            name: name.to_string(),
-            fields: Some(fields),
-        };
+    pub fn update_with_name(&self, name: &str, values: Table) -> Result<(), EncodeError> {
+        let mut event_data = Table::default();
+        event_data.items.insert(name.into(), values.into());
 
         let mut message = Vec::new();
         event_data.encode(&mut message)?;
-
         self.api.event(&message);
 
         Ok(())
     }
 
-    pub fn update(&self, fields: Table) -> Result<(), EncodeError> {
-        self.update_with_name(&self.name, fields)
+    pub fn update(&self, values: Table) -> Result<(), EncodeError> {
+        self.update_with_name(&self.name, values)
     }
 
     pub fn is_valid_identifier(identifier: &str) -> bool {

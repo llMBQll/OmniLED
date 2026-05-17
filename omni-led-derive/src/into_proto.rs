@@ -19,12 +19,10 @@ pub fn expand_into_proto_derive(input: DeriveInput) -> proc_macro::TokenStream {
             }
         }
 
-        impl Into<omni_led_api::types::Field> for #name {
-            fn into(self) -> omni_led_api::types::Field {
-                let table = self.into();
-                omni_led_api::types::Field {
-                    field: Some(omni_led_api::types::field::Field::FTable(table)),
-                }
+        impl Into<omni_led_api::types::Value> for #name {
+            fn into(self) -> omni_led_api::types::Value {
+                let table: omni_led_api::types::Table = self.into();
+                table.into()
             }
         }
     };
@@ -70,7 +68,12 @@ fn generate_assignments(data: &Data, struct_attrs: &StructAttributes) -> TokenSt
                     };
 
                     let none_insertion = quote! {
-                        table.items.insert(#renamed.to_string(), omni_led_api::types::None{}.into())
+                        table.items.insert(
+                            #renamed.to_string(),
+                            omni_led_api::types::Value {
+                                value: None,
+                            },
+                        )
                     };
 
                     if is_option {

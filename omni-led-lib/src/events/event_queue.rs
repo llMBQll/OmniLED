@@ -6,10 +6,8 @@ use crate::events::events::ScriptEvent;
 use crate::events::{event_handle::EventHandle, events::EventEntry};
 use crate::keyboard::keyboard::KeyboardEvent;
 
-type ApplicationEvent = (String, Table);
-
 pub enum Event {
-    Application(ApplicationEvent),
+    Application(Table),
     Keyboard(KeyboardEvent),
     Register(EventEntry),
     Unregister(EventHandle),
@@ -63,9 +61,12 @@ impl EventQueue {
     fn get_default_event_queue(counter: u64) -> Vec<Event> {
         // TODO find a better way to register meta events
 
-        let mut table = Table::default();
-        table.items.insert("Update".to_string(), counter.into());
+        let mut values = Table::default();
+        values.items.insert("Update".to_string(), counter.into());
 
-        vec![Event::Application(("OMNILED".to_string(), table))]
+        let mut table = Table::default();
+        table.items.insert("OMNILED".to_string(), values.into());
+
+        vec![Event::Application(table)]
     }
 }

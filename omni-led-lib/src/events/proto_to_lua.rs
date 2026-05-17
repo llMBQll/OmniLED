@@ -1,6 +1,6 @@
-use mlua::{Lua, Table, Value};
-use omni_led_api::types::Field;
-use omni_led_api::types::field::Field as FieldEntry;
+use mlua::{Lua, Table, Value as LuaValue};
+use omni_led_api::types::Value as ProtoValue;
+use omni_led_api::types::value::Value as ProtoValueEntry;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use crate::script_handler::script_data_types::ImageData;
@@ -25,25 +25,25 @@ fn set_cleanup_entries_metatable(lua: &Lua, table: &Table, entries: Table) -> ml
     table.set_metatable(Some(meta))
 }
 
-pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
-    match field.field {
-        Some(FieldEntry::FNone(_)) | None => Ok(mlua::Nil),
-        Some(FieldEntry::FBool(bool)) => Ok(Value::Boolean(bool)),
-        Some(FieldEntry::FInteger(integer)) => Ok(Value::Integer(integer)),
-        Some(FieldEntry::FFloat(float)) => Ok(Value::Number(float)),
-        Some(FieldEntry::FString(string)) => {
+pub fn proto_to_lua_value(lua: &Lua, value: ProtoValue) -> mlua::Result<LuaValue> {
+    match value.value {
+        None => Ok(mlua::Nil),
+        Some(ProtoValueEntry::VBool(bool)) => Ok(LuaValue::Boolean(bool)),
+        Some(ProtoValueEntry::VInteger(integer)) => Ok(LuaValue::Integer(integer)),
+        Some(ProtoValueEntry::VFloat(float)) => Ok(LuaValue::Number(float)),
+        Some(ProtoValueEntry::VString(string)) => {
             let string = lua.create_string(string)?;
-            Ok(Value::String(string))
+            Ok(LuaValue::String(string))
         }
-        Some(FieldEntry::FArray(array)) => {
+        Some(ProtoValueEntry::VArray(array)) => {
             let size = array.items.len();
             let table = lua.create_table_with_capacity(size, 0)?;
             for value in array.items {
                 table.push(proto_to_lua_value(lua, value)?)?;
             }
-            Ok(Value::Table(table))
+            Ok(LuaValue::Table(table))
         }
-        Some(FieldEntry::FTable(map)) => {
+        Some(ProtoValueEntry::VTable(map)) => {
             let size = map.items.len();
 
             let table = lua.create_table_with_capacity(0, size)?;
@@ -51,16 +51,16 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
 
             for (key, value) in map.items {
                 match proto_to_lua_value(lua, value)? {
-                    Value::Nil => cleanup_entries.set(key, true)?,
+                    LuaValue::Nil => cleanup_entries.set(key, true)?,
                     value => table.set(key, value)?,
                 }
             }
 
             set_cleanup_entries_metatable(&lua, &table, cleanup_entries)?;
 
-            Ok(Value::Table(table))
+            Ok(LuaValue::Table(table))
         }
-        Some(FieldEntry::FImageData(image)) => {
+        Some(ProtoValueEntry::VImageData(image)) => {
             let hash = hash(&image.data);
             let image_data = ImageData {
                 format: image.format().try_into().map_err(mlua::Error::external)?,
@@ -68,7 +68,7 @@ pub fn proto_to_lua_value(lua: &Lua, field: Field) -> mlua::Result<Value> {
                 hash: Some(hash),
             };
             let user_data = lua.create_any_userdata(image_data)?;
-            Ok(Value::UserData(user_data))
+            Ok(LuaValue::UserData(user_data))
         }
     }
 }
@@ -82,15 +82,14 @@ fn hash<T: Hash>(t: &T) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use omni_led_api::types::None;
     use omni_led_derive::IntoProto;
 
     #[test]
     fn convert_nil() {
         let lua = Lua::new();
         assert_eq!(
-            proto_to_lua_value(&lua, None {}.into()).unwrap(),
-            Value::Nil
+            proto_to_lua_value(&lua, ProtoValue { value: None }).unwrap(),
+            LuaValue::Nil
         )
     }
 
@@ -99,7 +98,7 @@ mod tests {
         let lua = Lua::new();
         assert_eq!(
             proto_to_lua_value(&lua, true.into()).unwrap(),
-            Value::Boolean(true)
+            LuaValue::Boolean(true)
         )
     }
 
@@ -108,7 +107,7 @@ mod tests {
         let lua = Lua::new();
         assert_eq!(
             proto_to_lua_value(&lua, 68.into()).unwrap(),
-            Value::Integer(68)
+            LuaValue::Integer(68)
         )
     }
 
@@ -117,7 +116,7 @@ mod tests {
         let lua = Lua::new();
         assert_eq!(
             proto_to_lua_value(&lua, 6.8.into()).unwrap(),
-            Value::Number(6.8)
+            LuaValue::Number(6.8)
         )
     }
 
@@ -127,7 +126,7 @@ mod tests {
         let string = "Omegalul";
         assert_eq!(
             proto_to_lua_value(&lua, string.into()).unwrap(),
-            Value::String(lua.create_string(string).unwrap())
+            LuaValue::String(lua.create_string(string).unwrap())
         )
     }
 
@@ -187,11 +186,11 @@ mod tests {
 
         let cleanup_entries = cleanup_entries.unwrap();
 
-        assert_eq!(cleanup_entries.pairs::<Value, Value>().count(), 1);
+        assert_eq!(cleanup_entries.pairs::<LuaValue, LuaValue>().count(), 1);
         // We only care that the key is present. As long as it's there, the condition will hold.
-        assert_ne!(cleanup_entries.get::<Value>("e").unwrap(), Value::Nil);
+        assert_ne!(cleanup_entries.get::<LuaValue>("e").unwrap(), LuaValue::Nil);
 
-        assert_eq!(result.pairs::<Value, Value>().count(), 4);
+        assert_eq!(result.pairs::<LuaValue, LuaValue>().count(), 4);
         assert_eq!(result.get::<i64>("a").unwrap(), 0);
         assert_eq!(result.get::<String>("b").unwrap(), String::from("b"));
         assert_eq!(result.get::<Option<bool>>("d").unwrap(), Some(true));

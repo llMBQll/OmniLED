@@ -4,76 +4,73 @@ mod plugin {
 
 pub use plugin::*;
 
-macro_rules! cast_and_into_field {
+macro_rules! cast_and_into_value {
     ($from:ty, $to:ty, $variant:expr) => {
-        impl Into<Field> for $from {
-            fn into(self) -> Field {
-                Field {
-                    field: Some($variant(self as $to)),
+        impl Into<Value> for $from {
+            fn into(self) -> Value {
+                Value {
+                    value: Some($variant(self as $to)),
                 }
             }
         }
     };
 }
 
-macro_rules! into_field {
+macro_rules! into_value {
     ($from:ty, $variant:expr) => {
-        impl Into<Field> for $from {
-            fn into(self) -> Field {
-                Field {
-                    field: Some($variant(self)),
+        impl Into<Value> for $from {
+            fn into(self) -> Value {
+                Value {
+                    value: Some($variant(self)),
                 }
             }
         }
     };
 }
-
-// None
-into_field!(None, field::Field::FNone);
 
 // Boolean values
-into_field!(bool, field::Field::FBool);
+into_value!(bool, value::Value::VBool);
 
 // Integer values
-cast_and_into_field!(i8, i64, field::Field::FInteger);
-cast_and_into_field!(i16, i64, field::Field::FInteger);
-cast_and_into_field!(i32, i64, field::Field::FInteger);
-into_field!(i64, field::Field::FInteger);
-cast_and_into_field!(i128, i64, field::Field::FInteger);
-cast_and_into_field!(u8, i64, field::Field::FInteger);
-cast_and_into_field!(u16, i64, field::Field::FInteger);
-cast_and_into_field!(u32, i64, field::Field::FInteger);
-cast_and_into_field!(u64, i64, field::Field::FInteger);
-cast_and_into_field!(u128, i64, field::Field::FInteger);
+cast_and_into_value!(i8, i64, value::Value::VInteger);
+cast_and_into_value!(i16, i64, value::Value::VInteger);
+cast_and_into_value!(i32, i64, value::Value::VInteger);
+into_value!(i64, value::Value::VInteger);
+cast_and_into_value!(i128, i64, value::Value::VInteger);
+cast_and_into_value!(u8, i64, value::Value::VInteger);
+cast_and_into_value!(u16, i64, value::Value::VInteger);
+cast_and_into_value!(u32, i64, value::Value::VInteger);
+cast_and_into_value!(u64, i64, value::Value::VInteger);
+cast_and_into_value!(u128, i64, value::Value::VInteger);
 
 // Floating point values
-cast_and_into_field!(f32, f64, field::Field::FFloat);
-into_field!(f64, field::Field::FFloat);
+cast_and_into_value!(f32, f64, value::Value::VFloat);
+into_value!(f64, value::Value::VFloat);
 
 // String values
-into_field!(String, field::Field::FString);
+into_value!(String, value::Value::VString);
 
-impl Into<Field> for &str {
-    fn into(self) -> Field {
-        Field {
-            field: Some(field::Field::FString(self.to_owned())),
+impl Into<Value> for &str {
+    fn into(self) -> Value {
+        Value {
+            value: Some(value::Value::VString(self.to_owned())),
         }
     }
 }
 
-impl Into<Field> for char {
-    fn into(self) -> Field {
-        Field {
-            field: Some(field::Field::FString(self.to_string())),
+impl Into<Value> for char {
+    fn into(self) -> Value {
+        Value {
+            value: Some(value::Value::VString(self.to_string())),
         }
     }
 }
 
 // Array values
-into_field!(Array, field::Field::FArray);
+into_value!(Array, value::Value::VArray);
 
-impl<T: Into<Field>> Into<Field> for Vec<T> {
-    fn into(self) -> Field {
+impl<T: Into<Value>> Into<Value> for Vec<T> {
+    fn into(self) -> Value {
         let array = Array {
             items: self.into_iter().map(|entry| entry.into()).collect(),
         };
@@ -82,8 +79,11 @@ impl<T: Into<Field>> Into<Field> for Vec<T> {
     }
 }
 
+// Table values
+into_value!(Table, value::Value::VTable);
+
 // Image values
-into_field!(ImageData, field::Field::FImageData);
+into_value!(ImageData, value::Value::VImageData);
 
 impl TryFrom<image::ImageFormat> for ImageFormat {
     type Error = &'static str;

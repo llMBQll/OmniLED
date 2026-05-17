@@ -2,34 +2,24 @@ syntax = 'proto3';
 
 package plugin;
 
-message EventData {
-  string name = 1;
-  Table fields = 2;
-}
-
-message EventResponse {}
-
-message Field {
-  oneof field {
-    None f_none = 1;
-    bool f_bool = 2;
-    int64 f_integer = 3;
-    double f_float = 4;
-    string f_string = 5;
-    Array f_array = 6;
-    Table f_table = 7;
-    ImageData f_image_data = 8;
+message Value {
+  oneof value {
+    bool v_bool = 1;
+    int64 v_integer = 2;
+    double v_float = 3;
+    string v_string = 4;
+    Array v_array = 5;
+    Table v_table = 6;
+    ImageData v_image_data = 7;
   }
 }
 
-message None {}
-
 message Array {
-  repeated Field items = 1;
+  repeated Value items = 1;
 }
 
 message Table {
-  map<string, Field> items = 1;
+  map<string, Value> items = 1;
 }
 
 message ImageData {
