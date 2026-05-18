@@ -1,11 +1,11 @@
 use all_smi::{AllSmi, device::CoreType};
 use omni_led_api::cli_types::TemperatureUnit;
-use omni_led_derive::IntoProto;
+use serde::Serialize;
 
 use crate::util::convert;
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct Data {
     name: String,
     utilization: f64,
@@ -14,8 +14,8 @@ pub struct Data {
     cores: Vec<CoreData>,
 }
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct CoreData {
     id: u32,
     utilization: f64,

@@ -12,8 +12,8 @@ use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
 use crate::devices::devices::{DeviceStatus, Devices};
+use crate::events::cbor_to_lua::get_cleanup_entries_metatable;
 use crate::events::events::Events;
-use crate::events::proto_to_lua::get_cleanup_entries_metatable;
 use crate::events::shortcuts::Shortcuts;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
@@ -525,8 +525,9 @@ impl UserData for ScreenBuilderImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{create_table, events::proto_to_lua::proto_to_lua_value};
-    use omni_led_derive::IntoProto;
+    use crate::{create_table, events::cbor_to_lua::cbor_to_lua_value};
+    use ciborium::Value as CborValue;
+    use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
     fn assert_tables_equal(lua: &Lua, left: &Table, right: &Table, line: u32) {
         assert_tables_equal_impl(lua, left, right, &format!("{line}"))
@@ -593,28 +594,39 @@ mod tests {
         }
     }
 
-    #[derive(IntoProto)]
+    #[derive(Serialize, Deserialize)]
     struct InputA {
+        #[serde(skip_serializing_if = "Option::is_none")]
         a: Option<i64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         b: Option<InputB>,
     }
 
-    #[derive(IntoProto)]
+    #[derive(Serialize, Deserialize)]
     struct InputB {
+        #[serde(skip_serializing_if = "Option::is_none")]
         b: Option<i64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         c: Option<InputC>,
     }
 
-    #[derive(IntoProto)]
+    #[derive(Serialize, Deserialize)]
     struct InputC {
+        #[serde(skip_serializing_if = "Option::is_none")]
         c: Option<i64>,
     }
 
-    #[derive(IntoProto)]
+    #[derive(Serialize, Deserialize)]
     struct InputStrongA {
+        #[serde(skip_serializing_if = "Option::is_none")]
         a: Option<i64>,
-        #[proto(strong_none)]
         b: Option<InputB>,
+    }
+
+    fn into_value<V: Serialize + DeserializeOwned>(v: V) -> CborValue {
+        let mut buffer = Vec::new();
+        ciborium::into_writer(&v, &mut buffer).unwrap();
+        ciborium::from_reader(buffer.as_slice()).unwrap()
     }
 
     #[test]
@@ -629,7 +641,7 @@ mod tests {
                 c: Some(InputC { c: None }),
             }),
         };
-        let input = proto_to_lua_value(&lua, input.into()).unwrap();
+        let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
         ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
@@ -659,7 +671,7 @@ mod tests {
                 c: None,
             }),
         };
-        let input = proto_to_lua_value(&lua, input.into()).unwrap();
+        let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
         ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
@@ -681,7 +693,7 @@ mod tests {
                 c: Some(InputC { c: Some(3) }),
             }),
         };
-        let input = proto_to_lua_value(&lua, input.into()).unwrap();
+        let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
         ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
@@ -713,7 +725,7 @@ mod tests {
                 c: Some(InputC { c: Some(3) }),
             }),
         };
-        let input = proto_to_lua_value(&lua, input.into()).unwrap();
+        let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
         ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
@@ -736,7 +748,7 @@ mod tests {
             a: Some(1),
             b: None,
         };
-        let input = proto_to_lua_value(&lua, input.into()).unwrap();
+        let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
         ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {

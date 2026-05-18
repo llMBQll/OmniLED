@@ -13,7 +13,4 @@ fn main() {
     bindings
         .write_to_file(out_path.join("c_api_bindings.rs"))
         .expect("Couldn't write bindings!");
-
-    prost_build::compile_protos(&["plugin/plugin.proto"], &["plugin/"])
-        .expect("Failed to generate Protouf types");
 }

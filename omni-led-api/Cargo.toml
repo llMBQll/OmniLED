@@ -6,10 +6,10 @@ license = "GPL-3.0-only"
 edition = "2024"
 
 [dependencies]
-image = "0.25"
+ciborium = "0.2"
+image = { version = "0.25", features = ["serde"] }
 log = { version = "0.4", features = ["std"] }
-prost = "0.14"
+serde = { version = "1", features = ["derive"] }
 
 [build-dependencies]
 bindgen = "0.71.0"
-prost-build = "0.14"

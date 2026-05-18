@@ -3,8 +3,8 @@ use log::info;
 use omni_led_api::new_plugin;
 use omni_led_api::plugin::Plugin;
 use omni_led_api::rust_api::OmniLedApi;
-use omni_led_api::types::Table;
 use omni_led_derive::plugin_entry;
+use serde::Serialize;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -37,16 +37,18 @@ pub async fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
                     map.entry(name).or_insert(transformed)
                 }
             };
-            let session_data = session_data_with_source(session_data, transformed);
+
+            let session_data = SessionDataExtended {
+                session_data,
+                source: transformed,
+            };
 
             if current && (mode == Focused || mode == Both) {
-                plugin.update(session_data.clone().into()).unwrap();
+                plugin.update(&session_data).unwrap();
             }
 
             if mode == Individual || mode == Both {
-                plugin
-                    .update_with_name(transformed, session_data.into())
-                    .unwrap();
+                plugin.update_with_name(transformed, &session_data).unwrap();
             }
         }
     });
@@ -58,10 +60,11 @@ pub async fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
 
 type Data = (bool, String, SessionData);
 
-fn session_data_with_source(session_data: SessionData, source: &str) -> Table {
-    let mut table: Table = session_data.into();
-    table.items.insert("Source".into(), source.into());
-    table
+#[derive(Serialize)]
+struct SessionDataExtended<'a> {
+    #[serde(flatten)]
+    session_data: SessionData,
+    source: &'a str,
 }
 
 fn transform_name(name: &String) -> String {

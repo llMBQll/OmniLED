@@ -1,14 +1,10 @@
-use std::ffi::{CString, c_char, c_int, c_uchar, c_ulonglong};
-use std::io::Cursor;
-use std::slice;
-use std::str::FromStr;
-
 use log::{debug, error};
 use mlua::UserData;
 use omni_led_api::c_api;
-use omni_led_api::types::Table;
 use omni_led_derive::FromLuaValue;
-use prost::Message;
+use std::ffi::{CString, c_char, c_int, c_uchar, c_ulonglong};
+use std::slice;
+use std::str::FromStr;
 
 use crate::events::event_queue::{Event, EventQueue};
 
@@ -66,7 +62,8 @@ impl<T> FnPtr for Option<T> {
 unsafe extern "C" fn plugin_event(event_data: *const c_uchar, event_data_length: c_ulonglong) {
     let event_data =
         unsafe { slice::from_raw_parts(event_data as *const u8, event_data_length as usize) };
-    let event_data = match Table::decode(&mut Cursor::new(event_data)) {
+
+    let event_data = match ciborium::from_reader(event_data) {
         Ok(event_data) => event_data,
         Err(err) => {
             error!("Failed to parse event data: '{}'", err);

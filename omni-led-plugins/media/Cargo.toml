@@ -12,7 +12,8 @@ crate-type = ["cdylib"]
 clap = { version = "4.5", features = ["derive"] }
 log = { version = "0.4", features = ["std"] }
 omni-led-api = { path = "../../omni-led-api" }
-omni-led-derive = { path = "../../omni-led-derive", features = ["into-proto", "plugin-entry"] }
+omni-led-derive = { path = "../../omni-led-derive", features = ["plugin-entry"] }
+serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]

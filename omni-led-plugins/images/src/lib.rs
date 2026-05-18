@@ -1,10 +1,12 @@
 use clap::{ArgAction, Parser};
-use image::guess_format;
+use image::{ImageFormat, guess_format};
 use log::{debug, error};
 use omni_led_api::new_plugin;
 use omni_led_api::rust_api::OmniLedApi;
-use omni_led_api::types::{ImageData, ImageFormat, Table};
+use omni_led_api::types::Image;
 use omni_led_derive::plugin_entry;
+use serde::Serialize;
+use std::collections::BTreeMap;
 
 #[plugin_entry]
 pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
@@ -14,11 +16,13 @@ pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
     // TODO verify that all image names are unique
 
     let images = load_images(options.images);
-    plugin.update(images).unwrap();
+    plugin.update(&images).unwrap();
 }
 
-fn load_images(image_options: Vec<ImageOptions>) -> Table {
-    let mut table = Table::default();
+fn load_images(image_options: Vec<ImageOptions>) -> Images {
+    let mut images = Images {
+        images: BTreeMap::new(),
+    };
 
     for option in image_options {
         let (format, bytes) = match load_image(&option.path, &option.format) {
@@ -32,17 +36,12 @@ fn load_images(image_options: Vec<ImageOptions>) -> Table {
             }
         };
 
-        table.items.insert(
-            option.name,
-            ImageData {
-                format: format as i32,
-                data: bytes,
-            }
-            .into(),
-        );
+        images
+            .images
+            .insert(option.name, Image { format, bytes }.into());
     }
 
-    table
+    images
 }
 
 fn load_image(
@@ -65,6 +64,12 @@ fn load_image(
     let _ = image::load_from_memory_with_format(&bytes, format)?;
 
     Ok((format.try_into()?, bytes))
+}
+
+#[derive(Serialize)]
+struct Images {
+    #[serde(flatten)]
+    images: BTreeMap<String, Image>,
 }
 
 #[derive(Parser, Debug)]

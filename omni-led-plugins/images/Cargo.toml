@@ -14,4 +14,5 @@ image = "0.25"
 log = { version = "0.4", features = ["std"] }
 omni-led-api = { path = "../../omni-led-api" }
 omni-led-derive = { path = "../../omni-led-derive", features = ["plugin-entry"] }
+serde = { version = "1", features = ["derive"] }
 shlex = "1.3"

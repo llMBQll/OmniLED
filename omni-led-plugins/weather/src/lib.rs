@@ -1,12 +1,14 @@
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use clap::Parser;
 use log::debug;
 use omni_led_api::cli_types::{TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS};
 use omni_led_api::rust_api::OmniLedApi;
-use omni_led_api::types::Table;
+use omni_led_api::types::Image;
 use omni_led_api::{new_plugin, plugin::Plugin};
-use omni_led_derive::{IntoProto, plugin_entry};
+use omni_led_derive::plugin_entry;
+use serde::Serialize;
 use ureq::Agent;
 
 mod weather_api;
@@ -29,20 +31,24 @@ pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
 
     loop {
         let weather = weather_api::get_weather(&coordinates, name, &options);
-        plugin.update(weather.into()).unwrap();
+        plugin.update(&weather).unwrap();
 
         std::thread::sleep(options.interval);
     }
 }
 
 fn load_and_send_images(plugin: &Plugin) {
-    let images = weather_api::load_images();
-
-    let mut table = Table::default();
-    for (name, image) in images {
-        table.items.insert(name.into(), image.into());
+    #[derive(Serialize)]
+    struct Wrapper<'a> {
+        #[serde(flatten)]
+        images: BTreeMap<&'a str, Image>,
     }
-    plugin.update(table).unwrap();
+
+    let images = weather_api::load_images();
+    let wrapper = Wrapper {
+        images: BTreeMap::from_iter(images.into_iter()),
+    };
+    plugin.update(&wrapper).unwrap();
 }
 
 fn get_coordinates_from_name(name: &Name) -> Coordinates {
@@ -107,8 +113,8 @@ fn get_coordinates_from_name(name: &Name) -> Coordinates {
     }
 }
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 struct WeatherData {
     city: String,
     image_key: &'static str,

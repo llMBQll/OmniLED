@@ -57,7 +57,7 @@ pub fn load_internal_functions(lua: &Lua) {
         .unwrap();
 
     let marked_table = lua
-        .create_function(|lua, table: Table| crate::events::proto_to_lua::marked_table(lua, table))
+        .create_function(|lua, table: Table| crate::events::cbor_to_lua::marked_table(lua, table))
         .unwrap();
 
     let round = lua

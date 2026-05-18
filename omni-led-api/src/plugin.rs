@@ -1,13 +1,19 @@
-use prost::{EncodeError, Message};
+use serde::Serialize;
+use std::collections::BTreeMap;
 
 use crate::logging;
 use crate::rust_api::OmniLedApi;
-use crate::types::Table;
 
 #[derive(Clone)]
 pub struct Plugin {
     api: OmniLedApi,
     name: String,
+}
+
+#[derive(Serialize)]
+struct ValueWrapper<'a, S> {
+    #[serde(flatten)]
+    payload: BTreeMap<&'a str, &'a S>,
 }
 
 impl Plugin {
@@ -17,19 +23,27 @@ impl Plugin {
         Self { api, name }
     }
 
-    pub fn update_with_name(&self, name: &str, values: Table) -> Result<(), EncodeError> {
-        let mut event_data = Table::default();
-        event_data.items.insert(name.into(), values.into());
+    pub fn update_with_name<S: Serialize>(
+        &self,
+        name: &str,
+        value: &S,
+    ) -> Result<(), ciborium::ser::Error<std::io::Error>> {
+        let wrapper = ValueWrapper {
+            payload: BTreeMap::from([(name, value)]),
+        };
 
-        let mut message = Vec::new();
-        event_data.encode(&mut message)?;
-        self.api.event(&message);
+        let mut buffer = Vec::new();
+        ciborium::into_writer(&wrapper, &mut buffer)?;
+        self.api.event(&buffer);
 
         Ok(())
     }
 
-    pub fn update(&self, values: Table) -> Result<(), EncodeError> {
-        self.update_with_name(&self.name, values)
+    pub fn update<S: Serialize>(
+        &self,
+        value: &S,
+    ) -> Result<(), ciborium::ser::Error<std::io::Error>> {
+        self.update_with_name(&self.name, value)
     }
 
     pub fn is_valid_identifier(identifier: &str) -> bool {

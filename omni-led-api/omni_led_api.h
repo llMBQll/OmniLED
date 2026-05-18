@@ -46,4 +46,8 @@ typedef int(*omni_led_run_t)(
 // Plugin entry point
 MBQ_OMNI_LED_EXPORTED int omni_led_run(OmniLedApi api, int argc, char** argv);
 
+// Extra type tags
+#define MBQ_OMNI_LED_IMAGE_TAG_BASE  32768
+#define MBQ_OMNI_LED_IMAGE_TAG_IMAGE (MBQ_OMNI_LED_IMAGE_TAG_BASE + 1)
+
 #endif // MBQ_OMNI_LED_API_H

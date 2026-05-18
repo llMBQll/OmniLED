@@ -1,5 +1,5 @@
+use ciborium::Value;
 use lazy_static::lazy_static;
-use omni_led_api::types::Table;
 use std::sync::{Arc, Mutex};
 
 use crate::events::events::ScriptEvent;
@@ -7,7 +7,7 @@ use crate::events::{event_handle::EventHandle, events::EventEntry};
 use crate::keyboard::keyboard::KeyboardEvent;
 
 pub enum Event {
-    Application(Table),
+    Application(Value),
     Keyboard(KeyboardEvent),
     Register(EventEntry),
     Unregister(EventHandle),
@@ -61,11 +61,8 @@ impl EventQueue {
     fn get_default_event_queue(counter: u64) -> Vec<Event> {
         // TODO find a better way to register meta events
 
-        let mut values = Table::default();
-        values.items.insert("Update".to_string(), counter.into());
-
-        let mut table = Table::default();
-        table.items.insert("OMNILED".to_string(), values.into());
+        let values = Value::Map(vec![("Update".into(), counter.into())]);
+        let table = Value::Map(vec![("OMNILED".into(), values.into())]);
 
         vec![Event::Application(table)]
     }

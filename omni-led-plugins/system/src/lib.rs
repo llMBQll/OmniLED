@@ -5,7 +5,8 @@ use omni_led_api::cli_types::{
 };
 use omni_led_api::new_plugin;
 use omni_led_api::rust_api::OmniLedApi;
-use omni_led_derive::{IntoProto, plugin_entry};
+use omni_led_derive::plugin_entry;
+use serde::Serialize;
 use std::time::{Duration, Instant};
 
 mod cpu;
@@ -30,7 +31,7 @@ pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
             memory: mem::read_data(&smi),
             temperature_unit: temperature_unit.unit(),
         };
-        plugin.update(data.into()).unwrap();
+        plugin.update(&data).unwrap();
 
         std::thread::sleep(options.interval.saturating_sub(begin.elapsed()));
     }
@@ -48,8 +49,8 @@ struct Options {
     temperature_unit: String,
 }
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 struct SystemData {
     cpus: Vec<cpu::Data>,
     gpus: Vec<gpu::Data>,

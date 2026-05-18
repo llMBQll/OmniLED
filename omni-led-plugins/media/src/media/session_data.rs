@@ -1,23 +1,32 @@
-use omni_led_derive::IntoProto;
+use serde::{Serialize, Serializer};
 use std::time::Duration;
 
-#[derive(Clone, IntoProto, Default, Debug)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize, Clone, Default, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct SessionData {
-    #[proto(strong_none)]
     pub artist: Option<String>,
-    #[proto(strong_none)]
     pub title: Option<String>,
-    #[proto(transform = Self::duration_into_ms)]
+    #[serde(serialize_with = "duration_ms")]
     pub position: Duration,
-    #[proto(strong_none, transform = Self::duration_into_ms)]
+    #[serde(serialize_with = "option_duration_ms")]
     pub duration: Option<Duration>,
     pub playing: bool,
     pub rate: f64,
 }
 
-impl SessionData {
-    fn duration_into_ms(duration: Duration) -> u64 {
-        duration.as_millis() as u64
+fn duration_ms<S>(duration: &Duration, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    s.serialize_u64(duration.as_millis() as u64)
+}
+
+fn option_duration_ms<S>(duration: &Option<Duration>, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match duration {
+        Some(duration) => s.serialize_u64(duration.as_millis() as u64),
+        None => s.serialize_none(),
     }
 }

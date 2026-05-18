@@ -1,10 +1,11 @@
 use chrono::prelude::*;
 use omni_led_api::{new_plugin, rust_api::OmniLedApi};
-use omni_led_derive::{IntoProto, plugin_entry};
+use omni_led_derive::plugin_entry;
+use serde::Serialize;
 use std::time::{Duration, Instant};
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 struct Names {
     day_names: Vec<&'static str>,
     month_names: Vec<&'static str>,
@@ -40,8 +41,8 @@ impl Names {
     }
 }
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 struct Time {
     hours: u32,
     minutes: u32,
@@ -57,7 +58,7 @@ pub fn omni_led_run(api: OmniLedApi, _args: Vec<&str>) {
     let plugin = new_plugin!(api);
 
     // Send initial data that will not be updated
-    plugin.update(Names::new().into()).unwrap();
+    plugin.update(&Names::new()).unwrap();
 
     let mut expected_update_time = Instant::now() + Duration::from_secs(1);
     loop {
@@ -72,7 +73,7 @@ pub fn omni_led_run(api: OmniLedApi, _args: Vec<&str>) {
             year: local.year(),
         };
 
-        plugin.update(time.into()).unwrap();
+        plugin.update(&time).unwrap();
 
         let sleep_duration = expected_update_time - Instant::now();
         std::thread::sleep(sleep_duration);

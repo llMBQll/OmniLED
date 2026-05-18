@@ -2,10 +2,10 @@ use log::warn;
 use mlua::{ErrorContext, Lua, Value};
 
 use crate::constants::config::{ConfigType, read_config};
+use crate::events::cbor_to_lua::{cbor_to_lua_value, get_cleanup_entries_metatable};
 use crate::events::event_handle::EventHandle;
 use crate::events::event_queue::Event;
 use crate::events::events::EventEntry;
-use crate::events::proto_to_lua::{get_cleanup_entries_metatable, proto_to_lua_value};
 use crate::keyboard::keyboard::{KeyboardEvent, KeyboardEventEventType};
 use crate::script_handler::script_handler::ScriptHandler;
 
@@ -25,8 +25,8 @@ impl Dispatcher {
     pub fn dispatch(&mut self, lua: &Lua, event: Event) -> mlua::Result<()> {
         match event {
             Event::Application(table) => {
-                let value = proto_to_lua_value(&lua, table.into())
-                    .map_err(|err| err.with_context(|_| "Failed to convert protobuf value"))?;
+                let value = cbor_to_lua_value(&lua, table.into())
+                    .map_err(|err| err.with_context(|_| "Failed to convert cbor value"))?;
 
                 self.dispatch_application_event(None, value, None)
             }

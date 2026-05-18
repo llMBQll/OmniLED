@@ -1,8 +1,8 @@
 use chrono::Timelike;
 use image::codecs::png::PngEncoder;
-use image::{ExtendedColorType, ImageEncoder};
+use image::{ExtendedColorType, ImageEncoder, ImageFormat};
 use omni_led_api::cli_types::TemperatureUnit;
-use omni_led_api::types::{ImageData, ImageFormat};
+use omni_led_api::types::Image;
 use serde::de;
 use std::collections::HashMap;
 use ureq::Agent;
@@ -247,7 +247,7 @@ fn get_image_key(weather: Weather, is_day: bool) -> &'static str {
     }
 }
 
-pub fn load_images() -> Vec<(&'static str, ImageData)> {
+pub fn load_images() -> Vec<(&'static str, Image)> {
     const IMAGES: &[(&str, &[u8])] = &[
         ("DAY_CLEAR", include_bytes!("../assets/day_clear.png")),
         ("NIGHT_CLEAR", include_bytes!("../assets/night_clear.png")),
@@ -267,8 +267,8 @@ pub fn load_images() -> Vec<(&'static str, ImageData)> {
                 image::load_from_memory_with_format(bytes, image::ImageFormat::Png).unwrap();
             image.invert();
 
-            let mut buffer = Vec::new();
-            PngEncoder::new(&mut buffer)
+            let mut bytes = Vec::new();
+            PngEncoder::new(&mut bytes)
                 .write_image(
                     image.as_bytes(),
                     image.width(),
@@ -277,9 +277,9 @@ pub fn load_images() -> Vec<(&'static str, ImageData)> {
                 )
                 .unwrap();
 
-            let image = ImageData {
-                data: buffer,
-                format: ImageFormat::Png as i32,
+            let image = Image {
+                format: ImageFormat::Png,
+                bytes,
             };
             (*name, image)
         })

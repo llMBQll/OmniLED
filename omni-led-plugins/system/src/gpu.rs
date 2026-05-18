@@ -1,11 +1,11 @@
 use all_smi::AllSmi;
 use omni_led_api::cli_types::TemperatureUnit;
-use omni_led_derive::IntoProto;
+use serde::Serialize;
 
 use crate::util::convert;
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct Data {
     name: String,
     utilization: f64,

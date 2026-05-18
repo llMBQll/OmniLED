@@ -1,8 +1,8 @@
 use all_smi::AllSmi;
-use omni_led_derive::IntoProto;
+use serde::Serialize;
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct Data {
     used: u64,
     total: u64,

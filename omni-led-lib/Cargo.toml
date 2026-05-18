@@ -6,6 +6,7 @@ license = "GPL-3.0-only"
 edition = "2024"
 
 [dependencies]
+ciborium = "0.2"
 convert_case = "0.11"
 device_query = "4.0"
 dirs-next = "2.0"
@@ -19,11 +20,10 @@ libloading = "0.9"
 log = { version = "0.4", features = ["std"] }
 mlua = { version = "0.11", features = ["lua54", "vendored", "macros"] }
 num-traits = "0.2"
-prost = "0.14"
 opener = { version = "0.8", features = ["reveal"] }
 regex = "1.10"
 rusb = "0.9"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 softbuffer = "0.4"
 omni-led-api = { path = "../omni-led-api" }
@@ -43,7 +43,6 @@ libc = "0.2"
 windres = "0.2"
 
 [dev-dependencies]
-omni-led-derive = { path = "../omni-led-derive", features = ["into-proto"] }
 test-case = "3.3.1"
 
 [features]

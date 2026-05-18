@@ -4,8 +4,8 @@ use audio::Audio;
 use log::debug;
 use omni_led_api::new_plugin;
 use omni_led_api::rust_api::OmniLedApi;
-use omni_led_api::types::Table;
-use omni_led_derive::{IntoProto, plugin_entry};
+use omni_led_derive::plugin_entry;
+use serde::Serialize;
 
 mod audio;
 
@@ -35,12 +35,14 @@ pub fn omni_led_run(api: OmniLedApi, _args: Vec<&str>) {
             None
         };
 
-        let event: Table = match device_type {
-            DeviceType::Input => InputAudioEvent { input: event_data }.into(),
-            DeviceType::Output => OutputAudioEvent { output: event_data }.into(),
+        match device_type {
+            DeviceType::Input => plugin
+                .update(&InputAudioEvent { input: event_data })
+                .unwrap(),
+            DeviceType::Output => plugin
+                .update(&OutputAudioEvent { output: event_data })
+                .unwrap(),
         };
-
-        plugin.update(event.into()).unwrap();
     }
 }
 
@@ -50,25 +52,24 @@ pub enum DeviceType {
     Output,
 }
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 struct InputAudioEvent {
-    #[proto(strong_none)]
     input: Option<EventData>,
 }
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 struct OutputAudioEvent {
-    #[proto(strong_none)]
     output: Option<EventData>,
 }
 
-#[derive(IntoProto)]
-#[proto(rename_all = PascalCase)]
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
 struct EventData {
     is_muted: bool,
     volume: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
 }
 
