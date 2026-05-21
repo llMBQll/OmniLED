@@ -1,7 +1,7 @@
 use mlua::{Lua, UserData, UserDataFields};
 use std::path::PathBuf;
 use std::{
-    env::consts::{EXE_EXTENSION, EXE_SUFFIX, OS},
+    env::consts::{DLL_EXTENSION, DLL_SUFFIX, EXE_EXTENSION, EXE_SUFFIX, OS},
     path::MAIN_SEPARATOR_STR,
 };
 
@@ -11,6 +11,8 @@ use crate::common::user_data::{UniqueUserData, UserDataRef};
 pub struct Constants {
     pub config_dir: PathBuf,
     pub data_dir: PathBuf,
+    pub dll_extension: &'static str,
+    pub dll_suffix: &'static str,
     pub exe_extension: &'static str,
     pub exe_suffix: &'static str,
     pub os: &'static str,
@@ -26,6 +28,8 @@ impl Constants {
             Self {
                 config_dir: Self::root_dir().join("config"),
                 data_dir: Self::root_dir().join("data"),
+                dll_extension: DLL_EXTENSION,
+                dll_suffix: DLL_SUFFIX,
                 exe_extension: EXE_EXTENSION,
                 exe_suffix: EXE_SUFFIX,
                 os: OS,
@@ -74,6 +78,8 @@ impl UserData for Constants {
         fields.add_field_method_get("ConfigDir", |_, constants| {
             Ok(constants.config_dir.to_str().unwrap().to_string())
         });
+        fields.add_field_method_get("DllExtension", |_, constants| Ok(constants.dll_extension));
+        fields.add_field_method_get("DllSuffix", |_, constants| Ok(constants.dll_suffix));
         fields.add_field_method_get("ExeExtension", |_, constants| Ok(constants.exe_extension));
         fields.add_field_method_get("ExeSuffix", |_, constants| Ok(constants.exe_suffix));
         fields.add_field_method_get("Os", |_, constants| Ok(constants.os));
