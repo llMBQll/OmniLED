@@ -1,4 +1,5 @@
-use log::Level;
+use log::{Level, error};
+use std::ffi::c_int;
 
 use crate::c_api;
 
@@ -37,6 +38,16 @@ impl OmniLedApi {
                 message.as_ptr() as *const i8,
                 message.len() as u64,
             )
+        }
+    }
+}
+
+pub fn __panic_handler(result: std::thread::Result<()>) -> c_int {
+    match result {
+        Ok(_) => c_api::MBQ_OMNI_LED_EXIT_OK as c_int,
+        Err(_) => {
+            error!("Unhandled panic");
+            c_api::MBQ_OMNI_LED_EXIT_ERROR as c_int
         }
     }
 }

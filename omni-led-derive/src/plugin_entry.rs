@@ -36,17 +36,21 @@ pub fn expand_plugin_entry_attr(_attr: TokenStream, item: TokenStream) -> TokenS
         ) {
             let api = omni_led_api::rust_api::OmniLedApi::new(c_api);
 
-            let args = unsafe { ::std::slice::from_raw_parts(argv, argc as usize) };
-            let args = args
-                .iter()
-                .map(|arg| unsafe {
-                    ::std::ffi::CStr::from_ptr(*arg)
-                        .to_str()
-                        .expect("Invalid UTF-8")
-                })
-                .collect();
+            let result = ::std::panic::catch_unwind(|| {
+                let args = unsafe { ::std::slice::from_raw_parts(argv, argc as usize) };
+                let args = args
+                    .iter()
+                    .map(|arg| unsafe {
+                        ::std::ffi::CStr::from_ptr(*arg)
+                            .to_str()
+                            .expect("Invalid UTF-8")
+                    })
+                    .collect();
 
-            #call_inner
+                #call_inner
+            });
+
+            omni_led_api::rust_api::__panic_handler(result);
         }
     };
 
