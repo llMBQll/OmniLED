@@ -11,15 +11,6 @@ running.
 
 The configuration is split into 4 categories.
 
-## Applications
-
-> File `config/applications.lua`
-
-In this file you can set which applications will be started by OmniLED and what command line
-arguments it will pass to them.
-
-See [applications](applications.md).
-
 ## Devices
 
 > File `config/devices.lua`
@@ -28,13 +19,14 @@ This file stores all OLED device configurations.
 
 See [devices](devices.md).
 
-## Settings
+## Plugins
 
-> File `config/settings.lua`
+> File `config/plugins.lua`
 
-This file stores global OmniLED settings.
+In this file you can set which plugins will be started by OmniLED and what command line
+arguments it will pass to them.
 
-See [settings](settings.md).
+See [plugins](plugins.md).
 
 ## User Scripts
 
@@ -44,6 +36,14 @@ Last, but not least, the biggest customization point of OmniLED. With user scrip
 happens on the screen of any device at any time.
 
 See [user scripts](user_scripts.md).
+
+## Settings
+
+> File `config/settings.lua`
+
+This file stores global OmniLED settings.
+
+See [settings](settings.md).
 
 ---
 

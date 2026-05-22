@@ -1,6 +1,6 @@
 # System
 
-System application provides information about the following system resources:
+System plugin provides information about the following system resources:
 
 - CPU usage and temperature
 - GPU usage and temperature
@@ -9,13 +9,11 @@ System application provides information about the following system resources:
 ## Running
 
 ```shell
-media --address <ADDRESS> [--interval <TIME_STRING>]
+media [--interval <TIME_STRING>]
 ```
 
-Media expects three arguments
+Media expects following arguments
 
-- Required:
-  - `a`/`address` - server address
 - Optional:
   - `i`/`interval` - update interval  
     Default: `2sec`.
@@ -24,11 +22,11 @@ Media expects three arguments
   
 ## Available information
 
-This application uses [all-smi](https://github.com/lablup/all-smi) to read system information.
+This plugin uses [all-smi](https://github.com/lablup/all-smi) to read system information.
 
 ## System Events
 
-System application sends the following event with the frequency set by interval option.
+System plugin sends the following event with the frequency set by interval option.
 
 `SYSTEM`: table
 

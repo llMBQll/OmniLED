@@ -1,18 +1,18 @@
 # Clock
 
-Clock application provides the current time and date, as well as day and month names.
+Clock plugin provides the current time and date, as well as day and month names.
 
 ## Running
 
-Clock expects one required argument - server address.
+Clock runs with no arguments.
 
 ```shell
-clock --address <ADDRESS>
+clock
 ```
 
 ## Clock Events
 
-Clock application sends `CLOCK` events in two forms
+Clock plugin sends `CLOCK` events in two forms
 
 1. Day and month names on startup  
    `CLOCK`: table

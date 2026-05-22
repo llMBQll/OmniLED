@@ -1,18 +1,16 @@
 # Images
 
-Images application reads images from disk and sends them to OmniLED. It supports both static and
+Images plugin reads images from disk and sends them to OmniLED. It supports both static and
 animated images.
 
 ## Running
 
 ```shell
-images --address <ADDRESS> [--image '<NAME> <PATH> [--format <FORMAT>] [--threshold <THRESHOLD>]']...
+images [--image '<NAME> <PATH> [--format <FORMAT>] [--threshold <THRESHOLD>]']...
 ```
 
-Images expects two arguments
+Images takes a single optional argument (cay be specified multiple times)
 
-- Required:
-  - `a`/`address` - server address
 - Optional:
   - `-i`/`--image` - loaded image options.  
       This option can be specified multiple times and it a **single string** as it's argument with
@@ -29,19 +27,18 @@ Images expects two arguments
 In this example `images` will load 2 images from disk.
 
 ```lua
-load_app {
-    path = get_default_path('images'),
-    args = {
-        '--address', SERVER.Address,
-        '--image', 'MyImage /path/to/my_gif --format gif',
-        '--image', 'MyOtherImage "C:\\path\\to\\other image.png"',
-    }
+load_plugin {
+  path = get_default_plugin_path('images'),
+  args = {
+    '--image', 'MyImage /path/to/my_gif --format gif',
+    '--image', 'MyOtherImage "C:\\path\\to\\other image.png"',
+  }
 }
 ```
 
 ## Images Events
 
-Images applications sends a single event with all loaded images with names specified as program
+Images plugin sends a single event with all loaded images with names specified as program
 arguments.
 
 `IMAGES`: table

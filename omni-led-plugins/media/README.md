@@ -5,13 +5,11 @@ Media application provides information about currently playing media, e.g., titl
 ## Running
 
 ```shell
-media --address <ADDRESS> [--mode <MODE>] [--map <MAPPING>...]
+media [--mode <MODE>] [--map <MAPPING>...]
 ```
 
-Media expects three arguments
+Media expects following arguments
 
-- Required:
-  - `a`/`address` - server address
 - Optional:
   - `m`/`mode` - reporting mode - `individual`, `focused` or `both`.
     Default: `both`.  

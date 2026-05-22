@@ -10,7 +10,6 @@ them be missing.
 - [Font](#font)
 - [Log Level](#log-level)
 - [Keyboard](#keyboard)
-- [Server Port](#server-port)
 - [Update Interval](#update-interval-tick-duration)
 
 > ### Animation
@@ -122,32 +121,6 @@ them be missing.
 > > Settings {
 > >   keyboard_ticks_repeat_delay = 4,
 > >   keyboard_ticks_repeat_rate = 1,
-> > }
-> > ```
-
-> ### Server Port
->
-> > `server_port`: `integer`
-> >
-> > Select on which port the server will receive events from applications. When setting port `0`,
-> > OS will select any available port. For any other value, server will try to bind to the specified
-> > port and exit the application if it's not available.
-> >
-> > _Optional_. Default: `0`
->
-> > Example `settings.lua` that sets server port to be assigned to the first available port.
-> >
-> > ```lua
-> > Settings {
-> >   server_port = 0,
-> > }
-> > ```
->
-> > Example `settings.lua` that sets server port to a fixed port.
-> >
-> > ```lua
-> > Settings {
-> >   server_port = 1234,
 > > }
 > > ```
 

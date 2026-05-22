@@ -25,7 +25,6 @@ weather <COMMON-OPTIONS> \
 
 **Common Options:**
 
-- `--address`: server address
 - `--interval`: interval between trying to refresh weather information
 - `--temperature-unit`: unit in which temperature will be reported
 - `--wind-speed-unit`: unit in which wind speed will be reported

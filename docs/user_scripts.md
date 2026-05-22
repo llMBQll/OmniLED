@@ -14,48 +14,51 @@ registering keyboard shortcuts and user scripts.
 The main event loop is actually synchronous, and it groups events into batches that are processed
 in the interval specified in the [settings](settings.md#update-interval-tick-duration). OmniLED will
 wait for the update interval's duration and put [keyboard](#keyboards-events)
-and [application update events](#application-update-events) into a queue. One the wait is done, it
+and [plugin update events](#plugin-update-events) into a queue. Once the wait is done, it
 will first execute all activated event and shortcut callbacks. Only then the user scripts
 are executed returning layouts that are then rendered and sent to the device.
 
-### Application Update Events
+### Plugin Update Events
 
-> Note: Data field names are not strictly enforced, but when creating your own application it's
-> best to keep the current convention of using PascalCase for data field names.
+> Note: Data field names are not strictly enforced, but when creating your own plugin it's
+> best to keep the current convention of using PascalCase for data field names, and
+> SCREAMING_SNAKE_CASE for the root data field
 
-Application update events are generated when any application sends an update to the server. OmniLED
+Plugin update events are generated when any plugin sends an update to the server. OmniLED
 will then generate an update event for every named field in the update data. It will also convert
 this data to a global variable that is accessible from user scripts.
 
 Additionally, for each update cycle there will be special event called `OMNILED.Update`, so that an
-action can be run on each event loop update, rather than relying on receiving application updates
+action can be run on each event loop update, rather than relying on receiving plugin updates
 that regularly.
 
 > Example:
 >
-> Let's suppose the server just got this data from 'MY_APPLICATION' application.
+> Let's suppose the server just got this data from a plugin.
 >
 > ```lua
-> MY_APPLICATION = {
->   Name = "OmniLED",
->   HoursToComplete = "TooMany",
->   SomeExampleData = {
->       FieldOne = 0,
->       FieldTwo = 1,
->   },
+> {
+>   MY_PLUGIN = {
+>     Name = "OmniLED",
+>     HoursToComplete = "TooMany",
+>     SomeExampleData = {
+>         FieldOne = 0,
+>         FieldTwo = 1,
+>     },
+>   }
 > }
 > ```
 >
 > This message will result in the following update events:
 >
-> - `MY_APPLICATION`
-> - `MY_APPLICATION.Name`
-> - `MY_APPLICATION.HoursToComplete`
-> - `MY_APPLICATION.SomeExampleData`
-> - `MY_APPLICATION.SomeExampleData.FieldOne`
-> - `MY_APPLICATION.SomeExampleData.FieldTwo`
+> - `MY_PLUGIN`
+> - `MY_PLUGIN.Name`
+> - `MY_PLUGIN.HoursToComplete`
+> - `MY_PLUGIN.SomeExampleData`
+> - `MY_PLUGIN.SomeExampleData.FieldOne`
+> - `MY_PLUGIN.SomeExampleData.FieldTwo`
 >
-> It will also create a global `MY_APPLICATION` variable that can be accessed by all user scripts.
+> It will also create a global `MY_PLUGIN` variable that can be accessed by all user scripts.
 
 ### Keyboards Events
 
@@ -66,7 +69,7 @@ When the key is released event `"KEY(<key_name>)"` will be sent with the value `
 ## Drawing on The Screen
 
 Drawing on the screen is as simple as laying out the desired [widgets](#widgets) on the screen and
-filling them with the desired data received from the applications.
+filling them with the desired data received from the plugins.
 
 ### Widgets
 
