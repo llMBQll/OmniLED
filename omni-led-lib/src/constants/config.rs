@@ -4,8 +4,8 @@ use crate::common::user_data::UserDataRef;
 use crate::constants::constants::Constants;
 
 pub enum ConfigType {
-    Applications,
     Devices,
+    Plugins,
     Scripts,
     Settings,
 }
@@ -13,8 +13,8 @@ pub enum ConfigType {
 impl ConfigType {
     pub fn get_filename(&self) -> &'static str {
         match self {
-            ConfigType::Applications => "applications.lua",
             ConfigType::Devices => "devices.lua",
+            ConfigType::Plugins => "plugins.lua",
             ConfigType::Scripts => "scripts.lua",
             ConfigType::Settings => "settings.lua",
         }

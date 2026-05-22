@@ -20,14 +20,16 @@ pub fn lua_enum_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     lua_enum::expand_lua_enum_derive(input)
 }
 
-#[cfg(feature = "into-proto")]
-mod into_proto;
+#[cfg(feature = "plugin-entry")]
+mod plugin_entry;
 
-#[cfg(feature = "into-proto")]
-#[proc_macro_derive(IntoProto, attributes(proto))]
-pub fn into_proto_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = syn::parse_macro_input!(input as syn::DeriveInput);
-    into_proto::expand_into_proto_derive(input)
+#[cfg(feature = "plugin-entry")]
+#[proc_macro_attribute]
+pub fn plugin_entry(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    plugin_entry::expand_plugin_entry_attr(attr.into(), item.into()).into()
 }
 
 #[cfg(feature = "unique-user-data")]

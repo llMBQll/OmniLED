@@ -1,12 +1,11 @@
 use log::warn;
 use mlua::{ErrorContext, Lua, Value};
-use omni_led_api::types::{Field, field};
 
 use crate::constants::config::{ConfigType, read_config};
+use crate::events::cbor_to_lua::{cbor_to_lua_value, get_cleanup_entries_metatable};
 use crate::events::event_handle::EventHandle;
 use crate::events::event_queue::Event;
 use crate::events::events::EventEntry;
-use crate::events::proto_to_lua::{get_cleanup_entries_metatable, proto_to_lua_value};
 use crate::keyboard::keyboard::{KeyboardEvent, KeyboardEventEventType};
 use crate::script_handler::script_handler::ScriptHandler;
 
@@ -25,14 +24,11 @@ impl Dispatcher {
 
     pub fn dispatch(&mut self, lua: &Lua, event: Event) -> mlua::Result<()> {
         match event {
-            Event::Application((application, value)) => {
-                let value = Field {
-                    field: Some(field::Field::FTable(value)),
-                };
-                let value = proto_to_lua_value(&lua, value)
-                    .map_err(|err| err.with_context(|_| "Failed to convert protobuf value"))?;
+            Event::Application(table) => {
+                let value = cbor_to_lua_value(&lua, table.into())
+                    .map_err(|err| err.with_context(|_| "Failed to convert cbor value"))?;
 
-                self.dispatch_application_event(&application, value, None)
+                self.dispatch_application_event(None, value, None)
             }
             Event::Keyboard(event) => self.dispatch_keyboard_event(lua, event),
             Event::Register(event_entry) => self.register(event_entry),
@@ -43,7 +39,7 @@ impl Dispatcher {
                 ScriptHandler::reload_config(lua, config)
             }
             Event::Script(script_event) => {
-                self.dispatch_application_event(&script_event.event, script_event.value, None)
+                self.dispatch_application_event(Some(&script_event.event), script_event.value, None)
             }
         }
     }
@@ -76,21 +72,27 @@ impl Dispatcher {
 
     fn dispatch_application_event(
         &self,
-        value_name: &str,
+        value_name: Option<&str>,
         value: Value,
         current_key: Option<&str>,
     ) -> mlua::Result<()> {
-        let current_key = match current_key {
-            Some(current_key) => format!("{}.{}", current_key, value_name),
-            None => value_name.to_string(),
+        let current_key = match (current_key, value_name) {
+            (Some(current_key), Some(value_name)) => {
+                Some(format!("{}.{}", current_key, value_name))
+            }
+            (None, Some(value_name)) => Some(value_name.to_owned()),
+            (Some(_), None) => unreachable!("value_name is always Some after the first call"),
+            (None, None) => None,
         };
 
-        self.dispatch_event(&current_key, &value)?;
+        if let Some(current_key) = current_key.as_deref() {
+            self.dispatch_event(current_key, &value)?;
+        }
 
         if let Value::Table(table) = value {
             if let Some(_) = get_cleanup_entries_metatable(&table)? {
                 return table.for_each(|key: String, val: Value| {
-                    self.dispatch_application_event(&key, val, Some(&current_key))
+                    self.dispatch_application_event(Some(&key), val, current_key.as_deref())
                 });
             }
         }

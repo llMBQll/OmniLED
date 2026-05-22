@@ -1,83 +1,49 @@
-use std::sync::Arc;
-use tokio::{runtime::Handle, sync::Mutex};
+use serde::Serialize;
+use std::collections::BTreeMap;
 
-use crate::{
-    logging,
-    types::{EventData, LogData, LogLevel, Table, plugin_client::PluginClient},
-};
+use crate::logging;
+use crate::rust_api::OmniLedApi;
 
 #[derive(Clone)]
 pub struct Plugin {
-    inner: Arc<Mutex<PluginInner>>,
+    api: OmniLedApi,
+    name: String,
 }
 
-struct PluginInner {
-    name: String,
-    client: PluginClient<tonic::transport::Channel>,
+#[derive(Serialize)]
+struct ValueWrapper<'a, S> {
+    #[serde(flatten)]
+    payload: BTreeMap<&'a str, &'a S>,
 }
 
 impl Plugin {
-    pub async fn new(
-        name: &str,
-        crate_name: &'static str,
-        url: &str,
-    ) -> Result<Self, tonic::transport::Error> {
-        let client = PluginClient::connect(format!("http://{url}")).await?;
+    pub fn new(api: OmniLedApi, name: String, crate_name: &'static str) -> Self {
+        logging::init(api, crate_name);
 
-        let plugin = Self {
-            inner: Arc::new(Mutex::new(PluginInner {
-                name: name.to_string(),
-                client: client,
-            })),
+        Self { api, name }
+    }
+
+    pub fn update_with_name<S: Serialize>(
+        &self,
+        name: &str,
+        value: &S,
+    ) -> Result<(), ciborium::ser::Error<std::io::Error>> {
+        let wrapper = ValueWrapper {
+            payload: BTreeMap::from([(name, value)]),
         };
 
-        logging::init(Handle::current(), plugin.clone(), crate_name);
+        let mut buffer = Vec::new();
+        ciborium::into_writer(&wrapper, &mut buffer)?;
+        self.api.event(&buffer);
 
-        Ok(plugin)
+        Ok(())
     }
 
-    pub async fn log(
+    pub fn update<S: Serialize>(
         &self,
-        log_level: LogLevel,
-        location: String,
-        message: String,
-    ) -> Result<(), tonic::Status> {
-        self.inner
-            .lock()
-            .await
-            .client
-            .log(LogData {
-                log_level: log_level as i32,
-                location: location,
-                message: message,
-            })
-            .await?;
-        Ok(())
-    }
-
-    pub async fn update_with_name(&self, name: &str, fields: Table) -> Result<(), tonic::Status> {
-        let mut inner = self.inner.lock().await;
-        Self::update_impl(&mut inner.client, name.to_string(), fields).await
-    }
-
-    pub async fn update(&self, fields: Table) -> Result<(), tonic::Status> {
-        let mut inner = self.inner.lock().await;
-        let name = inner.name.clone();
-        Self::update_impl(&mut inner.client, name, fields).await
-    }
-
-    async fn update_impl(
-        client: &mut PluginClient<tonic::transport::Channel>,
-        name: String,
-        fields: Table,
-    ) -> Result<(), tonic::Status> {
-        client
-            .event(EventData {
-                name,
-                fields: Some(fields),
-            })
-            .await?;
-        Ok(())
+        value: &S,
+    ) -> Result<(), ciborium::ser::Error<std::io::Error>> {
+        self.update_with_name(&self.name, value)
     }
 
     pub fn is_valid_identifier(identifier: &str) -> bool {
@@ -104,7 +70,7 @@ impl Plugin {
 
 #[macro_export]
 macro_rules! new_plugin {
-    ($address:expr) => {{
+    ($api:ident) => {{
         let crate_name = env!("CARGO_PKG_NAME");
         let plugin_name: String = crate_name
             .chars()
@@ -116,8 +82,6 @@ macro_rules! new_plugin {
                 }
             })
             .collect();
-        omni_led_api::plugin::Plugin::new(&plugin_name, crate_name, $address)
-            .await
-            .unwrap()
+        omni_led_api::plugin::Plugin::new($api, plugin_name, crate_name)
     }};
 }

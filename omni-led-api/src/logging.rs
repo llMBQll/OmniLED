@@ -1,10 +1,9 @@
 use log::{Log, Metadata, Record, error};
-use tokio::runtime::Handle;
 
-use crate::plugin::Plugin;
+use crate::rust_api::OmniLedApi;
 
-pub fn init(runtime_handle: Handle, plugin: Plugin, crate_name: &'static str) {
-    let logger = Logger::new(runtime_handle, plugin, crate_name);
+pub fn init(api: OmniLedApi, crate_name: &'static str) {
+    let logger = Logger::new(api, crate_name);
     log::set_boxed_logger(Box::new(logger))
         .map(|()| log::set_max_level(log::LevelFilter::Trace))
         .unwrap();
@@ -17,18 +16,13 @@ pub fn init(runtime_handle: Handle, plugin: Plugin, crate_name: &'static str) {
 }
 
 struct Logger {
-    runtime_handle: Handle,
-    plugin: Plugin,
+    api: OmniLedApi,
     crate_name: &'static str,
 }
 
 impl Logger {
-    pub fn new(runtime_handle: Handle, plugin: Plugin, crate_name: &'static str) -> Self {
-        Self {
-            runtime_handle,
-            plugin,
-            crate_name,
-        }
+    pub fn new(api: OmniLedApi, crate_name: &'static str) -> Self {
+        Self { api, crate_name }
     }
 }
 
@@ -44,12 +38,10 @@ impl Log for Logger {
         }
 
         let log_level = record.level();
-        let target = record.target().to_string();
-        let message = format!("{}", record.args());
-        let plugin = self.plugin.clone();
-        self.runtime_handle.spawn(async move {
-            _ = plugin.log(log_level.into(), target, message).await;
-        });
+        let target = record.target();
+        let message = record.args().to_string();
+
+        self.api.log(log_level, target, &message);
     }
 
     fn flush(&self) {}

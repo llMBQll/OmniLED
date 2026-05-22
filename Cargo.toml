@@ -6,12 +6,12 @@ members = [
     "omni-led-derive",
     "omni-led-lib",
     "omni-led-setup",
-    "omni-led-applications/audio",
-    "omni-led-applications/clock",
-    "omni-led-applications/images",
-    "omni-led-applications/media",
-    "omni-led-applications/system",
-    "omni-led-applications/weather",
+    "omni-led-plugins/audio",
+    "omni-led-plugins/clock",
+    "omni-led-plugins/images",
+    "omni-led-plugins/media",
+    "omni-led-plugins/system",
+    "omni-led-plugins/weather",
 ]
 
 resolver = "2"

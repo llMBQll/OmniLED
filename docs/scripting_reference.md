@@ -9,13 +9,31 @@
 > This table contains platform specific constants useful for constructing paths that work
 > regardless of the operating system that OmniLED is currently running on.
 >
-> > `ApplicationsDir: string`
-> >
-> > Default applications directory path.
->
 > > `ConfigDir: string`
 > >
 > > Configuration directory path.
+>
+> > `PluginsDir: string`
+> >
+> > Default plugins directory path.
+>
+> > `DllExtension: string`
+> >
+> > Extension used for shared object files on current platform
+> >
+> > Values:
+> >
+> > - `"dll"` on Windows
+> > - `"so"` on Linux
+>
+> > `DllSuffix: string`
+> >
+> > Suffix used for shared object files on current platform
+> >
+> > Values:
+> >
+> > - `".dll"` on Windows
+> > - `".so"` on Linux
 >
 > > `ExeExtension: string`
 > >
@@ -92,30 +110,6 @@
 > > `Width: integer`
 > >
 > > Screen width in pixels.
-
----
-
-> ### `SERVER`
->
-> Type: `table`
->
-> This table provides the server address and start timestamp.
->
-> > `Address: string`
-> >
-> > OmniLED server address in the format `"Ip:Port"`
->
-> > `Ip: string`
-> >
-> > OmniLED server ip. This always is the localhost ip.
->
-> > `Port: integer`
-> >
-> > OmniLED server port.
->
-> > `Timestamp: integer`
-> >
-> > Unix timestamp of the server start.
 
 ## Enums
 
@@ -430,11 +424,11 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
-> ### `get_default_path`
+> ### `get_default_plugin_path`
 >
 > Type: `fn(name: string) -> string`
 >
-> Return the full, system-specific path for a given application name. This assumes the application
+> Return the full, system-specific path for a given plugin name. This assumes the plugin
 > is in the default installation directory.
 >
 > Examples:
@@ -452,11 +446,11 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
-> ### `load_app`
+> ### `load_plugin`
 >
 > Type: `fn(config: Config)`
 >
-> Starts an application with the given configuration.
+> Starts a plugin with the given configuration.
 
 ---
 
@@ -541,7 +535,8 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 >
 > > _This type supports all relational operators._
 > >
-> > _This type can be stringified (representation is compatible with string format expected by OmniLED applications)._
+> > _This type can be stringified (representation is compatible with string format expected
+> > by OmniLED built-in plugins)._
 
 ---
 
@@ -579,7 +574,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > > `send: fn(self, event: string, value: any)`
 > >
 > > Send any event from user scripts. Due to lua limitations, for
-> > [recursive updates](user_scripts.md#application_update_events) each table must be marked using `marked_table`
+> > [recursive updates](user_scripts.md#plugin_update_events) each table must be marked using `marked_table`
 > > function.
 > >
 > > `event` must only consist of uppercase aplhanumeric characters and cannot start with a number.
@@ -679,17 +674,17 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 > ### `Config`
 >
-> Configuration for starting an application.
+> Configuration for starting a plugin.
 >
 > > `path: string`
 > >
-> > Path to the executable.
+> > Path to the plugin.
 >
 > > `args: [string]`
 > >
 > > _Optional_. Default: `[]`.
 > >
-> > Command line arguments to pass to the executable.
+> > Command line arguments to pass to the plugin.
 
 ---
 
