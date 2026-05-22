@@ -4,9 +4,8 @@ use std::time::Duration;
 use clap::Parser;
 use log::debug;
 use omni_led_api::cli_types::{TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS};
-use omni_led_api::rust_api::OmniLedApi;
+use omni_led_api::plugin::Plugin;
 use omni_led_api::types::Image;
-use omni_led_api::{new_plugin, plugin::Plugin};
 use omni_led_derive::plugin_entry;
 use serde::Serialize;
 use ureq::Agent;
@@ -14,8 +13,7 @@ use ureq::Agent;
 mod weather_api;
 
 #[plugin_entry]
-pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
-    let plugin = new_plugin!(api);
+pub fn omni_led_run(plugin: Plugin, args: Vec<&str>) {
     let options = Options::parse_from(args);
 
     debug!("{:?}", options);

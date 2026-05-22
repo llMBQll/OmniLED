@@ -1,8 +1,6 @@
 use clap::Parser;
 use log::info;
-use omni_led_api::new_plugin;
 use omni_led_api::plugin::Plugin;
-use omni_led_api::rust_api::OmniLedApi;
 use omni_led_derive::plugin_entry;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -16,8 +14,7 @@ use crate::media::session_data::SessionData;
 mod media;
 
 #[plugin_entry]
-pub async fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
-    let plugin = new_plugin!(api);
+pub async fn omni_led_run(plugin: Plugin, args: Vec<&str>) {
     let options = Options::parse_from(args);
 
     let (tx, mut rx): (Sender<Data>, Receiver<Data>) = mpsc::channel(256);

@@ -2,17 +2,14 @@ use std::sync::mpsc;
 
 use audio::Audio;
 use log::debug;
-use omni_led_api::new_plugin;
-use omni_led_api::rust_api::OmniLedApi;
+use omni_led_api::plugin::Plugin;
 use omni_led_derive::plugin_entry;
 use serde::Serialize;
 
 mod audio;
 
 #[plugin_entry]
-pub fn omni_led_run(api: OmniLedApi, _args: Vec<&str>) {
-    let plugin = new_plugin!(api);
-
+pub fn omni_led_run(plugin: Plugin, _args: Vec<&str>) {
     let (tx, rx) = mpsc::channel::<(DeviceData, DeviceType)>();
 
     let _audio = Audio::new(tx);

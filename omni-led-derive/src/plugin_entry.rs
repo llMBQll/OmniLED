@@ -18,11 +18,11 @@ pub fn expand_plugin_entry_attr(_attr: TokenStream, item: TokenStream) -> TokenS
                 .build()
                 .unwrap()
                 .block_on(async {
-                    #inner_name(api, args).await
+                    #inner_name(plugin, args).await
                 })
         }
     } else {
-        quote! { #inner_name(api, args) }
+        quote! { #inner_name(plugin, args) }
     };
 
     let expanded = quote! {
@@ -34,9 +34,10 @@ pub fn expand_plugin_entry_attr(_attr: TokenStream, item: TokenStream) -> TokenS
             argc:  ::std::os::raw::c_int,
             argv:  *mut *mut ::std::os::raw::c_char,
         ) {
-            let api = omni_led_api::rust_api::OmniLedApi::new(c_api);
-
             let result = ::std::panic::catch_unwind(|| {
+                let api = omni_led_api::rust_api::OmniLedApi::new(c_api);
+                let plugin = omni_led_api::new_plugin!(api);
+
                 let args = unsafe { ::std::slice::from_raw_parts(argv, argc as usize) };
                 let args = args
                     .iter()

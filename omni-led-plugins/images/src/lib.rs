@@ -1,16 +1,14 @@
 use clap::{ArgAction, Parser};
 use image::{ImageFormat, guess_format};
 use log::{debug, error};
-use omni_led_api::new_plugin;
-use omni_led_api::rust_api::OmniLedApi;
+use omni_led_api::plugin::Plugin;
 use omni_led_api::types::Image;
 use omni_led_derive::plugin_entry;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
 #[plugin_entry]
-pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
-    let plugin = new_plugin!(api);
+pub fn omni_led_run(plugin: Plugin, args: Vec<&str>) {
     let options = Options::parse_from(args);
 
     // TODO verify that all image names are unique

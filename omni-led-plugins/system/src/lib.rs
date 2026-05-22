@@ -3,8 +3,7 @@ use clap::Parser;
 use omni_led_api::cli_types::{
     TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS, TemperatureUnit,
 };
-use omni_led_api::new_plugin;
-use omni_led_api::rust_api::OmniLedApi;
+use omni_led_api::plugin::Plugin;
 use omni_led_derive::plugin_entry;
 use serde::Serialize;
 use std::time::{Duration, Instant};
@@ -15,8 +14,7 @@ mod mem;
 mod util;
 
 #[plugin_entry]
-pub fn omni_led_run(api: OmniLedApi, args: Vec<&str>) {
-    let plugin = new_plugin!(api);
+pub fn omni_led_run(plugin: Plugin, args: Vec<&str>) {
     let options = Options::parse_from(args);
 
     let temperature_unit: TemperatureUnit = options.temperature_unit.into();

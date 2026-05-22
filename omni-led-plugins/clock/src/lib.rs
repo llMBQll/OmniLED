@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use omni_led_api::{new_plugin, rust_api::OmniLedApi};
+use omni_led_api::plugin::Plugin;
 use omni_led_derive::plugin_entry;
 use serde::Serialize;
 use std::time::{Duration, Instant};
@@ -54,9 +54,7 @@ struct Time {
 }
 
 #[plugin_entry]
-pub fn omni_led_run(api: OmniLedApi, _args: Vec<&str>) {
-    let plugin = new_plugin!(api);
-
+pub fn omni_led_run(plugin: Plugin, _args: Vec<&str>) {
     // Send initial data that will not be updated
     plugin.update(&Names::new()).unwrap();
 
