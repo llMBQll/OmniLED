@@ -14,18 +14,23 @@ impl CPlugin {
     pub fn new(config: &Config) -> Result<Self, Box<dyn std::error::Error>> {
         let config = config.clone();
 
-        // TODO join it later
-        std::thread::spawn(move || unsafe {
-            let lib = libloading::Library::new(&config.path).unwrap();
-            let omni_led_run_fn: libloading::Symbol<<c_api::omni_led_run_t as FnPtr>::Type> =
-                lib.get(b"omni_led_run").unwrap();
+        let lib = unsafe { libloading::Library::new(&config.path)? };
+        let omni_led_run_fn =
+            unsafe { lib.get::<<c_api::omni_led_run_t as FnPtr>::Type>(b"omni_led_run")? };
+
+        // SAFETY `lib` is moved into the plugin thread, keeping it alive for the lifetime of `omni_led_run_fn`
+        let omni_led_run_fn = unsafe { omni_led_run_fn.into_raw() };
+
+        std::thread::spawn(move || {
+            // SAFETY Keep `lib` alive for the lifetime of this thread
+            let _lib = lib;
 
             let mut args = config.args.clone();
             args.insert(0, config.path.clone());
 
             let args = args
                 .iter()
-                .map(|arg| CString::from_str(&arg).unwrap())
+                .map(|arg| CString::from_str(arg).unwrap())
                 .collect::<Vec<_>>();
 
             let ptr_args = args
@@ -36,14 +41,16 @@ impl CPlugin {
             let argc = args.len() as c_int;
             let argv = ptr_args.as_ptr() as *mut *mut c_char;
 
-            let result = (omni_led_run_fn)(
-                c_api::OmniLedApi {
-                    event: Some(plugin_event),
-                    log: Some(plugin_log),
-                },
-                argc,
-                argv,
-            );
+            let result = unsafe {
+                (omni_led_run_fn)(
+                    c_api::OmniLedApi {
+                        event: Some(plugin_event),
+                        log: Some(plugin_log),
+                    },
+                    argc,
+                    argv,
+                )
+            };
             debug!("{:?} finished with code {}", config, result);
         });
 
@@ -63,13 +70,18 @@ unsafe extern "C" fn plugin_event(event_data: *const c_uchar, event_data_length:
     let event_data =
         unsafe { slice::from_raw_parts(event_data as *const u8, event_data_length as usize) };
 
-    let event_data = match ciborium::from_reader(event_data) {
+    let event_data: ciborium::Value = match ciborium::from_reader(event_data) {
         Ok(event_data) => event_data,
         Err(err) => {
             error!("Failed to parse event data: '{}'", err);
             return;
         }
     };
+
+    if !event_data.is_map() {
+        error!("Event data must be a map");
+        return;
+    }
 
     EventQueue::instance()
         .lock()
