@@ -50,7 +50,7 @@ MBQ_OMNI_LED_EXPORTED int omni_led_run(OmniLedApi api, int argc, char** argv);
 #define MBQ_OMNI_LED_EXIT_ERROR 1
 
 // Extra type tags
-#define MBQ_OMNI_LED_IMAGE_TAG_BASE  32768
-#define MBQ_OMNI_LED_IMAGE_TAG_IMAGE (MBQ_OMNI_LED_IMAGE_TAG_BASE + 1)
+#define MBQ_OMNI_LED_TAG_BASE  32768
+#define MBQ_OMNI_LED_TAG_IMAGE (MBQ_OMNI_LED_TAG_BASE + 1)
 
 #endif // MBQ_OMNI_LED_API_H

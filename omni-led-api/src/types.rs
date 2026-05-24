@@ -17,7 +17,7 @@ pub struct Image {
 }
 
 impl Tagged for Image {
-    const TAG: u64 = c_api::MBQ_OMNI_LED_IMAGE_TAG_IMAGE as u64;
+    const TAG: u64 = c_api::MBQ_OMNI_LED_TAG_IMAGE as u64;
 }
 
 impl Serialize for Image {
