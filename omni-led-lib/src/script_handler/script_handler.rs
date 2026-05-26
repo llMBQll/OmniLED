@@ -7,11 +7,12 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
+use crate::common::lua_traits::{LuaName, LuaTypeStaticMembers, StaticMembers};
 use crate::common::user_data::{UniqueUserData, UserDataRef};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
-use crate::devices::devices::{DeviceStatus, Devices};
+use crate::devices::devices::Devices;
 use crate::events::cbor_to_lua::get_cleanup_entries_metatable;
 use crate::events::events::Events;
 use crate::events::shortcuts::Shortcuts;
@@ -287,7 +288,7 @@ impl ScriptHandler {
             })
             .unwrap();
 
-        let env = create_table_with_defaults!(lua, {
+        create_table_with_defaults!(lua, {
             EVENTS = EVENTS,
             LOG = LOG,
             PLATFORM = PLATFORM,
@@ -297,10 +298,7 @@ impl ScriptHandler {
                 Never = $never_fn,
                 Times = $times_fn,
             }
-        });
-        env.set(ScreenBuilder::identifier(), ScreenBuilder).unwrap();
-
-        env
+        })
     }
 }
 
@@ -344,31 +342,6 @@ impl LayoutData {
     }
 }
 
-#[derive(UniqueUserData)]
-struct ScreenBuilder;
-
-impl UserData for ScreenBuilder {
-    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("new", |lua, _, name: String| {
-            let devices = UserDataRef::<Devices>::load(lua);
-
-            let builder = match devices.get().device_status(&name) {
-                Some(DeviceStatus::Available) => Ok(ScreenBuilderImpl::new(name)),
-                Some(DeviceStatus::Loaded) => Err(mlua::Error::RuntimeError(format!(
-                    "Device '{}' already loaded.",
-                    name
-                ))),
-                None => Err(mlua::Error::RuntimeError(format!(
-                    "Device '{}' not found.",
-                    name
-                ))),
-            };
-
-            builder
-        });
-    }
-}
-
 #[derive(Clone)]
 enum BuilderType {
     Layout,
@@ -376,7 +349,7 @@ enum BuilderType {
 }
 
 #[derive(Clone)]
-struct ScreenBuilderImpl {
+pub struct ScreenBuilder {
     layouts: Vec<Layout>,
     shortcut: Vec<String>,
     device_name: String,
@@ -385,7 +358,7 @@ struct ScreenBuilderImpl {
     current_screen: Rc<RefCell<usize>>,
 }
 
-impl ScreenBuilderImpl {
+impl ScreenBuilder {
     pub fn new(name: String) -> Self {
         Self {
             layouts: vec![],
@@ -398,7 +371,17 @@ impl ScreenBuilderImpl {
     }
 }
 
-impl UserData for ScreenBuilderImpl {
+impl LuaName for ScreenBuilder {
+    const NAME: &str = "ScreenBuilder";
+}
+
+impl LuaTypeStaticMembers for ScreenBuilder {
+    fn add_members(functions: &mut StaticMembers<'_>) {
+        functions.add_function("new", |_lua, name: String| Ok(Self::new(name)));
+    }
+}
+
+impl UserData for ScreenBuilder {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut("with_layout", |_lua, builder, layout: Layout| {
             if let Some(BuilderType::LayoutGroup) = builder.builder_type {

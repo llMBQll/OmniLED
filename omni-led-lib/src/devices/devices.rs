@@ -31,27 +31,23 @@ impl Devices {
         load_config(lua, ConfigType::Devices, &config, env).unwrap();
     }
 
-    pub fn device_status(&self, name: &str) -> Option<DeviceStatus> {
-        self.devices.get(name).map(|entry| entry.status)
-    }
-
     pub fn load_device(&mut self, lua: &Lua, name: String) -> mlua::Result<Box<dyn Device>> {
         let entry = self.devices.entry(name.clone());
         match entry {
             Entry::Occupied(mut entry) => {
                 let device_entry = entry.get_mut();
-                match device_entry.status {
-                    DeviceStatus::Available => {
-                        let constructor = device_entry.initializer.constructor;
-                        let settings = device_entry.initializer.settings.clone();
 
-                        let device = (constructor)(lua, settings);
-                        device_entry.status = DeviceStatus::Loaded;
-                        Ok(device)
-                    }
-                    DeviceStatus::Loaded => Err(mlua::Error::runtime(format!(
+                if device_entry.available {
+                    let constructor = device_entry.initializer.constructor;
+                    let settings = device_entry.initializer.settings.clone();
+
+                    let device = (constructor)(lua, settings);
+                    device_entry.available = false;
+                    Ok(device)
+                } else {
+                    Err(mlua::Error::runtime(format!(
                         "Device '{name}' was already loaded",
-                    ))),
+                    )))
                 }
             }
             Entry::Vacant(entry) => Err(mlua::Error::runtime(format!(
@@ -69,7 +65,7 @@ impl Devices {
 
         self.devices.entry(name.clone()).and_modify(|entry| {
             debug!("Unloaded device '{name}'");
-            entry.status = DeviceStatus::Available;
+            entry.available = true;
         });
 
         Ok(())
@@ -168,7 +164,7 @@ impl Devices {
                         settings,
                         constructor,
                     },
-                    status: DeviceStatus::Available,
+                    available: true,
                 });
             }
         }
@@ -184,13 +180,7 @@ struct Initializer {
     constructor: Constructor,
 }
 
-#[derive(Clone, Copy)]
-pub enum DeviceStatus {
-    Available,
-    Loaded,
-}
-
 struct DeviceEntry {
     initializer: Initializer,
-    status: DeviceStatus,
+    available: bool,
 }

@@ -204,8 +204,7 @@ function make_media_layout(source)
     }
 end
 
-SCREEN_BUILDER
-    :new('Emulator')
+ScreenBuilder.new('Emulator')
     :with_layout_group({
         {
             layout = volume,
