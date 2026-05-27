@@ -30,3 +30,7 @@ windows-implement = "0.60"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 pulse = { version = "2.0", package = "libpulse-binding" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-core-audio = "0.3"
+objc2-core-audio-types = "0.3"
