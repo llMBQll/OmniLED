@@ -1,6 +1,5 @@
 use log::{debug, warn};
 use mlua::{Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
-use omni_led_api::plugin::Plugin;
 use omni_led_derive::{FromLuaValue, UniqueUserData};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -59,9 +58,10 @@ impl ScriptHandler {
                 let mut this = UserDataRef::<ScriptHandler>::load(lua);
                 this.get_mut().mark_for_update(&event);
 
-                if Plugin::is_valid_identifier(&event) {
+                if !event.contains('.') {
                     // Set values recursively only from top-level application events
-                    this.get().set_value(lua, event, value)?;
+                    let env = &this.get().environment;
+                    Self::set_value(lua, env, &event, value)?;
                 }
 
                 Ok(())
@@ -96,17 +96,7 @@ impl ScriptHandler {
         Ok(())
     }
 
-    pub fn set_value(&self, lua: &Lua, value_name: String, value: Value) -> mlua::Result<()> {
-        let env = &self.environment;
-        Self::set_value_impl(lua, env, &value_name, value)
-    }
-
-    fn set_value_impl(
-        lua: &Lua,
-        parent: &Table,
-        value_name: &str,
-        value: Value,
-    ) -> mlua::Result<()> {
+    fn set_value(lua: &Lua, parent: &Table, value_name: &str, value: Value) -> mlua::Result<()> {
         match value {
             Value::Table(table) => match get_cleanup_entries_metatable(&table)? {
                 Some(cleanup_entries) => {
@@ -117,11 +107,11 @@ impl ScriptHandler {
                     let entry: Table = parent.get(value_name)?;
 
                     table.for_each(|key: String, val: Value| {
-                        Self::set_value_impl(lua, &entry, &key, val)
+                        Self::set_value(lua, &entry, &key, val)
                     })?;
 
                     cleanup_entries.for_each(|key: String, _: Value| {
-                        Self::set_value_impl(lua, &entry, &key, Value::Nil)
+                        Self::set_value(lua, &entry, &key, Value::Nil)
                     })
                 }
                 None => {
@@ -625,7 +615,7 @@ mod tests {
             }),
         };
         let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
-        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+        ScriptHandler::set_value(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
             lua,
@@ -655,7 +645,7 @@ mod tests {
             }),
         };
         let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
-        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+        ScriptHandler::set_value(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
             lua,
@@ -677,7 +667,7 @@ mod tests {
             }),
         };
         let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
-        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+        ScriptHandler::set_value(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
             lua,
@@ -709,7 +699,7 @@ mod tests {
             }),
         };
         let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
-        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+        ScriptHandler::set_value(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
             lua,
@@ -732,7 +722,7 @@ mod tests {
             b: None,
         };
         let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
-        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+        ScriptHandler::set_value(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
             lua,
