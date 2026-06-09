@@ -1,6 +1,6 @@
 use log::{debug, error, info, trace, warn};
 use mlua::{FromLua, Lua, UserData, UserDataMethods};
-use omni_led_derive::{LuaEnum, UniqueUserData};
+use omni_led_derive::LuaEnum;
 
 use crate::common::user_data::UniqueUserData;
 
@@ -8,9 +8,14 @@ pub trait LogHandle {
     fn set_level_filter(&self, level_filter: log::LevelFilter);
 }
 
-#[derive(UniqueUserData)]
 pub struct Log {
     handle: Box<dyn LogHandle>,
+}
+
+impl UniqueUserData for Log {
+    fn identifier() -> &'static str {
+        "Log"
+    }
 }
 
 impl Log {
@@ -51,27 +56,27 @@ impl Log {
 
 impl UserData for Log {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("debug", |lua, _, message: String| {
+        methods.add_function("debug", |lua, message: String| {
             debug!(target: &Self::get_log_location(lua), "{}", message);
             Ok(())
         });
 
-        methods.add_method("error", |lua, _, message: String| {
+        methods.add_function("error", |lua, message: String| {
             error!(target: &Self::get_log_location(lua), "{}", message);
             Ok(())
         });
 
-        methods.add_method("info", |lua, _, message: String| {
+        methods.add_function("info", |lua, message: String| {
             info!(target: &Self::get_log_location(lua), "{}", message);
             Ok(())
         });
 
-        methods.add_method("trace", |lua, _, message: String| {
+        methods.add_function("trace", |lua, message: String| {
             trace!(target: &Self::get_log_location(lua), "{}", message);
             Ok(())
         });
 
-        methods.add_method("warn", |lua, _, message: String| {
+        methods.add_function("warn", |lua, message: String| {
             warn!(target: &Self::get_log_location(lua), "{}", message);
             Ok(())
         });
