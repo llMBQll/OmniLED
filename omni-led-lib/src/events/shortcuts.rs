@@ -1,7 +1,6 @@
 use device_query::Keycode;
 use log::{error, warn};
 use mlua::{Function, Lua, UserData, UserDataMethods, Value};
-use omni_led_derive::UniqueUserData;
 use regex::Regex;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -12,11 +11,16 @@ use crate::events::events::Events;
 use crate::script_handler::script_data_types::EventKey;
 use crate::settings::settings::Settings;
 
-#[derive(UniqueUserData)]
 pub struct Shortcuts {
     delay: usize,
     rate: usize,
     current_tick: Rc<RefCell<usize>>,
+}
+
+impl UniqueUserData for Shortcuts {
+    fn identifier() -> &'static str {
+        "Shortcuts"
+    }
 }
 
 impl Shortcuts {
