@@ -1,21 +1,21 @@
 use log::{debug, error, warn};
 use mlua::{Lua, UserData, chunk};
-use omni_led_derive::UniqueUserData;
+use omni_led_derive::LuaName;
 
-use crate::common::user_data::{UniqueUserData, UserDataRef};
+use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::constants::constants::Constants;
 use crate::create_table_with_defaults;
 use crate::plugin_loader::c_plugin::{CPlugin, Config};
 
-#[derive(UniqueUserData)]
+#[derive(LuaName)]
 pub struct PluginLoader {
     plugins: Vec<CPlugin>,
 }
 
 impl PluginLoader {
     pub fn load(lua: &Lua, config: String) {
-        Self::set_unique(
+        set_unique_user_data(
             lua,
             Self {
                 plugins: Vec::new(),

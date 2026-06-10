@@ -1,23 +1,19 @@
 use log::error;
 use mlua::{Function, Lua, UserData, UserDataMethods, Value};
 use omni_led_api::plugin::Plugin;
+use omni_led_derive::LuaName;
 
-use crate::common::user_data::UniqueUserData;
+use crate::common::user_data::set_unique_user_data;
 use crate::events::event_handle::EventHandle;
 use crate::events::event_queue::{Event, EventQueue};
 use crate::script_handler::script_data_types::EventKey;
 
+#[derive(LuaName)]
 pub struct Events;
-
-impl UniqueUserData for Events {
-    fn identifier() -> &'static str {
-        "Events"
-    }
-}
 
 impl Events {
     pub fn load(lua: &Lua) {
-        Self::set_unique(lua, Self);
+        set_unique_user_data(lua, Self);
     }
 
     pub fn register(key: EventKey, on_match: Function, persistent: bool) -> EventHandle {

@@ -1,26 +1,21 @@
 use log::{debug, error, info, trace, warn};
 use mlua::{FromLua, Lua, UserData, UserDataMethods};
-use omni_led_derive::LuaEnum;
+use omni_led_derive::{LuaEnum, LuaName};
 
-use crate::common::user_data::UniqueUserData;
+use crate::common::user_data::set_unique_user_data;
 
 pub trait LogHandle {
     fn set_level_filter(&self, level_filter: log::LevelFilter);
 }
 
+#[derive(LuaName)]
 pub struct Log {
     handle: Box<dyn LogHandle>,
 }
 
-impl UniqueUserData for Log {
-    fn identifier() -> &'static str {
-        "Log"
-    }
-}
-
 impl Log {
     pub fn load<H: LogHandle + 'static>(lua: &Lua, handle: H) {
-        Log::set_unique(
+        set_unique_user_data(
             lua,
             Self {
                 handle: Box::new(handle),

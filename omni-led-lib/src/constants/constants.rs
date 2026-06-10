@@ -5,7 +5,8 @@ use std::{
     path::MAIN_SEPARATOR_STR,
 };
 
-use crate::common::user_data::{UniqueUserData, UserDataRef};
+use crate::common::lua_traits::LuaName;
+use crate::common::user_data::{UserDataRef, set_unique_user_data};
 
 #[derive(Debug, Clone)]
 pub struct Constants {
@@ -23,7 +24,7 @@ pub struct Constants {
 
 impl Constants {
     pub fn load(lua: &Lua) {
-        Self::set_unique(
+        set_unique_user_data(
             lua,
             Self {
                 config_dir: Self::root_dir().join("config"),
@@ -67,10 +68,8 @@ impl Constants {
     }
 }
 
-impl UniqueUserData for Constants {
-    fn identifier() -> &'static str {
-        "PLATFORM"
-    }
+impl LuaName for Constants {
+    const NAME: &str = "PLATFORM";
 }
 
 impl UserData for Constants {

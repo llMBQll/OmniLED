@@ -1,13 +1,13 @@
 use log::{debug, warn};
 use mlua::{Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
-use omni_led_derive::{FromLuaValue, UniqueUserData};
+use omni_led_derive::{FromLuaValue, LuaName};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
-use crate::common::lua_traits::{LuaName, LuaTypeStaticMembers, StaticMembers};
-use crate::common::user_data::{UniqueUserData, UserDataRef};
+use crate::common::lua_traits::{LuaTypeStaticMembers, StaticMembers};
+use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
@@ -20,7 +20,7 @@ use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::renderer::Renderer;
 use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Regex, Widget};
 
-#[derive(UniqueUserData)]
+#[derive(LuaName)]
 pub struct ScriptHandler {
     environment: Table,
     renderer: Renderer,
@@ -44,7 +44,7 @@ impl ScriptHandler {
     pub fn load(lua: &Lua, config: String) {
         let environment = Self::make_sandbox(lua);
 
-        Self::set_unique(
+        set_unique_user_data(
             lua,
             ScriptHandler {
                 renderer: Renderer::new(lua),
@@ -338,7 +338,7 @@ enum BuilderType {
     LayoutGroup,
 }
 
-#[derive(Clone)]
+#[derive(Clone, LuaName)]
 pub struct ScreenBuilder {
     layouts: Vec<Layout>,
     shortcut: Vec<String>,
@@ -359,10 +359,6 @@ impl ScreenBuilder {
             current_screen: Rc::new(RefCell::new(0)),
         }
     }
-}
-
-impl LuaName for ScreenBuilder {
-    const NAME: &str = "ScreenBuilder";
 }
 
 impl LuaTypeStaticMembers for ScreenBuilder {

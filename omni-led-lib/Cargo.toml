@@ -27,7 +27,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 softbuffer = "0.4"
 omni-led-api = { path = "../omni-led-api" }
-omni-led-derive = { path = "../omni-led-derive", features = ["from-lua-value", "lua-enum", "unique-user-data"] }
+omni-led-derive = { path = "../omni-led-derive", features = ["from-lua-value", "lua-enum", "lua-name"] }
 tray-icon = "0.24"
 ureq = { version = "3.1", features = ["json"] }
 winit = "0.30"

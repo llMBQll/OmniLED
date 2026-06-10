@@ -20,6 +20,16 @@ pub fn lua_enum_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     lua_enum::expand_lua_enum_derive(input)
 }
 
+#[cfg(feature = "lua-name")]
+mod lua_name;
+
+#[cfg(feature = "lua-name")]
+#[proc_macro_derive(LuaName, attributes(mlua))]
+pub fn lua_name_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    lua_name::expand_lua_name_derive(input)
+}
+
 #[cfg(feature = "plugin-entry")]
 mod plugin_entry;
 
@@ -30,14 +40,4 @@ pub fn plugin_entry(
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     plugin_entry::expand_plugin_entry_attr(attr.into(), item.into()).into()
-}
-
-#[cfg(feature = "unique-user-data")]
-mod unique_user_data;
-
-#[cfg(feature = "unique-user-data")]
-#[proc_macro_derive(UniqueUserData)]
-pub fn unique_user_data_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = syn::parse_macro_input!(input as syn::DeriveInput);
-    unique_user_data::expand_into_unique_user_data_derive(input)
 }

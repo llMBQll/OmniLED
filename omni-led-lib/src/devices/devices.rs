@@ -1,11 +1,11 @@
 use convert_case::{Case, Casing};
 use log::{debug, error, log_enabled};
 use mlua::{Function, Lua, Table, UserData, Value, chunk};
-use omni_led_derive::UniqueUserData;
+use omni_led_derive::LuaName;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
-use crate::common::user_data::{UniqueUserData, UserDataRef};
+use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::{Device, Settings};
@@ -17,7 +17,7 @@ use crate::devices::usb_device::raw_usb_device::RawUsbDeviceSettings;
 
 type Constructor = fn(&Lua, Value) -> Box<dyn Device>;
 
-#[derive(UniqueUserData)]
+#[derive(LuaName)]
 pub struct Devices {
     devices: HashMap<String, DeviceEntry>,
     constructors: HashMap<String, Constructor>,
@@ -27,7 +27,7 @@ impl Devices {
     pub fn load(lua: &Lua, config: String) {
         let (constructors, env) = Self::create_loaders(lua);
         usb_device::transform::load_common_functions(lua, &env);
-        Self::set_unique(lua, Self::new(constructors));
+        set_unique_user_data(lua, Self::new(constructors));
         load_config(lua, ConfigType::Devices, &config, env).unwrap();
     }
 
