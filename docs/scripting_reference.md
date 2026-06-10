@@ -540,38 +540,22 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
-> ### `Regex`
->
-> Used to check if a string matches a regex pattern
->
-> > `new`: `fn(pattern: string) -> Regex`
-> >
-> > Creates a new regex object with a given pattern.
-> >
-> > This will return an error if pattern fails to compile.
->
-> > `matches`: `fn(self, string: string) -> bool`
-> >
-> > Checks if `string` matches the regex pattern
-
----
-
-> ### `EVENTS`
+> ### `Events`
 >
 > Register callbacks for specific events. This, combined with script predicates, is useful when the
 > screen builder with default screen management doesn't quite cut it.
 >
-> > `register: fn(self, key: EventKey, callback: fn(event: string, value: any)) -> EventHandle`
+> > `register: fn(key: EventKey, callback: fn(event: string, value: any)) -> EventHandle`
 > >
 > > Register a callback for any event. When the callback is triggered, the event name and its value
 > > will be passed as callback arguments.  
 > > Returns an EventHandle object that can be used to unsubscribe from the event.
 >
-> > `unregister: fn(self, handle: EventHandle)`
+> > `unregister: fn(handle: EventHandle)`
 > >
 > > Unregister from an event using a handle received when registering.
 >
-> > `send: fn(self, event: string, value: any)`
+> > `send: fn(event: string, value: any)`
 > >
 > > Send any event from user scripts. Due to lua limitations, for
 > > [recursive updates](user_scripts.md#plugin_update_events) each table must be marked using `marked_table`
@@ -592,40 +576,54 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
-> ### `LOG`
->
-> Type: `table`
+> ### `Log`
 >
 > Provides logging functions for scripts.
 >
-> > `debug: fn(self, message: string)`
+> > `debug: fn(message: string)`
 > >
 > > Log a debug message
 >
-> > `error: fn(self, message: string)`
+> > `error: fn(message: string)`
 > >
 > > Log an error message
 >
-> > `info: fn(self, message: string)`
+> > `info: fn(message: string)`
 > >
 > > Log an info message
 >
-> > `trace: fn(self, message: string)`
+> > `trace: fn(message: string)`
 > >
 > > Log a trace message
 >
-> > `warn: fn(self, message: string)`
+> > `warn: fn(message: string)`
 > >
 > > Log a warning message
 
 ---
 
-> ### `SCREEN_BUILDER`
+> ### `Regex`
+>
+> Used to check if a string matches a regex pattern
+>
+> > `new`: `fn(pattern: string) -> Regex`
+> >
+> > Creates a new regex object with a given pattern.
+> >
+> > This will return an error if pattern fails to compile.
+>
+> > `matches`: `fn(self, string: string) -> bool`
+> >
+> > Checks if `string` matches the regex pattern
+
+---
+
+> ### `ScreenBuilder`
 >
 > Screen builder allows to put together layouts and screen setups for devices. This has to be
 > repeated for every device individually.
 >
-> > `new: fn(self, name: string)`
+> > `new: fn(name: string)`
 > >
 > > Begin a builder to register screen layouts for a given device. `name` must be a device with an
 > > existing config entry.
@@ -658,10 +656,10 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
-> ### `SHORTCUTS`
+> ### `Shortcuts`
 >
 > Register shortcuts to perform custom actions. This provides a bit of convenience over just using
-> the [`EVENTS`](#events) allowing for listening for a complete combination of keys as well as
+> the [`Events`](#events) allowing for listening for a complete combination of keys as well as
 > allowing customizable for auto-repeating behaviour on hold.
 >
 > _See [keyboard settings](settings.md#keyboard)_
