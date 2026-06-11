@@ -201,7 +201,7 @@ fn register_device_listeners(ctx: *mut c_void, device_id: AudioObjectID, device_
     let _ = unsafe {
         AudioObjectAddPropertyListener(
             device_id,
-            NonNull::from_ref(constants::volume_scalar_address(device_type)),
+            NonNull::from_ref(constants::volume_address(device_type)),
             Some(device_listener),
             ctx,
         )
@@ -224,7 +224,7 @@ fn unregister_device_listeners(
     let _ = unsafe {
         AudioObjectRemovePropertyListener(
             device_id,
-            NonNull::from_ref(constants::volume_scalar_address(device_type)),
+            NonNull::from_ref(constants::volume_address(device_type)),
             Some(device_listener),
             ctx,
         )
@@ -267,7 +267,7 @@ fn get_device_volume(device_id: AudioObjectID, device_type: DeviceType) -> i32 {
     unsafe {
         let status = AudioObjectGetPropertyData(
             device_id,
-            NonNull::from_ref(constants::volume_scalar_address(device_type)),
+            NonNull::from_ref(constants::volume_address(device_type)),
             0,
             std::ptr::null(),
             NonNull::from_ref(&size),

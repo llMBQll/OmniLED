@@ -8,7 +8,7 @@ pub const DEFAULT_OUTPUT_DEVICE_SELECTOR: u32 =
     objc2_core_audio::kAudioHardwarePropertyDefaultOutputDevice;
 pub const MUTE_SELECTOR: u32 = objc2_core_audio::kAudioDevicePropertyMute;
 pub const NAME_SELECTOR: u32 = objc2_core_audio::kAudioDevicePropertyDeviceName;
-pub const VOLUME_SELECTOR: u32 = objc2_core_audio::kAudioDevicePropertyVolumeScalar;
+pub const VOLUME_SELECTOR: u32 = u32::from_be_bytes(*b"vmvc"); // VirtualMasterVolume property
 
 pub const INPUT_SCOPE: u32 = objc2_core_audio::kAudioObjectPropertyScopeInput;
 pub const OUTPUT_SCOPE: u32 = objc2_core_audio::kAudioObjectPropertyScopeOutput;
@@ -27,7 +27,7 @@ macro_rules! define_get_address {
 define_get_address!(default_device_address, DEFAULT_DEVICE);
 define_get_address!(mute_address, MUTE);
 define_get_address!(name_address, NAME);
-define_get_address!(volume_scalar_address, VOLUME_SCALAR);
+define_get_address!(volume_address, VOLUME_SCALAR);
 
 mod input {
     use super::*;
