@@ -8,7 +8,7 @@ use std::ptr::NonNull;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
-use crate::audio::macos::addresses;
+use crate::audio::macos::constants;
 use crate::{DeviceData, DeviceType};
 
 pub struct AudioContext {
@@ -53,13 +53,13 @@ impl AudioImpl {
 
             _ = AudioObjectAddPropertyListener(
                 objc2_core_audio::kAudioObjectSystemObject as u32,
-                NonNull::from_ref(addresses::default_device_address(DeviceType::Input)),
+                NonNull::from_ref(constants::default_device_address(DeviceType::Input)),
                 Some(system_listener),
                 ctx,
             );
             _ = AudioObjectAddPropertyListener(
                 objc2_core_audio::kAudioObjectSystemObject as u32,
-                NonNull::from_ref(addresses::default_device_address(DeviceType::Output)),
+                NonNull::from_ref(constants::default_device_address(DeviceType::Output)),
                 Some(system_listener),
                 ctx,
             );
@@ -88,13 +88,13 @@ impl Drop for AudioImpl {
 
             _ = AudioObjectRemovePropertyListener(
                 objc2_core_audio::kAudioObjectSystemObject as u32,
-                NonNull::from_ref(addresses::default_device_address(DeviceType::Input)),
+                NonNull::from_ref(constants::default_device_address(DeviceType::Input)),
                 Some(system_listener),
                 self.ctx,
             );
             _ = AudioObjectRemovePropertyListener(
                 objc2_core_audio::kAudioObjectSystemObject as u32,
-                NonNull::from_ref(addresses::default_device_address(DeviceType::Output)),
+                NonNull::from_ref(constants::default_device_address(DeviceType::Output)),
                 Some(system_listener),
                 self.ctx,
             );
@@ -127,8 +127,8 @@ extern "C-unwind" fn system_listener(
 
         for addr in addresses {
             let device_type = match addr.mSelector {
-                objc2_core_audio::kAudioHardwarePropertyDefaultInputDevice => DeviceType::Input,
-                objc2_core_audio::kAudioHardwarePropertyDefaultOutputDevice => DeviceType::Output,
+                constants::DEFAULT_INPUT_DEVICE_SELECTOR => DeviceType::Input,
+                constants::DEFAULT_OUTPUT_DEVICE_SELECTOR => DeviceType::Output,
                 _ => continue,
             };
 
@@ -165,14 +165,14 @@ extern "C-unwind" fn device_listener(
         let mut update_output = false;
         for addr in addresses {
             let device_type = match addr.mScope {
-                objc2_core_audio::kAudioObjectPropertyScopeInput => DeviceType::Input,
-                objc2_core_audio::kAudioObjectPropertyScopeOutput => DeviceType::Output,
+                constants::INPUT_SCOPE => DeviceType::Input,
+                constants::OUTPUT_SCOPE => DeviceType::Output,
                 _ => continue,
             };
 
             if in_object_id == ctx.current_ids[device_type as usize]
-                && (addr.mSelector == objc2_core_audio::kAudioDevicePropertyVolumeScalar
-                    || addr.mSelector == objc2_core_audio::kAudioDevicePropertyMute)
+                && (addr.mSelector == constants::VOLUME_SELECTOR
+                    || addr.mSelector == constants::MUTE_SELECTOR)
             {
                 update_input = device_type == DeviceType::Input;
                 update_output = device_type == DeviceType::Output;
@@ -193,7 +193,7 @@ fn register_device_listeners(ctx: *mut c_void, device_id: AudioObjectID, device_
     let _ = unsafe {
         AudioObjectAddPropertyListener(
             device_id,
-            NonNull::from_ref(addresses::mute_address(device_type)),
+            NonNull::from_ref(constants::mute_address(device_type)),
             Some(device_listener),
             ctx,
         )
@@ -201,7 +201,7 @@ fn register_device_listeners(ctx: *mut c_void, device_id: AudioObjectID, device_
     let _ = unsafe {
         AudioObjectAddPropertyListener(
             device_id,
-            NonNull::from_ref(addresses::volume_scalar_address(device_type)),
+            NonNull::from_ref(constants::volume_scalar_address(device_type)),
             Some(device_listener),
             ctx,
         )
@@ -216,7 +216,7 @@ fn unregister_device_listeners(
     let _ = unsafe {
         AudioObjectRemovePropertyListener(
             device_id,
-            NonNull::from_ref(addresses::mute_address(device_type)),
+            NonNull::from_ref(constants::mute_address(device_type)),
             Some(device_listener),
             ctx,
         )
@@ -224,7 +224,7 @@ fn unregister_device_listeners(
     let _ = unsafe {
         AudioObjectRemovePropertyListener(
             device_id,
-            NonNull::from_ref(addresses::volume_scalar_address(device_type)),
+            NonNull::from_ref(constants::volume_scalar_address(device_type)),
             Some(device_listener),
             ctx,
         )
@@ -250,7 +250,7 @@ fn get_default_device(device_type: DeviceType) -> AudioObjectID {
     unsafe {
         _ = AudioObjectGetPropertyData(
             objc2_core_audio::kAudioObjectSystemObject as u32,
-            NonNull::from_ref(addresses::default_device_address(device_type)),
+            NonNull::from_ref(constants::default_device_address(device_type)),
             0,
             std::ptr::null(),
             NonNull::from_ref(&size),
@@ -267,7 +267,7 @@ fn get_device_volume(device_id: AudioObjectID, device_type: DeviceType) -> i32 {
     unsafe {
         let status = AudioObjectGetPropertyData(
             device_id,
-            NonNull::from_ref(addresses::volume_scalar_address(device_type)),
+            NonNull::from_ref(constants::volume_scalar_address(device_type)),
             0,
             std::ptr::null(),
             NonNull::from_ref(&size),
@@ -287,7 +287,7 @@ fn get_device_mute(device_id: AudioObjectID, device_type: DeviceType) -> bool {
     unsafe {
         let status = AudioObjectGetPropertyData(
             device_id,
-            NonNull::from_ref(addresses::mute_address(device_type)),
+            NonNull::from_ref(constants::mute_address(device_type)),
             0,
             std::ptr::null(),
             NonNull::from_ref(&size),
@@ -308,7 +308,7 @@ fn get_device_name(device_id: AudioObjectID, device_type: DeviceType) -> String 
     unsafe {
         let status = AudioObjectGetPropertyData(
             device_id,
-            NonNull::from_ref(addresses::name_address(device_type)),
+            NonNull::from_ref(constants::name_address(device_type)),
             0,
             std::ptr::null(),
             NonNull::from_ref(&size),
