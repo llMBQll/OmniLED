@@ -1,19 +1,19 @@
 use log::error;
 use mlua::{Function, Lua, UserData, UserDataMethods, Value};
 use omni_led_api::plugin::Plugin;
-use omni_led_derive::UniqueUserData;
+use omni_led_derive::LuaName;
 
-use crate::common::user_data::UniqueUserData;
+use crate::common::user_data::set_unique_user_data;
 use crate::events::event_handle::EventHandle;
 use crate::events::event_queue::{Event, EventQueue};
 use crate::script_handler::script_data_types::EventKey;
 
-#[derive(UniqueUserData)]
+#[derive(LuaName)]
 pub struct Events;
 
 impl Events {
     pub fn load(lua: &Lua) {
-        Self::set_unique(lua, Self);
+        set_unique_user_data(lua, Self);
     }
 
     pub fn register(key: EventKey, on_match: Function, persistent: bool) -> EventHandle {
@@ -53,19 +53,16 @@ impl Events {
 
 impl UserData for Events {
     fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method(
-            "register",
-            |_lua, _this, (key, on_match): (EventKey, Function)| {
-                // Registering from user scripts must never be persistent to avoid issues on reloads
-                Ok(Self::register(key, on_match, false))
-            },
-        );
+        methods.add_function("register", |_lua, (key, on_match): (EventKey, Function)| {
+            // Registering from user scripts must never be persistent to avoid issues on reloads
+            Ok(Self::register(key, on_match, false))
+        });
 
-        methods.add_method("unregister", |_lua, _this, handle: EventHandle| {
+        methods.add_function("unregister", |_lua, handle: EventHandle| {
             Ok(Self::unregister(handle))
         });
 
-        methods.add_method("send", |_lua, _this, (event, value): (String, Value)| {
+        methods.add_function("send", |_lua, (event, value): (String, Value)| {
             Ok(Self::send(event, value))
         });
     }

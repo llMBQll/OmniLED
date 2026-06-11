@@ -12,4 +12,4 @@ log = { version = "0.4", features = ["std"] }
 serde = { version = "1", features = ["derive"] }
 
 [build-dependencies]
-bindgen = "0.71.0"
+bindgen = "0.72"

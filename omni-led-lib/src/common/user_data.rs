@@ -1,28 +1,24 @@
 use mlua::{AnyUserData, IntoLua, Lua, UserData};
 use std::marker::PhantomData;
 
-pub trait UniqueUserData {
-    fn identifier() -> &'static str;
+use crate::common::lua_traits::LuaName;
 
-    fn set_unique<T: IntoLua + UniqueUserData>(lua: &Lua, value: T) {
-        let identifier = T::identifier();
-
-        if lua.globals().contains_key(identifier).unwrap() {
-            panic!("Global value '{}' is already set", identifier);
-        }
-
-        lua.globals().set(identifier, value).unwrap()
+pub fn set_unique_user_data<T: IntoLua + LuaName>(lua: &Lua, value: T) {
+    if lua.globals().contains_key(T::NAME).unwrap() {
+        panic!("Global value '{}' is already set", T::NAME);
     }
+
+    lua.globals().set(T::NAME, value).unwrap()
 }
 
-pub struct UserDataRef<T: UniqueUserData + UserData + 'static> {
+pub struct UserDataRef<T: UserData + LuaName + 'static> {
     user_data: AnyUserData,
     phantom_data: PhantomData<T>,
 }
 
-impl<'a, T: UniqueUserData + UserData + 'static> UserDataRef<T> {
+impl<'a, T: UserData + LuaName + 'static> UserDataRef<T> {
     pub fn load(lua: &Lua) -> Self {
-        let user_data = lua.globals().get(T::identifier()).unwrap();
+        let user_data = lua.globals().get(T::NAME).unwrap();
 
         Self {
             user_data,

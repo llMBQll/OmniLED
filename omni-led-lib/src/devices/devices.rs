@@ -1,11 +1,11 @@
 use convert_case::{Case, Casing};
 use log::{debug, error, log_enabled};
 use mlua::{Function, Lua, Table, UserData, Value, chunk};
-use omni_led_derive::UniqueUserData;
+use omni_led_derive::LuaName;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
-use crate::common::user_data::{UniqueUserData, UserDataRef};
+use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::{Device, Settings};
@@ -17,7 +17,7 @@ use crate::devices::usb_device::raw_usb_device::RawUsbDeviceSettings;
 
 type Constructor = fn(&Lua, Value) -> Box<dyn Device>;
 
-#[derive(UniqueUserData)]
+#[derive(LuaName)]
 pub struct Devices {
     devices: HashMap<String, DeviceEntry>,
     constructors: HashMap<String, Constructor>,
@@ -27,12 +27,8 @@ impl Devices {
     pub fn load(lua: &Lua, config: String) {
         let (constructors, env) = Self::create_loaders(lua);
         usb_device::transform::load_common_functions(lua, &env);
-        Self::set_unique(lua, Self::new(constructors));
+        set_unique_user_data(lua, Self::new(constructors));
         load_config(lua, ConfigType::Devices, &config, env).unwrap();
-    }
-
-    pub fn device_status(&self, name: &str) -> Option<DeviceStatus> {
-        self.devices.get(name).map(|entry| entry.status)
     }
 
     pub fn load_device(&mut self, lua: &Lua, name: String) -> mlua::Result<Box<dyn Device>> {
@@ -40,18 +36,18 @@ impl Devices {
         match entry {
             Entry::Occupied(mut entry) => {
                 let device_entry = entry.get_mut();
-                match device_entry.status {
-                    DeviceStatus::Available => {
-                        let constructor = device_entry.initializer.constructor;
-                        let settings = device_entry.initializer.settings.clone();
 
-                        let device = (constructor)(lua, settings);
-                        device_entry.status = DeviceStatus::Loaded;
-                        Ok(device)
-                    }
-                    DeviceStatus::Loaded => Err(mlua::Error::runtime(format!(
+                if device_entry.available {
+                    let constructor = device_entry.initializer.constructor;
+                    let settings = device_entry.initializer.settings.clone();
+
+                    let device = (constructor)(lua, settings);
+                    device_entry.available = false;
+                    Ok(device)
+                } else {
+                    Err(mlua::Error::runtime(format!(
                         "Device '{name}' was already loaded",
-                    ))),
+                    )))
                 }
             }
             Entry::Vacant(entry) => Err(mlua::Error::runtime(format!(
@@ -69,7 +65,7 @@ impl Devices {
 
         self.devices.entry(name.clone()).and_modify(|entry| {
             debug!("Unloaded device '{name}'");
-            entry.status = DeviceStatus::Available;
+            entry.available = true;
         });
 
         Ok(())
@@ -168,7 +164,7 @@ impl Devices {
                         settings,
                         constructor,
                     },
-                    status: DeviceStatus::Available,
+                    available: true,
                 });
             }
         }
@@ -184,13 +180,7 @@ struct Initializer {
     constructor: Constructor,
 }
 
-#[derive(Clone, Copy)]
-pub enum DeviceStatus {
-    Available,
-    Loaded,
-}
-
 struct DeviceEntry {
     initializer: Initializer,
-    status: DeviceStatus,
+    available: bool,
 }

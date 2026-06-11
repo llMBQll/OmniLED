@@ -1,10 +1,11 @@
 use mlua::{FromLua, Lua, UserData, Value};
+use omni_led_derive::LuaName;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::common::lua_traits::{FromUserdata, LuaName};
+use crate::common::lua_traits::FromUserdata;
 
-#[derive(Clone)]
+#[derive(Clone, LuaName)]
 pub struct EventHandle {
     event_id: Arc<AtomicUsize>,
 }
@@ -32,10 +33,6 @@ impl PartialEq for EventHandle {
 }
 
 impl UserData for EventHandle {}
-
-impl LuaName for EventHandle {
-    const NAME: &str = "EventHandle";
-}
 
 impl FromUserdata for EventHandle {}
 

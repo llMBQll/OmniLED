@@ -1,17 +1,17 @@
 use log::{debug, warn};
 use mlua::{Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
-use omni_led_api::plugin::Plugin;
-use omni_led_derive::{FromLuaValue, UniqueUserData};
+use omni_led_derive::{FromLuaValue, LuaName};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
-use crate::common::user_data::{UniqueUserData, UserDataRef};
+use crate::common::lua_traits::{LuaTypeStaticMembers, StaticMembers};
+use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::devices::device::Device;
-use crate::devices::devices::{DeviceStatus, Devices};
+use crate::devices::devices::Devices;
 use crate::events::cbor_to_lua::get_cleanup_entries_metatable;
 use crate::events::events::Events;
 use crate::events::shortcuts::Shortcuts;
@@ -20,7 +20,7 @@ use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::renderer::Renderer;
 use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Regex, Widget};
 
-#[derive(UniqueUserData)]
+#[derive(LuaName)]
 pub struct ScriptHandler {
     environment: Table,
     renderer: Renderer,
@@ -44,7 +44,7 @@ impl ScriptHandler {
     pub fn load(lua: &Lua, config: String) {
         let environment = Self::make_sandbox(lua);
 
-        Self::set_unique(
+        set_unique_user_data(
             lua,
             ScriptHandler {
                 renderer: Renderer::new(lua),
@@ -58,9 +58,10 @@ impl ScriptHandler {
                 let mut this = UserDataRef::<ScriptHandler>::load(lua);
                 this.get_mut().mark_for_update(&event);
 
-                if Plugin::is_valid_identifier(&event) {
+                if !event.contains('.') {
                     // Set values recursively only from top-level application events
-                    this.get().set_value(lua, event, value)?;
+                    let env = &this.get().environment;
+                    Self::set_value(lua, env, &event, value)?;
                 }
 
                 Ok(())
@@ -95,17 +96,7 @@ impl ScriptHandler {
         Ok(())
     }
 
-    pub fn set_value(&self, lua: &Lua, value_name: String, value: Value) -> mlua::Result<()> {
-        let env = &self.environment;
-        Self::set_value_impl(lua, env, &value_name, value)
-    }
-
-    fn set_value_impl(
-        lua: &Lua,
-        parent: &Table,
-        value_name: &str,
-        value: Value,
-    ) -> mlua::Result<()> {
+    fn set_value(lua: &Lua, parent: &Table, value_name: &str, value: Value) -> mlua::Result<()> {
         match value {
             Value::Table(table) => match get_cleanup_entries_metatable(&table)? {
                 Some(cleanup_entries) => {
@@ -116,11 +107,11 @@ impl ScriptHandler {
                     let entry: Table = parent.get(value_name)?;
 
                     table.for_each(|key: String, val: Value| {
-                        Self::set_value_impl(lua, &entry, &key, val)
+                        Self::set_value(lua, &entry, &key, val)
                     })?;
 
                     cleanup_entries.for_each(|key: String, _: Value| {
-                        Self::set_value_impl(lua, &entry, &key, Value::Nil)
+                        Self::set_value(lua, &entry, &key, Value::Nil)
                     })
                 }
                 None => {
@@ -287,7 +278,7 @@ impl ScriptHandler {
             })
             .unwrap();
 
-        let env = create_table_with_defaults!(lua, {
+        create_table_with_defaults!(lua, {
             EVENTS = EVENTS,
             LOG = LOG,
             PLATFORM = PLATFORM,
@@ -297,10 +288,7 @@ impl ScriptHandler {
                 Never = $never_fn,
                 Times = $times_fn,
             }
-        });
-        env.set(ScreenBuilder::identifier(), ScreenBuilder).unwrap();
-
-        env
+        })
     }
 }
 
@@ -344,39 +332,14 @@ impl LayoutData {
     }
 }
 
-#[derive(UniqueUserData)]
-struct ScreenBuilder;
-
-impl UserData for ScreenBuilder {
-    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method("new", |lua, _, name: String| {
-            let devices = UserDataRef::<Devices>::load(lua);
-
-            let builder = match devices.get().device_status(&name) {
-                Some(DeviceStatus::Available) => Ok(ScreenBuilderImpl::new(name)),
-                Some(DeviceStatus::Loaded) => Err(mlua::Error::RuntimeError(format!(
-                    "Device '{}' already loaded.",
-                    name
-                ))),
-                None => Err(mlua::Error::RuntimeError(format!(
-                    "Device '{}' not found.",
-                    name
-                ))),
-            };
-
-            builder
-        });
-    }
-}
-
 #[derive(Clone)]
 enum BuilderType {
     Layout,
     LayoutGroup,
 }
 
-#[derive(Clone)]
-struct ScreenBuilderImpl {
+#[derive(Clone, LuaName)]
+pub struct ScreenBuilder {
     layouts: Vec<Layout>,
     shortcut: Vec<String>,
     device_name: String,
@@ -385,7 +348,7 @@ struct ScreenBuilderImpl {
     current_screen: Rc<RefCell<usize>>,
 }
 
-impl ScreenBuilderImpl {
+impl ScreenBuilder {
     pub fn new(name: String) -> Self {
         Self {
             layouts: vec![],
@@ -398,7 +361,13 @@ impl ScreenBuilderImpl {
     }
 }
 
-impl UserData for ScreenBuilderImpl {
+impl LuaTypeStaticMembers for ScreenBuilder {
+    fn add_members(functions: &mut StaticMembers<'_>) {
+        functions.add_function("new", |_lua, name: String| Ok(Self::new(name)));
+    }
+}
+
+impl UserData for ScreenBuilder {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut("with_layout", |_lua, builder, layout: Layout| {
             if let Some(BuilderType::LayoutGroup) = builder.builder_type {
@@ -642,7 +611,7 @@ mod tests {
             }),
         };
         let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
-        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+        ScriptHandler::set_value(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
             lua,
@@ -672,7 +641,7 @@ mod tests {
             }),
         };
         let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
-        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+        ScriptHandler::set_value(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
             lua,
@@ -694,7 +663,7 @@ mod tests {
             }),
         };
         let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
-        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+        ScriptHandler::set_value(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
             lua,
@@ -726,7 +695,7 @@ mod tests {
             }),
         };
         let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
-        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+        ScriptHandler::set_value(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
             lua,
@@ -749,7 +718,7 @@ mod tests {
             b: None,
         };
         let input = cbor_to_lua_value(&lua, into_value(input)).unwrap();
-        ScriptHandler::set_value_impl(&lua, &env, "a", input).unwrap();
+        ScriptHandler::set_value(&lua, &env, "a", input).unwrap();
 
         let expected = create_table! {
             lua,

@@ -65,8 +65,8 @@ fn create_config(file_path: impl AsRef<Path>, level_filter: LevelFilter) -> Conf
     let builder = add_config(builder, "omni_led_lib");
 
     // Script files (+ 'script' as fallback if it failed to get script name)
-    let builder = add_config(builder, "applications.lua");
     let builder = add_config(builder, "devices.lua");
+    let builder = add_config(builder, "plugins.lua");
     let builder = add_config(builder, "scripts.lua");
     let builder = add_config(builder, "settings.lua");
     let builder = add_config(builder, "script");

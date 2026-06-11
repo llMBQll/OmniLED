@@ -1,5 +1,5 @@
 use mlua::{FromLua, Lua, MetaMethod, UserData, UserDataFields, UserDataMethods, Value};
-use omni_led_derive::{FromLuaValue, LuaEnum};
+use omni_led_derive::{FromLuaValue, LuaEnum, LuaName};
 use std::{hash::Hash, time::Duration};
 
 use crate::common::lua_traits::{FromUserdata, LuaName, LuaTypeStaticMembers, StaticMembers};
@@ -228,7 +228,7 @@ pub enum MemoryLayout {
 
 impl UserData for MemoryLayout {}
 
-#[derive(Clone)]
+#[derive(Clone, LuaName)]
 pub struct Regex {
     re: regex::Regex,
 }
@@ -242,10 +242,6 @@ impl Regex {
     pub fn matches(&self, string: &str) -> bool {
         self.re.is_match(string)
     }
-}
-
-impl LuaName for Regex {
-    const NAME: &str = "Regex";
 }
 
 impl LuaTypeStaticMembers for Regex {
