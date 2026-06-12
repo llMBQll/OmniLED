@@ -279,10 +279,10 @@ impl ScriptHandler {
             .unwrap();
 
         create_table_with_defaults!(lua, {
-            EVENTS = EVENTS,
-            LOG = LOG,
+            Events = Events,
+            Log = Log,
             PLATFORM = PLATFORM,
-            SHORTCUTS = SHORTCUTS,
+            Shortcuts = Shortcuts,
             PREDICATE = {
                 Always = $always_fn,
                 Never = $never_fn,
