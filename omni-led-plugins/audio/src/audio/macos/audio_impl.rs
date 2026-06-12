@@ -11,13 +11,13 @@ use std::sync::{Arc, Mutex};
 use crate::audio::macos::constants;
 use crate::{DeviceData, DeviceType};
 
-pub struct AudioContext {
-    pub tx: Sender<(DeviceData, DeviceType)>,
-    pub current_ids: [AudioObjectID; 2],
+pub struct AudioImpl {
+    ctx: Arc<Mutex<AudioContext>>,
 }
 
-pub struct AudioImpl {
-    ctx: *mut c_void,
+struct AudioContext {
+    pub tx: Sender<(DeviceData, DeviceType)>,
+    pub current_ids: [AudioObjectID; 2],
 }
 
 const _: () = {
@@ -32,25 +32,16 @@ impl AudioImpl {
             get_default_device(DeviceType::Output),
         ];
 
-        let context = Arc::new(Mutex::new(AudioContext {
+        let ctx = Arc::new(Mutex::new(AudioContext {
             tx: tx.clone(),
             current_ids,
         }));
 
-        let ctx = Arc::into_raw(context) as *mut c_void;
+        let ctx_ptr = Arc::as_ptr(&ctx) as *mut c_void;
 
         for device_type in [DeviceType::Input, DeviceType::Output] {
-            register_device_listeners(ctx, current_ids[device_type as usize], device_type);
-
-            unsafe {
-                _ = AudioObjectAddPropertyListener(
-                    objc2_core_audio::kAudioObjectSystemObject as u32,
-                    NonNull::from_ref(constants::default_device_address(device_type)),
-                    Some(system_listener),
-                    ctx,
-                );
-            }
-
+            register_system_listener(ctx_ptr, device_type);
+            register_device_listeners(ctx_ptr, current_ids[device_type as usize], device_type);
             send_initial_device_update(current_ids[device_type as usize], &tx, device_type);
         }
 
@@ -60,24 +51,16 @@ impl AudioImpl {
 
 impl Drop for AudioImpl {
     fn drop(&mut self) {
-        unsafe {
-            let context = Arc::from_raw(self.ctx as *const Mutex<AudioContext>);
-            let ctx = context.lock().unwrap();
+        let ctx_ptr = Arc::as_ptr(&self.ctx) as *mut c_void;
+        let ctx = self.ctx.lock().unwrap();
 
-            for device_type in [DeviceType::Input, DeviceType::Output] {
-                _ = AudioObjectRemovePropertyListener(
-                    objc2_core_audio::kAudioObjectSystemObject as u32,
-                    NonNull::from_ref(constants::default_device_address(device_type)),
-                    Some(system_listener),
-                    self.ctx,
-                );
-
-                unregister_device_listeners(
-                    self.ctx,
-                    ctx.current_ids[device_type as usize],
-                    device_type,
-                );
-            }
+        for device_type in [DeviceType::Input, DeviceType::Output] {
+            unregister_system_listener(ctx_ptr, device_type);
+            unregister_device_listeners(
+                ctx_ptr,
+                ctx.current_ids[device_type as usize],
+                device_type,
+            );
         }
     }
 }
@@ -156,6 +139,28 @@ extern "C-unwind" fn device_listener(
         }
     }
     0
+}
+
+fn register_system_listener(ctx: *mut c_void, device_type: DeviceType) {
+    unsafe {
+        _ = AudioObjectAddPropertyListener(
+            objc2_core_audio::kAudioObjectSystemObject as u32,
+            NonNull::from_ref(constants::default_device_address(device_type)),
+            Some(system_listener),
+            ctx,
+        );
+    }
+}
+
+fn unregister_system_listener(ctx: *mut c_void, device_type: DeviceType) {
+    unsafe {
+        _ = AudioObjectRemovePropertyListener(
+            objc2_core_audio::kAudioObjectSystemObject as u32,
+            NonNull::from_ref(constants::default_device_address(device_type)),
+            Some(system_listener),
+            ctx,
+        );
+    }
 }
 
 fn register_device_listeners(ctx: *mut c_void, device_id: AudioObjectID, device_type: DeviceType) {
