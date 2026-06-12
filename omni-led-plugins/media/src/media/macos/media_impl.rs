@@ -42,7 +42,7 @@ fn send_data(tx: &Sender<Data>, guard: RwLockReadGuard<'_, Option<NowPlayingInfo
             position: convert_duration(info.elapsed_time.unwrap_or(0.0)),
             duration: info.duration.and_then(|x| Some(convert_duration(x))),
             playing: info.is_playing.unwrap_or(false),
-            rate: 1.0,
+            rate: info.playback_rate.unwrap_or(1.0),
         };
 
         // TODO convert to tx.send and make the function async
