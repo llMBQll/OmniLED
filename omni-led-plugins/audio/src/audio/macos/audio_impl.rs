@@ -39,42 +39,20 @@ impl AudioImpl {
 
         let ctx = Arc::into_raw(context) as *mut c_void;
 
-        unsafe {
-            register_device_listeners(
-                ctx,
-                current_ids[DeviceType::Input as usize],
-                DeviceType::Input,
-            );
-            register_device_listeners(
-                ctx,
-                current_ids[DeviceType::Output as usize],
-                DeviceType::Output,
-            );
+        for device_type in [DeviceType::Input, DeviceType::Output] {
+            register_device_listeners(ctx, current_ids[device_type as usize], device_type);
 
-            _ = AudioObjectAddPropertyListener(
-                objc2_core_audio::kAudioObjectSystemObject as u32,
-                NonNull::from_ref(constants::default_device_address(DeviceType::Input)),
-                Some(system_listener),
-                ctx,
-            );
-            _ = AudioObjectAddPropertyListener(
-                objc2_core_audio::kAudioObjectSystemObject as u32,
-                NonNull::from_ref(constants::default_device_address(DeviceType::Output)),
-                Some(system_listener),
-                ctx,
-            );
+            unsafe {
+                _ = AudioObjectAddPropertyListener(
+                    objc2_core_audio::kAudioObjectSystemObject as u32,
+                    NonNull::from_ref(constants::default_device_address(device_type)),
+                    Some(system_listener),
+                    ctx,
+                );
+            }
+
+            send_device_update(current_ids[device_type as usize], &tx, device_type);
         }
-
-        send_device_update(
-            current_ids[DeviceType::Input as usize],
-            &tx,
-            DeviceType::Input,
-        );
-        send_device_update(
-            current_ids[DeviceType::Output as usize],
-            &tx,
-            DeviceType::Output,
-        );
 
         Self { ctx }
     }
@@ -86,29 +64,20 @@ impl Drop for AudioImpl {
             let context = Arc::from_raw(self.ctx as *const Mutex<AudioContext>);
             let ctx = context.lock().unwrap();
 
-            _ = AudioObjectRemovePropertyListener(
-                objc2_core_audio::kAudioObjectSystemObject as u32,
-                NonNull::from_ref(constants::default_device_address(DeviceType::Input)),
-                Some(system_listener),
-                self.ctx,
-            );
-            _ = AudioObjectRemovePropertyListener(
-                objc2_core_audio::kAudioObjectSystemObject as u32,
-                NonNull::from_ref(constants::default_device_address(DeviceType::Output)),
-                Some(system_listener),
-                self.ctx,
-            );
+            for device_type in [DeviceType::Input, DeviceType::Output] {
+                _ = AudioObjectRemovePropertyListener(
+                    objc2_core_audio::kAudioObjectSystemObject as u32,
+                    NonNull::from_ref(constants::default_device_address(device_type)),
+                    Some(system_listener),
+                    self.ctx,
+                );
 
-            unregister_device_listeners(
-                self.ctx,
-                ctx.current_ids[DeviceType::Input as usize],
-                DeviceType::Input,
-            );
-            unregister_device_listeners(
-                self.ctx,
-                ctx.current_ids[DeviceType::Output as usize],
-                DeviceType::Output,
-            );
+                unregister_device_listeners(
+                    self.ctx,
+                    ctx.current_ids[device_type as usize],
+                    device_type,
+                );
+            }
         }
     }
 }
@@ -133,13 +102,13 @@ extern "C-unwind" fn system_listener(
             };
 
             let new_device_id = get_default_device(device_type);
-            let idx = device_type as usize;
+            let current_id = &mut ctx.current_ids[device_type as usize];
 
-            if new_device_id != ctx.current_ids[idx] && new_device_id != 0 {
-                unregister_device_listeners(in_client_data, ctx.current_ids[idx], device_type);
+            if new_device_id != *current_id {
+                unregister_device_listeners(in_client_data, *current_id, device_type);
 
+                *current_id = new_device_id;
                 register_device_listeners(in_client_data, new_device_id, device_type);
-                ctx.current_ids[idx] = new_device_id;
 
                 send_device_update(new_device_id, &ctx.tx, device_type);
             }
@@ -190,22 +159,19 @@ extern "C-unwind" fn device_listener(
 }
 
 fn register_device_listeners(ctx: *mut c_void, device_id: AudioObjectID, device_type: DeviceType) {
-    let _ = unsafe {
-        AudioObjectAddPropertyListener(
-            device_id,
-            NonNull::from_ref(constants::mute_address(device_type)),
-            Some(device_listener),
-            ctx,
-        )
-    };
-    let _ = unsafe {
-        AudioObjectAddPropertyListener(
-            device_id,
-            NonNull::from_ref(constants::volume_address(device_type)),
-            Some(device_listener),
-            ctx,
-        )
-    };
+    for address in [
+        constants::mute_address(device_type),
+        constants::volume_address(device_type),
+    ] {
+        let _ = unsafe {
+            AudioObjectAddPropertyListener(
+                device_id,
+                NonNull::from_ref(address),
+                Some(device_listener),
+                ctx,
+            )
+        };
+    }
 }
 
 fn unregister_device_listeners(
@@ -213,22 +179,19 @@ fn unregister_device_listeners(
     device_id: AudioObjectID,
     device_type: DeviceType,
 ) {
-    let _ = unsafe {
-        AudioObjectRemovePropertyListener(
-            device_id,
-            NonNull::from_ref(constants::mute_address(device_type)),
-            Some(device_listener),
-            ctx,
-        )
-    };
-    let _ = unsafe {
-        AudioObjectRemovePropertyListener(
-            device_id,
-            NonNull::from_ref(constants::volume_address(device_type)),
-            Some(device_listener),
-            ctx,
-        )
-    };
+    for address in [
+        constants::mute_address(device_type),
+        constants::volume_address(device_type),
+    ] {
+        let _ = unsafe {
+            AudioObjectRemovePropertyListener(
+                device_id,
+                NonNull::from_ref(address),
+                Some(device_listener),
+                ctx,
+            )
+        };
+    }
 }
 
 fn send_device_update(

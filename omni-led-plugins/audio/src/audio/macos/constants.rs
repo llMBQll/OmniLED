@@ -10,12 +10,15 @@ pub const MUTE_SELECTOR: u32 = objc2_core_audio::kAudioDevicePropertyMute;
 pub const NAME_SELECTOR: u32 = objc2_core_audio::kAudioDevicePropertyDeviceName;
 pub const VOLUME_SELECTOR: u32 = u32::from_be_bytes(*b"vmvc"); // VirtualMasterVolume property
 
+pub const GLOBAL_SCOPE: u32 = objc2_core_audio::kAudioObjectPropertyScopeGlobal;
 pub const INPUT_SCOPE: u32 = objc2_core_audio::kAudioObjectPropertyScopeInput;
 pub const OUTPUT_SCOPE: u32 = objc2_core_audio::kAudioObjectPropertyScopeOutput;
 
+pub const MAIN_ELEMENT: u32 = objc2_core_audio::kAudioObjectPropertyElementMain;
+
 macro_rules! define_get_address {
     ($name:ident, $address:ident) => {
-        pub fn $name(device_type: DeviceType) -> &'static AudioObjectPropertyAddress {
+        pub const fn $name(device_type: DeviceType) -> &'static AudioObjectPropertyAddress {
             match device_type {
                 DeviceType::Input => &input::$address,
                 DeviceType::Output => &output::$address,
@@ -34,26 +37,26 @@ mod input {
 
     pub const DEFAULT_DEVICE: AudioObjectPropertyAddress = AudioObjectPropertyAddress {
         mSelector: DEFAULT_INPUT_DEVICE_SELECTOR,
-        mScope: objc2_core_audio::kAudioObjectPropertyScopeGlobal,
-        mElement: objc2_core_audio::kAudioObjectPropertyElementMain,
+        mScope: GLOBAL_SCOPE,
+        mElement: MAIN_ELEMENT,
     };
 
     pub const MUTE: AudioObjectPropertyAddress = AudioObjectPropertyAddress {
         mSelector: MUTE_SELECTOR,
         mScope: INPUT_SCOPE,
-        mElement: objc2_core_audio::kAudioObjectPropertyElementMain,
+        mElement: MAIN_ELEMENT,
     };
 
     pub const NAME: AudioObjectPropertyAddress = AudioObjectPropertyAddress {
         mSelector: NAME_SELECTOR,
         mScope: INPUT_SCOPE,
-        mElement: objc2_core_audio::kAudioObjectPropertyElementMain,
+        mElement: MAIN_ELEMENT,
     };
 
     pub const VOLUME_SCALAR: AudioObjectPropertyAddress = AudioObjectPropertyAddress {
         mSelector: VOLUME_SELECTOR,
         mScope: INPUT_SCOPE,
-        mElement: objc2_core_audio::kAudioObjectPropertyElementMain,
+        mElement: MAIN_ELEMENT,
     };
 }
 
@@ -62,25 +65,25 @@ mod output {
 
     pub const DEFAULT_DEVICE: AudioObjectPropertyAddress = AudioObjectPropertyAddress {
         mSelector: DEFAULT_OUTPUT_DEVICE_SELECTOR,
-        mScope: objc2_core_audio::kAudioObjectPropertyScopeGlobal,
-        mElement: objc2_core_audio::kAudioObjectPropertyElementMain,
+        mScope: GLOBAL_SCOPE,
+        mElement: MAIN_ELEMENT,
     };
 
     pub const MUTE: AudioObjectPropertyAddress = AudioObjectPropertyAddress {
         mSelector: MUTE_SELECTOR,
         mScope: OUTPUT_SCOPE,
-        mElement: objc2_core_audio::kAudioObjectPropertyElementMain,
+        mElement: MAIN_ELEMENT,
     };
 
     pub const NAME: AudioObjectPropertyAddress = AudioObjectPropertyAddress {
         mSelector: NAME_SELECTOR,
         mScope: OUTPUT_SCOPE,
-        mElement: objc2_core_audio::kAudioObjectPropertyElementMain,
+        mElement: MAIN_ELEMENT,
     };
 
     pub const VOLUME_SCALAR: AudioObjectPropertyAddress = AudioObjectPropertyAddress {
         mSelector: VOLUME_SELECTOR,
         mScope: OUTPUT_SCOPE,
-        mElement: objc2_core_audio::kAudioObjectPropertyElementMain,
+        mElement: MAIN_ELEMENT,
     };
 }
