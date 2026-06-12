@@ -51,7 +51,7 @@ impl AudioImpl {
                 );
             }
 
-            send_device_update(current_ids[device_type as usize], &tx, device_type);
+            send_initial_device_update(current_ids[device_type as usize], &tx, device_type);
         }
 
         Self { ctx }
@@ -110,7 +110,7 @@ extern "C-unwind" fn system_listener(
                 *current_id = new_device_id;
                 register_device_listeners(in_client_data, new_device_id, device_type);
 
-                send_device_update(new_device_id, &ctx.tx, device_type);
+                send_initial_device_update(new_device_id, &ctx.tx, device_type);
             }
         }
     }
@@ -149,16 +149,20 @@ extern "C-unwind" fn device_listener(
         }
 
         if update_input {
-            send_device_update(in_object_id, &ctx.tx, DeviceType::Input);
+            send_partial_device_update(in_object_id, &ctx.tx, DeviceType::Input);
         }
         if update_output {
-            send_device_update(in_object_id, &ctx.tx, DeviceType::Output);
+            send_partial_device_update(in_object_id, &ctx.tx, DeviceType::Output);
         }
     }
     0
 }
 
 fn register_device_listeners(ctx: *mut c_void, device_id: AudioObjectID, device_type: DeviceType) {
+    if device_id == 0 {
+        return;
+    }
+
     for address in [
         constants::mute_address(device_type),
         constants::volume_address(device_type),
@@ -179,6 +183,10 @@ fn unregister_device_listeners(
     device_id: AudioObjectID,
     device_type: DeviceType,
 ) {
+    if device_id == 0 {
+        return;
+    }
+
     for address in [
         constants::mute_address(device_type),
         constants::volume_address(device_type),
@@ -194,16 +202,31 @@ fn unregister_device_listeners(
     }
 }
 
-fn send_device_update(
+fn send_initial_device_update(
+    device_id: AudioObjectID,
+    tx: &Sender<(DeviceData, DeviceType)>,
+    device_type: DeviceType,
+) {
+    if device_id == 0 {
+        let _ = tx.send((DeviceData::new(false, true, 0, None), device_type));
+    } else {
+        let volume = get_device_volume(device_id, device_type);
+        let mute = get_device_mute(device_id, device_type);
+        let name = get_device_name(device_id, device_type);
+
+        let _ = tx.send((DeviceData::new(true, mute, volume, Some(name)), device_type));
+    }
+}
+
+fn send_partial_device_update(
     device_id: AudioObjectID,
     tx: &Sender<(DeviceData, DeviceType)>,
     device_type: DeviceType,
 ) {
     let volume = get_device_volume(device_id, device_type);
     let mute = get_device_mute(device_id, device_type);
-    let name = get_device_name(device_id, device_type);
 
-    let _ = tx.send((DeviceData::new(true, mute, volume, Some(name)), device_type));
+    let _ = tx.send((DeviceData::new(true, mute, volume, None), device_type));
 }
 
 fn get_default_device(device_type: DeviceType) -> AudioObjectID {
@@ -278,7 +301,7 @@ fn get_device_name(device_id: AudioObjectID, device_type: DeviceType) -> String 
             NonNull::new_unchecked(&mut name as *mut _ as *mut _),
         );
         if status != 0 {
-            return "Unknown Device".to_string();
+            return "Unknown".to_string();
         }
     }
 
