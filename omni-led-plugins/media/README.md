@@ -22,9 +22,16 @@ Media expects following arguments
 
 ## Reporting mode
 
+> [!NOTE]
 > On Linux with MPRIS, there is no concept of a “currently focused” media source. As a result, only individual
 > updates are sent. Setting the mode to “Both” behaves the same as “Individual”, while setting it to “Focused”
 > results in no events being sent.
+
+> [!NOTE]
+> Conversly, on macOS there exists only the "currently focused" media info. Currently OmniLED is at the mercy
+> of ther OS when it comes to the media info it can provide. While setting “Focused”, “Individual” or "Both"
+> reporting mode kind of does what it's supposed to, if the OS decides "Source B" is now ther focused thing
+> it will stop reporting "Source A" until it becomes focused again.
 
 ### Individual
 
