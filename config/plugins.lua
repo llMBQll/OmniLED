@@ -11,7 +11,7 @@ load_plugin {
 load_plugin {
     path = get_default_plugin_path('media'),
     args = {
-        '--mode', 'individual',
+        '--mode', 'both',
         '--map', 'Spotify.exe=SPOTIFY',
     },
 }
