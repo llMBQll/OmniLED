@@ -43,10 +43,10 @@ pub fn omni_led_run(plugin: Plugin, _args: Vec<&str>) {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum DeviceType {
-    Input,
-    Output,
+    Input = 0,
+    Output = 1,
 }
 
 #[derive(Serialize)]
