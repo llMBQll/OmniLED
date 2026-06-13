@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -27,8 +27,8 @@ jobs:
       - name: Docs format check
         uses: DavidAnson/markdownlint-cli2-action@v21
         with:
-          config: '.markdownlint.json'
-          globs: '**/*.md'
+          config: ".markdownlint.json"
+          globs: "**/*.md"
 
       - name: Build
         run: cargo make build
