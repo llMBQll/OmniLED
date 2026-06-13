@@ -5,7 +5,6 @@ members = [
     "omni-led-api",
     "omni-led-derive",
     "omni-led-lib",
-    "omni-led-setup",
     "omni-led-plugins/audio",
     "omni-led-plugins/clock",
     "omni-led-plugins/images",
