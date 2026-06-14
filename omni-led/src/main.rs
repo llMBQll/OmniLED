@@ -5,7 +5,7 @@ use mlua::Lua;
 use omni_led_lib::{
     common::common::load_internal_functions,
     common::user_data::UserDataRef,
-    constants::config::{ConfigType, read_config},
+    constants::config::{ConfigType, read_config, write_default_configs},
     constants::constants::Constants,
     devices::devices::Devices,
     events::dispatcher::Dispatcher,
@@ -45,6 +45,8 @@ fn main() {
 
         let log_handle = logging::init();
         Log::load(&lua, log_handle);
+
+        write_default_configs().unwrap();
 
         let devices_config = read_config(ConfigType::Devices).unwrap();
         let plugins_config = read_config(ConfigType::Plugins).unwrap();
