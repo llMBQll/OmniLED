@@ -31,15 +31,14 @@ impl PluginLoader {
             .unwrap();
 
         let get_default_plugin_path_fn = lua
-            .create_function(|lua, plugin_name: String| {
+            .create_function(|_lua, plugin_name: String| {
                 let executable = format!(
                     "{}{}{}",
                     std::env::consts::DLL_PREFIX,
                     plugin_name,
                     std::env::consts::DLL_SUFFIX
                 );
-                let constants = UserDataRef::<Constants>::load(lua);
-                let path = constants.get().plugins_dir.join(executable);
+                let path = Constants::plugins_dir().join(executable);
                 Ok(path.to_string_lossy().to_string())
             })
             .unwrap();

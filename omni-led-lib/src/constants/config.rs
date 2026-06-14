@@ -1,6 +1,5 @@
 use mlua::{ChunkMode, Lua, Table};
 
-use crate::common::user_data::UserDataRef;
 use crate::constants::constants::Constants;
 
 pub enum ConfigType {
@@ -21,9 +20,8 @@ impl ConfigType {
     }
 }
 
-pub fn read_config(lua: &Lua, config_type: ConfigType) -> mlua::Result<String> {
-    let constants = UserDataRef::<Constants>::load(lua);
-    let filename = constants.get().config_dir.join(config_type.get_filename());
+pub fn read_config(config_type: ConfigType) -> mlua::Result<String> {
+    let filename = Constants::config_dir().join(config_type.get_filename());
     std::fs::read_to_string(filename).map_err(mlua::Error::external)
 }
 

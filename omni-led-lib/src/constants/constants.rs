@@ -28,8 +28,8 @@ impl Constants {
         set_unique_user_data(
             lua,
             Self {
-                config_dir: Self::root_dir().join("config"),
-                data_dir: Self::root_dir().join("data"),
+                config_dir: Self::config_dir(),
+                data_dir: Self::data_dir(),
                 dll_extension: DLL_EXTENSION,
                 dll_prefix: DLL_PREFIX,
                 dll_suffix: DLL_SUFFIX,
@@ -46,7 +46,27 @@ impl Constants {
         std::println!("{:#?}", UserDataRef::<Self>::load(lua).get());
     }
 
-    fn root_dir() -> PathBuf {
+    pub fn config_dir() -> PathBuf {
+        Self::root_dir().join("config")
+    }
+
+    pub fn current_exe() -> PathBuf {
+        std::env::current_exe().unwrap()
+    }
+
+    pub fn data_dir() -> PathBuf {
+        Self::root_dir().join("data")
+    }
+
+    pub fn exe_dir() -> PathBuf {
+        Self::current_exe().parent().unwrap().to_path_buf()
+    }
+
+    pub fn plugins_dir() -> PathBuf {
+        Self::exe_dir()
+    }
+
+    pub fn root_dir() -> PathBuf {
         #[cfg(feature = "dev")]
         let root = Self::exe_dir()
             .parent()
@@ -59,14 +79,6 @@ impl Constants {
         let root = Self::exe_dir().parent().unwrap().to_path_buf();
 
         root
-    }
-
-    fn exe_dir() -> PathBuf {
-        std::env::current_exe()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .to_path_buf()
     }
 }
 

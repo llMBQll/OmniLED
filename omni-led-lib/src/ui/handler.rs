@@ -11,7 +11,6 @@ use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::window::{Icon, Window, WindowAttributes, WindowId};
 
-use crate::constants::constants::Constants;
 use crate::ui::event::Event;
 use crate::ui::icon_image::window_icon_image;
 use crate::ui::tray_icon::TrayIcon;
@@ -19,7 +18,6 @@ use crate::ui::window::WindowHandle;
 
 pub struct HandlerBuilder {
     event_loop: EventLoop<Event>,
-    constants: Option<Constants>,
     on_init: Option<Box<dyn FnOnce()>>,
 }
 
@@ -32,14 +30,8 @@ impl HandlerBuilder {
 
         Self {
             event_loop,
-            constants: None,
             on_init: None,
         }
-    }
-
-    pub fn with_constants(mut self, constants: Constants) -> Self {
-        self.constants = Some(constants);
-        self
     }
 
     pub fn with_on_init<F: FnOnce() + 'static>(mut self, on_init: F) -> Self {
@@ -49,17 +41,17 @@ impl HandlerBuilder {
 
     pub fn run(self) {
         #[cfg(target_os = "linux")]
-        Self::run_tray_icon_thread(self.constants.clone().unwrap());
+        Self::run_tray_icon_thread();
 
-        let mut handler = Handler::new(self.constants, self.on_init.unwrap());
+        let mut handler = Handler::new(self.on_init.unwrap());
         self.event_loop.run_app(&mut handler).unwrap();
     }
 
     #[cfg(target_os = "linux")]
-    fn run_tray_icon_thread(constants: Constants) {
+    fn run_tray_icon_thread() {
         std::thread::spawn(move || {
             gtk::init().unwrap();
-            let _tray = Some(TrayIcon::new(constants, PROXY.get().unwrap().clone()));
+            let _tray = Some(TrayIcon::new(PROXY.get().unwrap().clone()));
             gtk::main();
         });
     }
@@ -74,18 +66,15 @@ struct WindowContext {
 struct Handler {
     windows: HashMap<WindowId, WindowContext>,
     icon: Icon,
-    #[cfg_attr(target_os = "linux", allow(unused))]
-    constants: Option<Constants>,
     on_init: Option<Box<dyn FnOnce()>>,
     _tray: Option<TrayIcon>,
 }
 
 impl Handler {
-    fn new(constants: Option<Constants>, on_init: Box<dyn FnOnce()>) -> Self {
+    fn new(on_init: Box<dyn FnOnce()>) -> Self {
         Self {
             windows: HashMap::new(),
             icon: window_icon_image(),
-            constants,
             on_init: Some(on_init),
             _tray: None,
         }
@@ -97,10 +86,7 @@ impl ApplicationHandler<Event> for Handler {
         if let StartCause::Init = cause {
             #[cfg(not(target_os = "linux"))]
             {
-                self._tray = Some(TrayIcon::new(
-                    self.constants.take().unwrap(),
-                    PROXY.get().unwrap().clone(),
-                ));
+                self._tray = Some(TrayIcon::new(PROXY.get().unwrap().clone()));
             }
 
             self.on_init.take().unwrap()();

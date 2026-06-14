@@ -31,7 +31,6 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 fn main() {
     set_panic_hook();
 
-    let (constants_tx, constants_rx) = sync::mpsc::channel();
     let (ready_tx, ready_rx) = sync::mpsc::channel();
 
     let scripting_thread = std::thread::spawn(move || {
@@ -42,19 +41,15 @@ fn main() {
         load_internal_functions(&lua);
         Constants::load(&lua);
 
-        constants_tx
-            .send(UserDataRef::<Constants>::load(&lua).get().clone())
-            .unwrap();
-
         let _ = ready_rx.recv().unwrap();
 
-        let log_handle = logging::init(&lua);
+        let log_handle = logging::init();
         Log::load(&lua, log_handle);
 
-        let devices_config = read_config(&lua, ConfigType::Devices).unwrap();
-        let plugins_config = read_config(&lua, ConfigType::Plugins).unwrap();
-        let scripts_config = read_config(&lua, ConfigType::Scripts).unwrap();
-        let settings_config = read_config(&lua, ConfigType::Settings).unwrap();
+        let devices_config = read_config(ConfigType::Devices).unwrap();
+        let plugins_config = read_config(ConfigType::Plugins).unwrap();
+        let scripts_config = read_config(ConfigType::Scripts).unwrap();
+        let settings_config = read_config(ConfigType::Settings).unwrap();
 
         Settings::load(&lua, settings_config);
         let mut dispatcher = Dispatcher::load(&lua);
@@ -83,7 +78,6 @@ fn main() {
     let keyboard_thread = std::thread::spawn(|| process_events(&RUNNING));
 
     HandlerBuilder::new()
-        .with_constants(constants_rx.recv().unwrap())
         .with_on_init(move || ready_tx.send(true).unwrap())
         .run();
 

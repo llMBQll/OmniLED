@@ -35,7 +35,7 @@ impl Dispatcher {
             Event::Unregister(event_handle) => self.unregister(event_handle),
             Event::ReloadScripts => {
                 self.clear_non_persistent();
-                let config = read_config(lua, ConfigType::Scripts).unwrap();
+                let config = read_config(ConfigType::Scripts).unwrap();
                 ScriptHandler::reload_config(lua, config)
             }
             Event::Script(script_event) => {
