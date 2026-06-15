@@ -21,6 +21,9 @@ impl LogHandle for OmniLedLogHandle {
 }
 
 pub fn init() -> OmniLedLogHandle {
+    let data_dir = Constants::data_dir();
+    std::fs::create_dir_all(data_dir).unwrap();
+
     let path = Constants::data_dir().join("logging.log");
 
     let config = create_config(&path, default_log_level());

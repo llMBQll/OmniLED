@@ -20,7 +20,6 @@ pub struct Constants {
     pub os: &'static str,
     pub path_separator: &'static str,
     pub plugins_dir: PathBuf,
-    pub root_dir: PathBuf,
 }
 
 impl Constants {
@@ -38,7 +37,6 @@ impl Constants {
                 os: OS,
                 path_separator: MAIN_SEPARATOR_STR,
                 plugins_dir: Self::exe_dir(),
-                root_dir: Self::root_dir(),
             },
         );
 
@@ -47,7 +45,13 @@ impl Constants {
     }
 
     pub fn config_dir() -> PathBuf {
-        Self::root_dir().join("config")
+        #[cfg(feature = "dev")]
+        let dir = Self::root_dir().join("config");
+
+        #[cfg(not(feature = "dev"))]
+        let dir = Self::system_config_dir().join("config");
+
+        dir
     }
 
     pub fn current_exe() -> PathBuf {
@@ -55,30 +59,65 @@ impl Constants {
     }
 
     pub fn data_dir() -> PathBuf {
-        Self::root_dir().join("data")
+        #[cfg(feature = "dev")]
+        let dir = Self::root_dir().join("data");
+
+        #[cfg(not(feature = "dev"))]
+        let dir = Self::system_config_dir().join("data");
+
+        dir
     }
 
     pub fn exe_dir() -> PathBuf {
         Self::current_exe().parent().unwrap().to_path_buf()
     }
 
-    pub fn plugins_dir() -> PathBuf {
-        Self::exe_dir()
-    }
-
-    pub fn root_dir() -> PathBuf {
+    pub fn license_path() -> PathBuf {
         #[cfg(feature = "dev")]
-        let root = Self::exe_dir()
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .to_path_buf();
+        let path = Self::root_dir().join("LICENSE");
 
         #[cfg(not(feature = "dev"))]
-        let root = Self::exe_dir().parent().unwrap().to_path_buf();
+        let path = Self::resource_dir().join("license");
 
-        root
+        path
+    }
+
+    pub fn plugins_dir() -> PathBuf {
+        #[cfg(feature = "dev")]
+        let path = Self::exe_dir();
+
+        #[cfg(not(feature = "dev"))]
+        let path = Self::resource_dir().join("plugins");
+
+        path
+    }
+
+    pub fn system_config_dir() -> PathBuf {
+        dirs_next::config_dir().unwrap().join("OmniLED")
+    }
+
+    #[cfg(not(feature = "dev"))]
+    fn resource_dir() -> PathBuf {
+        #[cfg(target_os = "linux")]
+        let path = Self::exe_dir().parent().unwrap().join("lib/omni-led");
+
+        #[cfg(target_os = "macos")]
+        let path = Self::exe_dir().parent().unwrap().join("Resources");
+
+        #[cfg(target_os = "windows")]
+        let path = Self::exe_dir();
+
+        path
+    }
+
+    #[cfg(feature = "dev")]
+    fn root_dir() -> PathBuf {
+        Self::exe_dir()
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .to_path_buf()
     }
 }
 
@@ -100,9 +139,6 @@ impl UserData for Constants {
         fields.add_field_method_get("PathSeparator", |_, constants| Ok(constants.path_separator));
         fields.add_field_method_get("PluginsDir", |_, constants| {
             Ok(constants.plugins_dir.to_str().unwrap().to_string())
-        });
-        fields.add_field_method_get("RootDir", |_, constants| {
-            Ok(constants.root_dir.to_str().unwrap().to_string())
         });
     }
 }

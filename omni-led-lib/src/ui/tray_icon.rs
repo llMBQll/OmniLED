@@ -43,7 +43,7 @@ impl TrayIcon {
         .unwrap();
 
         let config_path = Constants::config_dir();
-        let license_path = Constants::root_dir().join("LICENSE");
+        let license_path = Constants::license_path();
         MenuEvent::set_event_handler(Some(move |e: MenuEvent| {
             match e.id.as_ref() {
                 RELOAD_SCRIPTS => {

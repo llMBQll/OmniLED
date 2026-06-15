@@ -34,6 +34,8 @@ impl ConfigType {
 
 pub fn write_default_configs() -> mlua::Result<()> {
     let config_dir = Constants::config_dir();
+    std::fs::create_dir_all(&config_dir)?;
+
     for config_type in [
         ConfigType::Devices,
         ConfigType::Plugins,
