@@ -25,6 +25,17 @@
 > >
 > > - `"dll"` on Windows
 > > - `"so"` on Linux
+> > - `"dylib"` on macOS
+>
+> > `DllPrefix: string`
+> >
+> > Prefix used for shared object files on current platform
+> >
+> > Values:
+> >
+> > - `""` (empty string) on Windows
+> > - `"lib"` on Linux
+> > - `"lib"` on macOS
 >
 > > `DllSuffix: string`
 > >
@@ -34,6 +45,7 @@
 > >
 > > - `".dll"` on Windows
 > > - `".so"` on Linux
+> > - `".dylib"` on macOS
 >
 > > `ExeExtension: string`
 > >
@@ -43,6 +55,7 @@
 > >
 > > - `"exe"` on Windows
 > > - `""` (empty string) on Linux
+> > - `""` (empty string) on macOS
 >
 > > `ExeSuffix: string`
 > >
@@ -52,6 +65,7 @@
 > >
 > > - `".exe"` on Windows
 > > - `""` (empty string) on Linux
+> > - `""` (empty string) on macOS
 >
 > > `PathSeparator: string`
 > >
