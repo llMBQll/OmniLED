@@ -6,17 +6,23 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-  build_and_release:
+  build_package:
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: omni-led-setup-x86_64-linux
-            bin_name: omni-led-setup
+            artifact_name: OmniLED-${{ github.ref_name }}-x86_64.AppImage
+            output_name: omni-led_*_x86_64.AppImage
+            package_format: appimage
+          - os: macos-latest
+            artifact_name: OmniLED-${{ github.ref_name }}-aarch64.dmg
+            output_name: OmniLED_*_aarch64.dmg
+            package_format: dmg
           - os: windows-latest
-            artifact_name: omni-led-setup-x86_64-windows.exe
-            bin_name: omni-led-setup.exe
+            artifact_name: OmniLED-${{ github.ref_name }}-x86_64.msi
+            output_name: omni-led_*_x64_en-US.msi
+            package_format: wix
 
     runs-on: ${{ matrix.os }}
 
@@ -27,12 +33,15 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-env
 
-      - name: Build setup
-        run: cargo make build-setup
+      - name: Install Cargo Packager
+        run: cargo install cargo-packager --locked
+
+      - name: Build package
+        run: cargo packager --verbose --formats ${{ matrix.package_format }} --config Packager.toml --release
 
       - name: Prepare artifact
         shell: bash
-        run: mv "target/release/${{ matrix.bin_name }}" "${{ matrix.artifact_name }}"
+        run: mv target/release/${{ matrix.output_name }} ${{ matrix.artifact_name }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -42,7 +51,7 @@ jobs:
           if-no-files-found: error
 
   create_release:
-    needs: build_and_release
+    needs: build_package
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -58,6 +67,19 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: "OmniLED ${{ github.ref_name }}"
+          body: |
+            ## Installation
+
+            | Platform | Download                                                    | Run                                                   |
+            |----------|-------------------------------------------------------------|-------------------------------------------------------|
+            | Linux    | [OmniLED-${{ github.ref_name }}-x86_64.AppImage][linux_url] | `chmod +x OmniLED-*.AppImage && ./OmniLED-*.AppImage` |
+            | macOS    | [OmniLED-${{ github.ref_name }}-aarch64.dmg][macos_url]     | Run the `.dmg` file and install the application       |
+            | Windows  | [OmniLED-${{ github.ref_name }}-x86_64.msi][windows_url]    | Run the `.msi` installer and follow the setup wizard  |
+
+            [linux_url]: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/OmniLED-${{ github.ref_name }}-x86_64.AppImage
+            [macos_url]: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/OmniLED-${{ github.ref_name }}-aarch64.dmg
+            [windows_url]: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/OmniLED-${{ github.ref_name }}-x86_64.msi
+            ---
           generate_release_notes: true
           files: artifacts/*
         env:
