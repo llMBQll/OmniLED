@@ -79,6 +79,16 @@ impl Handler {
             _tray: None,
         }
     }
+
+    #[cfg(target_os = "macos")]
+    fn set_app_policy(policy: objc2_app_kit::NSApplicationActivationPolicy) {
+        let thread_marker = objc2::MainThreadMarker::new().unwrap();
+        let app = objc2_app_kit::NSApplication::sharedApplication(thread_marker);
+        let changed = app.setActivationPolicy(policy);
+        if !changed {
+            error!("Failed to set NSApplicationActivationPolicy::Regular");
+        }
+    }
 }
 
 impl ApplicationHandler<Event> for Handler {
@@ -98,6 +108,14 @@ impl ApplicationHandler<Event> for Handler {
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: Event) {
         match event {
             Event::OpenWindow(window_handle) => {
+                #[cfg(target_os = "macos")]
+                {
+                    let first_window = self.windows.is_empty();
+                    if first_window {
+                        Self::set_app_policy(objc2_app_kit::NSApplicationActivationPolicy::Regular);
+                    }
+                }
+
                 let width = window_handle.size.width as u32;
                 let height = window_handle.size.height as u32;
                 let size = LogicalSize::new(width, height);
@@ -144,6 +162,16 @@ impl ApplicationHandler<Event> for Handler {
             }
             Event::CloseWindow(id) => {
                 self.windows.remove(&id.into());
+
+                #[cfg(target_os = "macos")]
+                {
+                    let last_window = self.windows.is_empty();
+                    if last_window {
+                        Self::set_app_policy(
+                            objc2_app_kit::NSApplicationActivationPolicy::Accessory,
+                        );
+                    }
+                }
             }
             Event::Quit => event_loop.exit(),
         }
