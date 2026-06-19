@@ -1,3 +1,4 @@
+pub mod autostart;
 pub mod common;
 pub mod constants;
 pub mod devices;

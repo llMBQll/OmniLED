@@ -2134,7 +2134,7 @@ checksum = "a8cbf17b871570c1f8612b763bac3e86290602bcf5dc3c5ce657e0e1e9071d9e"
 dependencies = [
  "serde",
  "serde_derive",
- "winreg 0.5.1",
+ "winreg",
 ]
 
 [[package]]
@@ -4628,6 +4628,8 @@ dependencies = [
  "log",
  "mlua",
  "num-traits",
+ "objc2 0.6.4",
+ "objc2-app-kit 0.3.2",
  "omni-led-api",
  "omni-led-derive",
  "opener",
@@ -4642,17 +4644,6 @@ dependencies = [
  "windows 0.62.2",
  "windres",
  "winit",
-]
-
-[[package]]
-name = "omni-led-setup"
-version = "0.10.1"
-dependencies = [
- "clap",
- "convert_case 0.11.0",
- "dirs-next",
- "windres",
- "winreg 0.56.0",
 ]
 
 [[package]]
@@ -8429,16 +8420,6 @@ checksum = "a27a759395c1195c4cc5cda607ef6f8f6498f64e78f7900f5de0a127a424704a"
 dependencies = [
  "serde",
  "winapi",
-]
-
-[[package]]
-name = "winreg"
-version = "0.56.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d6f32a0ff4a9f6f01231eb2059cc85479330739333e0e58cadf03b6af2cca10"
-dependencies = [
- "cfg-if",
- "windows-sys 0.61.2",
 ]
 
 [[package]]

@@ -1,7 +1,8 @@
 use log::error;
 use tray_icon::TrayIconBuilder;
-use tray_icon::menu::{Menu, MenuEvent, MenuItem};
+use tray_icon::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem};
 
+use crate::autostart::{AutoStart, AutoStartInterface};
 use crate::constants::constants::Constants;
 use crate::events::events::Events;
 use crate::ui::event::Event;
@@ -14,7 +15,7 @@ pub struct TrayIcon {
 
 impl TrayIcon {
     #[must_use]
-    pub fn new(constants: Constants, proxy: HandlerProxy) -> Self {
+    pub fn new(proxy: HandlerProxy) -> Self {
         #[cfg(feature = "dev")]
         const TITLE: &str = "OmniLED (dev)";
 
@@ -24,29 +25,44 @@ impl TrayIcon {
         const RELOAD_SCRIPTS: &str = "Reload scripts";
         const CONFIG_ID: &str = "Config";
         const LICENSE_ID: &str = "License";
+        const AUTOSTART_ID: &str = "Autostart";
         const QUIT_ID: &str = "Quit";
+
+        let autostart_enabled = AutoStart::enabled().unwrap_or_else(|err| {
+            error!("Failed to get autostart state: {}", err);
+            false
+        });
 
         let menu = Menu::with_items(&[
             &MenuItem::with_id(RELOAD_SCRIPTS, "Reload scripts", true, None),
             &MenuItem::with_id(CONFIG_ID, "Config", true, None),
             &MenuItem::with_id(LICENSE_ID, "License", true, None),
+            &CheckMenuItem::with_id(AUTOSTART_ID, "Autostart", true, autostart_enabled, None),
             &MenuItem::with_id(QUIT_ID, "Quit", true, None),
         ])
         .unwrap();
 
+        let config_path = Constants::config_dir();
+        let license_path = Constants::license_path();
         MenuEvent::set_event_handler(Some(move |e: MenuEvent| {
             match e.id.as_ref() {
                 RELOAD_SCRIPTS => {
                     Events::reload_scripts();
                 }
                 CONFIG_ID => {
-                    if let Err(err) = opener::reveal(&constants.config_dir) {
+                    if let Err(err) = opener::reveal(&config_path) {
                         error!("Failed to reveal config directory: {}", err);
                     }
                 }
                 LICENSE_ID => {
-                    if let Err(err) = opener::reveal(&constants.root_dir.join("LICENSE")) {
+                    if let Err(err) = opener::reveal(&license_path) {
                         error!("Failed to reveal license: {}", err);
+                    }
+                }
+                AUTOSTART_ID => {
+                    // TODO manually set toggle state if toggle errors
+                    if let Err(err) = AutoStart::toggle() {
+                        error!("Failed to toggle autostart: {}", err);
                     }
                 }
                 QUIT_ID => proxy.send(Event::Quit),

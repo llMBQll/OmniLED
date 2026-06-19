@@ -1,0 +1,50 @@
+name = "omni-led"
+productName = "OmniLED"
+version = "0.10.1"
+identifier = "io.github.llMBQll.OmniLED"
+description = "OLED screen controller for SteelSeries and other devices."
+authors = ["Michal Balabanow <m.balabanow@gmail.com>"]
+publisher = "Michal Balabanow"
+
+before-packaging-command = "cargo build --release --workspace"
+formats = ["appimage", "dmg", "wix"]
+out-dir = "target/release"
+binaries = [{ path = "omni-led", main = true }]
+icons = ["assets/icons/white.ico", "assets/icons/white.png"]
+
+resources = [
+  { src = "**/LICENSE*", target = "license" },
+
+  # Linux
+  { src = "target/release/libaudio.so", target = "plugins/libaudio.so" },
+  { src = "target/release/libclock.so", target = "plugins/libclock.so" },
+  { src = "target/release/libimages.so", target = "plugins/libimages.so" },
+  { src = "target/release/libmedia.so", target = "plugins/libmedia.so" },
+  { src = "target/release/libsystem.so", target = "plugins/libsystem.so" },
+  { src = "target/release/libweather.so", target = "plugins/libweather.so" },
+
+  # macOS
+  { src = "target/release/libaudio.dylib", target = "plugins/libaudio.dylib" },
+  { src = "target/release/libclock.dylib", target = "plugins/libclock.dylib" },
+  { src = "target/release/libimages.dylib", target = "plugins/libimages.dylib" },
+  { src = "target/release/libmedia.dylib", target = "plugins/libmedia.dylib" },
+  { src = "target/release/libsystem.dylib", target = "plugins/libsystem.dylib" },
+  { src = "target/release/libweather.dylib", target = "plugins/libweather.dylib" },
+
+  # Windows
+  { src = "target/release/audio.dll", target = "plugins/audio.dll" },
+  { src = "target/release/clock.dll", target = "plugins/clock.dll" },
+  { src = "target/release/images.dll", target = "plugins/images.dll" },
+  { src = "target/release/media.dll", target = "plugins/media.dll" },
+  { src = "target/release/system.dll", target = "plugins/system.dll" },
+  { src = "target/release/weather.dll", target = "plugins/weather.dll" },
+]
+
+[appimage]
+libs = [ "libayatana-appindicator3.so.1" ]
+
+[appimage.linuxdeploy-plugins]
+"gtk" = "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh"
+
+[macos]
+background_app = true

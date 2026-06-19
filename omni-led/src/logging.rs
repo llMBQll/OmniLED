@@ -4,8 +4,6 @@ use log4rs::config::runtime::ConfigBuilder;
 use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::{Config, Handle};
-use mlua::Lua;
-use omni_led_lib::common::user_data::UserDataRef;
 use omni_led_lib::constants::constants::Constants;
 use omni_led_lib::logging::logger::LogHandle;
 use std::path::{Path, PathBuf};
@@ -22,9 +20,11 @@ impl LogHandle for OmniLedLogHandle {
     }
 }
 
-pub fn init(lua: &Lua) -> OmniLedLogHandle {
-    let constants = UserDataRef::<Constants>::load(lua);
-    let path = constants.get().data_dir.join("logging.log");
+pub fn init() -> OmniLedLogHandle {
+    let data_dir = Constants::data_dir();
+    std::fs::create_dir_all(data_dir).unwrap();
+
+    let path = Constants::data_dir().join("logging.log");
 
     let config = create_config(&path, default_log_level());
     let handle = log4rs::init_config(config).unwrap();

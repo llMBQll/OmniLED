@@ -31,7 +31,7 @@ jobs:
           globs: "**/*.md"
 
       - name: Build
-        run: cargo make build
+        run: cargo build --workspace
 
       - name: Test
-        run: cargo make test
+        run: cargo test --workspace --all-features
