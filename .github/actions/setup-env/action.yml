@@ -1,6 +1,6 @@
-name: 'Setup Env'
+name: "Setup Env"
 
-description: 'Install dependencies and checkout the code'
+description: "Install dependencies and checkout the code"
 runs:
   using: composite
   steps:
@@ -36,6 +36,3 @@ runs:
 
     - name: Setup Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
-
-    - name: Install cargo-make
-      uses: davidB/rust-cargo-make@v1
