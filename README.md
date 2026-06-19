@@ -1,8 +1,7 @@
 # OmniLED
 
-OmniLED is a program allowing you to control devices with an OLED screen. It's designed to work on both Linux and
-Windows, while supporting all SteelSeries devices, virtually any custom USB device, and allowing for in-depth
-customization.
+Control OLED screen on SteelSeries and other devices. Works on macOS, Windows, and Linux.
+Lua scripting engine and plugin system enable in-depth customization, to make the device truly yours.
 
 ## Example layouts on device and in emulator
 
@@ -26,10 +25,10 @@ customization.
   - System resource usage and temperatures via [system](omni-led-applications/system/README.md)
   - Weather via [weather](omni-led-applications/weather/README.md)
 - Extensibility:
-  - Create custom applications using the [gRPC interface](omni-led-api/proto/plugin.proto)
+  - Create custom applications using the [plugin interface](omni-led-api/omni_led_api.h)
   - Configure the usb settings and data format to work with your device
 - Versatility:
-  - Works on Linux and Windows
+  - Works on macOS, Windows and Linux
   - Choose from multiple backends: Raw USB, Emulator, SteelSeries GG
 
 ## Supported Devices
@@ -69,8 +68,9 @@ Install OmniLED (see the [installation steps](docs/install.md) for both Linux an
 Now you can proceed to actually make OmniLED send data to your device.
 
 1. Navigate to the `<CONFIG_DIR>` inside the installation directory. This will by default be:
+    - macOS: `/Users/<username>/Library/Application Support/OmniLED/config`
+    - Linux: `/home/<username>/.config/OmniLED/config`
     - Windows: `C:\Users\<username>\AppData\Roaming\OmniLED\config`
-    - Linux: `~/.config/OmniLED/config`
 2. Open [`<CONFIG_DIR>/devices.lua`](config/devices.lua) to see if your device is already listed.  
    If it is, skip to step 4.
 3. Create a new configuration file for your device.
@@ -116,8 +116,31 @@ If this doesn't help, feel free to [open an issue](https://github.com/llMBQll/Om
 
 You can find the logs in your systems' `config` directory. By default, this will be:
 
+- macOS: `/Users/<username>/Library/Application Support/OmniLED/data/logging.log`
+- Linux: `/home/<username>/.config/OmniLED/data/logging.log`
 - Windows: `C:\Users\<username>\AppData\Roaming\OmniLED\data\logging.log`
-- Linux: `~/.config/OmniLED/data/logging.log`
+
+### macOS installation note
+
+Because the OmniLED executable is currently unsigned, macOS may block it from running and display the following warning:
+> **"OmniLED" is damaged and can't be opened. You should move it to the Trash.**
+
+Most of the, this actually doesn't mean it's damaged. You just need to grant macOS permission to trust it, using one of
+the solutions below:
+
+#### Method 1: Via System Settings
+
+You can whitelist the app by navigating to **System Settings > Privacy & Security** and clicking **Open Anyway**.  
+For detailed steps, see Apple's official guide:
+[Open a Mac app from an unknown developer](https://support.apple.com/en-gb/guide/mac-help/mh40616/mac).
+
+#### Method 2: Via Terminal
+
+Alternatively, you can manually strip the macOS quarantine flag by opening a Terminal and running the following command:
+
+```shell
+xattr -dr com.apple.quarantine /Applications/OmniLED.app
+```
 
 ## Contributing
 
@@ -129,7 +152,7 @@ All contributions are welcome! See the [contributing guide](CONTRIBUTING.md) for
 - [x] Loading custom images (Load images and GIFs from disk)
 - [x] Hardware info (CPU usage, temps, RAM usage, etc.)
 - [ ] Discord info (Mic status, currently speaking user, etc.)
-- [ ] Graphical interface for installer and settings
+- [ ] Graphical interface for settings
 
 ## License
 
