@@ -23,6 +23,8 @@ sudo apt install \
           g++ \
           libappindicator3-dev \
           libdbus-1-dev \
+          libdrm-dev \
+          librsvg2-dev \
           libfontconfig-dev \
           libgtk-3-dev \
           libpulse-dev \
