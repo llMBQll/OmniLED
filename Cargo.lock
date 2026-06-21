@@ -4579,10 +4579,12 @@ dependencies = [
 name = "omni-led"
 version = "0.11.0"
 dependencies = [
+ "clap",
  "log",
  "log4rs",
  "mlua",
  "omni-led-lib",
+ "windows 0.62.2",
 ]
 
 [[package]]
