@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
+use clap::Parser;
 use log::debug;
 use mlua::Lua;
 use omni_led_lib::{
@@ -24,11 +25,30 @@ use std::sync;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
+#[cfg(target_os = "windows")]
+mod console;
 mod logging;
 
 static RUNNING: AtomicBool = AtomicBool::new(true);
 
 fn main() {
+    let _options = match Options::try_parse() {
+        Ok(options) => {
+            #[cfg(target_os = "windows")]
+            if options.attach_console {
+                console::attach_console_if_missing();
+            }
+
+            options
+        }
+        Err(err) => {
+            #[cfg(target_os = "windows")]
+            console::attach_console_if_missing();
+
+            err.exit();
+        }
+    };
+
     set_panic_hook();
 
     let (ready_tx, ready_rx) = sync::mpsc::channel();
@@ -99,4 +119,13 @@ fn set_panic_hook() {
         RUNNING.store(false, Ordering::Relaxed);
         hook(info);
     }));
+}
+
+#[derive(Parser)]
+#[command(name = "OmniLED")]
+#[command(version, about)]
+struct Options {
+    /// Attach console to the program. Applies only on Windows.
+    #[clap(short, long, default_value = "false")]
+    attach_console: bool,
 }
