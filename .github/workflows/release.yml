@@ -70,17 +70,17 @@ jobs:
           body: |
             ## Installation
 
-            | Platform | Download                                                    | Run                                                                                                     |
-            |----------|-------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|
-            | Linux    | [OmniLED-${{ github.ref_name }}-x86_64.AppImage][linux_url] | `chmod +x OmniLED-*.AppImage && ./OmniLED-*.AppImage`                                                   |
-            | macOS    | [OmniLED-${{ github.ref_name }}-aarch64.dmg][macos_url]     | Run the `.dmg` file and install the application (also see [macOS installation note][macos_install_url]) |
-            | Windows  | [OmniLED-${{ github.ref_name }}-x86_64.msi][windows_url]    | Run the `.msi` installer and follow the setup wizard                                                    |
+            | Platform | Download                                                    | Run                                                                                                          |
+            |----------|-------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+            | Linux    | [OmniLED-${{ github.ref_name }}-x86_64.AppImage][linux_url] | `chmod +x OmniLED-*.AppImage && ./OmniLED-*.AppImage` (also see [post installation steps][post_install_url]) |
+            | macOS    | [OmniLED-${{ github.ref_name }}-aarch64.dmg][macos_url]     | Run the `.dmg` file and install the application (also see [macOS installation note][macos_install_url])      |
+            | Windows  | [OmniLED-${{ github.ref_name }}-x86_64.msi][windows_url]    | Run the `.msi` installer and follow the setup wizard                                                         |
 
             [linux_url]: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/OmniLED-${{ github.ref_name }}-x86_64.AppImage
             [macos_url]: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/OmniLED-${{ github.ref_name }}-aarch64.dmg
             [windows_url]: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/OmniLED-${{ github.ref_name }}-x86_64.msi
             [macos_install_url]: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/README.md#macos-installation-note
-
+            [post_install_url]: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/install.md#post-installation-steps
             ---
           generate_release_notes: true
           files: artifacts/*
