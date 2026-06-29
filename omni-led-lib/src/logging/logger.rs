@@ -1,5 +1,5 @@
 use log::{debug, error, info, trace, warn};
-use mlua::{FromLua, Lua, UserData, UserDataMethods};
+use mlua::{Lua, UserData, UserDataMethods};
 use omni_led_derive::{LuaEnum, LuaName};
 
 use crate::common::user_data::set_unique_user_data;

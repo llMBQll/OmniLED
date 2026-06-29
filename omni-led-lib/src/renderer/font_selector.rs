@@ -1,4 +1,4 @@
-use mlua::{FromLua, UserData};
+use mlua::UserData;
 use omni_led_derive::{FromLuaValue, LuaEnum};
 
 #[derive(Debug, Clone, PartialEq, LuaEnum)]
