@@ -1,6 +1,5 @@
-use convert_case::Casing;
 use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote};
+use quote::quote;
 use syn::{Attribute, Data, DeriveInput};
 
 use crate::common::{
@@ -81,8 +80,7 @@ fn generate_initializer(
                 let mut init_default: Vec<TokenStream> = Vec::new();
                 let mut drop_initialized: Vec<TokenStream> = Vec::new();
                 let mut impl_defaults: Vec<TokenStream> = Vec::new();
-                let mut mask_defs: Vec<TokenStream> = Vec::new();
-                let mut mask_refs: Vec<TokenStream> = Vec::new();
+                let mut masks: Vec<TokenStream> = Vec::new();
                 let mut field_names: Vec<TokenStream> = Vec::new();
 
                 for (index, f) in fields.named.iter().enumerate() {
@@ -90,12 +88,7 @@ fn generate_initializer(
                     let field = f.ident.as_ref().unwrap();
                     let attrs = get_field_attributes(&f.attrs);
 
-                    let mask_name = format_ident!(
-                        "__FIELD_MASK_{}",
-                        field.to_string().to_case(convert_case::Case::UpperSnake)
-                    );
-                    let mask_def = quote! { const #mask_name: u64 = 1 << #index };
-                    let mask_ref = quote! { Self::#mask_name };
+                    let mask = quote! { (1 << #index) };
 
                     // for `impl Default for <TYPE>`
                     match (&attrs.default, impl_default) {
@@ -126,7 +119,7 @@ fn generate_initializer(
                     init_field.push(quote! {
                         stringify!(#field) => unsafe {
                             (&raw mut (*ptr).#field).write(#write_value);
-                            *initialized |= #mask_ref;
+                            *initialized |= #mask;
                         }
                     });
 
@@ -139,10 +132,10 @@ fn generate_initializer(
 
                     if let Some(default) = default {
                         init_default.push(quote! {
-                            if *initialized & #mask_ref == 0 {
+                            if *initialized & #mask == 0 {
                                 unsafe {
                                     (&raw mut (*ptr).#field).write(#default);
-                                    *initialized |= #mask_ref;
+                                    *initialized |= #mask;
                                 }
                             }
                         });
@@ -150,7 +143,7 @@ fn generate_initializer(
 
                     // for `drop_initialized`
                     drop_initialized.push(quote! {
-                        if initialized & #mask_ref != 0 {
+                        if initialized & #mask != 0 {
                             unsafe {
                                 (&raw mut (*ptr).#field).drop_in_place();
                             }
@@ -158,21 +151,19 @@ fn generate_initializer(
                     });
 
                     // for constant definitions
-                    mask_defs.push(mask_def);
-                    mask_refs.push(mask_ref);
+                    masks.push(mask);
                     field_names.push(quote! { stringify!(#field) });
                 }
 
-                let num_masks = mask_refs.len();
+                let num_masks = masks.len();
                 let mask_all = quote! {
                     const __MASK_ALL: u64 = (1 << #num_masks) - 1
                 };
                 let mask_map = quote! {
                     const __MASK_MAP: [(u64, &str); #num_masks] = [
-                        #( (#mask_refs, #field_names) ),*
+                        #( (#masks, #field_names) ),*
                     ]
                 };
-                let mask_defs = quote! { #(#mask_defs);* };
 
                 let init_field = quote! { #(#init_field)* };
                 let init_default = quote! { #(#init_default)* };
@@ -180,7 +171,6 @@ fn generate_initializer(
 
                 let helper_impl = quote! {
                     impl #name {
-                        #mask_defs;
                         #mask_all;
                         #mask_map;
 
