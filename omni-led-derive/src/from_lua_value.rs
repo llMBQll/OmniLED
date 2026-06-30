@@ -105,7 +105,9 @@ fn generate_initializer(
                     if attrs.flatten.is_some() {
                         let flattened = quote! {
                             unsafe {
-                                (&raw mut (*ptr).#field).write(<#ty>::__from_fields(lua, fields, stringify!(#name), false)?);
+                                (&raw mut (*ptr).#field).write(<#ty>::__from_fields(
+                                    lua, fields, missing_fields, stringify!(#name), false)?
+                                );
                                 initialized |= #mask;
                             };
                         };
@@ -197,6 +199,7 @@ fn generate_initializer(
                         fn __from_fields(
                             lua: &mlua::Lua,
                             fields: &mut Vec<Option<(String, mlua::Value)>>,
+                            missing_fields: &mut Vec<&'static str>,
                             top_level_type: &'static str,
                             is_top_level: bool,
                         ) -> mlua::Result<Self> {
@@ -242,15 +245,18 @@ fn generate_initializer(
                             }
 
                             if initialized != Self::__MASK_ALL {
+                                missing_fields.extend(
+                                    Self::__MASK_MAP
+                                        .iter()
+                                        .filter(|(mask, _)| initialized & mask == 0)
+                                        .map(|(_, field)| field)
+                                );
+                            }
+
+                            if !missing_fields.is_empty() {
                                 use mlua::ErrorContext as _;
-                                let missing_fields = Self::__MASK_MAP
-                                    .iter()
-                                    .filter(|(mask, _)| initialized & mask == 0)
-                                    .map(|(_, field)| *field)
-                                    .collect::<Vec<_>>()
-                                    .join(", ");
                                 return Err(mlua::Error::runtime(format!(
-                                    "Missing fields: [{}]", missing_fields
+                                    "Missing fields: [{}]", missing_fields.join(", ")
                                 )).#wrong_fields_error_context);
                             }
 
@@ -292,12 +298,13 @@ fn generate_initializer(
 
                 let initializer = quote! {
                     mlua::Value::Table(table) => {
-                        let mut fields: Vec<Option<(String, mlua::Value)>> = Vec::new();
+                        let mut fields = Vec::new();
+                        let mut missing_fields = Vec::new();
                         for pair in table.pairs() {
                             let (name, value): (String, mlua::Value) = pair?;
                             fields.push(Some((name, value)));
                         }
-                        Self::__from_fields(lua, &mut fields, stringify!(#name), true)
+                        Self::__from_fields(lua, &mut fields, &mut missing_fields, stringify!(#name), true)
                     }
                 };
 
