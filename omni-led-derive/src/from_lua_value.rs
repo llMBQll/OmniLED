@@ -78,6 +78,7 @@ fn generate_initializer(
             syn::Fields::Named(ref fields) => {
                 let mut init_field: Vec<TokenStream> = Vec::new();
                 let mut init_default: Vec<TokenStream> = Vec::new();
+                let mut init_flattened: Vec<TokenStream> = Vec::new();
                 let mut drop_initialized: Vec<TokenStream> = Vec::new();
                 let mut impl_defaults: Vec<TokenStream> = Vec::new();
                 let mut masks: Vec<TokenStream> = Vec::new();
@@ -86,6 +87,7 @@ fn generate_initializer(
                 for (index, f) in fields.named.iter().enumerate() {
                     let index = index as u64;
                     let field = f.ident.as_ref().unwrap();
+                    let ty = &f.ty;
                     let attrs = get_field_attributes(&f.attrs);
 
                     let mask = quote! { (1 << #index) };
@@ -99,32 +101,43 @@ fn generate_initializer(
                         _ => {}
                     };
 
-                    // for `init_field`
-                    let write_value = quote! { <_ as mlua::FromLua>::from_lua(value, lua) };
-                    let write_value = match attrs.transform {
-                        Some(transform) => {
-                            quote! { #write_value.and_then(|value| #transform(value, lua)) }
-                        }
-                        None => write_value,
-                    };
-                    let write_value = quote! {
-                        #write_value.with_context(|_| {
-                            format!(
-                                "Error occurred when parsing '{}.{}'",
-                                top_level_type, stringify!(#field)
-                            )
-                        })?
-                    };
+                    // If flattendedm generate different init code
+                    if attrs.flatten.is_some() {
+                        let flattened = quote! {
+                            unsafe {
+                                (&raw mut (*ptr).#field).write(<#ty>::__from_fields(lua, fields, stringify!(#name), false)?);
+                                initialized |= #mask;
+                            };
+                        };
+                        init_flattened.push(flattened);
+                    } else {
+                        // for `init_field`
+                        let write_value = quote! { <_ as mlua::FromLua>::from_lua(value, lua) };
+                        let write_value = match attrs.transform {
+                            Some(transform) => {
+                                quote! { #write_value.and_then(|value| #transform(value, lua)) }
+                            }
+                            None => write_value,
+                        };
+                        let write_value = quote! {
+                            #write_value.with_context(|_| {
+                                format!(
+                                    "Error occurred when parsing '{}.{}'",
+                                    top_level_type, stringify!(#field)
+                                )
+                            })?
+                        };
 
-                    init_field.push(quote! {
-                        stringify!(#field) => unsafe {
-                            (&raw mut (*ptr).#field).write(#write_value);
-                            *initialized |= #mask;
-                        }
-                    });
+                        init_field.push(quote! {
+                            stringify!(#field) => unsafe {
+                                (&raw mut (*ptr).#field).write(#write_value);
+                                *initialized |= #mask;
+                            }
+                        });
+                    }
 
                     // for `init_defaults`
-                    let default = match (attrs.default, is_option(&f.ty)) {
+                    let default = match (attrs.default, is_option(ty)) {
                         (Some(default), _) => Some(default),
                         (None, true) => Some(quote! { None }),
                         (None, false) => None,
@@ -167,11 +180,12 @@ fn generate_initializer(
 
                 let init_field = quote! { #(#init_field)* };
                 let init_default = quote! { #(#init_default)* };
+                let init_flattened = quote! { #(#init_flattened)* };
                 let drop_initialized = quote! { #(#drop_initialized)* };
 
                 let wrong_fields_error_context = quote! {
                     with_context(|_| {
-                        format!("Error occurred when parsing '{}'", stringify!(#name))
+                        format!("Error occurred when parsing '{}'", top_level_type)
                     })
                 };
 
@@ -182,9 +196,9 @@ fn generate_initializer(
 
                         fn __from_fields(
                             lua: &mlua::Lua,
-                            top_level_type: &'static str,
                             fields: &mut Vec<Option<(String, mlua::Value)>>,
-                            report_unknown: bool,
+                            top_level_type: &'static str,
+                            is_top_level: bool,
                         ) -> mlua::Result<Self> {
                             struct DropGuard {
                                 ptr: *mut #name,
@@ -205,6 +219,8 @@ fn generate_initializer(
                                 initialized: &mut initialized as *mut _,
                             };
 
+                            #init_flattened;
+
                             for field in fields.iter_mut() {
                                 Self::__init_field(top_level_type, ptr, &mut initialized, lua, field)?;
                             }
@@ -212,7 +228,7 @@ fn generate_initializer(
                             Self::__init_default(ptr, &mut initialized);
 
                             // TODO see if there is a more efficient way to check unknown fields
-                            if report_unknown && fields.iter().any(|x| x.is_some()) {
+                            if is_top_level && fields.iter().any(|x| x.is_some()) {
                                 use mlua::ErrorContext as _;
 
                                 let unknown_fields = fields
@@ -252,12 +268,12 @@ fn generate_initializer(
                             field: &mut Option<(String, mlua::Value)>,
                         ) -> mlua::Result<()> {
                             use mlua::ErrorContext as _;
-                            // let (name, value) = unsafe { field.take().unwrap_unchecked() };
-                            let (name, value) = field.take().unwrap();
-                            match name.as_str() {
-                                #init_field
-                                other => {
-                                    *field = Some((name, value));
+                            if let Some((name, value)) = field.take() {
+                                match name.as_str() {
+                                    #init_field
+                                    other => {
+                                        *field = Some((name, value));
+                                    }
                                 }
                             }
                             Ok(())
@@ -281,7 +297,7 @@ fn generate_initializer(
                             let (name, value): (String, mlua::Value) = pair?;
                             fields.push(Some((name, value)));
                         }
-                        Self::__from_fields(lua, stringify!(#name), &mut fields, true)
+                        Self::__from_fields(lua, &mut fields, stringify!(#name), true)
                     }
                 };
 
@@ -384,6 +400,7 @@ fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
 
 struct FieldAttributes {
     default: Option<TokenStream>,
+    flatten: Option<TokenStream>,
     transform: Option<TokenStream>,
 }
 
@@ -396,6 +413,7 @@ fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
             "default",
             quote!(Default::default()),
         ),
+        flatten: get_attribute_with_default_value(&mut attributes, "flatten", quote! {}),
         transform: get_attribute(&mut attributes, "transform"),
     }
 }
