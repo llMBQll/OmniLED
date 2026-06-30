@@ -111,7 +111,7 @@ fn generate_initializer(
                         #write_value.with_context(|_| {
                             format!(
                                 "Error occurred when parsing '{}.{}'",
-                                stringify!(#name), stringify!(#field)
+                                top_level_type, stringify!(#field)
                             )
                         })?
                     };
@@ -169,100 +169,119 @@ fn generate_initializer(
                 let init_default = quote! { #(#init_default)* };
                 let drop_initialized = quote! { #(#drop_initialized)* };
 
+                let wrong_fields_error_context = quote! {
+                    with_context(|_| {
+                        format!("Error occurred when parsing '{}'", stringify!(#name))
+                    })
+                };
+
                 let helper_impl = quote! {
                     impl #name {
                         #mask_all;
                         #mask_map;
 
-                        fn init_field(
+                        fn __from_fields(
+                            lua: &mlua::Lua,
+                            top_level_type: &'static str,
+                            fields: &mut Vec<Option<(String, mlua::Value)>>,
+                            report_unknown: bool,
+                        ) -> mlua::Result<Self> {
+                            struct DropGuard {
+                                ptr: *mut #name,
+                                initialized: *const u64,
+                            }
+                            impl Drop for DropGuard {
+                                fn drop(&mut self) {
+                                    #name::__drop_initialized(self.ptr, self.initialized);
+                                }
+                            }
+
+                            let mut uninit: std::mem::MaybeUninit<Self> = std::mem::MaybeUninit::uninit();
+                            let ptr = uninit.as_mut_ptr();
+                            let mut initialized = 0;
+
+                            let drop_guard = DropGuard {
+                                ptr,
+                                initialized: &mut initialized as *mut _,
+                            };
+
+                            for field in fields.iter_mut() {
+                                Self::__init_field(top_level_type, ptr, &mut initialized, lua, field)?;
+                            }
+
+                            Self::__init_default(ptr, &mut initialized);
+
+                            // TODO see if there is a more efficient way to check unknown fields
+                            if report_unknown && fields.iter().any(|x| x.is_some()) {
+                                use mlua::ErrorContext as _;
+
+                                let unknown_fields = fields
+                                    .iter()
+                                    .filter_map(|field| field.as_ref().and_then(|(name, _)| Some(name.clone())))
+                                    .collect::<Vec<_>>();
+                                let unknown_fields = unknown_fields.join(", ");
+                                return Err(mlua::Error::runtime(format!(
+                                    "Unknown fields: [{}]", unknown_fields
+                                )).#wrong_fields_error_context);
+                            }
+
+                            if initialized != Self::__MASK_ALL {
+                                use mlua::ErrorContext as _;
+                                let missing_fields = Self::__MASK_MAP
+                                    .iter()
+                                    .filter(|(mask, _)| initialized & mask == 0)
+                                    .map(|(_, field)| *field)
+                                    .collect::<Vec<_>>()
+                                    .join(", ");
+                                return Err(mlua::Error::runtime(format!(
+                                    "Missing fields: [{}]", missing_fields
+                                )).#wrong_fields_error_context);
+                            }
+
+                            // All errors handled, no need to cleanup the data now
+                            std::mem::forget(drop_guard);
+
+                            unsafe { Ok(uninit.assume_init()) }
+                        }
+
+                        fn __init_field(
+                            top_level_type: &'static str,
                             ptr: *mut Self,
                             initialized: &mut u64,
                             lua: &mlua::Lua,
-                            field: &str,
-                            value: mlua::Value,
-                            unknown: &mut Vec<String>,
+                            field: &mut Option<(String, mlua::Value)>,
                         ) -> mlua::Result<()> {
                             use mlua::ErrorContext as _;
-                            match field {
+                            // let (name, value) = unsafe { field.take().unwrap_unchecked() };
+                            let (name, value) = field.take().unwrap();
+                            match name.as_str() {
                                 #init_field
                                 other => {
-                                    unknown.push(other.to_string());
+                                    *field = Some((name, value));
                                 }
                             }
                             Ok(())
                         }
 
-                        fn init_default(ptr: *mut Self, initialized: &mut u64) {
+                        fn __init_default(ptr: *mut Self, initialized: &mut u64) {
                             #init_default
                         }
 
-                        fn drop_initialized(ptr: *mut Self, initialized: *const u64) {
+                        fn __drop_initialized(ptr: *mut Self, initialized: *const u64) {
                             let initialized = unsafe { *initialized };
                             #drop_initialized
                         }
                     }
                 };
 
-                let wrong_fields_error_context = quote! {
-                    with_context(|_| {
-                        format!("Error occurred when parsing '{}'",stringify!(#name))
-                    })
-                };
-
                 let initializer = quote! {
                     mlua::Value::Table(table) => {
-                        struct DropGuard {
-                            ptr: *mut #name,
-                            initialized: *const u64,
-                        }
-                        impl Drop for DropGuard {
-                            fn drop(&mut self) {
-                                #name::drop_initialized(self.ptr, self.initialized);
-                            }
-                        }
-
-                        let mut uninit: std::mem::MaybeUninit<Self> = std::mem::MaybeUninit::uninit();
-                        let ptr = uninit.as_mut_ptr();
-                        let mut initialized = 0;
-                        let mut unknown_fields = Vec::new();
-
-                        let drop_guard = DropGuard {
-                            ptr,
-                            initialized: &mut initialized as *mut _,
-                        };
-
+                        let mut fields: Vec<Option<(String, mlua::Value)>> = Vec::new();
                         for pair in table.pairs() {
-                            let (key, value): (String, mlua::Value) = pair?;
-                            Self::init_field(ptr, &mut initialized, lua, &key, value, &mut unknown_fields)?;
+                            let (name, value): (String, mlua::Value) = pair?;
+                            fields.push(Some((name, value)));
                         }
-
-                        Self::init_default(ptr, &mut initialized);
-
-                        if !unknown_fields.is_empty() {
-                            use mlua::ErrorContext as _;
-                            let unknown_fields = unknown_fields.join(", ");
-                            return Err(mlua::Error::runtime(format!(
-                                "Unknown fields: [{}]", unknown_fields
-                            )).#wrong_fields_error_context);
-                        }
-
-                        if initialized != Self::__MASK_ALL {
-                            use mlua::ErrorContext as _;
-                            let missing_fields = Self::__MASK_MAP
-                                .iter()
-                                .filter(|(mask, _)| initialized & mask == 0)
-                                .map(|(_, field)| *field)
-                                .collect::<Vec<_>>()
-                                .join(", ");
-                            return Err(mlua::Error::runtime(format!(
-                                "Missing fields: [{}]", missing_fields
-                            )).#wrong_fields_error_context);
-                        }
-
-                        // All errors handled, no need to cleanup the data now
-                        std::mem::forget(drop_guard);
-
-                        unsafe { Ok(uninit.assume_init()) }
+                        Self::__from_fields(lua, stringify!(#name), &mut fields, true)
                     }
                 };
 
