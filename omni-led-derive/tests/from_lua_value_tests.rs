@@ -10,8 +10,17 @@ mod tests {
         a: i32,
         b: String,
         c: bool,
+        #[mlua(flatten)]
+        flattened: TestFlatten,
     }
     impl UserData for Test {}
+
+    #[derive(FromLuaValue, Clone, Debug, PartialEq)]
+    struct TestFlatten {
+        d: f64,
+        e: char,
+    }
+    impl UserData for TestFlatten {}
 
     #[test]
     fn basic_round_trip() {
@@ -20,6 +29,7 @@ mod tests {
             a: 42,
             b: "It works".to_string(),
             c: true,
+            flattened: TestFlatten { d: 1.23, e: 'e' },
         };
 
         let expected = value.clone();
@@ -41,7 +51,26 @@ mod tests {
             {
                 a = "that's not right",
                 b = "b",
-                c = true
+                c = true,
+                d = 1.23,
+                e = "e",
+            }
+        })
+        .eval::<Test>()
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic = "context: \"Error occurred when parsing 'Test.e'\", cause: FromLuaConversionError"]
+    fn flattened_field_error() {
+        let lua = Lua::new();
+        lua.load(chunk! {
+            {
+                a = 1,
+                b = "b",
+                c = true,
+                d = 1.23,
+                e = "that's not right",
             }
         })
         .eval::<Test>()
@@ -68,10 +97,11 @@ mod tests {
             .load(chunk! {
                 {
                     b = "b",
+                    e = "e",
                 }
             })
             .eval::<Test>()
-            .expect_err("Fail due to fields 'a' and 'c' missing")
+            .expect_err("Fail due to fields 'a', 'c' and 'd' missing")
             .to_string();
 
         let expected = "Error occurred when parsing 'Test'\nruntime error: Missing fields: ";
@@ -79,7 +109,7 @@ mod tests {
             err.starts_with(expected),
             "Expected: '{expected}'.\nActual:   '{err}'"
         );
-        assert_eq!(["a", "c"], *extract_error_fields(&err));
+        assert_eq!(["a", "c", "d"], *extract_error_fields(&err));
     }
 
     #[test]
@@ -91,12 +121,14 @@ mod tests {
                     a = 1,
                     b = "b",
                     c = true,
-                    d = "unknown",
-                    e = "fields",
+                    d = 1.23,
+                    e = "e",
+                    f = "unknown",
+                    g = "fields"
                 }
             })
             .eval::<Test>()
-            .expect_err("Fail due to extra 'd' and 'e' fields")
+            .expect_err("Fail due to extra 'f' and 'g' fields")
             .to_string();
 
         let expected = "Error occurred when parsing 'Test'\nruntime error: Unknown fields: ";
@@ -104,7 +136,7 @@ mod tests {
             err.starts_with(expected),
             "Expected: '{expected}'.\nActual:   '{err}'"
         );
-        assert_eq!(["d", "e"], *extract_error_fields(&err));
+        assert_eq!(["f", "g"], *extract_error_fields(&err));
     }
 
     /// Test proper field cleanup on error. Uninitialized fields must not be dropped.
