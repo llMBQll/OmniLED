@@ -146,7 +146,7 @@ mod tests {
     /// current parse count and drop count to assert them at the end.
     #[test]
     fn error_cleanup() {
-        const N: usize = 4;
+        const N: usize = 6;
 
         static PARSE_COUNT: AtomicUsize = AtomicUsize::new(0);
         static DROP_COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -184,6 +184,14 @@ mod tests {
             b: Tracked,
             c: Tracked,
             d: Tracked,
+            #[mlua(flatten)]
+            flatten: CleanupTestFlatten,
+        }
+
+        #[derive(FromLuaValue, Clone, Debug)]
+        struct CleanupTestFlatten {
+            e: Tracked,
+            f: Tracked,
         }
 
         let lua = Lua::new();
@@ -193,12 +201,20 @@ mod tests {
                 b = {},
                 c = {},
                 d = {},
+                e = {},
+                f = {},
             }
         })
         .eval::<CleanupTest>()
         .expect_err("Fail due to simulated parse failure");
 
-        assert_eq!(N, CleanupTest::__MASK_MAP.len());
+        // Track if test constant 'N' is in sync with defnitions.
+        // N == lenght of CleanupTest's mask map and CleanupTestFlatten's mask map
+        // (-1 due to `flatten` that is needed for internal logic)
+        assert_eq!(
+            N,
+            CleanupTest::__MASK_MAP.len() + CleanupTestFlatten::__MASK_MAP.len() - 1
+        );
         assert_eq!(N, PARSE_COUNT.load(Ordering::Acquire));
         assert_eq!(N - 1, DROP_COUNT.load(Ordering::Acquire));
     }

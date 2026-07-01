@@ -5,21 +5,15 @@ authors = ["Michał Bałabanow <m.balabanow@gmail.com>"]
 license = "GPL-3.0-only"
 edition = "2024"
 
-[lib]
-proc-macro = true
-
 [dependencies]
-convert_case = "0.11"
-proc-macro2 = "1"
-syn = "2.0"
-quote = "1.0"
+mlua = { version = "0.11", features = ["lua54", "vendored", "macros"] }
+omni-led-derive-impl = { path = "omni-led-derive-impl" }
 
 [dev-dependencies]
-mlua = { version = "0.11", features = ["lua54", "vendored", "macros"] }
 regex = "1.10"
 
 [features]
-from-lua-value = []
-lua-enum = []
-lua-name = []
-plugin-entry = []
+from-lua-value = ["omni-led-derive-impl/from-lua-value"]
+lua-enum = ["omni-led-derive-impl/lua-enum"]
+lua-name = ["omni-led-derive-impl/lua-name"]
+plugin-entry = ["omni-led-derive-impl/plugin-entry"]
