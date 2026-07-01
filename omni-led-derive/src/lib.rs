@@ -1,43 +1,12 @@
-mod common;
+pub use omni_led_derive_impl::*;
 
-#[cfg(feature = "from-lua-value")]
-mod from_lua_value;
-
-#[cfg(feature = "from-lua-value")]
-#[proc_macro_derive(FromLuaValue, attributes(mlua))]
-pub fn from_lua_table_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = syn::parse_macro_input!(input as syn::DeriveInput);
-    from_lua_value::expand_lua_value_derive(input)
+pub enum FromLuaError {
+    Lua(mlua::Error),
+    MissingFields,
 }
 
-#[cfg(feature = "lua-enum")]
-mod lua_enum;
-
-#[cfg(feature = "lua-enum")]
-#[proc_macro_derive(LuaEnum, attributes(mlua))]
-pub fn lua_enum_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = syn::parse_macro_input!(input as syn::DeriveInput);
-    lua_enum::expand_lua_enum_derive(input)
-}
-
-#[cfg(feature = "lua-name")]
-mod lua_name;
-
-#[cfg(feature = "lua-name")]
-#[proc_macro_derive(LuaName, attributes(mlua))]
-pub fn lua_name_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = syn::parse_macro_input!(input as syn::DeriveInput);
-    lua_name::expand_lua_name_derive(input)
-}
-
-#[cfg(feature = "plugin-entry")]
-mod plugin_entry;
-
-#[cfg(feature = "plugin-entry")]
-#[proc_macro_attribute]
-pub fn plugin_entry(
-    attr: proc_macro::TokenStream,
-    item: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    plugin_entry::expand_plugin_entry_attr(attr.into(), item.into()).into()
+impl From<mlua::Error> for FromLuaError {
+    fn from(value: mlua::Error) -> Self {
+        Self::Lua(value)
+    }
 }

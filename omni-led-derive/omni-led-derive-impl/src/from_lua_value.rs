@@ -104,11 +104,17 @@ fn generate_initializer(
                     // If flattendedm generate different init code
                     if attrs.flatten.is_some() {
                         let flattened = quote! {
-                            unsafe {
-                                (&raw mut (*ptr).#field).write(<#ty>::__from_fields(
-                                    lua, fields, missing_fields, stringify!(#name), false)?
-                                );
-                                initialized |= #mask;
+                            match <#ty>::__from_fields(lua, fields, missing_fields, stringify!(#name), false) {
+                                Ok(value) => unsafe {
+                                    (&raw mut (*ptr).#field).write(value);
+                                    initialized |= #mask;
+                                }
+                                Err(omni_led_derive::FromLuaError::Lua(err)) => {
+                                    return Err(omni_led_derive::FromLuaError::Lua(err));
+                                }
+                                Err(omni_led_derive::FromLuaError::MissingFields) => {
+                                    // continue parsing
+                                }
                             };
                         };
                         init_flattened.push(flattened);
@@ -202,7 +208,7 @@ fn generate_initializer(
                             missing_fields: &mut Vec<&'static str>,
                             top_level_type: &'static str,
                             is_top_level: bool,
-                        ) -> mlua::Result<Self> {
+                        ) -> Result<Self, omni_led_derive::FromLuaError> {
                             struct DropGuard {
                                 ptr: *mut #name,
                                 initialized: *const u64,
@@ -233,15 +239,14 @@ fn generate_initializer(
                             // TODO see if there is a more efficient way to check unknown fields
                             if is_top_level && fields.iter().any(|x| x.is_some()) {
                                 use mlua::ErrorContext as _;
-
                                 let unknown_fields = fields
                                     .iter()
                                     .filter_map(|field| field.as_ref().and_then(|(name, _)| Some(name.clone())))
                                     .collect::<Vec<_>>();
                                 let unknown_fields = unknown_fields.join(", ");
-                                return Err(mlua::Error::runtime(format!(
+                                return Err(omni_led_derive::FromLuaError::Lua(mlua::Error::runtime(format!(
                                     "Unknown fields: [{}]", unknown_fields
-                                )).#wrong_fields_error_context);
+                                )).#wrong_fields_error_context));
                             }
 
                             if initialized != Self::__MASK_ALL {
@@ -253,11 +258,12 @@ fn generate_initializer(
                                 );
                             }
 
-                            if !missing_fields.is_empty() {
+                            // Only return error from top level struct, after collecting all missing fields
+                            if is_top_level && !missing_fields.is_empty() {
                                 use mlua::ErrorContext as _;
-                                return Err(mlua::Error::runtime(format!(
+                                return Err(omni_led_derive::FromLuaError::Lua(mlua::Error::runtime(format!(
                                     "Missing fields: [{}]", missing_fields.join(", ")
-                                )).#wrong_fields_error_context);
+                                )).#wrong_fields_error_context));
                             }
 
                             // All errors handled, no need to cleanup the data now
@@ -304,7 +310,11 @@ fn generate_initializer(
                             let (name, value): (String, mlua::Value) = pair?;
                             fields.push(Some((name, value)));
                         }
-                        Self::__from_fields(lua, &mut fields, &mut missing_fields, stringify!(#name), true)
+                        match Self::__from_fields(lua, &mut fields, &mut missing_fields, stringify!(#name), true) {
+                            Ok(value) => Ok(value),
+                            Err(omni_led_derive::FromLuaError::Lua(err)) => Err(err),
+                            Err(omni_led_derive::FromLuaError::MissingFields) => unreachable!(),
+                        }
                     }
                 };
 
