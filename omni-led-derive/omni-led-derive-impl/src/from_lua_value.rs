@@ -2,10 +2,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput};
 
-use crate::common::{
-    EnumFieldType, collect_enum_variants, get_attribute, get_attribute_with_default_value,
-    is_option, parse_attributes,
-};
+use crate::common::{get_attribute, get_attribute_with_default_value, is_option, parse_attributes};
 
 pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
@@ -328,75 +325,7 @@ fn generate_initializer(
             }
             syn::Fields::Unnamed(_) | syn::Fields::Unit => unimplemented!(),
         },
-
-        Data::Enum(ref data) => {
-            let fields = collect_enum_variants(data, get_enum_attributes);
-
-            let names = fields.iter().map(|(_, ident, _ty, attrs)| {
-                let alias = attrs.alias.as_ref().map(|alias| quote! { #alias, });
-                quote! {
-                    stringify!(#ident), #alias
-                }
-            });
-            let names = quote! { vec![#(#names)*] };
-
-            let mut unnamed_initializers = Vec::new();
-            let mut unit_initializers = Vec::new();
-
-            for field in fields {
-                match field {
-                    (EnumFieldType::Unnamed, ident, _ty, _attrs) => {
-                        unnamed_initializers.push(quote! {
-                            else if table.contains_key(stringify!(#ident))? {
-                                Ok(Self::#ident(table.get(stringify!(#ident))?))
-                            }
-                        });
-                    }
-                    (EnumFieldType::Unit, ident, _ty, attrs) => {
-                        let alias = attrs.alias.map(|alias| {
-                            quote! {
-                                #alias => Ok(Self::#ident),
-                            }
-                        });
-
-                        unit_initializers.push(quote! {
-                            stringify!(#ident) => Ok(Self::#ident),
-                            #alias
-                        });
-                    }
-                }
-            }
-
-            let unnamed_initializers = quote! { #(#unnamed_initializers)* };
-            let unit_initializers = quote! { #(#unit_initializers)* };
-
-            let initializer = quote! {
-                mlua::Value::Table(table) => {
-                    if false {
-                        unreachable!();
-                    }
-                    #unnamed_initializers
-                    else {
-                        Err(mlua::Error::runtime(format!(
-                            "Expected one of {:?}",
-                            #names
-                        )))
-                    }
-                },
-                mlua::Value::String(string) => {
-                    match &*string.to_str().unwrap() {
-                        #unit_initializers
-                        string => Err(mlua::Error::runtime(format!(
-                            "Expected one of {:?}, got '{}'",
-                            #names,
-                            string
-                        ))),
-                    }
-                }
-            };
-
-            (initializer, None, None)
-        }
+        Data::Enum(_) => unimplemented!("Use LuaEnum for enums"),
         Data::Union(_) => unimplemented!(),
     }
 }
@@ -432,17 +361,5 @@ fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
         ),
         flatten: get_attribute_with_default_value(&mut attributes, "flatten", quote! {}),
         transform: get_attribute(&mut attributes, "transform"),
-    }
-}
-
-struct EnumAttributes {
-    alias: Option<TokenStream>,
-}
-
-fn get_enum_attributes(attributes: &Vec<Attribute>) -> EnumAttributes {
-    let mut attributes = parse_attributes("mlua", attributes);
-
-    EnumAttributes {
-        alias: get_attribute(&mut attributes, "alias"),
     }
 }
