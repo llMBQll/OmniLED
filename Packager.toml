@@ -1,6 +1,6 @@
 name = "omni-led"
 productName = "OmniLED"
-version = "0.11.0"
+version = "0.11.1"
 identifier = "io.github.llMBQll.OmniLED"
 description = "OLED screen controller for SteelSeries and other devices."
 authors = ["Michal Balabanow <m.balabanow@gmail.com>"]
