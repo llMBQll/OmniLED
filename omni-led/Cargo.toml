@@ -10,7 +10,7 @@ default-run = "omni-led"
 clap = { version = "4.5", features = ["derive"] }
 log = { version = "0.4", features = ["std"] }
 log4rs = "1.4"
-mlua = "0.11"
+mlua = { version = "0.12", features = ["lua54", "vendored", "macros"] }
 omni-led-lib = { path = "../omni-led-lib" }
 
 [target.'cfg(target_os = "windows")'.dependencies]

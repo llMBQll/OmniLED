@@ -1,7 +1,8 @@
 use std::io::Write;
 
 use log::info;
-use mlua::{ChunkMode, ErrorContext, Lua, Table};
+use mlua::chunk::ChunkMode;
+use mlua::{ErrorContext, Lua, Table};
 
 use crate::constants::constants::Constants;
 
