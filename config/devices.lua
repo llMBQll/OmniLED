@@ -44,6 +44,21 @@ hid_device {
 }
 
 hid_device {
+    name = 'SteelSeries Apex Pro TKL Gen 3',
+    screen_size = {
+        width = 128,
+        height = 40,
+    },
+    hid_settings = {
+        vendor_id = '0x1038',
+        product_id = '0x1642',
+        interface = '0x01',
+    },
+    transform = transform_data({ prepend = {0x38, 0x83, 0x00, 0x00} }),
+    memory_layout = MemoryLayout.SteelSeries2,
+}
+
+hid_device {
     name = 'SteelSeries Apex Pro TKL Wireless Gen 3 (2.4G)',
     screen_size = {
         width = 128,

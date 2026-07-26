@@ -43,6 +43,7 @@ Officially supported devices:
 - SteelSeries Apex 5
 - SteelSeries Apex 7 TKL
 - SteelSeries Apex Pro
+- SteelSeries Apex Pro TKL Gen 3
 - SteelSeries Apex Pro TKL Wireless Gen 3 (Wired mode)
 - SteelSeries Apex Pro TKL Wireless Gen 3 (2.4G Wireless mode)
 
