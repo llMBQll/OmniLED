@@ -24,7 +24,7 @@ pub fn expand_lua_enum_derive(input: DeriveInput) -> proc_macro::TokenStream {
             }
         }
 
-        impl FromLua for #name {
+        impl mlua::FromLua for #name {
              fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
                 match value {
                     #builtin
