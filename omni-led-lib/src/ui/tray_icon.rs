@@ -71,6 +71,7 @@ impl TrayIcon {
         }));
 
         let tray = TrayIconBuilder::new()
+            .with_id("com.github.llMBQll.OmniLED")
             .with_menu(Box::new(menu))
             .with_tooltip(TITLE)
             .with_icon(tray_icon_image())
