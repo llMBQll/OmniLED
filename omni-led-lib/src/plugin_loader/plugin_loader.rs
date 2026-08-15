@@ -46,7 +46,7 @@ impl PluginLoader {
         let env = create_table_with_defaults!(lua, {
             load_plugin = $load_plugin_fn,
             get_default_plugin_path = $get_default_plugin_path_fn,
-            LOG = LOG,
+            Log = Log,
             PLATFORM = PLATFORM,
         });
 

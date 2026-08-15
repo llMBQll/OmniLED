@@ -46,7 +46,7 @@ impl Settings {
             .unwrap();
 
         let env = create_table_with_defaults!(lua, {
-            LOG = LOG,
+            Log = Log,
             PLATFORM = PLATFORM,
             Settings = $load_settings_fn,
         });
