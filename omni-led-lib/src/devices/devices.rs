@@ -15,7 +15,7 @@ use crate::devices::usb_device;
 use crate::devices::usb_device::hid_device::HidDeviceSettings;
 use crate::devices::usb_device::raw_usb_device::RawUsbDeviceSettings;
 
-type Constructor = fn(&Lua, Value) -> Box<dyn Device>;
+type Constructor = fn(&Lua, Value) -> mlua::Result<Box<dyn Device>>;
 
 #[derive(LuaName)]
 pub struct Devices {
@@ -41,7 +41,7 @@ impl Devices {
                     let constructor = device_entry.initializer.constructor;
                     let settings = device_entry.initializer.settings.clone();
 
-                    let device = (constructor)(lua, settings);
+                    let device = (constructor)(lua, settings)?;
                     device_entry.available = false;
                     Ok(device)
                 } else {
@@ -109,7 +109,7 @@ impl Devices {
         type DeviceType<S> = <S as Settings>::DeviceType;
 
         let constructor: Constructor = |lua, settings| {
-            let mut device = Box::new(<DeviceType<S>>::init(lua, settings).unwrap());
+            let mut device = Box::new(<DeviceType<S>>::init(lua, settings)?);
 
             if log_enabled!(log::Level::Debug) {
                 let type_name = Self::get_type_name::<DeviceType<S>>().to_case(Case::Snake);
@@ -117,7 +117,7 @@ impl Devices {
                 debug!("Loaded {} '{}'", type_name, device_name);
             }
 
-            device
+            Ok(device)
         };
 
         let type_name = Self::get_type_name::<DeviceType<S>>().to_case(Case::Snake);
