@@ -18,6 +18,7 @@ use omni_led_lib::{
     plugin_loader::plugin_loader::PluginLoader,
     script_handler::script_handler::ScriptHandler,
     settings::settings::Settings,
+    steelseries_engine,
     ui::event::Event,
     ui::handler::{HandlerBuilder, PROXY},
 };
@@ -77,6 +78,7 @@ fn main() {
         let mut dispatcher = Dispatcher::load(&lua);
         Events::load(&lua);
         Shortcuts::load(&lua);
+        steelseries_engine::api::Api::load(&lua);
         Devices::load(&lua, devices_config);
         ScriptHandler::load(&lua, scripts_config);
         PluginLoader::load(&lua, plugins_config);

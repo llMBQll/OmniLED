@@ -1,23 +1,18 @@
-use lazy_static::lazy_static;
-use serde_json::Value;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use std::sync::Mutex;
+use std::time::Duration;
+
+use mlua::{Lua, UserData};
+use serde_json::Value;
 use ureq::http::StatusCode;
 use ureq::{Agent, Body};
 
-use crate::devices::device::Size;
+use crate::common::lua_traits::LuaName;
+use crate::common::user_data::set_unique_user_data;
 use crate::renderer::buffer::{BitBuffer, BufferTrait};
-
-pub fn register_size(size: Size) {
-    API.lock().unwrap().register_size(size);
-}
-
-pub fn update(size: &Size, data: &[u8]) -> Result<()> {
-    API.lock().unwrap().update(size, data)
-}
+use crate::script_handler::script_data_types::Size;
 
 #[derive(Debug)]
 pub enum Error {
@@ -29,44 +24,51 @@ pub enum Error {
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-const GAME: &str = "MBQ_OMNI_LED";
-const GAME_DISPLAY_NAME: &str = "OmniLED";
-const DEVELOPER: &str = "MBQ";
-const TIMEOUT: u32 = 60000;
-
-lazy_static! {
-    static ref API: Mutex<Api> = Mutex::new(Api::new());
-}
-
-struct Api {
+pub struct Api {
     agent: Agent,
     address: Option<String>,
     counter: usize,
     sizes: HashSet<Size>,
+    timeout: Duration,
 }
 
+const GAME: &str = "MBQ_OMNI_LED";
+const GAME_DISPLAY_NAME: &str = "OmniLED";
+const DEVELOPER: &str = "MBQ";
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
+
 impl Api {
+    pub fn load(lua: &Lua) {
+        let api = Self::new();
+
+        // TODO register heartbeat event to fire on OMNILED.Update
+        // send event only if last call was close to `timeout` ago
+
+        set_unique_user_data(lua, api);
+    }
+
     fn new() -> Self {
         Self {
             agent: Agent::new_with_defaults(),
             address: None,
             counter: 0,
             sizes: HashSet::new(),
+            timeout: DEFAULT_TIMEOUT, // TODO actually can load it from settings now
         }
     }
 
-    fn register_size(&mut self, size: Size) {
-        self.sizes.insert(size);
+    pub fn register_size(&mut self, size: Size) {
+        self.sizes.insert(size); // TODO see if it makes sense to track if size handler was bound
     }
 
-    fn update(&mut self, size: &Size, data: &[u8]) -> Result<()> {
+    pub fn update(&mut self, size: &Size, data: &[u8]) -> Result<()> {
         let update = serde_json::json!({
             "game": GAME,
-            "event": Self::get_event(&size),
+            "event": Self::event_name_for_size(&size),
             "data": {
                 "value": self.counter,
                 "frame": {
-                    Self::get_image_data_field(&size): data
+                    Self::data_field_for_size(&size): data
                 }
             }
         });
@@ -80,14 +82,14 @@ impl Api {
             "game": GAME,
             "game_display_name": GAME_DISPLAY_NAME,
             "developer": DEVELOPER,
-            "deinitialize_timer_length_ms": TIMEOUT
+            "deinitialize_timer_length_ms": self.timeout.as_millis()
         });
         self.game_metadata(serde_json::to_string(&metadata).unwrap().as_str())?;
 
         let sizes = self.sizes.clone();
         for size in sizes {
-            // Use buffer type for correctly handling widths not divisible by 8 which in theory
-            // should not happen as all currently available devices have 128 pixel width
+            // Use buffer type for correctly handling widths not divisible by 8.
+            // In practice no currently available device requires it though.
             let buffer = BitBuffer::new(Size {
                 width: size.width,
                 height: size.height,
@@ -96,13 +98,13 @@ impl Api {
 
             let handler = serde_json::json!({
                 "game": GAME,
-                "event": Self::get_event(&size),
+                "event": Self::event_name_for_size(&size),
                 "handlers": [{
                     "datas": [{
                         "has-text": false,
                         "image-data": empty_data,
                     }],
-                    "device-type": Self::get_device_type(&size),
+                    "device-type": Self::device_type_for_size(&size),
                     "mode": "screen",
                     "zone": "one",
                 }]
@@ -115,10 +117,10 @@ impl Api {
         Ok(())
     }
 
-    fn unregister(&mut self) {
+    fn unregister(&mut self) -> Result<()> {
         let remove_game = serde_json::json!({ "game": GAME });
 
-        _ = self.remove_game(serde_json::to_string(&remove_game).unwrap().as_str());
+        self.remove_game(serde_json::to_string(&remove_game).unwrap().as_str())
     }
 
     fn game_metadata(&mut self, json: &str) -> Result<()> {
@@ -226,21 +228,27 @@ impl Api {
             ))
     }
 
-    fn get_event(size: &Size) -> String {
+    fn event_name_for_size(size: &Size) -> String {
         format!("UPDATE-{}X{}", size.width, size.height)
     }
 
-    fn get_image_data_field(size: &Size) -> String {
+    fn data_field_for_size(size: &Size) -> String {
         format!("image-data-{}x{}", size.width, size.height)
     }
 
-    fn get_device_type(size: &Size) -> String {
+    fn device_type_for_size(size: &Size) -> String {
         format!("screened-{}x{}", size.width, size.height)
     }
 }
 
 impl Drop for Api {
     fn drop(&mut self) {
-        self.unregister()
+        _ = self.unregister();
     }
 }
+
+impl LuaName for Api {
+    const NAME: &str = "SteelSeriesApi";
+}
+
+impl UserData for Api {}
