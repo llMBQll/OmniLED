@@ -2,10 +2,10 @@ use log::error;
 use mlua::{FromLua, Lua, Value};
 use omni_led_derive::FromLuaValue;
 
+use crate::common::user_data::UserDataRef;
 use crate::devices::device::{Device, MemoryLayout, Settings, Size};
-use crate::devices::steelseries_engine::api;
-use crate::devices::steelseries_engine::api::Error;
 use crate::renderer::buffer::Buffer;
+use crate::steelseries_engine::api::{Api, Error};
 
 pub struct SteelSeriesEngineDevice {
     name: String,
@@ -15,9 +15,10 @@ pub struct SteelSeriesEngineDevice {
 impl Device for SteelSeriesEngineDevice {
     fn init(lua: &Lua, settings: Value) -> mlua::Result<Self> {
         let settings = SteelSeriesEngineDeviceSettings::from_lua(settings, lua)?;
-
         let screen_size = settings.screen_size;
-        api::register_size(screen_size);
+
+        let mut api = UserDataRef::<Api>::load(lua);
+        api.get_mut().register_size(screen_size);
 
         Ok(Self {
             name: settings.name,
@@ -29,8 +30,9 @@ impl Device for SteelSeriesEngineDevice {
         Ok(self.size)
     }
 
-    fn update(&mut self, _: &Lua, buffer: Buffer) -> mlua::Result<()> {
-        match api::update(&self.size, buffer.bytes()) {
+    fn update(&mut self, lua: &Lua, buffer: Buffer) -> mlua::Result<()> {
+        let mut api = UserDataRef::<Api>::load(lua);
+        match api.get_mut().update(&self.size, buffer.bytes()) {
             Ok(_) => Ok(()),
             Err(Error::Disconnected) => {
                 error!("SteelSeries Engine is temporarily not available.");
