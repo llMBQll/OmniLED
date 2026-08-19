@@ -5,14 +5,16 @@ use std::path::Path;
 use std::time::Duration;
 
 use mlua::{Lua, UserData};
+use omni_led_derive::FromLuaValue;
 use serde_json::Value;
 use ureq::http::StatusCode;
 use ureq::{Agent, Body};
 
 use crate::common::lua_traits::LuaName;
-use crate::common::user_data::set_unique_user_data;
+use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::renderer::buffer::{BitBuffer, BufferTrait};
-use crate::script_handler::script_data_types::Size;
+use crate::script_handler::script_data_types::{DurationWrapper, Size};
+use crate::settings::settings::Settings;
 
 #[derive(Debug)]
 pub enum Error {
@@ -24,36 +26,72 @@ pub enum Error {
 
 pub type Result<T> = core::result::Result<T, Error>;
 
+#[derive(Clone, Debug, FromLuaValue)]
+#[mlua(impl_default)]
+#[mlua(validate = Self::validate)]
+pub struct ApiSettings {
+    #[mlua(default = true)]
+    enabled: bool,
+
+    #[mlua(default = true)]
+    register_heartbeat: bool,
+
+    #[mlua(default = Duration::from_secs(15))]
+    #[mlua(transform = DurationWrapper::transform)]
+    deinitialize_timeout: Duration,
+}
+
+impl ApiSettings {
+    fn validate(settings: &Self) -> mlua::Result<()> {
+        if settings.deinitialize_timeout >= Duration::from_secs(1)
+            && settings.deinitialize_timeout <= Duration::from_secs(60)
+        {
+            Ok(())
+        } else {
+            Err(mlua::Error::runtime(format!(
+                "api_settings.deinitialize_timeout must be in range [1sec, 60sec] inclusive, got {:#?}",
+                settings.deinitialize_timeout
+            )))
+        }
+    }
+}
+
 pub struct Api {
     agent: Agent,
     address: Option<String>,
     counter: usize,
     sizes: HashSet<Size>,
-    timeout: Duration,
+    deinitialize_timeout: Duration,
 }
 
 const GAME: &str = "MBQ_OMNI_LED";
 const GAME_DISPLAY_NAME: &str = "OmniLED";
 const DEVELOPER: &str = "MBQ";
-const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
 
 impl Api {
     pub fn load(lua: &Lua) {
-        let api = Self::new();
+        let settings = UserDataRef::<Settings>::load(lua);
+        let api_settings = settings.get().steelseries_api.clone();
+
+        if !api_settings.enabled {
+            return;
+        }
 
         // TODO register heartbeat event to fire on OMNILED.Update
         // send event only if last call was close to `timeout` ago
 
+        let api = Self::new(api_settings.deinitialize_timeout);
+
         set_unique_user_data(lua, api);
     }
 
-    fn new() -> Self {
+    fn new(deinitialize_timeout: Duration) -> Self {
         Self {
             agent: Agent::new_with_defaults(),
             address: None,
             counter: 0,
             sizes: HashSet::new(),
-            timeout: DEFAULT_TIMEOUT, // TODO actually can load it from settings now
+            deinitialize_timeout,
         }
     }
 
@@ -82,7 +120,7 @@ impl Api {
             "game": GAME,
             "game_display_name": GAME_DISPLAY_NAME,
             "developer": DEVELOPER,
-            "deinitialize_timer_length_ms": self.timeout.as_millis()
+            "deinitialize_timer_length_ms": self.deinitialize_timeout.as_millis()
         });
         self.game_metadata(serde_json::to_string(&metadata).unwrap().as_str())?;
 
