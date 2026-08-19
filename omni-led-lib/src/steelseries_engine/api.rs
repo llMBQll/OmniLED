@@ -2,8 +2,9 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
+use log::error;
 use mlua::{Lua, UserData};
 use omni_led_derive::FromLuaValue;
 use serde_json::Value;
@@ -12,8 +13,9 @@ use ureq::{Agent, Body};
 
 use crate::common::lua_traits::LuaName;
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
+use crate::events::events::Events;
 use crate::renderer::buffer::{BitBuffer, BufferTrait};
-use crate::script_handler::script_data_types::{DurationWrapper, Size};
+use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Size};
 use crate::settings::settings::Settings;
 
 #[derive(Debug)]
@@ -62,6 +64,7 @@ pub struct Api {
     counter: usize,
     sizes: HashSet<Size>,
     deinitialize_timeout: Duration,
+    last_update: Instant,
 }
 
 const GAME: &str = "MBQ_OMNI_LED";
@@ -77,12 +80,38 @@ impl Api {
             return;
         }
 
-        // TODO register heartbeat event to fire on OMNILED.Update
-        // send event only if last call was close to `timeout` ago
-
         let api = Self::new(api_settings.deinitialize_timeout);
-
         set_unique_user_data(lua, api);
+
+        if !api_settings.register_heartbeat {
+            return;
+        }
+
+        let heartbeat_threshold = api_settings.deinitialize_timeout * 8 / 10;
+        let heartbeat_payload = &serde_json::json!({
+            "game": GAME,
+        });
+        let heartbeat_payload = serde_json::to_string(&heartbeat_payload).unwrap();
+        let hearbeat = lua
+            .create_function(move |lua: &Lua, _: ()| {
+                let mut api = UserDataRef::<Self>::load(lua).get_mut();
+
+                // Don't bother sending heartbeat if it's disconnected
+                if api.address.is_some() && api.last_update.elapsed() > heartbeat_threshold {
+                    if let Err(err) = api.heartbeat(&heartbeat_payload) {
+                        error!("Failed to send heartbeat event: {:?}", err);
+                    }
+                }
+
+                Ok(())
+            })
+            .unwrap();
+
+        Events::register(
+            EventKey::String(String::from("OMNILED.Update")),
+            hearbeat,
+            true,
+        );
     }
 
     fn new(deinitialize_timeout: Duration) -> Self {
@@ -92,6 +121,7 @@ impl Api {
             counter: 0,
             sizes: HashSet::new(),
             deinitialize_timeout,
+            last_update: Instant::now(),
         }
     }
 
@@ -150,8 +180,6 @@ impl Api {
             self.bind_game_event(serde_json::to_string(&handler).unwrap().as_str())?;
         }
 
-        // todo!("Register heartbeat event")
-
         Ok(())
     }
 
@@ -177,9 +205,9 @@ impl Api {
         self.call("/remove_game", json)
     }
 
-    // fn game_heartbeat(&mut self, json: &str) {
-    //     self.call("/game_heartbeat", json)
-    // }
+    fn heartbeat(&mut self, json: &str) -> Result<()> {
+        self.call("/game_heartbeat", json)
+    }
 
     fn try_reconnecting(&mut self) -> Result<()> {
         match self.address {
