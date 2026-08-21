@@ -10,4 +10,5 @@ pub mod renderer;
 pub mod script_handler;
 pub mod semaphore;
 pub mod settings;
+pub mod steelseries_engine;
 pub mod ui;
