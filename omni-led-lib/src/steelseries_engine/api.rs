@@ -1,9 +1,12 @@
 use std::collections::HashSet;
+use std::fs::File;
+use std::io::BufReader;
 use std::time::{Duration, Instant};
 
 use log::error;
 use mlua::{Lua, UserData};
 use omni_led_derive::FromLuaValue;
+use serde_json::Value;
 use ureq::http::StatusCode;
 use ureq::{Agent, Body};
 
@@ -28,6 +31,9 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[mlua(impl_default)]
 #[mlua(validate = Self::validate)]
 pub struct ApiSettings {
+    #[mlua(default = Self::default_config_path())]
+    config_path: Option<String>,
+
     #[mlua(default = cfg!(not(target_os = "linux")))]
     enabled: bool,
 
@@ -52,6 +58,32 @@ impl ApiSettings {
             )))
         }
     }
+
+    #[cfg(target_os = "linux")]
+    fn default_config_path() -> Option<String> {
+        None
+    }
+
+    #[cfg(target_os = "macos")]
+    fn default_config_path() -> Option<String> {
+        Some(String::from(
+            "/Library/Application Support/SteelSeries Engine 3/coreProps.json",
+        ))
+    }
+
+    #[cfg(target_os = "windows")]
+    fn default_config_path() -> Option<String> {
+        match std::env::var("PROGRAMDATA") {
+            Ok(program_data) => Some(format!(
+                "{}/SteelSeries/SteelSeries Engine 3/coreProps.json",
+                program_data
+            )),
+            Err(err) => {
+                error!("Failed to read PROGRAMDATA env variable: {}", err);
+                None
+            }
+        }
+    }
 }
 
 pub struct Api {
@@ -61,6 +93,7 @@ pub struct Api {
     sizes: HashSet<Size>,
     deinitialize_timeout: Duration,
     last_update: Instant,
+    config_path: String,
 }
 
 const GAME: &str = "MBQ_OMNI_LED";
@@ -76,7 +109,15 @@ impl Api {
             return;
         }
 
-        let api = Self::new(api_settings.deinitialize_timeout);
+        let config_path = match api_settings.config_path {
+            Some(config_path) => config_path,
+            None => {
+                error!("No config path found. SteelSeries Engine API will not be available");
+                return;
+            }
+        };
+
+        let api = Self::new(api_settings.deinitialize_timeout, config_path);
         set_unique_user_data(lua, api);
 
         if !api_settings.register_heartbeat {
@@ -110,7 +151,7 @@ impl Api {
         );
     }
 
-    fn new(deinitialize_timeout: Duration) -> Self {
+    fn new(deinitialize_timeout: Duration, config_path: String) -> Self {
         Self {
             agent: Agent::new_with_defaults(),
             address: None,
@@ -118,6 +159,7 @@ impl Api {
             sizes: HashSet::new(),
             deinitialize_timeout,
             last_update: Instant::now(),
+            config_path,
         }
     }
 
@@ -208,7 +250,7 @@ impl Api {
     fn try_reconnecting(&mut self) -> Result<()> {
         match self.address {
             Some(_) => Ok(()),
-            None => match Self::read_address() {
+            None => match self.read_address() {
                 Ok(address) => {
                     self.address = Some(address);
                     self.register()
@@ -249,44 +291,13 @@ impl Api {
         }
     }
 
-    #[cfg(target_os = "linux")]
-    fn read_address() -> Result<String> {
-        Err(Error::NotAvailable(
-            "SteelSeries Engine does not exist on Linux".to_string(),
-        ))
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    fn read_address() -> Result<String> {
-        use serde_json::Value;
-        use std::fs::File;
-        use std::io::BufReader;
-        use std::path::Path;
-
-        #[cfg(target_os = "windows")]
-        let dir = {
-            let program_data =
-                std::env::var("PROGRAMDATA").expect("PROGRAMDATA env variable not found");
-            format!("{}/SteelSeries/SteelSeries Engine 3", program_data)
-        };
-
-        #[cfg(target_os = "macos")]
-        let dir = String::from("/Library/Application Support/SteelSeries Engine 3");
-
-        if !Path::new(&dir).is_dir() {
-            return Err(Error::NotAvailable(format!(
-                "SteelSeries Engine directory '{}' doesn't exist",
-                dir
-            )));
-        }
-
-        let path = format!("{}/coreProps.json", dir);
-        let file = match File::open(&path) {
+    fn read_address(&self) -> Result<String> {
+        let file = match File::open(&self.config_path) {
             Ok(file) => file,
             Err(error) => {
                 return Err(Error::NotAvailable(format!(
                     "Couldn't open '{}'. {}",
-                    path, error
+                    self.config_path, error
                 )));
             }
         };
