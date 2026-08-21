@@ -6,7 +6,7 @@ Settings {
     keyboard_ticks_repeat_delay = 2,
     keyboard_ticks_repeat_rate = 2,
     steelseries_api = {
-        enabled = PLATFORM.Os == 'windows',
+        enabled = PLATFORM.Os ~= 'linux',
         register_heartbeat = true,
         deinitialize_timeout = Duration.from_secs(15),
     },
