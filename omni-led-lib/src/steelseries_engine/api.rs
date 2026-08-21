@@ -1,13 +1,9 @@
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
 use std::time::{Duration, Instant};
 
 use log::error;
 use mlua::{Lua, UserData};
 use omni_led_derive::FromLuaValue;
-use serde_json::Value;
 use ureq::http::StatusCode;
 use ureq::{Agent, Body};
 
@@ -32,7 +28,7 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[mlua(impl_default)]
 #[mlua(validate = Self::validate)]
 pub struct ApiSettings {
-    #[mlua(default = true)]
+    #[mlua(default = cfg!(not(target_os = "linux")))]
     enabled: bool,
 
     #[mlua(default = true)]
@@ -253,10 +249,30 @@ impl Api {
         }
     }
 
+    #[cfg(target_os = "linux")]
     fn read_address() -> Result<String> {
-        let program_data =
-            std::env::var("PROGRAMDATA").expect("PROGRAMDATA env variable not found");
-        let dir = format!("{}/SteelSeries/SteelSeries Engine 3", program_data);
+        Err(Error::NotAvailable(
+            "SteelSeries Engine does not exist on Linux".to_string(),
+        ))
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    fn read_address() -> Result<String> {
+        use serde_json::Value;
+        use std::fs::File;
+        use std::io::BufReader;
+        use std::path::Path;
+
+        #[cfg(target_os = "windows")]
+        let dir = {
+            let program_data =
+                std::env::var("PROGRAMDATA").expect("PROGRAMDATA env variable not found");
+            format!("{}/SteelSeries/SteelSeries Engine 3", program_data)
+        };
+
+        #[cfg(target_os = "macos")]
+        let dir = String::from("/Library/Application Support/SteelSeries Engine 3");
+
         if !Path::new(&dir).is_dir() {
             return Err(Error::NotAvailable(format!(
                 "SteelSeries Engine directory '{}' doesn't exist",
