@@ -1,6 +1,5 @@
 use log::debug;
 use mlua::{Lua, UserData, chunk};
-use omni_led_derive::FromLuaValue;
 use std::time::Duration;
 
 use crate::common::lua_traits::LuaName;
@@ -11,44 +10,26 @@ use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
 use crate::script_handler::script_data_types::DurationWrapper;
 
-#[derive(Debug, Clone, FromLuaValue)]
+#[derive(Debug, Clone, UserData)]
 pub struct Settings {
-    #[mlua(default = 8)]
     pub animation_ticks_delay: usize,
-
-    #[mlua(default = 2)]
     pub animation_ticks_rate: usize,
-
-    #[mlua(default = FontSelector::Default)]
     pub font: FontSelector,
-
-    #[mlua(default = LevelFilter::Info)]
     pub log_level: LevelFilter,
-
-    #[mlua(default = 2)]
     pub keyboard_ticks_repeat_delay: usize,
-
-    #[mlua(default = 2)]
     pub keyboard_ticks_repeat_rate: usize,
-
-    #[mlua(transform = DurationWrapper::transform)]
-    #[mlua(default = Duration::from_millis(100))]
+    #[lua(skip)]
     pub update_interval: Duration,
 }
 
 impl Settings {
     pub fn load(lua: &Lua, config: String) {
-        let load_settings_fn = lua
-            .create_function(move |lua, settings: Settings| {
-                set_unique_user_data(lua, settings);
-                Ok(())
-            })
-            .unwrap();
+        set_unique_user_data(lua, Settings::default());
 
         let env = create_table_with_defaults!(lua, {
             Log = Log,
             PLATFORM = PLATFORM,
-            Settings = $load_settings_fn,
+            Settings = Settings,
         });
         load_config(lua, ConfigType::Settings, &config, env).unwrap();
 
@@ -60,8 +41,33 @@ impl Settings {
     }
 }
 
-impl LuaName for Settings {
-    const NAME: &str = "SETTINGS";
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            animation_ticks_delay: 8,
+            animation_ticks_rate: 2,
+            font: FontSelector::Default,
+            log_level: LevelFilter::Info,
+            keyboard_ticks_repeat_delay: 2,
+            keyboard_ticks_repeat_rate: 2,
+            update_interval: Duration::from_millis(100),
+        }
+    }
 }
 
-impl UserData for Settings {}
+#[mlua::userdata_impl]
+impl Settings {
+    #[lua(getter, name = "update_interval", infallible)]
+    fn get_update_interval(&self) -> DurationWrapper {
+        DurationWrapper(self.update_interval)
+    }
+
+    #[lua(setter, name = "update_interval", infallible)]
+    fn set_update_interval(&mut self, update_interval: DurationWrapper) {
+        self.update_interval = update_interval.0;
+    }
+}
+
+impl LuaName for Settings {
+    const NAME: &str = "Settings";
+}
