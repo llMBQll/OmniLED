@@ -83,6 +83,7 @@ impl Devices {
         let env = create_table_with_defaults!(lua, {
             Log = Log,
             PLATFORM = PLATFORM,
+            Settings = Settings,
         });
 
         let loaders = [
