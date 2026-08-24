@@ -36,11 +36,13 @@ pub fn process_events(running: &AtomicBool) {
     }
 }
 
+#[derive(Debug)]
 pub enum KeyboardEventEventType {
     Press,
     Release,
 }
 
+#[derive(Debug)]
 pub struct KeyboardEvent {
     pub key: Keycode,
     pub event_type: KeyboardEventEventType,

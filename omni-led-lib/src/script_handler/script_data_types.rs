@@ -228,7 +228,7 @@ pub enum MemoryLayout {
 
 impl UserData for MemoryLayout {}
 
-#[derive(Clone, LuaName)]
+#[derive(Clone, Debug, LuaName)]
 pub struct Regex {
     re: regex::Regex,
 }
@@ -266,7 +266,7 @@ impl FromLua for Regex {
     }
 }
 
-#[derive(Clone, LuaEnum)]
+#[derive(Clone, Debug, LuaEnum)]
 pub enum EventKey {
     #[mlua(implicit_construct)]
     Regex(Regex),

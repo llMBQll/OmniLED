@@ -64,6 +64,7 @@ macro_rules! get_set_impl {
     ($fields:ident, $name:ident) => {
         $fields.add_field_method_get(stringify!($name), |_, this| Ok(this.$name.clone()));
         $fields.add_field_method_set(stringify!($name), |lua, this, val| {
+            println!("Settings.{} = {:?}", stringify!($name), val);
             this.$name = val;
             EventQueue::instance()
                 .lock()

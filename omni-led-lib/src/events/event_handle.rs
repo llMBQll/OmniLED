@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::common::lua_traits::FromUserdata;
 
-#[derive(Clone, LuaName)]
+#[derive(Clone, Debug, LuaName)]
 pub struct EventHandle {
     event_id: Arc<AtomicUsize>,
 }

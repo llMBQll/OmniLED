@@ -68,6 +68,7 @@ impl UserData for Events {
     }
 }
 
+#[derive(Debug)]
 pub struct EventEntry {
     pub key: EventKey,
     pub on_match: Function,
@@ -78,6 +79,7 @@ pub struct EventEntry {
 // SAFETY: This struct will always be created and read from lua interpreter thread
 unsafe impl Send for EventEntry {}
 
+#[derive(Debug)]
 pub struct ScriptEvent {
     pub event: String,
     pub value: Value,

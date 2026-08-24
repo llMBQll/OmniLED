@@ -6,6 +6,7 @@ use crate::events::events::ScriptEvent;
 use crate::events::{event_handle::EventHandle, events::EventEntry};
 use crate::keyboard::keyboard::KeyboardEvent;
 
+#[derive(Debug)]
 pub enum Event {
     Application(Value),
     Keyboard(KeyboardEvent),
