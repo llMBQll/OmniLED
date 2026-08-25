@@ -2,7 +2,8 @@ use log::{debug, error, info, trace, warn};
 use mlua::{Lua, UserData, UserDataMethods};
 use omni_led_derive::{LuaEnum, LuaName};
 
-use crate::common::user_data::set_unique_user_data;
+use crate::common::user_data::{UserDataRef, set_unique_user_data};
+use crate::settings::settings::Settings;
 
 pub trait LogHandle {
     fn set_level_filter(&self, level_filter: log::LevelFilter);
@@ -21,6 +22,11 @@ impl Log {
                 handle: Box::new(handle),
             },
         );
+
+        Settings::on_log_level_update(lua, |lua, new_level_filter| {
+            let logger = UserDataRef::<Log>::load(lua);
+            logger.get().set_level_filter(new_level_filter);
+        });
     }
 
     pub fn set_level_filter(&self, level_filter: LevelFilter) {

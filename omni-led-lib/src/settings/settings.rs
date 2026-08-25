@@ -9,10 +9,12 @@ use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::events::event_queue::{Event, EventQueue};
+use crate::events::events::Events;
 use crate::events::events::ScriptEvent;
 use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
 use crate::script_handler::script_data_types::DurationWrapper;
+use crate::script_handler::script_data_types::EventKey;
 
 #[derive(Debug, Clone)]
 pub struct Settings {
@@ -58,6 +60,25 @@ impl Default for Settings {
             update_interval: Rc::new(RefCell::new(DurationWrapper(Duration::from_millis(100)))),
         }
     }
+}
+
+macro_rules! make_register_fn {
+    ($fn_name:ident, $name:ident, $ty:ty) => {
+        pub fn $fn_name<F: Fn(&Lua, $ty) + 'static>(lua: &Lua, callback: F) {
+            let key = EventKey::String(format!("Settings.{}", stringify!($name)));
+            let callback = lua
+                .create_function(move |lua, (_event, val): (String, $ty)| {
+                    callback(lua, val);
+                    Ok(())
+                })
+                .unwrap();
+            Events::register(key, callback, true);
+        }
+    };
+}
+
+impl Settings {
+    make_register_fn!(on_log_level_update, log_level, LevelFilter);
 }
 
 impl LuaName for Settings {
