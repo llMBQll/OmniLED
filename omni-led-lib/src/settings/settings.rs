@@ -1,5 +1,7 @@
 use log::debug;
 use mlua::{IntoLua, Lua, UserData, UserDataFields, chunk};
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 
 use crate::common::lua_traits::LuaName;
@@ -14,13 +16,13 @@ use crate::script_handler::script_data_types::DurationWrapper;
 
 #[derive(Debug, Clone)]
 pub struct Settings {
-    pub animation_ticks_delay: usize,
-    pub animation_ticks_rate: usize,
-    pub font: FontSelector,
-    pub log_level: LevelFilter,
-    pub keyboard_ticks_repeat_delay: usize,
-    pub keyboard_ticks_repeat_rate: usize,
-    pub update_interval: Duration,
+    pub animation_ticks_delay: Rc<RefCell<usize>>,
+    pub animation_ticks_rate: Rc<RefCell<usize>>,
+    pub font: Rc<RefCell<FontSelector>>,
+    pub log_level: Rc<RefCell<LevelFilter>>,
+    pub keyboard_ticks_repeat_delay: Rc<RefCell<usize>>,
+    pub keyboard_ticks_repeat_rate: Rc<RefCell<usize>>,
+    pub update_interval: Rc<RefCell<DurationWrapper>>,
 }
 
 impl Settings {
@@ -36,7 +38,9 @@ impl Settings {
 
         let settings = UserDataRef::<Settings>::load(lua);
         let logger = UserDataRef::<Log>::load(lua);
-        logger.get().set_level_filter(settings.get().log_level);
+        logger
+            .get()
+            .set_level_filter(*settings.get().log_level.borrow());
 
         debug!("Loaded settings {:?}", settings.get());
     }
@@ -45,13 +49,13 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            animation_ticks_delay: 8,
-            animation_ticks_rate: 2,
-            font: FontSelector::Default,
-            log_level: LevelFilter::Info,
-            keyboard_ticks_repeat_delay: 2,
-            keyboard_ticks_repeat_rate: 2,
-            update_interval: Duration::from_millis(100),
+            animation_ticks_delay: Rc::new(RefCell::new(8)),
+            animation_ticks_rate: Rc::new(RefCell::new(2)),
+            font: Rc::new(RefCell::new(FontSelector::Default)),
+            log_level: Rc::new(RefCell::new(LevelFilter::Info)),
+            keyboard_ticks_repeat_delay: Rc::new(RefCell::new(2)),
+            keyboard_ticks_repeat_rate: Rc::new(RefCell::new(2)),
+            update_interval: Rc::new(RefCell::new(DurationWrapper(Duration::from_millis(100)))),
         }
     }
 }
@@ -62,15 +66,17 @@ impl LuaName for Settings {
 
 macro_rules! get_set_impl {
     ($fields:ident, $name:ident) => {
-        $fields.add_field_method_get(stringify!($name), |_, this| Ok(this.$name.clone()));
+        $fields.add_field_method_get(stringify!($name), |_, this| {
+            Ok((*this.$name.borrow()).clone())
+        });
         $fields.add_field_method_set(stringify!($name), |lua, this, val| {
-            this.$name = val;
+            *this.$name.borrow_mut() = val;
             EventQueue::instance()
                 .lock()
                 .unwrap()
                 .push(Event::Script(ScriptEvent {
                     event: format!("Settings.{}", stringify!($name)),
-                    value: this.$name.clone().into_lua(&lua)?,
+                    value: (*this.$name.borrow()).clone().into_lua(&lua)?,
                 }));
             Ok(())
         });
@@ -85,19 +91,6 @@ impl UserData for Settings {
         get_set_impl!(fields, log_level);
         get_set_impl!(fields, keyboard_ticks_repeat_delay);
         get_set_impl!(fields, keyboard_ticks_repeat_rate);
-        fields.add_field_method_get("update_interval", |_, this| {
-            Ok(DurationWrapper(this.update_interval))
-        });
-        fields.add_field_method_set("update_interval", |lua, this, val: DurationWrapper| {
-            this.update_interval = val.0;
-            EventQueue::instance()
-                .lock()
-                .unwrap()
-                .push(Event::Script(ScriptEvent {
-                    event: "Settings.update_interval".to_string(),
-                    value: val.into_lua(&lua)?,
-                }));
-            Ok(())
-        });
+        get_set_impl!(fields, update_interval);
     }
 }
