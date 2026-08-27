@@ -7,8 +7,8 @@ use log::error;
 use mlua::{Lua, UserData};
 use omni_led_derive::FromLuaValue;
 use serde_json::Value;
+use ureq::Agent;
 use ureq::http::StatusCode;
-use ureq::{Agent, Body};
 
 use crate::common::lua_traits::LuaName;
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
@@ -16,16 +16,6 @@ use crate::events::events::Events;
 use crate::renderer::buffer::{BitBuffer, BufferTrait};
 use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Size};
 use crate::settings::settings::Settings;
-
-#[derive(Debug)]
-pub enum Error {
-    NotAvailable(String),
-    Disconnected,
-    BadRequest(ureq::Error),
-    BadData(StatusCode, Body),
-}
-
-pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Clone, Debug, FromLuaValue)]
 #[mlua(impl_default)]
@@ -167,14 +157,14 @@ impl Api {
         self.sizes.insert(size); // TODO see if it makes sense to track if size handler was bound
     }
 
-    pub fn update(&mut self, size: &Size, data: &[u8]) -> Result<()> {
+    pub fn update(&mut self, size: &Size, data: &[u8]) -> mlua::Result<()> {
         let update = serde_json::json!({
             "game": GAME,
-            "event": Self::event_name_for_size(&size),
+            "event": Self::event_name_for_size(size),
             "data": {
                 "value": self.counter,
                 "frame": {
-                    Self::data_field_for_size(&size): data
+                    Self::data_field_for_size(size): data
                 }
             }
         });
@@ -183,7 +173,7 @@ impl Api {
         self.game_event(serde_json::to_string(&update).unwrap().as_str())
     }
 
-    fn register(&mut self) -> Result<()> {
+    fn register(&mut self) -> mlua::Result<()> {
         let metadata = serde_json::json!({
             "game": GAME,
             "game_display_name": GAME_DISPLAY_NAME,
@@ -221,52 +211,45 @@ impl Api {
         Ok(())
     }
 
-    fn unregister(&mut self) -> Result<()> {
+    fn unregister(&mut self) -> mlua::Result<()> {
         let remove_game = serde_json::json!({ "game": GAME });
 
         self.remove_game(serde_json::to_string(&remove_game).unwrap().as_str())
     }
 
-    fn game_metadata(&mut self, json: &str) -> Result<()> {
+    fn game_metadata(&mut self, json: &str) -> mlua::Result<()> {
         self.call("/game_metadata", json)
     }
 
-    fn bind_game_event(&mut self, json: &str) -> Result<()> {
+    fn bind_game_event(&mut self, json: &str) -> mlua::Result<()> {
         self.call("/bind_game_event", json)
     }
 
-    fn game_event(&mut self, json: &str) -> Result<()> {
+    fn game_event(&mut self, json: &str) -> mlua::Result<()> {
         self.call("/game_event", json)
     }
 
-    fn remove_game(&mut self, json: &str) -> Result<()> {
+    fn remove_game(&mut self, json: &str) -> mlua::Result<()> {
         self.call("/remove_game", json)
     }
 
-    fn heartbeat(&mut self, json: &str) -> Result<()> {
+    fn heartbeat(&mut self, json: &str) -> mlua::Result<()> {
         self.call("/game_heartbeat", json)
     }
 
-    fn try_reconnecting(&mut self) -> Result<()> {
-        match self.address {
-            Some(_) => Ok(()),
-            None => match self.read_address() {
-                Ok(address) => {
-                    self.address = Some(address);
-                    self.register()
-                }
-                Err(error) => Err(error),
-            },
+    fn try_reconnecting(&mut self) -> mlua::Result<()> {
+        if self.address.is_some() {
+            return Ok(());
         }
+
+        self.address = Some(self.read_address()?);
+        self.register()
     }
 
-    fn call(&mut self, endpoint: &str, json: &str) -> Result<()> {
+    fn call(&mut self, endpoint: &str, json: &str) -> mlua::Result<()> {
         self.try_reconnecting()?;
 
-        let address = match &self.address {
-            Some(address) => address,
-            None => return Err(Error::Disconnected),
-        };
+        let address = self.address.as_ref().unwrap();
 
         let url = format!("http://{}{}", address, endpoint);
         let result = self
@@ -276,49 +259,33 @@ impl Api {
             .send(json);
 
         match result {
-            Ok(response) => {
-                let status = response.status();
-                if status == StatusCode::OK {
-                    Ok(())
-                } else {
-                    Err(Error::BadData(status, response.into_body()))
-                }
+            Ok(response) if response.status() == StatusCode::OK => Ok(()),
+            Ok(response) => Err(mlua::Error::runtime(format!(
+                "SteelSeries API request failed with status {}: {:?}",
+                response.status(),
+                response.body(),
+            ))),
+            Err(ureq::Error::HostNotFound) | Err(ureq::Error::Io(_)) => {
+                self.address = None;
+                Err(mlua::Error::runtime("SteelSeries API is disconnected"))
             }
-            Err(error) => match error {
-                ureq::Error::HostNotFound => Err(Error::Disconnected),
-                other => Err(Error::BadRequest(other)),
-            },
+            Err(error) => Err(mlua::Error::external(error)),
         }
     }
 
-    fn read_address(&self) -> Result<String> {
-        let file = match File::open(&self.config_path) {
-            Ok(file) => file,
-            Err(error) => {
-                return Err(Error::NotAvailable(format!(
-                    "Couldn't open '{}'. {}",
-                    self.config_path, error
-                )));
-            }
-        };
+    fn read_address(&self) -> mlua::Result<String> {
+        let file = File::open(&self.config_path).map_err(|error| {
+            mlua::Error::runtime(format!("Couldn't open '{}': {}", self.config_path, error))
+        })?;
 
         let reader = BufReader::new(file);
-        let json: Value = match serde_json::from_reader(reader) {
-            Ok(json) => json,
-            Err(error) => {
-                return Err(Error::NotAvailable(format!(
-                    "Couldn't parse properties json. {}",
-                    error
-                )));
-            }
-        };
+        let json: Value = serde_json::from_reader(reader).map_err(|error| {
+            mlua::Error::runtime(format!("Couldn't parse properties json: {}", error))
+        })?;
 
-        json["address"]
-            .as_str()
-            .map(|address| String::from(address))
-            .ok_or(Error::NotAvailable(
-                "Couldn't parse properties json. Didn't find 'address' field".to_string(),
-            ))
+        json["address"].as_str().map(String::from).ok_or_else(|| {
+            mlua::Error::runtime("Couldn't parse properties json: missing 'address' field")
+        })
     }
 
     fn event_name_for_size(size: &Size) -> String {

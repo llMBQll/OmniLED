@@ -5,7 +5,7 @@ use omni_led_derive::FromLuaValue;
 use crate::common::user_data::UserDataRef;
 use crate::devices::device::{Device, MemoryLayout, Settings, Size};
 use crate::renderer::buffer::Buffer;
-use crate::steelseries_engine::api::{Api, Error};
+use crate::steelseries_engine::api::Api;
 
 pub struct SteelSeriesEngineDevice {
     name: String,
@@ -32,24 +32,10 @@ impl Device for SteelSeriesEngineDevice {
 
     fn update(&mut self, lua: &Lua, buffer: Buffer) -> mlua::Result<()> {
         let mut api = UserDataRef::<Api>::load(lua);
-        match api.get_mut().update(&self.size, buffer.bytes()) {
-            Ok(_) => Ok(()),
-            Err(Error::Disconnected) => {
-                error!("SteelSeries Engine is temporarily not available.");
-                Ok(())
-            }
-            Err(Error::NotAvailable(message)) => Err(mlua::Error::runtime(format!(
-                "SteelSeries Engine is not available. {}",
-                message
-            ))),
-            Err(Error::BadRequest(error)) => {
-                Err(mlua::Error::runtime(format!("Update failed. {:?}", error)))
-            }
-            Err(Error::BadData(status, response)) => Err(mlua::Error::runtime(format!(
-                "Update failed. Response: [{}] {:?}",
-                status, response
-            ))),
+        if let Err(err) = api.get_mut().update(&self.size, buffer.bytes()) {
+            error!("{}", err);
         }
+        Ok(())
     }
 
     fn name(&mut self, _: &Lua) -> mlua::Result<String> {
