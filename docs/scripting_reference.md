@@ -485,7 +485,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
-> ### `steelseries_engine_device`
+> ### `steel_series_engine_device`
 >
 > Type: `fn(settings: SteelSeriesEngineDeviceSettings)`
 >
