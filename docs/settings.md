@@ -10,6 +10,7 @@ them be missing.
 - [Font](#font)
 - [Log Level](#log-level)
 - [Keyboard](#keyboard)
+- [Steelseries API](#steelseries-api)
 - [Update Interval](#update-interval-tick-duration)
 
 > ### Animation
@@ -123,6 +124,55 @@ them be missing.
 > >   keyboard_ticks_repeat_rate = 1,
 > > }
 > > ```
+
+> ### Steelseries API
+>
+> > `steelseries_api.address`: `string`
+> >
+> > Will override the default logic and use the provided api address.
+> > Might be useful for non-standard setups or when the adddress parsing logic is failing
+> > for any reason.
+> >
+> > _Optional_. Default: `nil`
+>
+> > `steelseries_api.config_path`: `string`
+> >
+> > Will override the default logic and use the provided coreProps.json path.
+> > Might be useful for non-standard setups or when the logic is failing for any reason.
+> >
+> > _Optional_. Default:
+> >
+> > - Linux:   `nil`,
+> > - macOS:   `"/Library/Application Support/SteelSeries Engine 3/coreProps.json"`,
+> > - Windows: `"%PROGRAMDATA%/SteelSeries/SteelSeries Engine 3/coreProps.json"`
+>
+> > `steelseries_api.enabled`: `bool`
+> >
+> > Enables or disables the Steelseries API integration.
+> >
+> > _Optional_. Default:
+> >
+> > - Linux:   `false`,
+> > - macOS:   `true`,
+> > - Windows: `true`
+>
+> > `steelseries_api.register_heartbeat`: `bool`
+> >
+> > Enables or disables the heartbeat event. SteelSeries API expects reugular updates, or
+> > it deems the sender to be disconnected. To prevent this, if OmniLED doesn't send any
+> > render requests for some time it will automatically send a heartbeat event to remind
+> > SteelSeries API it still exists.
+> >
+> > _Optional_. Default: `true`
+>
+> > `steelseries_api.deinitialize_timeout`: `Duration`
+> >
+> > Register to SteelSeries APi with a given `deinitialize_timeout`. This controls how
+> > soon the API will forget about OmniLED if no events are sent. This setting also impacts
+> > how often the heartbeats are sent (if enabled) to keep the connection alive.  
+> > It accepts a range [1s, 60s] inclusive.
+> >
+> > _Optional_. Default: `Duration.from_secs(15)`
 
 > ### Update interval (Tick Duration)
 >
