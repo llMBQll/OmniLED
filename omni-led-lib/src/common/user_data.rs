@@ -1,4 +1,4 @@
-use mlua::{AnyUserData, IntoLua, Lua, UserData};
+use mlua::{AnyUserData, ErrorContext, IntoLua, Lua, UserData};
 use std::marker::PhantomData;
 
 use crate::common::lua_traits::LuaName;
@@ -18,7 +18,11 @@ pub struct UserDataRef<T: UserData + LuaName + 'static> {
 
 impl<'a, T: UserData + LuaName + 'static> UserDataRef<T> {
     pub fn load(lua: &Lua) -> Self {
-        let user_data = lua.globals().get(T::NAME).unwrap();
+        let user_data = lua
+            .globals()
+            .get(T::NAME)
+            .with_context(|_| format!("Failed to find {}", T::NAME))
+            .unwrap();
 
         Self {
             user_data,
@@ -27,10 +31,16 @@ impl<'a, T: UserData + LuaName + 'static> UserDataRef<T> {
     }
 
     pub fn get(&self) -> mlua::UserDataRef<T> {
-        self.user_data.borrow().unwrap()
+        self.user_data
+            .borrow()
+            .with_context(|_| format!("Failed to borrow {}", T::NAME))
+            .unwrap()
     }
 
     pub fn get_mut(&mut self) -> mlua::UserDataRefMut<T> {
-        self.user_data.borrow_mut().unwrap()
+        self.user_data
+            .borrow_mut()
+            .with_context(|_| format!("Failed to mutably borrow {}", T::NAME))
+            .unwrap()
     }
 }
