@@ -84,11 +84,20 @@ pub struct Api {
     deinitialize_timeout: Duration,
     last_update: Instant,
     config_path: String,
+    error_count: usize,
 }
 
 const GAME: &str = "MBQ_OMNI_LED";
 const GAME_DISPLAY_NAME: &str = "OmniLED";
 const DEVELOPER: &str = "MBQ";
+
+const BACKOFF_TABLE: &[Duration] = &[
+    Duration::from_millis(500),
+    Duration::from_millis(1000),
+    Duration::from_millis(2000),
+    Duration::from_millis(4000),
+    Duration::from_millis(8000),
+];
 
 impl Api {
     pub fn load(lua: &Lua) {
@@ -150,6 +159,7 @@ impl Api {
             deinitialize_timeout,
             last_update: Instant::now(),
             config_path,
+            error_count: 0,
         }
     }
 
@@ -247,6 +257,31 @@ impl Api {
     }
 
     fn call(&mut self, endpoint: &str, json: &str) -> mlua::Result<()> {
+        if self.error_count != 0 {
+            let index = std::cmp::min(self.error_count, BACKOFF_TABLE.len()) - 1;
+            let elapsed = self.last_update.elapsed();
+            if elapsed < BACKOFF_TABLE[index] {
+                return Err(mlua::Error::runtime(format!(
+                    "Skipping request, backoff remaining: {:?}",
+                    BACKOFF_TABLE[index] - elapsed
+                )));
+            }
+        }
+
+        self.last_update = Instant::now();
+        match self.call_impl(endpoint, json) {
+            Ok(()) => {
+                self.error_count = 0;
+                Ok(())
+            }
+            Err(err) => {
+                self.error_count += 1;
+                Err(err)
+            }
+        }
+    }
+
+    fn call_impl(&mut self, endpoint: &str, json: &str) -> mlua::Result<()> {
         self.try_reconnecting()?;
 
         let address = self.address.as_ref().unwrap();
