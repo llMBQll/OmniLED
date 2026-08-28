@@ -21,6 +21,9 @@ use crate::settings::settings::Settings;
 #[mlua(impl_default)]
 #[mlua(validate = Self::validate)]
 pub struct ApiSettings {
+    #[mlua(default = None)]
+    address: Option<String>,
+
     #[mlua(default = Self::default_config_path())]
     config_path: Option<String>,
 
@@ -79,6 +82,7 @@ impl ApiSettings {
 pub struct Api {
     agent: Agent,
     address: Option<String>,
+    address_override: Option<String>,
     counter: usize,
     sizes: HashSet<Size>,
     deinitialize_timeout: Duration,
@@ -116,7 +120,11 @@ impl Api {
             }
         };
 
-        let api = Self::new(api_settings.deinitialize_timeout, config_path);
+        let api = Self::new(
+            api_settings.address,
+            config_path,
+            api_settings.deinitialize_timeout,
+        );
         set_unique_user_data(lua, api);
 
         if !api_settings.register_heartbeat {
@@ -150,10 +158,15 @@ impl Api {
         );
     }
 
-    fn new(deinitialize_timeout: Duration, config_path: String) -> Self {
+    fn new(
+        address_override: Option<String>,
+        config_path: String,
+        deinitialize_timeout: Duration,
+    ) -> Self {
         Self {
             agent: Agent::new_with_defaults(),
             address: None,
+            address_override,
             counter: 0,
             sizes: HashSet::new(),
             deinitialize_timeout,
@@ -309,6 +322,10 @@ impl Api {
     }
 
     fn read_address(&self) -> mlua::Result<String> {
+        if let Some(address_override) = &self.address_override {
+            return Ok(address_override.clone());
+        }
+
         let file = File::open(&self.config_path).map_err(|error| {
             mlua::Error::runtime(format!("Couldn't open '{}': {}", self.config_path, error))
         })?;
