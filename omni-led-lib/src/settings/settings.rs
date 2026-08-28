@@ -10,6 +10,7 @@ use crate::create_table_with_defaults;
 use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
 use crate::script_handler::script_data_types::DurationWrapper;
+use crate::steelseries_engine::api::ApiSettings;
 
 #[derive(Debug, Clone, FromLuaValue)]
 pub struct Settings {
@@ -30,6 +31,9 @@ pub struct Settings {
 
     #[mlua(default = 2)]
     pub keyboard_ticks_repeat_rate: usize,
+
+    #[mlua(default)]
+    pub steelseries_api: ApiSettings,
 
     #[mlua(transform = DurationWrapper::transform)]
     #[mlua(default = Duration::from_millis(100))]
