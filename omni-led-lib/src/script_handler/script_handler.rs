@@ -282,12 +282,13 @@ impl ScriptHandler {
             Events = Events,
             Log = Log,
             PLATFORM = PLATFORM,
-            Shortcuts = Shortcuts,
             PREDICATE = {
                 Always = $always_fn,
                 Never = $never_fn,
                 Times = $times_fn,
-            }
+            },
+            Settings = Settings,
+            Shortcuts = Shortcuts,
         })
     }
 }

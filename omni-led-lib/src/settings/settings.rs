@@ -1,9 +1,8 @@
 use log::debug;
-use mlua::{Lua, UserData, chunk};
-use omni_led_derive::FromLuaValue;
+use mlua::{Lua, chunk};
+use omni_led_derive::{DefaultImpl, LuaName, LuaSettings};
 use std::time::Duration;
 
-use crate::common::lua_traits::LuaName;
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
@@ -12,7 +11,8 @@ use crate::renderer::font_selector::FontSelector;
 use crate::script_handler::script_data_types::DurationWrapper;
 use crate::steelseries_engine::api::ApiSettings;
 
-#[derive(Debug, Clone, FromLuaValue)]
+#[derive(Debug, Clone, LuaName, LuaSettings, DefaultImpl)]
+#[omni(root = Settings)]
 pub struct Settings {
     #[omni(default = 8)]
     pub animation_ticks_delay: usize,
@@ -35,24 +35,18 @@ pub struct Settings {
     #[omni(default)]
     pub steelseries_api: ApiSettings,
 
-    #[omni(transform = DurationWrapper::transform)]
-    #[omni(default = Duration::from_millis(100))]
-    pub update_interval: Duration,
+    #[omni(default = DurationWrapper(Duration::from_millis(100)))]
+    pub update_interval: DurationWrapper,
 }
 
 impl Settings {
     pub fn load(lua: &Lua, config: String) {
-        let load_settings_fn = lua
-            .create_function(move |lua, settings: Settings| {
-                set_unique_user_data(lua, settings);
-                Ok(())
-            })
-            .unwrap();
+        set_unique_user_data(lua, Self::default());
 
         let env = create_table_with_defaults!(lua, {
             Log = Log,
             PLATFORM = PLATFORM,
-            Settings = $load_settings_fn,
+            Settings = Settings,
         });
         load_config(lua, ConfigType::Settings, &config, env).unwrap();
 
@@ -63,9 +57,3 @@ impl Settings {
         debug!("Loaded settings {:?}", settings.get());
     }
 }
-
-impl LuaName for Settings {
-    const NAME: &str = "SETTINGS";
-}
-
-impl UserData for Settings {}
