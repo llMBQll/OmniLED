@@ -48,6 +48,7 @@ impl PluginLoader {
             get_default_plugin_path = $get_default_plugin_path_fn,
             Log = Log,
             PLATFORM = PLATFORM,
+            Settings = Settings,
         });
 
         load_config(lua, ConfigType::Plugins, &config, env).unwrap();

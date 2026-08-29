@@ -87,7 +87,7 @@ fn main() {
         debug!("Initialized in {:?}", init_end - init_begin);
 
         let settings = UserDataRef::<Settings>::load(&lua);
-        let interval = settings.get().update_interval;
+        let interval = settings.get().update_interval.0;
         let event_loop = EventLoop::new();
         event_loop.run(interval, &RUNNING, |events| {
             for event in events {
