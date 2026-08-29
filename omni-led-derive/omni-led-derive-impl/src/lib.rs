@@ -40,6 +40,16 @@ pub fn lua_name_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     lua_name::expand_lua_name_derive(input)
 }
 
+#[cfg(feature = "lua-settings")]
+mod lua_settings;
+
+#[cfg(feature = "lua-settings")]
+#[proc_macro_derive(LuaSettings, attributes(omni))]
+pub fn lua_settings_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    lua_settings::expand_lua_settings_derive(input)
+}
+
 #[cfg(feature = "plugin-entry")]
 mod plugin_entry;
 
