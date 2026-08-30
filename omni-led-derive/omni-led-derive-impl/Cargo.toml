@@ -19,6 +19,7 @@ mlua = { version = "0.12", features = ["lua54", "vendored", "macros"] }
 regex = "1.10"
 
 [features]
+default-impl = []
 from-lua-value = []
 lua-enum = []
 lua-name = []

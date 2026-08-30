@@ -13,6 +13,7 @@ mlua = { version = "0.12", features = ["lua54", "vendored", "macros"] }
 regex = "1.10"
 
 [features]
+default-impl = ["omni-led-derive-impl/default-impl"]
 from-lua-value = ["omni-led-derive-impl/from-lua-value"]
 lua-enum = ["omni-led-derive-impl/lua-enum"]
 lua-name = ["omni-led-derive-impl/lua-name"]
