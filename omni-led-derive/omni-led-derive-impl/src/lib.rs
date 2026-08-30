@@ -1,5 +1,15 @@
 mod common;
 
+#[cfg(feature = "default-impl")]
+mod default_impl;
+
+#[cfg(feature = "default-impl")]
+#[proc_macro_derive(DefaultImpl, attributes(omni))]
+pub fn default_impl_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    default_impl::expand_default_impl_derive(input)
+}
+
 #[cfg(feature = "from-lua-value")]
 mod from_lua_value;
 

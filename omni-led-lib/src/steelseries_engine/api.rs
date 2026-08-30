@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use log::error;
 use mlua::{Lua, UserData};
-use omni_led_derive::FromLuaValue;
+use omni_led_derive::{DefaultImpl, FromLuaValue};
 use serde_json::Value;
 use ureq::Agent;
 use ureq::http::StatusCode;
@@ -17,8 +17,7 @@ use crate::renderer::buffer::{BitBuffer, BufferTrait};
 use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Size};
 use crate::settings::settings::Settings;
 
-#[derive(Clone, Debug, FromLuaValue)]
-#[omni(impl_default)]
+#[derive(Clone, Debug, DefaultImpl, FromLuaValue)]
 #[omni(validate = Self::validate)]
 pub struct ApiSettings {
     #[omni(default = None)]

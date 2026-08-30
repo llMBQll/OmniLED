@@ -10,12 +10,9 @@ use crate::common::{
 
 pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
-    let (_impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let struct_attrs = get_struct_attributes(&input.attrs);
 
-    let impl_default = struct_attrs.impl_default.is_some();
-    let (initializer, default_initializer, helper_impl) =
-        generate_initializer(&name, &input.data, impl_default);
+    let (initializer, helper_impl) = generate_initializer(&name, &input.data);
 
     let validate = match struct_attrs.validate {
         Some(validate) => quote! {
@@ -30,11 +27,11 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
         None => quote! { result },
     };
 
-    let mut expanded = quote! {
+    let expanded = quote! {
         #helper_impl
 
-        impl mlua::FromLua for #name #ty_generics {
-            fn from_lua(value: mlua::Value, lua: &mlua::Lua) -> mlua::Result<#name #ty_generics #where_clause> {
+        impl mlua::FromLua for #name {
+            fn from_lua(value: mlua::Value, lua: &mlua::Lua) -> mlua::Result<#name> {
                 let result = match value {
                     #initializer,
                     mlua::Value::UserData(user_data) => {
@@ -52,35 +49,16 @@ pub fn expand_lua_value_derive(input: DeriveInput) -> proc_macro::TokenStream {
         }
     };
 
-    if let Some(default_initializer) = default_initializer {
-        expanded = quote! {
-            #expanded
-
-            impl Default for #name {
-                fn default() -> Self {
-                    Self {
-                        #default_initializer
-                    }
-                }
-            }
-        }
-    }
-
     proc_macro::TokenStream::from(expanded)
 }
 
-fn generate_initializer(
-    name: &Ident,
-    data: &Data,
-    impl_default: bool,
-) -> (TokenStream, Option<TokenStream>, Option<TokenStream>) {
+fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<TokenStream>) {
     match *data {
         Data::Struct(ref data) => match data.fields {
             syn::Fields::Named(ref fields) => {
                 let mut init_field: Vec<TokenStream> = Vec::new();
                 let mut init_default: Vec<TokenStream> = Vec::new();
                 let mut drop_initialized: Vec<TokenStream> = Vec::new();
-                let mut impl_defaults: Vec<TokenStream> = Vec::new();
                 let mut mask_defs: Vec<TokenStream> = Vec::new();
                 let mut mask_refs: Vec<TokenStream> = Vec::new();
                 let mut field_names: Vec<TokenStream> = Vec::new();
@@ -96,15 +74,6 @@ fn generate_initializer(
                     );
                     let mask_def = quote! { const #mask_name: u64 = 1 << #index };
                     let mask_ref = quote! { Self::#mask_name };
-
-                    // for `impl Default for <TYPE>`
-                    match (&attrs.default, impl_default) {
-                        (Some(default), true) => impl_defaults.push(quote! { #field: #default, }),
-                        (None, true) => panic!(
-                            "Must specify default for '{name}.{field}' when using [mlua(impl_default)]"
-                        ),
-                        _ => {}
-                    };
 
                     // for `init_field`
                     let write_value = quote! { <_ as mlua::FromLua>::from_lua(value, lua) };
@@ -276,13 +245,7 @@ fn generate_initializer(
                     }
                 };
 
-                let default_initializers = if impl_default {
-                    Some(quote! { #(#impl_defaults)* })
-                } else {
-                    None
-                };
-
-                (initializer, default_initializers, Some(helper_impl))
+                (initializer, Some(helper_impl))
             }
             syn::Fields::Unnamed(_) | syn::Fields::Unit => unimplemented!(),
         },
@@ -353,14 +316,13 @@ fn generate_initializer(
                 }
             };
 
-            (initializer, None, None)
+            (initializer, None)
         }
         Data::Union(_) => unimplemented!(),
     }
 }
 
 struct StructAttributes {
-    impl_default: Option<TokenStream>,
     validate: Option<TokenStream>,
 }
 
@@ -368,7 +330,6 @@ fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
     let mut attributes = parse_attributes("omni", attributes);
 
     StructAttributes {
-        impl_default: get_attribute_with_default_value(&mut attributes, "impl_default", quote! {}),
         validate: get_attribute(&mut attributes, "validate"),
     }
 }

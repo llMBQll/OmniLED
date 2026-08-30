@@ -1,6 +1,6 @@
 use log::debug;
 use mlua::{Lua, UserData};
-use omni_led_derive::FromLuaValue;
+use omni_led_derive::{DefaultImpl, FromLuaValue};
 use std::time::Duration;
 
 use crate::common::lua_traits::LuaName;
@@ -14,7 +14,7 @@ use crate::sandbox_value;
 use crate::script_handler::script_data_types::DurationWrapper;
 use crate::steelseries_engine::api::ApiSettings;
 
-#[derive(Debug, Clone, FromLuaValue)]
+#[derive(Debug, Clone, DefaultImpl, FromLuaValue)]
 pub struct Settings {
     #[omni(default = 8)]
     pub animation_ticks_delay: usize,
