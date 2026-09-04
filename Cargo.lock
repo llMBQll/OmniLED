@@ -4575,6 +4575,15 @@ dependencies = [
 name = "omni-led-derive"
 version = "0.11.4"
 dependencies = [
+ "mlua",
+ "omni-led-derive-impl",
+ "regex",
+]
+
+[[package]]
+name = "omni-led-derive-impl"
+version = "0.11.4"
+dependencies = [
  "convert_case 0.11.0",
  "mlua",
  "proc-macro2",
