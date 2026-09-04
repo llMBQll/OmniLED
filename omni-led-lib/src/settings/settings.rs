@@ -1,11 +1,13 @@
 use log::debug;
-use mlua::{Lua, chunk};
+use mlua::{IntoLua, Lua, chunk};
 use omni_led_derive::{DefaultImpl, LuaName, LuaSettings};
 use std::time::Duration;
 
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
+use crate::events::event_queue::{Event, EventQueue};
+use crate::events::events::ScriptEvent;
 use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
 use crate::script_handler::script_data_types::DurationWrapper;
@@ -13,6 +15,7 @@ use crate::steelseries_engine::api::ApiSettings;
 
 #[derive(Debug, Clone, LuaName, LuaSettings, DefaultImpl)]
 #[omni(root = Settings)]
+#[omni(on_set = on_settings_update)]
 pub struct Settings {
     #[omni(default = 8)]
     pub animation_ticks_delay: usize,
@@ -56,4 +59,19 @@ impl Settings {
 
         debug!("Loaded settings {:?}", settings.get());
     }
+}
+
+pub fn on_settings_update<T: IntoLua + Clone>(
+    lua: &Lua,
+    event_name: &str,
+    value: &T,
+) -> mlua::Result<()> {
+    EventQueue::instance()
+        .lock()
+        .unwrap()
+        .push(Event::Script(ScriptEvent {
+            event: event_name.to_string(),
+            value: value.clone().into_lua(&lua)?,
+        }));
+    Ok(())
 }

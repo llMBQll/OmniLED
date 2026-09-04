@@ -6,10 +6,10 @@ license = "GPL-3.0-only"
 edition = "2024"
 
 [dependencies]
+mlua = { version = "0.12", features = ["lua54", "vendored", "macros"] }
 omni-led-derive-impl = { path = "omni-led-derive-impl" }
 
 [dev-dependencies]
-mlua = { version = "0.12", features = ["lua54", "vendored", "macros"] }
 regex = "1.10"
 
 [features]

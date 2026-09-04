@@ -6,9 +6,9 @@ use crate::common::{get_attribute, parse_attributes};
 
 pub fn expand_lua_settings_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
-    let root = get_struct_attributes(&input.attrs).root;
+    let attrs = get_struct_attributes(&input.attrs);
 
-    let (const_defs, get_set_impls) = expand(input.data, root);
+    let (const_defs, get_set_impls) = expand(input.data, attrs.root, attrs.on_set);
 
     let expanded = quote! {
         impl #name {
@@ -41,7 +41,7 @@ pub fn expand_lua_settings_derive(input: DeriveInput) -> proc_macro::TokenStream
     proc_macro::TokenStream::from(expanded)
 }
 
-fn expand(data: Data, root: TokenStream) -> (TokenStream, TokenStream) {
+fn expand(data: Data, root: TokenStream, on_set: TokenStream) -> (TokenStream, TokenStream) {
     let Data::Struct(struct_data) = data else {
         panic!("Expected a struct");
     };
@@ -82,18 +82,9 @@ fn expand(data: Data, root: TokenStream) -> (TokenStream, TokenStream) {
                 Ok(this.#ident.clone())
             });
             fields.add_field_method_set(stringify!(#ident), |lua, this, val| {
-                use mlua::IntoLua;
-
                 #validate
                 this.#ident = val;
-                crate::events::event_queue::EventQueue::instance()
-                    .lock()
-                    .unwrap()
-                    .push(crate::events::event_queue::Event::Script(crate::events::events::ScriptEvent {
-                        event: Self::#event_ident.to_string(),
-                        value: this.#ident.clone().into_lua(&lua)?,
-                    }));
-                Ok(())
+                #on_set(lua, Self::#event_ident, &this.#ident)
             })
         }
     });
@@ -104,6 +95,7 @@ fn expand(data: Data, root: TokenStream) -> (TokenStream, TokenStream) {
 
 struct StructAttributes {
     root: TokenStream,
+    on_set: TokenStream,
 }
 
 fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
@@ -111,6 +103,7 @@ fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
 
     StructAttributes {
         root: get_attribute(&mut attributes, "root").expect("\"root\" attribute is required"),
+        on_set: get_attribute(&mut attributes, "on_set").expect("\"on_set\" attribute is required"),
     }
 }
 
