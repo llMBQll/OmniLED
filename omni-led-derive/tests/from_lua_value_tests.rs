@@ -172,22 +172,22 @@ mod tests {
     }
 
     #[derive(FromLuaValue, Clone, Debug, PartialEq)]
-    #[mlua(impl_default)]
+    #[omni(impl_default)]
     struct DefaultTestInner {
-        #[mlua(default = 24)]
+        #[omni(default = 24)]
         a: i32,
-        #[mlua(default = 501)]
+        #[omni(default = 501)]
         b: i32,
     }
 
     #[derive(FromLuaValue, Clone, Debug, PartialEq)]
-    #[mlua(impl_default)]
+    #[omni(impl_default)]
     struct DefaultTest {
-        #[mlua(default = 42)]
+        #[omni(default = 42)]
         a: i32,
-        #[mlua(default = String::from("Default string"))]
+        #[omni(default = String::from("Default string"))]
         b: String,
-        #[mlua(default)]
+        #[omni(default)]
         c: DefaultTestInner,
     }
 

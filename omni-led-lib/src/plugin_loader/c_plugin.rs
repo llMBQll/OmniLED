@@ -133,7 +133,7 @@ unsafe extern "C" fn plugin_log(
 #[derive(Debug, Clone, FromLuaValue)]
 pub struct Config {
     path: String,
-    #[mlua(default)]
+    #[omni(default)]
     args: Vec<String>,
 }
 

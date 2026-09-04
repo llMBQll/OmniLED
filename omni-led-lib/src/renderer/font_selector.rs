@@ -13,18 +13,18 @@ impl UserData for FontSelector {}
 #[derive(Debug, Clone, PartialEq, FromLuaValue)]
 pub struct FilesystemSelector {
     pub path: String,
-    #[mlua(default = 0)]
+    #[omni(default = 0)]
     pub font_index: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, FromLuaValue)]
 pub struct SystemSelector {
     pub names: Vec<FamilyName>,
-    #[mlua(default = Style::Normal)]
+    #[omni(default = Style::Normal)]
     pub style: Style,
-    #[mlua(default = Weight::Normal)]
+    #[omni(default = Weight::Normal)]
     pub weight: Weight,
-    #[mlua(default = Stretch::Normal)]
+    #[omni(default = Stretch::Normal)]
     pub stretch: Stretch,
 }
 

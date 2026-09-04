@@ -36,7 +36,7 @@ impl UserData for Rectangle {}
 
 #[derive(Debug, Clone, FromLuaValue)]
 pub struct ImageData {
-    #[mlua(transform = Self::parse_format)]
+    #[omni(transform = Self::parse_format)]
     pub format: image::ImageFormat,
     pub bytes: Vec<u8>,
     pub hash: Option<u64>,
@@ -101,7 +101,7 @@ pub enum Widget {
 impl UserData for Widget {}
 
 #[derive(Clone, Debug, FromLuaValue)]
-#[mlua(validate = Self::validate_range)]
+#[omni(validate = Self::validate_range)]
 pub struct Range {
     pub min: f32,
     pub max: f32,
@@ -125,14 +125,14 @@ impl UserData for Range {}
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Bar {
     pub value: f32,
-    #[mlua(default = Range {min: 0.0, max: 100.0})]
+    #[omni(default = Range {min: 0.0, max: 100.0})]
     pub range: Range,
-    #[mlua(default = false)]
+    #[omni(default = false)]
     pub vertical: bool,
     pub position: Point,
     pub size: Size,
 
-    #[mlua(default)]
+    #[omni(default)]
     pub modifiers: Modifiers,
 }
 
@@ -149,11 +149,11 @@ impl UserData for Repeat {}
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Image {
     pub image: ImageData,
-    #[mlua(default = false)]
+    #[omni(default = false)]
     pub animated: bool,
-    #[mlua(default = 128)]
+    #[omni(default = 128)]
     pub threshold: u8,
-    #[mlua(default = Repeat::ForDuration)]
+    #[omni(default = Repeat::ForDuration)]
     pub repeats: Repeat,
     pub animation_group: Option<usize>,
     pub animation_ticks_delay: Option<usize>,
@@ -161,7 +161,7 @@ pub struct Image {
     pub position: Point,
     pub size: Size,
 
-    #[mlua(default)]
+    #[omni(default)]
     pub modifiers: Modifiers,
 }
 
@@ -171,11 +171,11 @@ impl UserData for Image {}
 pub struct Text {
     pub text: String,
     pub text_offset: Option<isize>,
-    #[mlua(default = FontSize::Auto)]
+    #[omni(default = FontSize::Auto)]
     pub font_size: FontSize,
-    #[mlua(default = false)]
+    #[omni(default = false)]
     pub scrolling: bool,
-    #[mlua(default = Repeat::ForDuration)]
+    #[omni(default = Repeat::ForDuration)]
     pub repeats: Repeat,
     pub animation_group: Option<usize>,
     pub animation_ticks_delay: Option<usize>,
@@ -184,7 +184,7 @@ pub struct Text {
     pub size: Size,
     pub hash: Option<u64>,
 
-    #[mlua(default)]
+    #[omni(default)]
     pub modifiers: Modifiers,
 }
 
@@ -192,7 +192,7 @@ impl UserData for Text {}
 
 #[derive(Copy, Clone, Debug, LuaEnum)]
 pub enum FontSize {
-    #[mlua(implicit_construct)]
+    #[omni(implicit_construct)]
     Value(usize),
     Auto,
     AutoUpper,
@@ -202,16 +202,16 @@ impl UserData for FontSize {}
 
 #[derive(Clone, Copy, Debug, Default, FromLuaValue)]
 pub struct Modifiers {
-    #[mlua(default = false)]
+    #[omni(default = false)]
     pub clear_background: bool,
 
-    #[mlua(default = false)]
+    #[omni(default = false)]
     pub flip_horizontal: bool,
 
-    #[mlua(default = false)]
+    #[omni(default = false)]
     pub flip_vertical: bool,
 
-    #[mlua(default = false)]
+    #[omni(default = false)]
     pub negative: bool,
 }
 
@@ -219,10 +219,10 @@ impl UserData for Modifiers {}
 
 #[derive(Clone, Copy, LuaEnum)]
 pub enum MemoryLayout {
-    #[mlua(alias = "SteelSeries")]
+    #[omni(alias = "SteelSeries")]
     BitPerPixel,
     BytePerPixel,
-    #[mlua(alias = "SteelSeries2")]
+    #[omni(alias = "SteelSeries2")]
     BitPerPixelVertical,
 }
 
@@ -268,9 +268,9 @@ impl FromLua for Regex {
 
 #[derive(Clone, LuaEnum)]
 pub enum EventKey {
-    #[mlua(implicit_construct)]
+    #[omni(implicit_construct)]
     Regex(Regex),
-    #[mlua(implicit_construct)]
+    #[omni(implicit_construct)]
     String(String),
 }
 
