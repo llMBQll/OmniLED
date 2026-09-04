@@ -4,7 +4,7 @@ mod common;
 mod from_lua_value;
 
 #[cfg(feature = "from-lua-value")]
-#[proc_macro_derive(FromLuaValue, attributes(mlua))]
+#[proc_macro_derive(FromLuaValue, attributes(omni))]
 pub fn from_lua_table_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     from_lua_value::expand_lua_value_derive(input)
@@ -14,7 +14,7 @@ pub fn from_lua_table_derive(input: proc_macro::TokenStream) -> proc_macro::Toke
 mod lua_enum;
 
 #[cfg(feature = "lua-enum")]
-#[proc_macro_derive(LuaEnum, attributes(mlua))]
+#[proc_macro_derive(LuaEnum, attributes(omni))]
 pub fn lua_enum_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     lua_enum::expand_lua_enum_derive(input)
@@ -24,7 +24,7 @@ pub fn lua_enum_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 mod lua_name;
 
 #[cfg(feature = "lua-name")]
-#[proc_macro_derive(LuaName, attributes(mlua))]
+#[proc_macro_derive(LuaName, attributes(omni))]
 pub fn lua_name_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     lua_name::expand_lua_name_derive(input)

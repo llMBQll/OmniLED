@@ -18,23 +18,23 @@ use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Size};
 use crate::settings::settings::Settings;
 
 #[derive(Clone, Debug, FromLuaValue)]
-#[mlua(impl_default)]
-#[mlua(validate = Self::validate)]
+#[omni(impl_default)]
+#[omni(validate = Self::validate)]
 pub struct ApiSettings {
-    #[mlua(default = None)]
+    #[omni(default = None)]
     address: Option<String>,
 
-    #[mlua(default = Self::default_config_path())]
+    #[omni(default = Self::default_config_path())]
     config_path: Option<String>,
 
-    #[mlua(default = cfg!(not(target_os = "linux")))]
+    #[omni(default = cfg!(not(target_os = "linux")))]
     enabled: bool,
 
-    #[mlua(default = true)]
+    #[omni(default = true)]
     register_heartbeat: bool,
 
-    #[mlua(default = Duration::from_secs(15))]
-    #[mlua(transform = DurationWrapper::transform)]
+    #[omni(default = Duration::from_secs(15))]
+    #[omni(transform = DurationWrapper::transform)]
     deinitialize_timeout: Duration,
 }
 

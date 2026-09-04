@@ -102,11 +102,11 @@ impl UserData for HidDeviceSettings {}
 
 #[derive(FromLuaValue, Clone)]
 pub struct HidSettings {
-    #[mlua(transform = from_hex)]
+    #[omni(transform = from_hex)]
     pub vendor_id: u16,
-    #[mlua(transform = from_hex)]
+    #[omni(transform = from_hex)]
     pub product_id: u16,
-    #[mlua(transform = from_hex)]
+    #[omni(transform = from_hex)]
     pub interface: u8,
 }
 
