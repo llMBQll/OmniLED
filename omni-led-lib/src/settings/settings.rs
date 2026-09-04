@@ -14,29 +14,29 @@ use crate::steelseries_engine::api::ApiSettings;
 
 #[derive(Debug, Clone, FromLuaValue)]
 pub struct Settings {
-    #[mlua(default = 8)]
+    #[omni(default = 8)]
     pub animation_ticks_delay: usize,
 
-    #[mlua(default = 2)]
+    #[omni(default = 2)]
     pub animation_ticks_rate: usize,
 
-    #[mlua(default = FontSelector::Default)]
+    #[omni(default = FontSelector::Default)]
     pub font: FontSelector,
 
-    #[mlua(default = LevelFilter::Info)]
+    #[omni(default = LevelFilter::Info)]
     pub log_level: LevelFilter,
 
-    #[mlua(default = 2)]
+    #[omni(default = 2)]
     pub keyboard_ticks_repeat_delay: usize,
 
-    #[mlua(default = 2)]
+    #[omni(default = 2)]
     pub keyboard_ticks_repeat_rate: usize,
 
-    #[mlua(default)]
+    #[omni(default)]
     pub steelseries_api: ApiSettings,
 
-    #[mlua(transform = DurationWrapper::transform)]
-    #[mlua(default = Duration::from_millis(100))]
+    #[omni(transform = DurationWrapper::transform)]
+    #[omni(default = Duration::from_millis(100))]
     pub update_interval: Duration,
 }
 

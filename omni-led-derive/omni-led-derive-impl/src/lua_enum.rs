@@ -192,7 +192,7 @@ struct EnumAttributes {
 }
 
 fn get_enum_attributes(attributes: &Vec<Attribute>) -> EnumAttributes {
-    let mut attributes = parse_attributes("mlua", attributes);
+    let mut attributes = parse_attributes("omni", attributes);
 
     EnumAttributes {
         alias: get_attribute(&mut attributes, "alias"),

@@ -365,7 +365,7 @@ struct StructAttributes {
 }
 
 fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
-    let mut attributes = parse_attributes("mlua", attributes);
+    let mut attributes = parse_attributes("omni", attributes);
 
     StructAttributes {
         impl_default: get_attribute_with_default_value(&mut attributes, "impl_default", quote! {}),
@@ -379,7 +379,7 @@ struct FieldAttributes {
 }
 
 fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
-    let mut attributes = parse_attributes("mlua", attributes);
+    let mut attributes = parse_attributes("omni", attributes);
 
     FieldAttributes {
         default: get_attribute_with_default_value(
@@ -396,7 +396,7 @@ struct EnumAttributes {
 }
 
 fn get_enum_attributes(attributes: &Vec<Attribute>) -> EnumAttributes {
-    let mut attributes = parse_attributes("mlua", attributes);
+    let mut attributes = parse_attributes("omni", attributes);
 
     EnumAttributes {
         alias: get_attribute(&mut attributes, "alias"),
