@@ -15,10 +15,11 @@ use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::events::events::Events;
 use crate::renderer::buffer::{BitBuffer, BufferTrait};
 use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Size};
-use crate::settings::settings::Settings;
+use crate::settings::settings::{Settings, on_settings_update};
 
 #[derive(Clone, Debug, LuaSettings, DefaultImpl)]
 #[omni(root = Settings.steelseries_api)]
+#[omni(on_set = on_settings_update)]
 pub struct ApiSettings {
     #[omni(default = None)]
     address: Option<String>,
