@@ -7,14 +7,14 @@ use log4rs::{Config, Handle};
 use std::path::{Path, PathBuf};
 
 use crate::constants::constants::Constants;
-use crate::logging::logger::LogHandle;
+use crate::logging::logger::LogImpl;
 
 pub struct FileLogger {
     handle: Handle,
     path: PathBuf,
 }
 
-impl LogHandle for FileLogger {
+impl LogImpl for FileLogger {
     fn set_level_filter(&self, level_filter: LevelFilter) {
         let config = create_config(&self.path, level_filter);
         self.handle.set_config(config);
