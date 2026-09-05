@@ -1,33 +1,32 @@
 use log::{Level, LevelFilter, error};
+use log4rs::Config;
 use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::filter::{Filter, Response};
-use log4rs::{Config, Handle};
 use omni_led_lib::constants::constants::Constants;
-use omni_led_lib::logging::logger::LogHandle;
+use omni_led_lib::logging::logger::LogImpl;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
-pub struct OmniLedLogHandle {
-    _handle: Handle,
+pub struct OmniLedLog {
     filter: DynamicFilter,
 }
 
-impl LogHandle for OmniLedLogHandle {
+impl LogImpl for OmniLedLog {
     fn set_level_filter(&self, level_filter: LevelFilter) {
         self.filter.set(level_filter);
     }
 }
 
-pub fn init() -> OmniLedLogHandle {
+pub fn init() -> OmniLedLog {
     let data_dir = Constants::data_dir();
     std::fs::create_dir_all(data_dir).unwrap();
 
     let path = Constants::data_dir().join("logging.log");
     let filter = DynamicFilter::new(default_log_level());
     let config = create_config(&path, filter.clone());
-    let handle = log4rs::init_config(config).unwrap();
+    let _handle = log4rs::init_config(config).unwrap();
 
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
@@ -35,10 +34,7 @@ pub fn init() -> OmniLedLogHandle {
         default_hook(panic_info);
     }));
 
-    OmniLedLogHandle {
-        _handle: handle,
-        filter,
-    }
+    OmniLedLog { filter }
 }
 
 fn create_config(file_path: impl AsRef<Path>, filter: DynamicFilter) -> Config {
