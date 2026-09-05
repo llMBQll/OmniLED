@@ -64,8 +64,8 @@ fn main() {
 
         let _ = ready_rx.recv().unwrap();
 
-        let log_handle = file_logger::init();
-        Log::load(&lua, log_handle);
+        let logger = file_logger::init();
+        Log::load(&lua, logger);
 
         write_default_configs().unwrap();
 
