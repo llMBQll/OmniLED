@@ -4,23 +4,24 @@ use log4rs::config::runtime::ConfigBuilder;
 use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::{Config, Handle};
-use omni_led_lib::constants::constants::Constants;
-use omni_led_lib::logging::logger::LogHandle;
 use std::path::{Path, PathBuf};
 
-pub struct OmniLedLogHandle {
+use crate::constants::constants::Constants;
+use crate::logging::logger::LogHandle;
+
+pub struct FileLogger {
     handle: Handle,
     path: PathBuf,
 }
 
-impl LogHandle for OmniLedLogHandle {
+impl LogHandle for FileLogger {
     fn set_level_filter(&self, level_filter: LevelFilter) {
         let config = create_config(&self.path, level_filter);
         self.handle.set_config(config);
     }
 }
 
-pub fn init() -> OmniLedLogHandle {
+pub fn init() -> FileLogger {
     let data_dir = Constants::data_dir();
     std::fs::create_dir_all(data_dir).unwrap();
 
@@ -35,7 +36,7 @@ pub fn init() -> OmniLedLogHandle {
         default_hook(panic_info);
     }));
 
-    OmniLedLogHandle { handle, path }
+    FileLogger { handle, path }
 }
 
 fn create_config(file_path: impl AsRef<Path>, level_filter: LevelFilter) -> Config {

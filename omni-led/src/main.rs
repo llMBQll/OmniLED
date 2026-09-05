@@ -12,6 +12,7 @@ use omni_led_lib::{
     devices::devices::Devices,
     events::{dispatcher::Dispatcher, event_loop::EventLoop, events::Events, shortcuts::Shortcuts},
     keyboard::keyboard::process_events,
+    logging::file_logger,
     logging::logger::Log,
     plugin_loader::plugin_loader::PluginLoader,
     script_handler::script_handler::ScriptHandler,
@@ -28,7 +29,6 @@ use std::time::Instant;
 
 #[cfg(target_os = "windows")]
 mod console;
-mod logging;
 
 static RUNNING: AtomicBool = AtomicBool::new(true);
 
@@ -63,7 +63,7 @@ fn main() {
 
         let _ = ready_rx.recv().unwrap();
 
-        let log_handle = logging::init();
+        let log_handle = file_logger::init();
         Log::load(&lua, log_handle);
 
         write_default_configs().unwrap();
