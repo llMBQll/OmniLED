@@ -3,7 +3,8 @@ use mlua::{Lua, Table};
 use crate::{
     common::lua_traits::LuaTypeStaticMembers,
     devices::device::MemoryLayout,
-    logging::logger::{LevelFilter, LogFilterMap},
+    logging::level_filter_map::LogFilterMap,
+    logging::logger::LevelFilter,
     renderer::font_selector::{FamilyName, FontSelector, Stretch, Style, Weight},
     script_handler::script_data_types::{
         DurationWrapper, EventKey, FontSize, ImageFormat, Regex, Repeat, Widget,
