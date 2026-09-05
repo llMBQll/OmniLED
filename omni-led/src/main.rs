@@ -12,7 +12,7 @@ use omni_led_lib::{
     devices::devices::Devices,
     events::{dispatcher::Dispatcher, event_loop::EventLoop, events::Events, shortcuts::Shortcuts},
     keyboard::keyboard::process_events,
-    logging::file_logger,
+    logging::file_logger::FileLogger,
     logging::logger::Log,
     plugin_loader::plugin_loader::PluginLoader,
     script_handler::script_handler::ScriptHandler,
@@ -63,7 +63,7 @@ fn main() {
 
         let _ = ready_rx.recv().unwrap();
 
-        let logger = file_logger::init();
+        let logger = FileLogger::instance();
         Log::load(&lua, logger);
 
         write_default_configs().unwrap();
