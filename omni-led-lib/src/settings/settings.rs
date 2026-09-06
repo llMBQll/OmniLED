@@ -29,6 +29,7 @@ pub struct Settings {
     pub font: FontSelector,
 
     #[omni(default = LogFilterMap::default())]
+    #[omni(on_set = Log::set_filter_map_handler)]
     pub log_filter_map: HashMap<String, LevelFilter>,
 
     #[omni(default = 2)]
@@ -56,11 +57,6 @@ impl Settings {
         load_config(lua, ConfigType::Settings, &config, env).unwrap();
 
         let settings = UserDataRef::<Settings>::load(lua);
-        let logger = UserDataRef::<Log>::load(lua);
-        logger
-            .get()
-            .set_filter_map(settings.get().log_filter_map.clone());
-
         debug!("Loaded settings {:?}", settings.get());
     }
 }
