@@ -1,6 +1,7 @@
 use log::debug;
 use mlua::{IntoLua, Lua, chunk};
 use omni_led_derive::{DefaultImpl, LuaName, LuaSettings};
+use std::collections::HashMap;
 use std::time::Duration;
 
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
@@ -8,7 +9,7 @@ use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::events::event_queue::{Event, EventQueue};
 use crate::events::events::ScriptEvent;
-use crate::logging::logger::{LevelFilter, Log};
+use crate::logging::logger::{LevelFilter, Log, LogFilterMap};
 use crate::renderer::font_selector::FontSelector;
 use crate::script_handler::script_data_types::DurationWrapper;
 use crate::steelseries_engine::api::ApiSettings;
@@ -26,8 +27,8 @@ pub struct Settings {
     #[omni(default = FontSelector::Default)]
     pub font: FontSelector,
 
-    #[omni(default = LevelFilter::Info)]
-    pub log_level: LevelFilter,
+    #[omni(default = LogFilterMap::default())]
+    pub log_filter_map: HashMap<String, LevelFilter>,
 
     #[omni(default = 2)]
     pub keyboard_ticks_repeat_delay: usize,
@@ -55,7 +56,9 @@ impl Settings {
 
         let settings = UserDataRef::<Settings>::load(lua);
         let logger = UserDataRef::<Log>::load(lua);
-        logger.get().set_level_filter(settings.get().log_level);
+        logger
+            .get()
+            .set_filter_map(settings.get().log_filter_map.clone());
 
         debug!("Loaded settings {:?}", settings.get());
     }
