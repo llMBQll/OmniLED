@@ -3,7 +3,7 @@ use mlua::{Lua, UserData, UserDataMethods};
 use omni_led_derive::{LuaEnum, LuaName};
 use std::collections::HashMap;
 
-use crate::common::user_data::set_unique_user_data;
+use crate::common::user_data::{UserDataRef, set_unique_user_data};
 
 pub trait LogImpl {
     fn set_filter_map(&self, filter_map: HashMap<String, LevelFilter>);
@@ -26,6 +26,16 @@ impl Log {
 
     pub fn set_filter_map(&self, filter_map: HashMap<String, LevelFilter>) {
         self.logger.set_filter_map(filter_map);
+    }
+
+    pub fn set_filter_map_handler(
+        lua: &Lua,
+        _event: &'static str,
+        filter_map: &HashMap<String, LevelFilter>,
+    ) -> mlua::Result<()> {
+        let this = UserDataRef::<Self>::load(lua);
+        this.get().logger.set_filter_map(filter_map.clone());
+        Ok(())
     }
 
     fn get_log_location(lua: &Lua) -> String {
