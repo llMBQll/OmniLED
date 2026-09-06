@@ -3,7 +3,7 @@ use mlua::{Lua, Table};
 use crate::{
     common::lua_traits::LuaTypeStaticMembers,
     devices::device::MemoryLayout,
-    logging::logger::LevelFilter,
+    logging::logger::{LevelFilter, LogFilterMap},
     renderer::font_selector::{FamilyName, FontSelector, Stretch, Style, Weight},
     script_handler::script_data_types::{
         DurationWrapper, EventKey, FontSize, ImageFormat, Regex, Repeat, Widget,
@@ -27,7 +27,8 @@ pub fn set_lua_enums(lua: &Lua, env: &Table) {
 }
 
 pub fn set_lua_types(lua: &Lua, env: &Table) {
-    ScreenBuilder::register_members(lua, env).unwrap();
     DurationWrapper::register_members(lua, env).unwrap();
+    LogFilterMap::register_members(lua, env).unwrap();
     Regex::register_members(lua, env).unwrap();
+    ScreenBuilder::register_members(lua, env).unwrap();
 }

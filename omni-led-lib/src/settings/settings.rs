@@ -1,6 +1,7 @@
 use log::debug;
 use mlua::Lua;
 use omni_led_derive::{DefaultImpl, FromLuaValue, LuaName, LuaSettings};
+use std::collections::HashMap;
 use std::time::Duration;
 
 use crate::common::lua_traits::LuaName;
@@ -8,7 +9,7 @@ use crate::common::sandbox::Sandbox;
 use crate::common::user_data::{UserDataRef, set_mutable_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::constants::constants::Constants;
-use crate::logging::logger::{LevelFilter, Log};
+use crate::logging::logger::{LevelFilter, Log, LogFilterMap};
 use crate::renderer::font_selector::FontSelector;
 use crate::sandbox_value;
 use crate::script_handler::script_data_types::DurationWrapper;
@@ -25,9 +26,9 @@ pub struct Settings {
     #[omni(default = FontSelector::Default)]
     pub font: FontSelector,
 
-    #[omni(default = LevelFilter::Info)]
-    #[omni(on_set = Log::set_level_filter)]
-    pub log_level: LevelFilter,
+    #[omni(default = LogFilterMap::default())]
+    #[omni(on_set = Log::set_filter_map)]
+    pub log_filter_map: HashMap<String, LevelFilter>,
 
     #[omni(default = 2)]
     pub keyboard_ticks_repeat_delay: usize,
