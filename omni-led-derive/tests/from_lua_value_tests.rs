@@ -3,7 +3,7 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use mlua::{FromLua, Lua, UserData, Value, chunk};
-    use omni_led_derive::FromLuaValue;
+    use omni_led_derive::{DefaultImpl, FromLuaValue};
 
     #[derive(FromLuaValue, Clone, Debug, PartialEq)]
     struct Test {
@@ -171,8 +171,7 @@ mod tests {
         assert_eq!(N - 1, DROP_COUNT.load(Ordering::Acquire));
     }
 
-    #[derive(FromLuaValue, Clone, Debug, PartialEq)]
-    #[omni(impl_default)]
+    #[derive(FromLuaValue, DefaultImpl, Clone, Debug, PartialEq)]
     struct DefaultTestInner {
         #[omni(default = 24)]
         a: i32,
@@ -180,8 +179,7 @@ mod tests {
         b: i32,
     }
 
-    #[derive(FromLuaValue, Clone, Debug, PartialEq)]
-    #[omni(impl_default)]
+    #[derive(FromLuaValue, DefaultImpl, Clone, Debug, PartialEq)]
     struct DefaultTest {
         #[omni(default = 42)]
         a: i32,

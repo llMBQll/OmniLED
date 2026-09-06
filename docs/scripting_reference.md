@@ -670,6 +670,16 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
+> ### `Settings`
+>
+> Read and set all available settings. Assigning a value to a setting will update it and send
+> an event with name `"Settings.<SETTING_NAME>"` and its value (it may be the same as old value -
+> it fires on all assignments).
+>
+> _See [settings.md](settings.md) for more detail on available settings_
+
+---
+
 > ### `Shortcuts`
 >
 > Register shortcuts to perform custom actions. This provides a bit of convenience over just using

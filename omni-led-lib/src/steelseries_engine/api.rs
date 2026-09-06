@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use log::error;
 use mlua::{Lua, UserData};
-use omni_led_derive::FromLuaValue;
+use omni_led_derive::{DefaultImpl, LuaSettings};
 use serde_json::Value;
 use ureq::Agent;
 use ureq::http::StatusCode;
@@ -15,11 +15,11 @@ use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::events::events::Events;
 use crate::renderer::buffer::{BitBuffer, BufferTrait};
 use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Size};
-use crate::settings::settings::Settings;
+use crate::settings::settings::{Settings, on_settings_update};
 
-#[derive(Clone, Debug, FromLuaValue)]
-#[omni(impl_default)]
-#[omni(validate = Self::validate)]
+#[derive(Clone, Debug, LuaSettings, DefaultImpl)]
+#[omni(root = Settings.steelseries_api)]
+#[omni(on_set = on_settings_update)]
 pub struct ApiSettings {
     #[omni(default = None)]
     address: Option<String>,
@@ -33,21 +33,21 @@ pub struct ApiSettings {
     #[omni(default = true)]
     register_heartbeat: bool,
 
-    #[omni(default = Duration::from_secs(15))]
-    #[omni(transform = DurationWrapper::transform)]
-    deinitialize_timeout: Duration,
+    #[omni(default = DurationWrapper(Duration::from_secs(15)))]
+    #[omni(validate = Self::validate_timeout)]
+    deinitialize_timeout: DurationWrapper,
 }
 
 impl ApiSettings {
-    fn validate(settings: &Self) -> mlua::Result<()> {
-        if settings.deinitialize_timeout >= Duration::from_secs(1)
-            && settings.deinitialize_timeout <= Duration::from_secs(60)
+    fn validate_timeout(deinitialize_timeout: &DurationWrapper) -> mlua::Result<()> {
+        if deinitialize_timeout.0 >= Duration::from_secs(1)
+            && deinitialize_timeout.0 <= Duration::from_secs(60)
         {
             Ok(())
         } else {
             Err(mlua::Error::runtime(format!(
-                "api_settings.deinitialize_timeout must be in range [1sec, 60sec] inclusive, got {:#?}",
-                settings.deinitialize_timeout
+                "steelseries_api.deinitialize_timeout must be in range [1sec, 60sec] inclusive, got {:#?}",
+                deinitialize_timeout.0
             )))
         }
     }
@@ -123,7 +123,7 @@ impl Api {
         let api = Self::new(
             api_settings.address,
             config_path,
-            api_settings.deinitialize_timeout,
+            api_settings.deinitialize_timeout.0,
         );
         set_unique_user_data(lua, api);
 
@@ -131,7 +131,7 @@ impl Api {
             return;
         }
 
-        let heartbeat_threshold = api_settings.deinitialize_timeout * 8 / 10;
+        let heartbeat_threshold = api_settings.deinitialize_timeout.0 * 8 / 10;
         let heartbeat_payload = &serde_json::json!({
             "game": GAME,
         });
