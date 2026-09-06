@@ -1,11 +1,13 @@
 use log::{debug, error, info, trace, warn};
 use mlua::{Lua, UserData, UserDataMethods};
 use omni_led_derive::{LuaEnum, LuaName};
+use std::collections::HashMap;
 
+use crate::common::lua_traits::{LuaTypeStaticMembers, StaticMembers};
 use crate::common::user_data::set_unique_user_data;
 
 pub trait LogImpl {
-    fn set_level_filter(&self, level_filter: log::LevelFilter);
+    fn set_filter_map(&self, filter_map: HashMap<String, LevelFilter>);
 }
 
 #[derive(LuaName)]
@@ -23,8 +25,8 @@ impl Log {
         );
     }
 
-    pub fn set_level_filter(&self, level_filter: LevelFilter) {
-        self.logger.set_level_filter(level_filter.into());
+    pub fn set_filter_map(&self, filter_map: HashMap<String, LevelFilter>) {
+        self.logger.set_filter_map(filter_map);
     }
 
     fn get_log_location(lua: &Lua) -> String {
@@ -102,3 +104,65 @@ impl Into<log::LevelFilter> for LevelFilter {
         }
     }
 }
+
+impl PartialEq<log::Level> for LevelFilter {
+    #[inline]
+    fn eq(&self, other: &log::Level) -> bool {
+        *self as usize == *other as usize
+    }
+}
+
+impl PartialOrd<log::Level> for LevelFilter {
+    #[inline]
+    fn partial_cmp(&self, other: &log::Level) -> Option<std::cmp::Ordering> {
+        Some((*self as usize).cmp(&(*other as usize)))
+    }
+}
+
+#[derive(Clone, Debug, LuaName)]
+pub struct LogFilterMap {}
+
+impl LogFilterMap {
+    pub fn default() -> HashMap<String, LevelFilter> {
+        Self::default_filter_map(Self::default_level_filer())
+    }
+
+    pub fn default_with(level_filter: LevelFilter) -> HashMap<String, LevelFilter> {
+        Self::default_filter_map(level_filter)
+    }
+
+    fn default_filter_map(level_filter: LevelFilter) -> HashMap<String, LevelFilter> {
+        HashMap::from([
+            (String::from("omni_led"), level_filter),
+            (String::from("omni_led_api"), level_filter),
+            (String::from("omni_led_lib"), level_filter),
+            (String::from("devices.lua"), level_filter),
+            (String::from("plugins.lua"), level_filter),
+            (String::from("scripts.lua"), level_filter),
+            (String::from("settings.lua"), level_filter),
+            (String::from("script"), level_filter),
+            (String::from("plugin"), level_filter),
+        ])
+    }
+
+    const fn default_level_filer() -> LevelFilter {
+        #[cfg(debug_assertions)]
+        let level = LevelFilter::Debug;
+
+        #[cfg(not(debug_assertions))]
+        let level = LevelFilter::Info;
+
+        level
+    }
+}
+
+impl LuaTypeStaticMembers for LogFilterMap {
+    fn add_members(members: &mut StaticMembers<'_>) {
+        members.add_function("default", |_lua, _: ()| Ok(Self::default()));
+        members.add_function("default_with", |_lua, level_filter: LevelFilter| {
+            Ok(Self::default_with(level_filter))
+        });
+    }
+}
+
+impl UserData for LogFilterMap {}

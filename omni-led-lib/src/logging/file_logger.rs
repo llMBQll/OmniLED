@@ -1,22 +1,23 @@
-use log::{Level, LevelFilter, error};
+use log::{Level, error};
 use log4rs::Config;
 use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::filter::{Filter, Response};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 use crate::constants::constants::Constants;
-use crate::logging::logger::LogImpl;
+use crate::logging::logger::{LevelFilter, LogFilterMap, LogImpl};
 
 pub struct FileLogger {
     filter: DynamicFilter,
 }
 
 impl LogImpl for FileLogger {
-    fn set_level_filter(&self, level_filter: LevelFilter) {
-        self.filter.set(level_filter);
+    fn set_filter_map(&self, filter_map: HashMap<String, LevelFilter>) {
+        self.filter.set(filter_map);
     }
 }
 
@@ -25,7 +26,7 @@ pub fn init() -> FileLogger {
     std::fs::create_dir_all(data_dir).unwrap();
 
     let path = Constants::data_dir().join("logging.log");
-    let filter = DynamicFilter::new(default_log_level());
+    let filter = DynamicFilter::new(LogFilterMap::default());
     let config = create_config(&path, filter.clone());
     let _handle = log4rs::init_config(config).unwrap();
 
@@ -57,40 +58,30 @@ fn create_config(file_path: impl AsRef<Path>, filter: DynamicFilter) -> Config {
         .build(
             Root::builder()
                 .appender(FILE_APPENDER)
-                .build(LevelFilter::Trace),
+                .build(log::LevelFilter::Trace),
         )
         .unwrap()
 }
 
-#[cfg(debug_assertions)]
-fn default_log_level() -> LevelFilter {
-    LevelFilter::Debug
-}
-
-#[cfg(not(debug_assertions))]
-fn default_log_level() -> LevelFilter {
-    LevelFilter::Info
-}
-
 #[derive(Debug, Clone)]
 struct DynamicFilter {
-    level_filter: Arc<RwLock<LevelFilter>>,
+    filter_map: Arc<RwLock<HashMap<String, LevelFilter>>>,
 }
 
 impl DynamicFilter {
-    pub fn new(level_filter: LevelFilter) -> Self {
+    pub fn new(filter_map: HashMap<String, LevelFilter>) -> Self {
         Self {
-            level_filter: Arc::new(RwLock::new(level_filter)),
+            filter_map: Arc::new(RwLock::new(filter_map)),
         }
     }
 
-    pub fn set(&self, level_filter: LevelFilter) {
-        *self.level_filter.write().unwrap() = level_filter;
+    pub fn set(&self, filter_map: HashMap<String, LevelFilter>) {
+        *self.filter_map.write().unwrap() = filter_map;
     }
 
     #[inline]
     fn respond(target_level: Level, level_filter: LevelFilter) -> Response {
-        if target_level > level_filter {
+        if level_filter < target_level {
             return Response::Reject;
         } else {
             return Response::Accept;
@@ -100,30 +91,22 @@ impl DynamicFilter {
 
 impl Filter for DynamicFilter {
     fn filter(&self, record: &log::Record) -> Response {
-        const TARGETS: &[&str] = &[
-            // OmniLED implementation files
-            "omni_led",
-            "omni_led_api",
-            "omni_led_lib",
-            // Script files (+ 'script' as fallback if it failed to get script name)
-            "devices.lua",
-            "plugins.lua",
-            "scripts.lua",
-            "settings.lua",
-            "script",
-            // Plugin applications
-            "plugin",
-        ];
+        let filter_map = self.filter_map.read().unwrap();
 
-        for prefix in TARGETS {
-            if record.target() == *prefix
-                || record
-                    .target()
-                    .strip_prefix(*prefix)
-                    .is_some_and(|prefix| prefix.starts_with("::"))
-            {
-                let level_filter = self.level_filter.read().unwrap();
-                return Self::respond(record.level(), *level_filter);
+        let mut target = record.target();
+        loop {
+            match filter_map.get(target) {
+                Some(level_filter) => {
+                    return Self::respond(record.level(), *level_filter);
+                }
+                None => match target.rfind("::") {
+                    Some(index) => {
+                        target = &target[..index];
+                    }
+                    None => {
+                        break;
+                    }
+                },
             }
         }
 
