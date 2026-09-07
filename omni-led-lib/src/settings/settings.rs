@@ -9,7 +9,7 @@ use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
 use crate::events::event_queue::{Event, EventQueue};
 use crate::events::events::ScriptEvent;
-use crate::logging::level_filter_map::LogFilterMap;
+use crate::logging::level_filter_table::LevelFilterTable;
 use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
 use crate::script_handler::script_data_types::DurationWrapper;
@@ -28,9 +28,9 @@ pub struct Settings {
     #[omni(default = FontSelector::Default)]
     pub font: FontSelector,
 
-    #[omni(default = LogFilterMap::default())]
+    #[omni(default = LevelFilterTable::default())]
     #[omni(on_set = Log::set_filter_map_handler)]
-    pub log_filter_map: HashMap<String, LevelFilter>,
+    pub level_filter_table: HashMap<String, LevelFilter>,
 
     #[omni(default = 2)]
     pub keyboard_ticks_repeat_delay: usize,
