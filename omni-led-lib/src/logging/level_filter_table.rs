@@ -6,9 +6,9 @@ use crate::common::lua_traits::{LuaTypeStaticMembers, StaticMembers};
 use crate::logging::logger::LevelFilter;
 
 #[derive(Clone, Debug, LuaName)]
-pub struct LogFilterMap {}
+pub struct LevelFilterTable {}
 
-impl LogFilterMap {
+impl LevelFilterTable {
     pub fn default() -> HashMap<String, LevelFilter> {
         Self::default_filter_map(Self::default_level_filer())
     }
@@ -42,7 +42,7 @@ impl LogFilterMap {
     }
 }
 
-impl LuaTypeStaticMembers for LogFilterMap {
+impl LuaTypeStaticMembers for LevelFilterTable {
     fn add_members(members: &mut StaticMembers<'_>) {
         members.add_function("default", |_lua, _: ()| Ok(Self::default()));
         members.add_function("default_with", |_lua, level_filter: LevelFilter| {
@@ -51,4 +51,4 @@ impl LuaTypeStaticMembers for LogFilterMap {
     }
 }
 
-impl UserData for LogFilterMap {}
+impl UserData for LevelFilterTable {}
