@@ -9,7 +9,7 @@ use std::sync::OnceLock;
 
 use crate::constants::constants::Constants;
 use crate::logging::dynamic_filter::DynamicFilter;
-use crate::logging::level_filter_map::LogFilterMap;
+use crate::logging::level_filter_table::LevelFilterTable;
 use crate::logging::logger::{LevelFilter, LogImpl};
 
 #[derive(Clone)]
@@ -29,7 +29,7 @@ impl FileLogger {
         std::fs::create_dir_all(data_dir).unwrap();
 
         let path = Constants::data_dir().join("logging.log");
-        let filter = DynamicFilter::new(LogFilterMap::default());
+        let filter = DynamicFilter::new(LevelFilterTable::default());
         let config = Self::create_config(&path, filter.clone());
         let _handle = log4rs::init_config(config).unwrap();
 
