@@ -190,16 +190,15 @@ them be missing.
 
 > ### Update interval (Tick Duration)
 >
-> > `update_interval`: `integer`
+> > `update_interval`: `Duration`
 > >
 > > This setting will define how ofter the server will process events and render updates on the
-> > screen. Lower interval will increase responsiveness at the cost of the CPU usage. Update
-> > interval (or tick duration) is defined in milliseconds.
+> > screen. Lower interval will increase responsiveness at the cost of the CPU usage.
 > >
-> > _Optional_. Default: `100`
+> > _Optional_. Default: `Duration.from_millis(100)`
 >
-> > Example `settings.lua` that sets update interval to `50`.
+> > Example `settings.lua` that sets update interval to `50ms`.
 > >
 > > ```lua
-> > Settings.update_interval = 50,
+> > Settings.update_interval = Duration.from_millis(50),
 > > ```
