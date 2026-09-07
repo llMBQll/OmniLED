@@ -1,30 +1,41 @@
 use log::{debug, error, info, trace, warn};
 use mlua::{Lua, UserData, UserDataMethods};
 use omni_led_derive::{LuaEnum, LuaName};
+use std::collections::HashMap;
 
-use crate::common::user_data::set_unique_user_data;
+use crate::common::user_data::{UserDataRef, set_unique_user_data};
 
-pub trait LogHandle {
-    fn set_level_filter(&self, level_filter: log::LevelFilter);
+pub trait LogImpl {
+    fn set_filter_map(&self, filter_map: HashMap<String, LevelFilter>);
 }
 
 #[derive(LuaName)]
 pub struct Log {
-    handle: Box<dyn LogHandle>,
+    logger: Box<dyn LogImpl>,
 }
 
 impl Log {
-    pub fn load<H: LogHandle + 'static>(lua: &Lua, handle: H) {
+    pub fn load<I: LogImpl + 'static>(lua: &Lua, logger: I) {
         set_unique_user_data(
             lua,
             Self {
-                handle: Box::new(handle),
+                logger: Box::new(logger),
             },
         );
     }
 
-    pub fn set_level_filter(&self, level_filter: LevelFilter) {
-        self.handle.set_level_filter(level_filter.into());
+    pub fn set_filter_map(&self, filter_map: HashMap<String, LevelFilter>) {
+        self.logger.set_filter_map(filter_map);
+    }
+
+    pub fn set_filter_map_handler(
+        lua: &Lua,
+        _event: &'static str,
+        filter_map: &HashMap<String, LevelFilter>,
+    ) -> mlua::Result<()> {
+        let this = UserDataRef::<Self>::load(lua);
+        this.get().logger.set_filter_map(filter_map.clone());
+        Ok(())
     }
 
     fn get_log_location(lua: &Lua) -> String {
@@ -100,5 +111,19 @@ impl Into<log::LevelFilter> for LevelFilter {
             LevelFilter::Debug => log::LevelFilter::Debug,
             LevelFilter::Trace => log::LevelFilter::Trace,
         }
+    }
+}
+
+impl PartialEq<log::Level> for LevelFilter {
+    #[inline]
+    fn eq(&self, other: &log::Level) -> bool {
+        *self as usize == *other as usize
+    }
+}
+
+impl PartialOrd<log::Level> for LevelFilter {
+    #[inline]
+    fn partial_cmp(&self, other: &log::Level) -> Option<std::cmp::Ordering> {
+        Some((*self as usize).cmp(&(*other as usize)))
     }
 }
