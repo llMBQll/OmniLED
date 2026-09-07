@@ -8,7 +8,7 @@ them be missing.
 
 - [Animation](#animation)
 - [Font](#font)
-- [Log Level](#log-level)
+- [Level Filter Table](#level-filter-table)
 - [Keyboard](#keyboard)
 - [Steelseries API](#steelseries-api)
 - [Update Interval](#update-interval-tick-duration)
@@ -69,6 +69,7 @@ them be missing.
 > >     }
 > >   }
 > > }
+> > ```
 >
 > > Example `settings.lua` that loads installed system font
 > >
@@ -85,19 +86,33 @@ them be missing.
 > > }
 > > ```
 
-> ### Log Level
+> ### Level Filter Table
 >
-> > `log_level`: [`LogLevel`](scripting_reference.md#loglevel)
+> > `level_filter_table`: `table<string, LevelFilter>`
 > >
-> > Set minimum required severity of messages to be logged.
+> > _See [`LevelFilter`](scripting_reference.md#levelfilter)_
 > >
-> > _Optional_. Default: `Info`
+> > Set a per target log level. This is useful to limit certain targets or allow more tracing from another.
+> > Usually you just want the default setting `LevelFilterTable.default()` or change it across all default targets using
+> > `LevelFilterTable.default_with(LevelFilter.<LEVEL>)`.
+> >
+> > _Optional_. Default: `LevelFilterTable.default()`
+> >
+> > _See [`LevelFilterTable`](scripting_reference.md#levelfiltertable)_
 >
-> > Example `settings.lua` that accepts debug log levels and above.
+> > Example `settings.lua` that accepts debug log levels and above using default targets.
 > >
 > > ```lua
-> > Settings {
-> >   log_level = 'Debug'
+> > Settings.level_filter_table = 'LogFilterMap.default_with(LevelFilter.Debug)'
+> > ```
+>
+> > Example `settings.lua` that accepts custom per target levels.
+> >
+> > ```lua
+> > Settings.level_filter_table = {
+> >   omni_led = LevelFilter.Info,
+> >   omni_led_lib = LevelFilter.Trace,
+> >   ['omni_led_lib::devices'] = LevelFilter.Debug,
 > > }
 > > ```
 
@@ -142,8 +157,8 @@ them be missing.
 > >
 > > _Optional_. Default:
 > >
-> > - Linux:   `nil`,
-> > - macOS:   `"/Library/Application Support/SteelSeries Engine 3/coreProps.json"`,
+> > - Linux: `nil`,
+> > - macOS: `"/Library/Application Support/SteelSeries Engine 3/coreProps.json"`,
 > > - Windows: `"%PROGRAMDATA%/SteelSeries/SteelSeries Engine 3/coreProps.json"`
 >
 > > `steelseries_api.enabled`: `bool`
@@ -152,8 +167,8 @@ them be missing.
 > >
 > > _Optional_. Default:
 > >
-> > - Linux:   `false`,
-> > - macOS:   `true`,
+> > - Linux: `false`,
+> > - macOS: `true`,
 > > - Windows: `true`
 >
 > > `steelseries_api.register_heartbeat`: `bool`
