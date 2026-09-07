@@ -352,7 +352,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
-> ### `LogLevel`
+> ### `LevelFilter`
 >
 > Log level filter, selecting one value will also activate all values above it, e.g. enabling
 > `Info`, will also enable `Warn` and `Error`.
@@ -363,7 +363,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 >
 > > `Error`
 > >
-> > Allow logging errors and above.
+> > Allow logging errors.
 >
 > > `Warn`
 > >
@@ -587,6 +587,21 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > >   },
 > > }
 > > ```
+
+---
+
+> ### `LevelFilterTable`
+>
+> Provides utility functions for creating log level filter tables.  
+> To create a custom filter table use a regular lua table or edit the table returned by one of the utility functions.
+>
+> > `default: fn() -> table<string, LevelFilter>`
+> >
+> > Returns a table with default targets and `LevelFilter.Info` (or `LevelFilter.Debug` in dev builds) level filter.
+>
+> > `default_with: fn(level_filter: LevelFilter) -> table<string, LevelFilter>`
+> >
+> > Returns a table with default targets and `level_filter` level filter.
 
 ---
 
