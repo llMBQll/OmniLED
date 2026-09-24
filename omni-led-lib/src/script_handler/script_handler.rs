@@ -1,5 +1,5 @@
-use log::{debug, warn};
-use mlua::{Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
+use log::{debug, error, warn};
+use mlua::{FromLua, Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
 use omni_led_derive::{FromLuaValue, LuaName};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -7,6 +7,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use crate::common::lua_traits::{LuaTypeStaticMembers, StaticMembers};
+use crate::common::recoverable;
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
@@ -342,28 +343,113 @@ enum BuilderType {
 pub struct ScreenBuilder {
     layouts: Vec<Layout>,
     shortcut: Vec<String>,
-    device_name: String,
+    device_names: Vec<String>,
     builder_type: Option<BuilderType>,
     screen_count: usize,
     current_screen: Rc<RefCell<usize>>,
 }
 
 impl ScreenBuilder {
-    pub fn new(name: String) -> Self {
+    pub fn new(names: Vec<String>) -> Self {
         Self {
             layouts: vec![],
             shortcut: vec![],
-            device_name: name,
+            device_names: names,
             builder_type: None,
             screen_count: 0,
             current_screen: Rc::new(RefCell::new(0)),
         }
     }
+
+    fn try_register(&self, lua: &Lua, name: String) -> Result<(), recoverable::Error<mlua::Error>> {
+        let mut script_handler = UserDataRef::<ScriptHandler>::load(lua);
+        script_handler
+            .get_mut()
+            .register(lua, name.clone(), self.layouts.clone())
+            .map_err(recoverable::Error::Recoverable)?;
+
+        if self.screen_count == 0 {
+            warn!("Registered device '{}' with zero screens provided", name);
+        }
+
+        if !self.shortcut.is_empty() {
+            if self.screen_count < 2 {
+                warn!(
+                    "Registering shortcut to toggle screens for device '{}', but its screen count is {}",
+                    name, self.screen_count
+                );
+            }
+
+            let current = self.current_screen.clone();
+            let count = self.screen_count;
+            let name = name.clone();
+            let toggle_screen = lua
+                .create_function_mut(move |lua, _: ()| {
+                    *current.borrow_mut() += 1;
+                    if *current.borrow() >= count {
+                        *current.borrow_mut() = 0;
+                    }
+
+                    let mut script_handler = UserDataRef::<ScriptHandler>::load(lua);
+                    script_handler.get_mut().reset(&name);
+
+                    Ok(())
+                })
+                .unwrap();
+
+            // Return a fatal error since this is device independent and
+            // would error out for all subsequent devices
+            let mut shortcuts = UserDataRef::<Shortcuts>::load(lua);
+            shortcuts
+                .get_mut()
+                .register(lua, self.shortcut.clone(), toggle_screen)
+                .map_err(recoverable::Error::Fatal)?;
+        }
+
+        return Ok(());
+    }
+}
+
+// TODO rework LuaEnum derive macro to support implicit construct from Vec<T>
+#[derive(UserData)]
+pub struct Names {
+    names: Vec<String>,
+}
+
+impl FromLua for Names {
+    fn from_lua(value: Value, _lua: &Lua) -> mlua::Result<Self> {
+        let names = match value {
+            Value::String(string) => vec![string.to_string_lossy()],
+            Value::Table(table) => {
+                match table
+                    .sequence_values::<String>()
+                    .collect::<mlua::Result<Vec<_>>>()
+                {
+                    Ok(names) => names,
+                    Err(_) => {
+                        return Err(mlua::Error::FromLuaConversionError {
+                            from: "table",
+                            to: "String or Vec<String>".to_string(),
+                            message: None,
+                        });
+                    }
+                }
+            }
+            other => {
+                return Err(mlua::Error::FromLuaConversionError {
+                    from: other.type_name(),
+                    to: "String or Vec<String>".to_string(),
+                    message: None,
+                });
+            }
+        };
+        Ok(Self { names })
+    }
 }
 
 impl LuaTypeStaticMembers for ScreenBuilder {
     fn add_members(functions: &mut StaticMembers<'_>) {
-        functions.add_function("new", |_lua, name: String| Ok(Self::new(name)));
+        functions.add_function("new", |_lua, names: Names| Ok(Self::new(names.names)));
     }
 }
 
@@ -396,8 +482,8 @@ impl UserData for ScreenBuilder {
 
             if layouts.len() == 0 {
                 warn!(
-                    "Registering a layout group for device '{}' with 0 layouts",
-                    builder.device_name
+                    "Registering a layout group for builder '{}' with 0 layouts",
+                    builder.device_names.join("|")
                 );
             }
 
@@ -444,49 +530,16 @@ impl UserData for ScreenBuilder {
         );
 
         methods.add_method_mut("register", |lua, builder, _: ()| {
-            if !builder.shortcut.is_empty() {
-                if builder.screen_count < 2 {
-                    warn!("Registering shortcut to toggle screens for device '{}', but its screen count is {}", builder.device_name, builder.screen_count);
+            for name in &builder.device_names {
+                match builder.try_register(lua, name.clone()) {
+                    Ok(_) => return Ok(()),
+                    Err(recoverable::Error::Fatal(err)) => return Err(err),
+                    Err(recoverable::Error::Recoverable(err)) => {
+                        error!("Failed to load device '{}': {}", name, err)
+                    }
                 }
-
-                let current = builder.current_screen.clone();
-                let count = builder.screen_count;
-                let name = builder.device_name.clone();
-                let toggle_screen = lua
-                    .create_function_mut(move |lua, _: ()| {
-                        *current.borrow_mut() += 1;
-                        if *current.borrow() >= count {
-                            *current.borrow_mut() = 0;
-                        }
-
-                        let mut script_handler = UserDataRef::<ScriptHandler>::load(lua);
-                        script_handler.get_mut().reset(&name);
-
-                        Ok(())
-                    })
-                    .unwrap();
-
-                let mut shortcuts = UserDataRef::<Shortcuts>::load(lua);
-                shortcuts
-                    .get_mut()
-                    .register(lua, builder.shortcut.clone(), toggle_screen)?;
             }
-
-            if builder.screen_count == 0 {
-                warn!(
-                    "Registering device '{}' with zero screens provided",
-                    builder.device_name
-                );
-            }
-
-            let mut script_handler = UserDataRef::<ScriptHandler>::load(lua);
-            script_handler.get_mut().register(
-                lua,
-                builder.device_name.clone(),
-                builder.layouts.clone(),
-            )?;
-
-            Ok(())
+            Err(mlua::Error::runtime("Failed to register any devices"))
         });
     }
 }
