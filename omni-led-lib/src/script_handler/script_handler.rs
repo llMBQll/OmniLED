@@ -7,6 +7,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use crate::common::lua_traits::{LuaTypeStaticMembers, StaticMembers};
+use crate::common::recoverable;
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::create_table_with_defaults;
@@ -360,11 +361,12 @@ impl ScreenBuilder {
         }
     }
 
-    fn try_register(&self, lua: &Lua, name: String) -> mlua::Result<()> {
+    fn try_register(&self, lua: &Lua, name: String) -> Result<(), recoverable::Error<mlua::Error>> {
         let mut script_handler = UserDataRef::<ScriptHandler>::load(lua);
         script_handler
             .get_mut()
-            .register(lua, name.clone(), self.layouts.clone())?;
+            .register(lua, name.clone(), self.layouts.clone())
+            .map_err(recoverable::Error::Recoverable)?;
 
         if self.screen_count == 0 {
             warn!("Registered device '{}' with zero screens provided", name);
@@ -395,10 +397,13 @@ impl ScreenBuilder {
                 })
                 .unwrap();
 
+            // Return a fatal error since this is device independent and
+            // would error out for all subsequent devices
             let mut shortcuts = UserDataRef::<Shortcuts>::load(lua);
             shortcuts
                 .get_mut()
-                .register(lua, self.shortcut.clone(), toggle_screen)?;
+                .register(lua, self.shortcut.clone(), toggle_screen)
+                .map_err(recoverable::Error::Fatal)?;
         }
 
         return Ok(());
@@ -528,7 +533,10 @@ impl UserData for ScreenBuilder {
             for name in &builder.device_names {
                 match builder.try_register(lua, name.clone()) {
                     Ok(_) => return Ok(()),
-                    Err(err) => error!("Failed to load device '{}': {}", name, err),
+                    Err(recoverable::Error::Fatal(err)) => return Err(err),
+                    Err(recoverable::Error::Recoverable(err)) => {
+                        error!("Failed to load device '{}': {}", name, err)
+                    }
                 }
             }
             Err(mlua::Error::runtime("Failed to register any devices"))
