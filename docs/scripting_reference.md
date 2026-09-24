@@ -130,6 +130,7 @@
 Given the following enum:
 
 > `MyEnum`
+>
 > > VariantA
 >
 > > VariantB(value: integer)
@@ -146,6 +147,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > Given:
 >
 > > `MyEnum`
+> >
 > > > VariantA(string)
 > >
 > > > VariantB(string) _implicit construct_
@@ -520,7 +522,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > > `from_millis`: `fn(value: integer) -> Duration`  
 > > `from_secs`: `fn(value: integer) -> Duration`  
 > > `from_mins`: `fn(value: integer) -> Duration`  
-> > `from_hours`: `fn(value: integer) -> Duration`  
+> > `from_hours`: `fn(value: integer) -> Duration`
 > >
 > > Creates a new duration object from given value and time unit.
 >
@@ -535,7 +537,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > > `as_nanos`: `fn(self) -> integer`  
 > > `as_micros`: `fn(self) -> integer`  
 > > `as_millis`: `fn(self) -> integer`  
-> > `as_secs`: `fn(self) -> integer`  
+> > `as_secs`: `fn(self) -> integer`
 > >
 > > Returns the duration truncated to a given time unit.
 >
@@ -637,15 +639,20 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > Screen builder allows to put together layouts and screen setups for devices. This has to be
 > repeated for every device individually.
 >
-> > `new: fn(name: string)`
+> > `new: fn(names: string|[string])`
 > >
-> > Begin a builder to register screen layouts for a given device. `name` must be a device with an
-> > existing config entry.
+> > Begin a builder to register screen layouts for a given device or devices. `names` must be
+> > devices with existing config entries.
+> >
+> > _Supports a single string argument or an array of strings._
 >
 > > `register: fn(self)`
 > >
 > > Finalize the builder and register all provided scripts and shortcuts for the provided device.
 > > Without this call, no scripts will be registered.
+> >
+> > If ScreenBuilder was created with a list of devices, it will try to register for devices in order
+> > until one of them succeeds (or all fail).
 >
 > > `with_layout: fn(self, layout: Layout)`
 > >
@@ -838,7 +845,6 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > > `x`: `integer`
 > >
 > > X-coordinate.
-> >
 >
 > > `y`: `integer`
 > >
@@ -1033,7 +1039,7 @@ Widgets are the building blocks for displaying data on screen. Combine them to c
 All widgets have the following common attributes in addition to widget-specific ones.
 
 > ### Common attributes
-> >
+>
 > > `position`: `Point`
 > >
 > > Position of the upper-left corner of the widget.
