@@ -5,9 +5,9 @@ use crate::devices::device::Buffer;
 
 #[derive(Clone, FromLuaValue)]
 struct ExtraBytes {
-    #[mlua(default)]
+    #[omni(default)]
     prepend: Vec<u8>,
-    #[mlua(default)]
+    #[omni(default)]
     append: Vec<u8>,
 }
 
