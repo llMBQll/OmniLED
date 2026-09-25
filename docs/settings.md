@@ -33,10 +33,8 @@ them be missing.
 > > Example `settings.lua` that sets scroll delay and repeat delay.
 > >
 > > ```lua
-> > Settings {
-> >   animation_ticks_delay = 4,
-> >   animation_ticks_rate = 1,
-> > }
+> > Settings.animation_ticks_delay = 4,
+> > Settings.animation_ticks_rate = 1,
 > > ```
 
 > ### Font
@@ -53,34 +51,28 @@ them be missing.
 > > Example `settings.lua` that loads default font
 > >
 > > ```lua
-> > Settings {
-> >   font = 'Default'
-> > }
+> > Settings.font = 'Default'
 > > ```
 >
 > > Example `settings.lua` that loads font from the file system
 > >
 > > ```lua
-> > Settings {
-> >   font = {
-> >     Filesystem = {
-> >       path = '/path/to/my/font',
-> >       font_index = 0,
-> >     }
+> > Settings.font = {
+> >   Filesystem = {
+> >     path = '/path/to/my/font',
+> >     font_index = 0,
 > >   }
 > > }
 >
 > > Example `settings.lua` that loads installed system font
 > >
 > > ```lua
-> > Settings {
-> >   font = {
-> >     System = {
-> >       names = {'FiraMono', 'Monospace'},
-> >       style = 'Normal',
-> >       weight = 'Bold',
-> >       stretch = 'Condensed',
-> >     }
+> > Settings.font = {
+> >   System = {
+> >     names = {'FiraMono', 'Monospace'},
+> >     style = 'Normal',
+> >     weight = 'Bold',
+> >     stretch = 'Condensed',
 > >   }
 > > }
 > > ```
@@ -96,9 +88,7 @@ them be missing.
 > > Example `settings.lua` that accepts debug log levels and above.
 > >
 > > ```lua
-> > Settings {
-> >   log_level = 'Debug'
-> > }
+> > Settings.log_level = 'Debug'
 > > ```
 
 > ### Keyboard
@@ -119,10 +109,8 @@ them be missing.
 > > Example `settings.lua` that sets repeat delay and repeat delay.
 > >
 > > ```lua
-> > Settings {
-> >   keyboard_ticks_repeat_delay = 4,
-> >   keyboard_ticks_repeat_rate = 1,
-> > }
+> > Settings.keyboard_ticks_repeat_delay = 4,
+> > Settings.keyboard_ticks_repeat_rate = 1,
 > > ```
 
 > ### Steelseries API
@@ -173,6 +161,16 @@ them be missing.
 > > It accepts a range [1s, 60s] inclusive.
 > >
 > > _Optional_. Default: `Duration.from_secs(15)`
+>
+> > Example `settings.lua` that sets up the SteelSeries API.
+> >
+> > ```lua
+> > Settings.steelseries_api.address = "some_address",
+> > Settings.steelseries_api.config_path = "some_path",
+> > Settings.steelseries_api.enabled = true,
+> > Settings.steelseries_api.register_heartbeat = true,
+> > Settings.steelseries_api.deinitialize_timeout = Duration.from_secs(7),
+> > ```
 
 > ### Update interval (Tick Duration)
 >
@@ -187,7 +185,5 @@ them be missing.
 > > Example `settings.lua` that sets update interval to `50`.
 > >
 > > ```lua
-> > Settings {
-> >   update_interval = 50,
-> > }
+> > Settings.update_interval = 50,
 > > ```
