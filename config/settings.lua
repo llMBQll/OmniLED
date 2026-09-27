@@ -1,4 +1,4 @@
-Settings {
+Settings = {
     animation_ticks_delay = 8,
     animation_ticks_rate = 2,
     font = FontSelector.Default,

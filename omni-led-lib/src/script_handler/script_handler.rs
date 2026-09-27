@@ -23,6 +23,7 @@ use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::renderer::Renderer;
 use crate::sandbox_value;
 use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Regex, Widget};
+use crate::settings::settings::Settings;
 
 #[derive(LuaName)]
 pub struct ScriptHandler {
@@ -290,6 +291,7 @@ impl ScriptHandler {
                 sandbox_value!(Constants::NAME),
                 sandbox_value!(Events::NAME),
                 sandbox_value!(Log::NAME),
+                sandbox_value!(Settings::NAME),
                 sandbox_value!(Shortcuts::NAME),
                 sandbox_value!("PREDICATE", table: predicates),
             ],

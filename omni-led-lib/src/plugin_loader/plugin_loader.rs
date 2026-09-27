@@ -10,6 +10,7 @@ use crate::constants::constants::Constants;
 use crate::logging::logger::Log;
 use crate::plugin_loader::c_plugin::{CPlugin, Config};
 use crate::sandbox_value;
+use crate::settings::settings::Settings;
 
 #[derive(LuaName)]
 pub struct PluginLoader {
@@ -51,6 +52,7 @@ impl PluginLoader {
             vec![
                 sandbox_value!(Constants::NAME),
                 sandbox_value!(Log::NAME),
+                sandbox_value!(Settings::NAME),
                 sandbox_value!("load_plugin", function: load_plugin),
                 sandbox_value!("get_default_plugin_path", function: get_default_plugin_path),
             ],

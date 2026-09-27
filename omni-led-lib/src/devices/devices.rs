@@ -10,7 +10,7 @@ use crate::common::sandbox::Sandbox;
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::constants::constants::Constants;
-use crate::devices::device::{Device, Settings};
+use crate::devices::device::{Device, Settings as DeviceSettings};
 use crate::devices::emulator::emulator::EmulatorSettings;
 use crate::devices::steelseries_engine::steelseries_engine_device::SteelSeriesEngineDeviceSettings;
 use crate::devices::usb_device;
@@ -18,6 +18,7 @@ use crate::devices::usb_device::hid_device::HidDeviceSettings;
 use crate::devices::usb_device::raw_usb_device::RawUsbDeviceSettings;
 use crate::logging::logger::Log;
 use crate::sandbox_value;
+use crate::settings::settings::Settings;
 
 type Constructor = fn(&Lua, Value) -> mlua::Result<Box<dyn Device>>;
 
@@ -86,7 +87,11 @@ impl Devices {
         let mut constructors = HashMap::new();
         let sandbox = Sandbox::new(
             lua,
-            vec![sandbox_value!(Constants::NAME), sandbox_value!(Log::NAME)],
+            vec![
+                sandbox_value!(Constants::NAME),
+                sandbox_value!(Log::NAME),
+                sandbox_value!(Settings::NAME),
+            ],
         );
 
         let loaders = [
@@ -109,8 +114,8 @@ impl Devices {
         type_name.split("::").last().unwrap().to_string()
     }
 
-    fn create_loader<S: Settings + 'static>(lua: &Lua) -> (String, Constructor, Function) {
-        type DeviceType<S> = <S as Settings>::DeviceType;
+    fn create_loader<S: DeviceSettings + 'static>(lua: &Lua) -> (String, Constructor, Function) {
+        type DeviceType<S> = <S as DeviceSettings>::DeviceType;
 
         let constructor: Constructor = |lua, settings| {
             let mut device = Box::new(<DeviceType<S>>::init(lua, settings)?);
