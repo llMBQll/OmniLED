@@ -26,6 +26,7 @@ pub struct Settings {
     pub font: FontSelector,
 
     #[omni(default = LevelFilter::Info)]
+    #[omni(on_set = Log::set_level_filter)]
     pub log_level: LevelFilter,
 
     #[omni(default = 2)]
@@ -57,9 +58,6 @@ impl Settings {
         load_config(lua, ConfigType::Settings, &config, sandbox.proxy).unwrap();
 
         let settings = UserDataRef::<Settings>::load(lua);
-        let logger = UserDataRef::<Log>::load(lua);
-        logger.get().set_level_filter(settings.get().log_level);
-
         debug!("Loaded settings {:?}", settings.get());
     }
 }
