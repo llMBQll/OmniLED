@@ -1,6 +1,6 @@
 use log::debug;
-use mlua::{Lua, UserData};
-use omni_led_derive::{DefaultImpl, FromLuaValue};
+use mlua::Lua;
+use omni_led_derive::{DefaultImpl, FromLuaValue, LuaSettings};
 use std::time::Duration;
 
 use crate::common::lua_traits::LuaName;
@@ -14,7 +14,7 @@ use crate::sandbox_value;
 use crate::script_handler::script_data_types::DurationWrapper;
 use crate::steelseries_engine::api::ApiSettings;
 
-#[derive(Debug, Clone, DefaultImpl, FromLuaValue)]
+#[derive(Debug, Clone, DefaultImpl, FromLuaValue, LuaSettings)]
 pub struct Settings {
     #[omni(default = 8)]
     pub animation_ticks_delay: usize,
@@ -35,11 +35,11 @@ pub struct Settings {
     pub keyboard_ticks_repeat_rate: usize,
 
     #[omni(default)]
+    #[omni(on_set = ApiSettings::recursive_set)]
     pub steelseries_api: ApiSettings,
 
-    #[omni(transform = DurationWrapper::transform)]
-    #[omni(default = Duration::from_millis(100))]
-    pub update_interval: Duration,
+    #[omni(default = DurationWrapper(Duration::from_millis(100)))]
+    pub update_interval: DurationWrapper,
 }
 
 impl Settings {
@@ -72,5 +72,3 @@ impl Settings {
 impl LuaName for Settings {
     const NAME: &str = "SETTINGS";
 }
-
-impl UserData for Settings {}
