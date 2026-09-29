@@ -1,6 +1,7 @@
 use mlua::{FromLua, FromLuaMulti, Function, IntoLuaMulti, Lua, MetaMethod, Table, Value};
 use std::os::raw::c_void;
 
+use crate::common::lua_access_handler::LuaAccessHandler;
 use crate::common::lua_register::{set_lua_enums, set_lua_types};
 
 #[macro_export]
@@ -51,20 +52,24 @@ impl Sandbox {
 
         // With this metatable `_G` will mostly behave as if it was the real one from user script prerspective
         let real_env = real.clone();
+        let mut handler = LuaAccessHandler::instance(lua);
         proxy_meta
             .set(
                 MetaMethod::Index.name(),
-                lua.create_function(move |_, (_, key): (Table, String)| real_env.get::<Value>(key))
-                    .unwrap(),
+                lua.create_function_mut(move |lua, (_, key): (Table, String)| {
+                    handler.get(lua, real_env.clone(), &key)
+                })
+                .unwrap(),
             )
             .unwrap();
 
         let real_env = real.clone();
+        let mut handler = LuaAccessHandler::instance(lua);
         proxy_meta
             .set(
                 MetaMethod::NewIndex.name(),
-                lua.create_function(move |_, (_, key, value): (Table, String, Value)| {
-                    real_env.set(key, value)
+                lua.create_function_mut(move |lua, (_, key, value): (Table, String, Value)| {
+                    handler.set(lua, real_env.clone(), &key, value)
                 })
                 .unwrap(),
             )
@@ -293,9 +298,10 @@ fn round(_: &Lua, val: f64) -> mlua::Result<i64> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use mlua::{IntoLua, chunk};
+    use std::{cell::RefCell, rc::Rc};
+
+    use super::*;
 
     macro_rules! eval {
         ($lua:expr, $proxy:expr, $code:tt) => {
@@ -459,5 +465,75 @@ mod tests {
             REAL_VERSION
         );
         assert_eq!(non_g.raw_get::<String>("_VERSION").unwrap(), TEST_VERSION);
+    }
+
+    #[test]
+    fn lua_access_handler() {
+        let lua = Lua::new();
+        let sandbox = Sandbox::new(&lua, vec![]);
+
+        let gets = Rc::new(RefCell::new(0));
+        let sets = Rc::new(RefCell::new(0));
+
+        let mut handler = LuaAccessHandler::instance(&lua);
+
+        handler.add_on_get("tracked", {
+            let gets = gets.clone();
+            move |_lua, table, key| {
+                *gets.borrow_mut() += 1;
+                table.get(key)
+            }
+        });
+
+        handler.add_on_set("tracked", {
+            let sets = sets.clone();
+            move |_lua, table, key, value| {
+                *sets.borrow_mut() += 1;
+                table.set(key, value)
+            }
+        });
+
+        exec!(lua, sandbox.proxy, {
+            tracked = 7
+            tracked = nil
+            tracked = 'A'
+
+            other = tracked
+            other = tracked
+        });
+
+        assert_eq!(gets.take(), 2);
+        assert_eq!(sets.take(), 3);
+    }
+
+    fn setup_readonly_env() -> (Lua, Sandbox) {
+        let lua = Lua::new();
+        let sandbox = Sandbox::new(
+            &lua,
+            vec![sandbox_value!("my_readonly", val: Value::Integer(7))],
+        );
+
+        let mut handler = LuaAccessHandler::instance(&lua);
+        handler.add_on_set("my_readonly", move |_lua, _table, key, _value| {
+            Err(mlua::Error::runtime(format!("'{key}' is readonly")))
+        });
+
+        (lua, sandbox)
+    }
+
+    #[test]
+    fn lua_readonly_read() {
+        let (lua, sandbox) = setup_readonly_env();
+
+        let value: i64 = eval!(lua, sandbox.proxy, { my_readonly });
+        assert_eq!(value, 7);
+    }
+
+    #[test]
+    #[should_panic = "'my_readonly' is readonly"]
+    fn lua_readonly_write() {
+        let (lua, sandbox) = setup_readonly_env();
+
+        exec!(lua, sandbox.proxy, { my_readonly = 7 });
     }
 }
