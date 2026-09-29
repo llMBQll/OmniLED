@@ -1,29 +1,32 @@
 use log::{debug, error, warn};
-use mlua::{FromLua, Function, Lua, Table, UserData, UserDataMethods, Value, chunk};
+use mlua::{FromLua, Function, Lua, Table, UserData, UserDataMethods, Value};
 use omni_led_derive::{FromLuaValue, LuaName};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
-use crate::common::lua_traits::{LuaTypeStaticMembers, StaticMembers};
+use crate::common::lua_traits::{LuaName, LuaTypeStaticMembers, StaticMembers};
 use crate::common::recoverable;
+use crate::common::sandbox::Sandbox;
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
-use crate::create_table_with_defaults;
+use crate::constants::constants::Constants;
 use crate::devices::device::Device;
 use crate::devices::devices::Devices;
 use crate::events::cbor_to_lua::get_cleanup_entries_metatable;
 use crate::events::events::Events;
 use crate::events::shortcuts::Shortcuts;
+use crate::logging::logger::Log;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::renderer::Renderer;
+use crate::sandbox_value;
 use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Regex, Widget};
 
 #[derive(LuaName)]
 pub struct ScriptHandler {
-    environment: Table,
+    environment: Sandbox,
     renderer: Renderer,
     devices: Vec<DeviceContext>,
 }
@@ -61,7 +64,7 @@ impl ScriptHandler {
 
                 if !event.contains('.') {
                     // Set values recursively only from top-level application events
-                    let env = &this.get().environment;
+                    let env = &this.get().environment.proxy;
                     Self::set_value(lua, env, &event, value)?;
                 }
 
@@ -79,7 +82,7 @@ impl ScriptHandler {
         debug!("Reloading user scripts");
 
         let mut this = UserDataRef::<Self>::load(lua);
-        let environment = this.get().environment.clone();
+        let environment = this.get().environment.proxy.clone();
         this.get_mut().cleanup(lua)?;
 
         load_config(lua, ConfigType::Scripts, &config, environment)
@@ -138,7 +141,7 @@ impl ScriptHandler {
     }
 
     pub fn update(&mut self, lua: &Lua, time_passed: Duration) -> mlua::Result<()> {
-        let env = &self.environment;
+        let env = &self.environment.real;
         for device in &mut self.devices {
             Self::update_impl(lua, device, &mut self.renderer, &env, time_passed)?;
         }
@@ -264,12 +267,10 @@ impl ScriptHandler {
         Ok(())
     }
 
-    fn make_sandbox(lua: &Lua) -> Table {
-        let always_fn = lua.create_function(|_, _: ()| Ok(true)).unwrap();
-
-        let never_fn = lua.create_function(|_, _: ()| Ok(false)).unwrap();
-
-        let times_fn = lua
+    fn make_sandbox(lua: &Lua) -> Sandbox {
+        let always = lua.create_function(|_, _: ()| Ok(true)).unwrap();
+        let never = lua.create_function(|_, _: ()| Ok(false)).unwrap();
+        let times = lua
             .create_function(|lua, n: usize| {
                 let mut count = 0;
                 lua.create_function_mut(move |_, _: ()| {
@@ -278,18 +279,21 @@ impl ScriptHandler {
                 })
             })
             .unwrap();
+        let predicates = lua.create_table().unwrap();
+        predicates.set("Always", always).unwrap();
+        predicates.set("Never", never).unwrap();
+        predicates.set("Times", times).unwrap();
 
-        create_table_with_defaults!(lua, {
-            Events = Events,
-            Log = Log,
-            PLATFORM = PLATFORM,
-            Shortcuts = Shortcuts,
-            PREDICATE = {
-                Always = $always_fn,
-                Never = $never_fn,
-                Times = $times_fn,
-            }
-        })
+        Sandbox::new(
+            lua,
+            vec![
+                sandbox_value!(Constants::NAME),
+                sandbox_value!(Events::NAME),
+                sandbox_value!(Log::NAME),
+                sandbox_value!(Shortcuts::NAME),
+                sandbox_value!("PREDICATE", table: predicates),
+            ],
+        )
     }
 }
 

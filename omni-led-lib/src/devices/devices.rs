@@ -1,19 +1,23 @@
 use convert_case::{Case, Casing};
 use log::{debug, error, log_enabled};
-use mlua::{Function, Lua, Table, UserData, Value, chunk};
+use mlua::{Function, Lua, UserData, Value};
 use omni_led_derive::LuaName;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
+use crate::common::lua_traits::LuaName;
+use crate::common::sandbox::Sandbox;
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
-use crate::create_table_with_defaults;
+use crate::constants::constants::Constants;
 use crate::devices::device::{Device, Settings};
 use crate::devices::emulator::emulator::EmulatorSettings;
 use crate::devices::steelseries_engine::steelseries_engine_device::SteelSeriesEngineDeviceSettings;
 use crate::devices::usb_device;
 use crate::devices::usb_device::hid_device::HidDeviceSettings;
 use crate::devices::usb_device::raw_usb_device::RawUsbDeviceSettings;
+use crate::logging::logger::Log;
+use crate::sandbox_value;
 
 type Constructor = fn(&Lua, Value) -> mlua::Result<Box<dyn Device>>;
 
@@ -26,9 +30,9 @@ pub struct Devices {
 impl Devices {
     pub fn load(lua: &Lua, config: String) {
         let (constructors, env) = Self::create_loaders(lua);
-        usb_device::transform::load_common_functions(lua, &env);
+        usb_device::transform::load_common_functions(lua, &env.real);
         set_unique_user_data(lua, Self::new(constructors));
-        load_config(lua, ConfigType::Devices, &config, env).unwrap();
+        load_config(lua, ConfigType::Devices, &config, env.proxy).unwrap();
     }
 
     pub fn load_device(&mut self, lua: &Lua, name: String) -> mlua::Result<Box<dyn Device>> {
@@ -78,12 +82,12 @@ impl Devices {
         }
     }
 
-    fn create_loaders(lua: &Lua) -> (HashMap<String, Constructor>, Table) {
+    fn create_loaders(lua: &Lua) -> (HashMap<String, Constructor>, Sandbox) {
         let mut constructors = HashMap::new();
-        let env = create_table_with_defaults!(lua, {
-            Log = Log,
-            PLATFORM = PLATFORM,
-        });
+        let sandbox = Sandbox::new(
+            lua,
+            vec![sandbox_value!(Constants::NAME), sandbox_value!(Log::NAME)],
+        );
 
         let loaders = [
             Self::create_loader::<EmulatorSettings>(lua),
@@ -94,10 +98,10 @@ impl Devices {
 
         for (name, constructor, loader) in loaders {
             constructors.insert(name.clone(), constructor);
-            env.set(name, loader).unwrap();
+            sandbox.real.set(name, loader).unwrap();
         }
 
-        (constructors, env)
+        (constructors, sandbox)
     }
 
     fn get_type_name<T: Device>() -> String {

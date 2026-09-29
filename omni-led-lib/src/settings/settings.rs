@@ -1,14 +1,16 @@
 use log::debug;
-use mlua::{Lua, UserData, chunk};
+use mlua::{Lua, UserData};
 use omni_led_derive::FromLuaValue;
 use std::time::Duration;
 
 use crate::common::lua_traits::LuaName;
+use crate::common::sandbox::Sandbox;
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
-use crate::create_table_with_defaults;
+use crate::constants::constants::Constants;
 use crate::logging::logger::{LevelFilter, Log};
 use crate::renderer::font_selector::FontSelector;
+use crate::sandbox_value;
 use crate::script_handler::script_data_types::DurationWrapper;
 use crate::steelseries_engine::api::ApiSettings;
 
@@ -49,12 +51,15 @@ impl Settings {
             })
             .unwrap();
 
-        let env = create_table_with_defaults!(lua, {
-            Log = Log,
-            PLATFORM = PLATFORM,
-            Settings = $load_settings_fn,
-        });
-        load_config(lua, ConfigType::Settings, &config, env).unwrap();
+        let sandbox = Sandbox::new(
+            lua,
+            vec![
+                sandbox_value!(Constants::NAME),
+                sandbox_value!(Log::NAME),
+                sandbox_value!("Settings", function: load_settings_fn),
+            ],
+        );
+        load_config(lua, ConfigType::Settings, &config, sandbox.proxy).unwrap();
 
         let settings = UserDataRef::<Settings>::load(lua);
         let logger = UserDataRef::<Log>::load(lua);

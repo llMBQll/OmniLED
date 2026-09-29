@@ -4,7 +4,6 @@ use clap::Parser;
 use log::debug;
 use mlua::Lua;
 use omni_led_lib::{
-    common::common::load_internal_functions,
     common::user_data::UserDataRef,
     constants::config::{ConfigType, read_config, write_default_configs},
     constants::constants::Constants,
@@ -59,7 +58,6 @@ fn main() {
 
         let lua = Lua::new();
 
-        load_internal_functions(&lua);
         Constants::load(&lua);
 
         let _ = ready_rx.recv().unwrap();
