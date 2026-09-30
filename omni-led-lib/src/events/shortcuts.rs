@@ -7,23 +7,22 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::str::FromStr;
 
-use crate::common::user_data::{UserDataRef, set_unique_user_data};
+use crate::common::user_data::set_unique_user_data;
 use crate::events::events::Events;
 use crate::script_handler::script_data_types::EventKey;
-use crate::settings::settings::Settings;
+use crate::settings::settings_value::SettingsValue;
 
 #[derive(LuaName)]
 pub struct Shortcuts {
-    delay: usize,
-    rate: usize,
+    delay: SettingsValue<usize>,
+    rate: SettingsValue<usize>,
     current_tick: Rc<RefCell<usize>>,
 }
 
 impl Shortcuts {
     pub fn load(lua: &Lua) {
-        let settings = UserDataRef::<Settings>::load(lua);
-        let delay = settings.get().keyboard_ticks_repeat_delay;
-        let rate = settings.get().keyboard_ticks_repeat_rate;
+        let delay = SettingsValue::new(lua, |s| s.keyboard_ticks_repeat_delay);
+        let rate = SettingsValue::new(lua, |s| s.keyboard_ticks_repeat_rate);
         let current_tick = Rc::new(RefCell::new(0));
 
         let function = lua
@@ -66,8 +65,8 @@ impl Shortcuts {
         let press = all_pressed && !entry.last_all_pressed;
         let hold = all_pressed && entry.last_all_pressed;
         let required_ticks = match entry.hold_updates {
-            0 => entry.delay,
-            _ => entry.rate,
+            0 => entry.delay.get(),
+            _ => entry.rate.get(),
         };
         let delta_ticks = current_tick - entry.last_update_tick;
         let update = (current_tick != entry.last_update_tick)
@@ -140,8 +139,8 @@ impl Shortcuts {
             last_all_pressed: false,
             last_update_tick: 0,
             hold_updates: 0,
-            delay: self.delay,
-            rate: self.rate,
+            delay: self.delay.clone(),
+            rate: self.rate.clone(),
         };
 
         let current_tick = Rc::clone(&self.current_tick);
@@ -176,8 +175,8 @@ struct ShortcutEntry {
     last_all_pressed: bool,
     last_update_tick: usize,
     hold_updates: usize,
-    delay: usize,
-    rate: usize,
+    delay: SettingsValue<usize>,
+    rate: SettingsValue<usize>,
 }
 
 struct KeyState {

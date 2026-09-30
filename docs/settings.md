@@ -8,7 +8,7 @@ them be missing.
 
 - [Animation](#animation)
 - [Font](#font)
-- [Log Level](#log-level)
+- [Level Filter Table](#level-filter-table)
 - [Keyboard](#keyboard)
 - [Steelseries API](#steelseries-api)
 - [Update Interval](#update-interval-tick-duration)
@@ -69,6 +69,7 @@ them be missing.
 > >     }
 > >   }
 > > }
+> > ```
 >
 > > Example `settings.lua` that loads installed system font
 > >
@@ -85,19 +86,33 @@ them be missing.
 > > }
 > > ```
 
-> ### Log Level
+> ### Level Filter Table
 >
-> > `log_level`: [`LogLevel`](scripting_reference.md#loglevel)
+> > `level_filter_table`: `table<string, LevelFilter>`
 > >
-> > Set minimum required severity of messages to be logged.
+> > _See [`LevelFilter`](scripting_reference.md#levelfilter)_
 > >
-> > _Optional_. Default: `Info`
+> > Set a per target log level. This is useful to limit certain targets or allow more tracing from another.
+> > Usually you just want the default setting `LevelFilterTable.default()` or change it across all default targets using
+> > `LevelFilterTable.default_with(LevelFilter.<LEVEL>)`.
+> >
+> > _Optional_. Default: `LevelFilterTable.default()`
+> >
+> > _See [`LevelFilterTable`](scripting_reference.md#levelfiltertable)_
 >
-> > Example `settings.lua` that accepts debug log levels and above.
+> > Example `settings.lua` that accepts debug log levels and above using default targets.
 > >
 > > ```lua
-> > Settings {
-> >   log_level = 'Debug'
+> > Settings.level_filter_table = 'LogFilterMap.default_with(LevelFilter.Debug)'
+> > ```
+>
+> > Example `settings.lua` that accepts custom per target levels.
+> >
+> > ```lua
+> > Settings.level_filter_table = {
+> >   omni_led = LevelFilter.Info,
+> >   omni_led_lib = LevelFilter.Trace,
+> >   ['omni_led_lib::devices'] = LevelFilter.Debug,
 > > }
 > > ```
 
@@ -142,8 +157,8 @@ them be missing.
 > >
 > > _Optional_. Default:
 > >
-> > - Linux:   `nil`,
-> > - macOS:   `"/Library/Application Support/SteelSeries Engine 3/coreProps.json"`,
+> > - Linux: `nil`,
+> > - macOS: `"/Library/Application Support/SteelSeries Engine 3/coreProps.json"`,
 > > - Windows: `"%PROGRAMDATA%/SteelSeries/SteelSeries Engine 3/coreProps.json"`
 >
 > > `steelseries_api.enabled`: `bool`
@@ -152,8 +167,8 @@ them be missing.
 > >
 > > _Optional_. Default:
 > >
-> > - Linux:   `false`,
-> > - macOS:   `true`,
+> > - Linux: `false`,
+> > - macOS: `true`,
 > > - Windows: `true`
 >
 > > `steelseries_api.register_heartbeat`: `bool`
@@ -176,18 +191,15 @@ them be missing.
 
 > ### Update interval (Tick Duration)
 >
-> > `update_interval`: `integer`
+> > `update_interval`: `Duration`
 > >
 > > This setting will define how ofter the server will process events and render updates on the
-> > screen. Lower interval will increase responsiveness at the cost of the CPU usage. Update
-> > interval (or tick duration) is defined in milliseconds.
+> > screen. Lower interval will increase responsiveness at the cost of the CPU usage.
 > >
-> > _Optional_. Default: `100`
+> > _Optional_. Default: `Duration.from_millis(100)`
 >
-> > Example `settings.lua` that sets update interval to `50`.
+> > Example `settings.lua` that sets update interval to `50ms`.
 > >
 > > ```lua
-> > Settings {
-> >   update_interval = 50,
-> > }
+> > Settings.update_interval = Duration.from_millis(50),
 > > ```

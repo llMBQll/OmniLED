@@ -1,12 +1,16 @@
 use log::{debug, error, warn};
-use mlua::{Lua, UserData, chunk};
+use mlua::{Lua, UserData};
 use omni_led_derive::LuaName;
 
+use crate::common::lua_traits::LuaName;
+use crate::common::sandbox::Sandbox;
 use crate::common::user_data::{UserDataRef, set_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::constants::constants::Constants;
-use crate::create_table_with_defaults;
+use crate::logging::logger::Log;
 use crate::plugin_loader::c_plugin::{CPlugin, Config};
+use crate::sandbox_value;
+use crate::settings::settings::Settings;
 
 #[derive(LuaName)]
 pub struct PluginLoader {
@@ -22,7 +26,7 @@ impl PluginLoader {
             },
         );
 
-        let load_plugin_fn = lua
+        let load_plugin = lua
             .create_function(|lua, config: Config| {
                 let mut loader = UserDataRef::<PluginLoader>::load(lua);
                 loader.get_mut().start_plugin(config);
@@ -30,7 +34,7 @@ impl PluginLoader {
             })
             .unwrap();
 
-        let get_default_plugin_path_fn = lua
+        let get_default_plugin_path = lua
             .create_function(|_lua, plugin_name: String| {
                 let executable = format!(
                     "{}{}{}",
@@ -43,14 +47,18 @@ impl PluginLoader {
             })
             .unwrap();
 
-        let env = create_table_with_defaults!(lua, {
-            load_plugin = $load_plugin_fn,
-            get_default_plugin_path = $get_default_plugin_path_fn,
-            Log = Log,
-            PLATFORM = PLATFORM,
-        });
+        let sandbox = Sandbox::new(
+            lua,
+            vec![
+                sandbox_value!(Constants::NAME),
+                sandbox_value!(Log::NAME),
+                sandbox_value!(Settings::NAME),
+                sandbox_value!("load_plugin", function: load_plugin),
+                sandbox_value!("get_default_plugin_path", function: get_default_plugin_path),
+            ],
+        );
 
-        load_config(lua, ConfigType::Plugins, &config, env).unwrap();
+        load_config(lua, ConfigType::Plugins, &config, sandbox.proxy).unwrap();
 
         let plugin_loader = UserDataRef::<PluginLoader>::load(lua);
         if plugin_loader.get().plugins.len() == 0 {
