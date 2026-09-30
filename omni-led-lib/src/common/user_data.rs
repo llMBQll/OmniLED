@@ -48,6 +48,7 @@ pub fn set_mutable_unique_user_data<T: IntoLua + FromLua + LuaName + 'static>(
     lua.globals().set(T::NAME, value).unwrap();
 }
 
+#[derive(Clone)]
 pub struct UserDataRef<T: UserData + LuaName + 'static> {
     user_data: AnyUserData,
     phantom_data: PhantomData<T>,
