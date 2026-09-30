@@ -20,14 +20,14 @@ use crate::settings::settings::Settings;
 
 macro_rules! get_animation_settings {
     ($default:expr, $widget:expr) => {
-        AnimationSettings {
-            ticks_at_edge: $widget
+        (
+            $widget
                 .animation_ticks_delay
                 .unwrap_or($default.ticks_at_edge),
-            ticks_per_move: $widget
+            $widget
                 .animation_ticks_rate
                 .unwrap_or($default.ticks_per_move),
-        }
+        )
     };
 }
 
@@ -59,7 +59,14 @@ impl Renderer {
     ) -> (State, Buffer) {
         let mut buffer = Buffer::new(size, memory_layout);
 
-        self.calculate_animations(animation_groups, &mut widgets, screen_changed);
+        let settings_changed = self.animation_settings.refresh();
+
+        self.calculate_animations(
+            animation_groups,
+            &mut widgets,
+            screen_changed,
+            settings_changed,
+        );
 
         for operation in widgets {
             match operation {
@@ -251,7 +258,13 @@ impl Renderer {
         animation_groups: &mut HashMap<usize, AnimationGroup>,
         widgets: &mut Vec<Widget>,
         screen_changed: bool,
+        settings_changed: bool,
     ) {
+        if settings_changed {
+            // Since default animations settings changed, rebuild all animations
+            animation_groups.clear();
+        }
+
         for widget in widgets {
             match widget {
                 Widget::Bar(_) => continue,
@@ -264,7 +277,8 @@ impl Renderer {
 
                     let group = Self::get_animation_group(animation_groups, image.animation_group);
                     group.entry(image.image.hash.unwrap()).or_insert_with(|| {
-                        let settings = get_animation_settings!(self.animation_settings, image);
+                        let (ticks_at_edge, ticks_per_move) =
+                            get_animation_settings!(self.animation_settings, image);
                         let rendered = images::render_image(
                             &mut self.image_cache,
                             &image.image,
@@ -272,12 +286,7 @@ impl Renderer {
                             image.threshold,
                             image.animated,
                         );
-                        Animation::new(
-                            settings.ticks_at_edge,
-                            settings.ticks_per_move,
-                            rendered.len(),
-                            image.repeats,
-                        )
+                        Animation::new(ticks_at_edge, ticks_per_move, rendered.len(), image.repeats)
                     });
                 }
                 Widget::Text(text) => {
@@ -289,14 +298,10 @@ impl Renderer {
 
                     let group = Self::get_animation_group(animation_groups, text.animation_group);
                     group.entry(text.hash.unwrap()).or_insert_with(|| {
-                        let settings = get_animation_settings!(self.animation_settings, text);
+                        let (ticks_at_edge, ticks_per_move) =
+                            get_animation_settings!(self.animation_settings, text);
                         let steps = Self::pre_render_text(&mut self.font_manager, text);
-                        Animation::new(
-                            settings.ticks_at_edge,
-                            settings.ticks_per_move,
-                            steps,
-                            text.repeats,
-                        )
+                        Animation::new(ticks_at_edge, ticks_per_move, steps, text.repeats)
                     });
                 }
             };
@@ -374,6 +379,7 @@ impl Renderer {
 }
 
 struct AnimationSettings {
+    settings: UserDataRef<Settings>,
     ticks_at_edge: usize,
     ticks_per_move: usize,
 }
@@ -382,8 +388,24 @@ impl AnimationSettings {
     pub fn new(lua: &Lua) -> Self {
         let settings = UserDataRef::<Settings>::load(lua);
         Self {
+            settings: settings.clone(),
             ticks_at_edge: settings.get().animation_ticks_delay,
             ticks_per_move: settings.get().animation_ticks_rate,
         }
+    }
+
+    pub fn refresh(&mut self) -> bool {
+        let ticks_at_edge = std::mem::replace(
+            &mut self.ticks_at_edge,
+            self.settings.get().animation_ticks_delay,
+        );
+
+        let ticks_per_move = std::mem::replace(
+            &mut self.ticks_per_move,
+            self.settings.get().animation_ticks_rate,
+        );
+
+        let changed = ticks_at_edge != self.ticks_at_edge || ticks_per_move != self.ticks_per_move;
+        changed
     }
 }
