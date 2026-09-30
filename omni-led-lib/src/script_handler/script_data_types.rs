@@ -291,7 +291,7 @@ impl UserData for EventKey {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct DurationWrapper(pub Duration);
 
 impl DurationWrapper {

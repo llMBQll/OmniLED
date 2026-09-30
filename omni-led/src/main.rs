@@ -5,21 +5,22 @@ use log::debug;
 use mlua::Lua;
 use omni_led_lib::{
     common::user_data::UserDataRef,
-    constants::config::{ConfigType, read_config, write_default_configs},
-    constants::constants::Constants,
+    constants::{
+        config::{ConfigType, read_config, write_default_configs},
+        constants::Constants,
+    },
     devices::devices::Devices,
-    events::dispatcher::Dispatcher,
-    events::event_loop::EventLoop,
-    events::events::Events,
-    events::shortcuts::Shortcuts,
+    events::{dispatcher::Dispatcher, event_loop::EventLoop, events::Events, shortcuts::Shortcuts},
     keyboard::keyboard::process_events,
     logging::logger::Log,
     plugin_loader::plugin_loader::PluginLoader,
     script_handler::script_handler::ScriptHandler,
-    settings::settings::Settings,
+    settings::{settings::Settings, settings_value::SettingsValue},
     steelseries_engine,
-    ui::event::Event,
-    ui::handler::{HandlerBuilder, PROXY},
+    ui::{
+        event::Event,
+        handler::{HandlerBuilder, PROXY},
+    },
 };
 use std::sync;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -84,16 +85,14 @@ fn main() {
         let init_end = Instant::now();
         debug!("Initialized in {:?}", init_end - init_begin);
 
-        let settings = UserDataRef::<Settings>::load(&lua);
-        let interval = settings.get().update_interval.0;
-        let event_loop = EventLoop::new();
-        event_loop.run(interval, &RUNNING, |events| {
+        let interval = SettingsValue::new(&lua, |s| s.update_interval);
+        EventLoop::new().run(interval, &RUNNING, move |time_passed, events| {
             for event in events {
                 dispatcher.dispatch(&lua, event).unwrap();
             }
 
             let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
-            script_handler.get_mut().update(&lua, interval).unwrap();
+            script_handler.get_mut().update(&lua, time_passed).unwrap();
         });
     });
 
