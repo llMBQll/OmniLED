@@ -5,19 +5,31 @@ use crate::common::lua_access_handler::LuaAccessHandler;
 use crate::common::lua_traits::LuaName;
 
 pub fn set_unique_user_data<T: IntoLua + LuaName>(lua: &Lua, value: T) {
-    let mut handler = LuaAccessHandler::instance(lua);
-    handler.add_on_set(T::NAME, |_: &Lua, _: Table, key: &str, _: Value| {
-        Err(mlua::Error::runtime(format!(
-            "Global value '{key}' cannot be changed",
-        )))
-    });
-
     debug_assert!(
         !lua.globals().contains_key(T::NAME).unwrap(),
         "'{}' already set",
         T::NAME
     );
     lua.globals().set(T::NAME, value).unwrap();
+
+    // Guard against false positives - only guard if the name and value match
+    // So if userdata is not exposed and user sets a value with this name the handler will run a normal env.set
+    let user_data = lua.globals().get(T::NAME).unwrap();
+    let mut handler = LuaAccessHandler::instance(lua);
+    handler.add_on_set(
+        T::NAME,
+        move |_: &Lua, env: Table, key: &str, value: Value| {
+            if let Some(value) = env.get::<Option<Value>>(key)?
+                && value == user_data
+            {
+                Err(mlua::Error::runtime(format!(
+                    "Global value '{key}' cannot be changed",
+                )))
+            } else {
+                env.set(key, value)
+            }
+        },
+    );
 }
 
 pub fn set_mutable_unique_user_data<T: IntoLua + FromLua + LuaName + 'static>(
@@ -25,27 +37,36 @@ pub fn set_mutable_unique_user_data<T: IntoLua + FromLua + LuaName + 'static>(
     value: T,
     on_set: Option<fn(&Lua, &T) -> mlua::Result<()>>,
 ) {
-    let mut handler = LuaAccessHandler::instance(lua);
-    handler.add_on_set(
-        T::NAME,
-        move |lua: &Lua, env: Table, key: &str, value: Value| {
-            let new_value = T::from_lua(value, lua)?;
-            if let Some(on_set) = on_set {
-                on_set(lua, &new_value)?;
-            }
-            let user_data: AnyUserData = env.get(key)?;
-            let mut original = user_data.borrow_mut::<T>()?;
-            *original = new_value;
-            Ok(())
-        },
-    );
-
     debug_assert!(
         !lua.globals().contains_key(T::NAME).unwrap(),
         "'{}' already set",
         T::NAME
     );
     lua.globals().set(T::NAME, value).unwrap();
+
+    // Guard against false positives - only guard if the name and value match
+    // So if userdata is not exposed and user sets a value with this name the handler will run a normal env.set
+    let user_data = lua.globals().get(T::NAME).unwrap();
+    let mut handler = LuaAccessHandler::instance(lua);
+    handler.add_on_set(
+        T::NAME,
+        move |lua: &Lua, env: Table, key: &str, value: Value| {
+            if let Some(value) = env.get::<Option<Value>>(key)?
+                && value == user_data
+            {
+                let new_value = T::from_lua(value, lua)?;
+                if let Some(on_set) = on_set {
+                    on_set(lua, &new_value)?;
+                }
+                let user_data: AnyUserData = env.get(key)?;
+                let mut original = user_data.borrow_mut::<T>()?;
+                *original = new_value;
+                Ok(())
+            } else {
+                env.set(key, value)
+            }
+        },
+    );
 }
 
 #[derive(Clone)]
