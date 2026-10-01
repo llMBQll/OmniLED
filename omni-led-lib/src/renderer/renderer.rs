@@ -4,12 +4,12 @@ use std::collections::HashMap;
 use std::str::Chars;
 
 use crate::common::user_data::UserDataRef;
+use crate::font::font_manager::FontManager;
 use crate::renderer::animation::{Animation, State};
 use crate::renderer::animation_group::{
     AnimationGroup, AnimationKey, ImageAnimationKey, TextAnimationKey,
 };
 use crate::renderer::buffer::{BitBuffer, Buffer, BufferTrait};
-use crate::renderer::font_manager::FontManager;
 use crate::renderer::images;
 use crate::renderer::images::ImageCache;
 use crate::script_handler::script_data_types::{

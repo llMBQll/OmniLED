@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 
-use crate::renderer::bit::Bit;
-use crate::renderer::font_selector::FontSelector;
+use crate::common::bit::Bit;
+use crate::font::font_selector::FontSelector;
 use crate::script_handler::script_data_types::FontSize;
 
 pub struct FontManager {
