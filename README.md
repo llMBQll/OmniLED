@@ -24,12 +24,18 @@ Lua scripting engine and plugin system enable in-depth customization, to make th
   - Currently playing media information via [media](omni-led-applications/media/README.md)
   - System resource usage and temperatures via [system](omni-led-applications/system/README.md)
   - Weather via [weather](omni-led-applications/weather/README.md)
+- Performance:
+  - Written in rust, compiled to a native binary for each OS
+  - Optimized for low memory and CPU usage
+  - Plugins are written in event driven architecture that reacts to events instead of polling saving CPU cycles
 - Extensibility:
   - Create custom applications using the [plugin interface](omni-led-api/omni_led_api.h)
   - Configure the usb settings and data format to work with your device
-- Versatility:
+- Versatility & Flexibility:
   - Works on macOS, Windows and Linux
   - Choose from multiple backends: Raw USB, Emulator, SteelSeries GG
+  - Load only the plugins you need, show only the data you want
+  - Use multiple output devices at once, while displaying different data on each one
 
 ## Supported Devices
 
@@ -69,42 +75,42 @@ Install OmniLED (see the [installation steps](docs/install.md) for both Linux an
 Now you can proceed to actually make OmniLED send data to your device.
 
 1. Navigate to the `<CONFIG_DIR>` inside the installation directory. This will by default be:
-    - macOS: `/Users/<username>/Library/Application Support/OmniLED/config`
-    - Linux: `/home/<username>/.config/OmniLED/config`
-    - Windows: `C:\Users\<username>\AppData\Roaming\OmniLED\config`
+   - macOS: `/Users/<username>/Library/Application Support/OmniLED/config`
+   - Linux: `/home/<username>/.config/OmniLED/config`
+   - Windows: `C:\Users\<username>\AppData\Roaming\OmniLED\config`
 2. Open [`<CONFIG_DIR>/devices.lua`](config/devices.lua) to see if your device is already listed.  
    If it is, skip to step 4.
 3. Create a new configuration file for your device.
    > You can use [`<CONFIG_DIR>/devices.lua`](config/devices.lua) as examples.
 4. Update the `<CONFIG_DIR>/scripts.lua` to register the scripts for your device instead of the emulator.
 
-    ```diff
-    SCREEN_BUILDER
-    -   :new('Emulator')
-    +   :new('YOUR_DEVICE_NAME')
-        :with_layout_group({
-            {
-                layout = volume,
-                run_on = { 'AUDIO.Input', 'AUDIO.Output' },
-            },
-            {
-                layout = spotify,
-                run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
-            },
-            {
-                layout = clock,
-                run_on = { 'CLOCK.Seconds' },
-            },
-        })
-        :with_layout_group({
-            {
-                layout = weather,
-                run_on = { 'CLOCK.Seconds' },
-            }
-        })
-        :with_layout_group_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
-        :register()
-    ```
+   ```diff
+   SCREEN_BUILDER
+   -   :new('Emulator')
+   +   :new('YOUR_DEVICE_NAME')
+       :with_layout_group({
+           {
+               layout = volume,
+               run_on = { 'AUDIO.Input', 'AUDIO.Output' },
+           },
+           {
+               layout = spotify,
+               run_on = { 'SPOTIFY.Artist', 'SPOTIFY.Progress', 'SPOTIFY.Title' },
+           },
+           {
+               layout = clock,
+               run_on = { 'CLOCK.Seconds' },
+           },
+       })
+       :with_layout_group({
+           {
+               layout = weather,
+               run_on = { 'CLOCK.Seconds' },
+           }
+       })
+       :with_layout_group_toggle({ 'KEY(RAlt)', 'KEY(Slash)' })
+       :register()
+   ```
 
 5. Select 'Reload scripts' entry from the tray icon menu or restart the application.
    You should now see the data on your device's screen.
@@ -124,6 +130,7 @@ You can find the logs in your systems' `config` directory. By default, this will
 ### macOS installation note
 
 Because the OmniLED executable is currently unsigned, macOS may block it from running and display the following warning:
+
 > **"OmniLED" is damaged and can't be opened. You should move it to the Trash.**
 
 Most of the, this actually doesn't mean it's damaged. You just need to grant macOS permission to trust it, using one of
