@@ -3,7 +3,7 @@ use omni_led_derive::{FromLuaValue, LuaEnum};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, LuaEnum)]
 pub enum FontSelector {
-    Default,
+    Builtin,
     Filesystem(FilesystemSelector),
     System(SystemSelector),
 }
@@ -157,8 +157,8 @@ mod tests {
     #[test]
     fn default_selector() {
         let lua = get_lua_env();
-        let selector = eval!(lua, { FontSelector.Default });
-        assert_eq!(selector, FontSelector::Default);
+        let selector = eval!(lua, { FontSelector.Builtin });
+        assert_eq!(selector, FontSelector::Builtin);
     }
 
     #[test]

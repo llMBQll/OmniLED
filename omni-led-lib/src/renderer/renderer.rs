@@ -8,7 +8,6 @@ use std::str::Chars;
 use crate::common::user_data::UserDataRef;
 use crate::font::font::Font;
 use crate::font::font_manager::FontManager;
-use crate::font::font_selector::FontSelector;
 use crate::renderer::animation::{Animation, State};
 use crate::renderer::animation_group::{
     AnimationGroup, AnimationKey, ImageAnimationKey, TextAnimationKey,
@@ -44,9 +43,10 @@ pub struct Renderer {
 impl Renderer {
     pub fn new(lua: &Lua) -> Self {
         let mut font_manager = UserDataRef::<FontManager>::load(lua);
+        let settings = UserDataRef::<Settings>::load(lua);
         let default_font = font_manager
             .get_mut()
-            .get_font(FontSelector::Default)
+            .get_font(settings.get().default_font.clone())
             .unwrap();
 
         Self {

@@ -24,8 +24,8 @@ pub struct Settings {
     #[omni(default = 2)]
     pub animation_ticks_rate: usize,
 
-    #[omni(default = FontSelector::Default)]
-    pub font: FontSelector,
+    #[omni(default = FontSelector::Builtin)]
+    pub default_font: FontSelector,
 
     #[omni(default = DurationWrapper(Duration::from_secs(10)))]
     pub intern_retention_period: DurationWrapper,

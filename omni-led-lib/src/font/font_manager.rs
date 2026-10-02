@@ -55,7 +55,7 @@ impl FontManager {
 
     fn load_font_data(selector: FontSelector) -> mlua::Result<(font_kit::font::Font, u32)> {
         match selector {
-            FontSelector::Default => Ok(Self::load_default_font_data()),
+            FontSelector::Builtin => Ok(Self::load_builtin_font_data()),
             FontSelector::Filesystem(selector) => {
                 let font_index = selector.font_index;
                 let font = font_kit::font::Font::from_path(&selector.path, font_index)
@@ -78,15 +78,15 @@ impl FontManager {
         }
     }
 
-    fn load_default_font_data() -> (font_kit::font::Font, u32) {
-        const DEFAULT_FONT: &[u8] =
+    fn load_builtin_font_data() -> (font_kit::font::Font, u32) {
+        const BUILTIN_FONT: &[u8] =
             include_bytes!("../../../assets/fonts/FiraMono/FiraMono-Bold.ttf");
-        const DEFAULT_FONT_INDEX: u32 = 0;
+        const BUILTIN_FONT_INDEX: u32 = 0;
 
-        let default_font = Arc::new(DEFAULT_FONT.to_vec());
-        let font = font_kit::font::Font::from_bytes(default_font, DEFAULT_FONT_INDEX).unwrap();
+        let builtin_font = Arc::new(BUILTIN_FONT.to_vec());
+        let font = font_kit::font::Font::from_bytes(builtin_font, BUILTIN_FONT_INDEX).unwrap();
 
-        (font, DEFAULT_FONT_INDEX)
+        (font, BUILTIN_FONT_INDEX)
     }
 }
 
