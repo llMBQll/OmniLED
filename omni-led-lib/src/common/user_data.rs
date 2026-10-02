@@ -18,7 +18,7 @@ pub fn set_unique_user_data<T: IntoLua + LuaName>(lua: &Lua, value: T) {
     let mut handler = LuaAccessHandler::instance(lua);
     handler.add_on_set(
         T::NAME,
-        move |_: &Lua, env: Table, key: &str, value: Value| {
+        move |_: &Lua, env: Table, key: &str, new_value: Value| {
             if let Some(value) = env.get::<Option<Value>>(key)?
                 && value == user_data
             {
@@ -26,7 +26,7 @@ pub fn set_unique_user_data<T: IntoLua + LuaName>(lua: &Lua, value: T) {
                     "Global value '{key}' cannot be changed",
                 )))
             } else {
-                env.set(key, value)
+                env.set(key, new_value)
             }
         },
     );
@@ -50,20 +50,19 @@ pub fn set_mutable_unique_user_data<T: IntoLua + FromLua + LuaName + 'static>(
     let mut handler = LuaAccessHandler::instance(lua);
     handler.add_on_set(
         T::NAME,
-        move |lua: &Lua, env: Table, key: &str, value: Value| {
-            if let Some(value) = env.get::<Option<Value>>(key)?
+        move |lua: &Lua, env: Table, key: &str, new_value: Value| {
+            if let Ok(value) = env.get::<AnyUserData>(key)
                 && value == user_data
             {
-                let new_value = T::from_lua(value, lua)?;
+                let new_value = T::from_lua(new_value, lua)?;
                 if let Some(on_set) = on_set {
                     on_set(lua, &new_value)?;
                 }
-                let user_data: AnyUserData = env.get(key)?;
                 let mut original = user_data.borrow_mut::<T>()?;
                 *original = new_value;
                 Ok(())
             } else {
-                env.set(key, value)
+                env.set(key, new_value)
             }
         },
     );
