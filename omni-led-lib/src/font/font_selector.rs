@@ -1,7 +1,7 @@
 use mlua::UserData;
 use omni_led_derive::{FromLuaValue, LuaEnum};
 
-#[derive(Debug, Clone, PartialEq, LuaEnum)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, LuaEnum)]
 pub enum FontSelector {
     Default,
     Filesystem(FilesystemSelector),
@@ -10,14 +10,14 @@ pub enum FontSelector {
 
 impl UserData for FontSelector {}
 
-#[derive(Debug, Clone, PartialEq, FromLuaValue)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, FromLuaValue)]
 pub struct FilesystemSelector {
     pub path: String,
     #[omni(default = 0)]
     pub font_index: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, FromLuaValue)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, FromLuaValue)]
 pub struct SystemSelector {
     pub names: Vec<FamilyName>,
     #[omni(default = Style::Normal)]
@@ -28,7 +28,7 @@ pub struct SystemSelector {
     pub stretch: Stretch,
 }
 
-#[derive(Debug, Clone, PartialEq, LuaEnum)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, LuaEnum)]
 pub enum FamilyName {
     Title(String),
     Serif,
@@ -53,7 +53,7 @@ impl Into<font_kit::family_name::FamilyName> for FamilyName {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, LuaEnum)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, LuaEnum)]
 pub enum Style {
     Normal,
     Italic,
@@ -72,7 +72,7 @@ impl Into<font_kit::properties::Style> for Style {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, LuaEnum)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, LuaEnum)]
 pub enum Weight {
     Thin,
     ExtraLight,
@@ -103,7 +103,7 @@ impl Into<font_kit::properties::Weight> for Weight {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, LuaEnum)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, LuaEnum)]
 pub enum Stretch {
     UltraCondensed,
     ExtraCondensed,

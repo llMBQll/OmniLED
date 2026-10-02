@@ -17,6 +17,7 @@ use crate::devices::devices::Devices;
 use crate::events::cbor_to_lua::get_cleanup_entries_metatable;
 use crate::events::events::Events;
 use crate::events::shortcuts::Shortcuts;
+use crate::font::font_manager::FontManager;
 use crate::logging::logger::Log;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
@@ -290,6 +291,7 @@ impl ScriptHandler {
             vec![
                 sandbox_value!(Constants::NAME),
                 sandbox_value!(Events::NAME),
+                sandbox_value!(FontManager::NAME),
                 sandbox_value!(Log::NAME),
                 sandbox_value!(Settings::NAME),
                 sandbox_value!(Shortcuts::NAME),

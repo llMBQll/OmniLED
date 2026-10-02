@@ -1,110 +1,65 @@
-use font_kit::font::Font;
 use font_kit::properties::Properties;
 use font_kit::source::SystemSource;
-use freetype::RenderMode;
-use freetype::face::LoadFlag;
-use log::{debug, error};
+use freetype::Library;
+use mlua::{ErrorContext, Lua, UserData, UserDataMethods};
+use omni_led_derive::LuaName;
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::error::Error;
+use std::rc::Rc;
 use std::sync::Arc;
 
-use crate::common::bit::Bit;
+use crate::common::user_data::set_unique_user_data;
+use crate::font::font::Font;
 use crate::font::font_selector::FontSelector;
-use crate::script_handler::script_data_types::FontSize;
+use crate::script_handler::script_data_types::FontWrapper;
 
+#[derive(LuaName)]
 pub struct FontManager {
-    _library: freetype::Library,
-    face: freetype::Face,
-    metrics: FontMetrics,
-    cache: HashMap<(char, usize), Character>,
-}
-
-struct FontMetrics {
-    full_scale: f64,
-    ascender_only_scale: f64,
-    offset_scale: f64,
+    library: Library,
+    fonts: HashMap<FontSelector, Rc<RefCell<Font>>>,
 }
 
 impl FontManager {
-    pub fn new(selector: FontSelector) -> Self {
-        let library = freetype::Library::init().unwrap();
+    pub fn load(lua: &Lua) {
+        let manager = Self {
+            library: Library::init().unwrap(),
+            fonts: HashMap::new(),
+        };
+        set_unique_user_data(lua, manager);
+    }
 
-        let (data, font_index) = Self::load_font(selector);
-        let face = library
-            .new_memory_face(data.to_vec(), font_index as isize)
-            .unwrap_or_else(|_| {
-                panic!("Selected font doesn't have a face at index {}", font_index)
-            });
-
-        let ascender = face.ascender() as f64;
-        let descender = face.descender() as f64;
-        let em_size = face.em_size() as f64;
-
-        let full_scale = em_size / (ascender - descender);
-        let ascender_only_scale = em_size / ascender;
-        let offset_scale = descender.abs() / (ascender - descender);
-
-        Self {
-            _library: library,
-            face,
-            metrics: FontMetrics {
-                full_scale,
-                ascender_only_scale,
-                offset_scale,
-            },
-            cache: HashMap::new(),
+    pub fn get_font(&mut self, selector: FontSelector) -> mlua::Result<Rc<RefCell<Font>>> {
+        if let Some(font) = self.fonts.get(&selector) {
+            return Ok(font.clone());
         }
+
+        let font = self.load_font(selector.clone())?;
+        let font = Rc::new(RefCell::new(font));
+        self.fonts.insert(selector, font.clone());
+        Ok(font)
     }
 
-    pub fn get_font_size(&self, font_setting: FontSize, max_height: usize) -> usize {
-        match font_setting {
-            FontSize::Value(value) => value,
-            FontSize::Auto => {
-                let size = max_height as f64 * self.metrics.full_scale;
-                size.round() as usize
-            }
-            FontSize::AutoUpper => {
-                let size = max_height as f64 * self.metrics.ascender_only_scale;
-                size.round() as usize
-            }
-        }
+    fn load_font(&self, selector: FontSelector) -> mlua::Result<Font> {
+        let (font, font_index) = Self::load_font_data(selector.clone())
+            .with_context(|_| format!("Loading font with selector: {:?}", selector))?;
+        let font_bytes = font.copy_font_data().unwrap();
+
+        let face = self
+            .library
+            .new_memory_face(font_bytes.to_vec(), font_index as isize)
+            .map_err(mlua::Error::runtime)
+            .with_context(|_| format!("Loading font with selector: {:?}", selector))?;
+
+        Ok(Font::new(face))
     }
 
-    pub fn get_offset(&self, font_setting: FontSize, actual_font_size: usize) -> isize {
-        match font_setting {
-            FontSize::Value(_) | FontSize::Auto => {
-                let offset = actual_font_size as f64 * self.metrics.offset_scale;
-                offset.ceil() as isize
-            }
-            FontSize::AutoUpper => 1,
-        }
-    }
-
-    pub fn get_character(&mut self, character: char, font_size: usize) -> &Character {
-        self.cache.entry((character, font_size)).or_insert_with(|| {
-            self.face
-                .set_pixel_sizes(font_size as u32, font_size as u32)
-                .unwrap();
-            self.face
-                .load_char(character as usize, LoadFlag::TARGET_MONO)
-                .unwrap();
-            let slot = self.face.glyph();
-            let metrics = slot.metrics();
-            let glyph = slot.get_glyph().unwrap();
-
-            Character {
-                metrics: metrics.into(),
-                bitmap: glyph.to_bitmap(RenderMode::Mono, None).unwrap().into(),
-            }
-        })
-    }
-
-    fn select_font(selector: FontSelector) -> Result<(Font, u32), Box<dyn Error>> {
-        match selector.clone() {
-            FontSelector::Default => Ok(Self::load_default_font()),
+    fn load_font_data(selector: FontSelector) -> mlua::Result<(font_kit::font::Font, u32)> {
+        match selector {
+            FontSelector::Default => Ok(Self::load_default_font_data()),
             FontSelector::Filesystem(selector) => {
                 let font_index = selector.font_index;
-                let font = Font::from_path(&selector.path, font_index)?;
+                let font = font_kit::font::Font::from_path(&selector.path, font_index)
+                    .map_err(mlua::Error::external)?;
                 Ok((font, font_index))
             }
             FontSelector::System(selector) => {
@@ -114,92 +69,32 @@ impl FontManager {
                     weight: selector.weight.into(),
                     stretch: selector.stretch.into(),
                 };
-                let handle = SystemSource::new().select_best_match(&names, &properties)?;
-                let font = handle.load()?;
+                let handle = SystemSource::new()
+                    .select_best_match(&names, &properties)
+                    .map_err(mlua::Error::external)?;
+                let font = handle.load().map_err(mlua::Error::external)?;
                 Ok((font, 0 /* will this always be zero? */))
             }
         }
     }
 
-    fn load_font(selector: FontSelector) -> (Arc<Vec<u8>>, u32) {
-        let (font, font_index) = match Self::select_font(selector.clone()) {
-            Ok((font, font_index)) => (font, font_index),
-            Err(err) => {
-                error!(
-                    "Failed to load font with selector '{:?}': {:?}. Falling back to default",
-                    selector, err
-                );
-                Self::load_default_font()
-            }
-        };
-        debug!(
-            "Loaded font: {:?}, {:?}",
-            font.full_name(),
-            font.properties()
-        );
-
-        (font.copy_font_data().unwrap(), font_index)
-    }
-
-    fn load_default_font() -> (Font, u32) {
+    fn load_default_font_data() -> (font_kit::font::Font, u32) {
         const DEFAULT_FONT: &[u8] =
             include_bytes!("../../../assets/fonts/FiraMono/FiraMono-Bold.ttf");
         const DEFAULT_FONT_INDEX: u32 = 0;
 
         let default_font = Arc::new(DEFAULT_FONT.to_vec());
-        let font = Font::from_bytes(default_font, DEFAULT_FONT_INDEX).unwrap();
+        let font = font_kit::font::Font::from_bytes(default_font, DEFAULT_FONT_INDEX).unwrap();
 
         (font, DEFAULT_FONT_INDEX)
     }
 }
 
-pub struct Character {
-    pub metrics: Metrics,
-    pub bitmap: Bitmap,
-}
-
-#[derive(Debug)]
-pub struct Metrics {
-    pub advance: isize,
-}
-
-impl From<freetype::GlyphMetrics> for Metrics {
-    fn from(metrics: freetype::GlyphMetrics) -> Self {
-        Self {
-            advance: (metrics.horiAdvance >> 6) as isize,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct Bitmap {
-    pub offset_x: isize,
-    pub offset_y: isize,
-    pub rows: usize,
-    pub cols: usize,
-    stride: usize,
-    buffer: Vec<u8>,
-}
-
-impl Bitmap {
-    pub fn get(&self, x: usize, y: usize) -> bool {
-        let row_begin = y * self.stride;
-        let mut byte = self.buffer[row_begin + x / 8];
-        let bit = Bit::new(&mut byte, 7 - x % 8);
-        bit.get()
-    }
-}
-
-impl From<freetype::BitmapGlyph> for Bitmap {
-    fn from(bitmap_glyph: freetype::BitmapGlyph) -> Self {
-        let bitmap = bitmap_glyph.bitmap();
-        Self {
-            offset_x: bitmap_glyph.left() as isize,
-            offset_y: bitmap_glyph.top() as isize,
-            rows: bitmap.rows() as usize,
-            cols: bitmap.width() as usize,
-            stride: bitmap.pitch() as usize,
-            buffer: bitmap.buffer().to_vec(),
-        }
+impl UserData for FontManager {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_method_mut("get_font", |_, this, selector: FontSelector| {
+            let font = this.get_font(selector)?;
+            Ok(FontWrapper(font))
+        });
     }
 }
