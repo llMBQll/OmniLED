@@ -33,7 +33,7 @@ them be missing.
 > > Example `settings.lua` that sets scroll delay and repeat delay.
 > >
 > > ```lua
-> > Settings {
+> > Settings = {
 > >   animation_ticks_delay = 4,
 > >   animation_ticks_rate = 1,
 > > }
@@ -53,36 +53,26 @@ them be missing.
 > > Example `settings.lua` that loads default font
 > >
 > > ```lua
-> > Settings {
-> >   font = 'Default'
-> > }
+> > Settings.font = FontSelector.Default
 > > ```
 >
 > > Example `settings.lua` that loads font from the file system
 > >
 > > ```lua
-> > Settings {
-> >   font = {
-> >     Filesystem = {
-> >       path = '/path/to/my/font',
-> >       font_index = 0,
-> >     }
-> >   }
+> > Settings.font = FontSelector.Filesystem {
+> >   path = '/path/to/my/font',
+> >   font_index = 0,
 > > }
 > > ```
 >
 > > Example `settings.lua` that loads installed system font
 > >
 > > ```lua
-> > Settings {
-> >   font = {
-> >     System = {
-> >       names = {'FiraMono', 'Monospace'},
-> >       style = 'Normal',
-> >       weight = 'Bold',
-> >       stretch = 'Condensed',
-> >     }
-> >   }
+> > Settings.font = FontSelector.System {
+> >   names = { 'FiraMono', 'Monospace' },
+> >   style = 'Normal',
+> >   weight = 'Bold',
+> >   stretch = 'Condensed',
 > > }
 > > ```
 
@@ -103,7 +93,7 @@ them be missing.
 > > Example `settings.lua` that accepts debug log levels and above using default targets.
 > >
 > > ```lua
-> > Settings.level_filter_table = 'LogFilterMap.default_with(LevelFilter.Debug)'
+> > Settings.level_filter_table = 'LevelFilterTable.default_with(LevelFilter.Debug)'
 > > ```
 >
 > > Example `settings.lua` that accepts custom per target levels.
@@ -134,7 +124,7 @@ them be missing.
 > > Example `settings.lua` that sets repeat delay and repeat delay.
 > >
 > > ```lua
-> > Settings {
+> > Settings = {
 > >   keyboard_ticks_repeat_delay = 4,
 > >   keyboard_ticks_repeat_rate = 1,
 > > }
