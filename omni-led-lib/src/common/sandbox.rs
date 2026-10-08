@@ -246,10 +246,8 @@ fn wrap_raw_fn<A: FromLuaMulti + 'static, R: IntoLuaMulti + 'static>(
 
 fn safe_raw_get(proxy_ptr: *const c_void, (target, key): (Table, Value)) -> mlua::Result<Value> {
     if target.to_pointer() == proxy_ptr {
-        println!("_");
         target.get(key)
     } else {
-        println!("__");
         target.raw_get(key)
     }
 }
