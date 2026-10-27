@@ -80,7 +80,7 @@ impl FontManager {
 
     fn load_builtin_font_data() -> (font_kit::font::Font, u32) {
         const BUILTIN_FONT: &[u8] =
-            include_bytes!("../../../assets/fonts/FiraMono/FiraMono-Bold.ttf");
+            include_bytes!("../../../assets/fonts/DejaVu/DejaVuSansMono.ttf");
         const BUILTIN_FONT_INDEX: u32 = 0;
 
         let builtin_font = Arc::new(BUILTIN_FONT.to_vec());
