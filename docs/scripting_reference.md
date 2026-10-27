@@ -213,7 +213,7 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 > >
 > > Search for the best matching serif font.
 >
-> > `Title(title: string)`
+> > `Title(title: string)` _implicit contruct_
 > >
 > > Search for a font with a specific `title`.
 

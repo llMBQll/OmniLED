@@ -30,6 +30,7 @@ pub struct SystemSelector {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, LuaEnum)]
 pub enum FamilyName {
+    #[omni(implicit_construct)]
     Title(String),
     Serif,
     SansSerif,
@@ -180,11 +181,12 @@ mod tests {
 
     #[test]
     fn system_selector() {
-        const TITLE: &str = "font-title";
+        const TITLE_1: &str = "font-title-1";
+        const TITLE_2: &str = "font-title-2";
 
         let lua = get_lua_env();
         let selector = eval!(lua, { FontSelector.System({
-            names = { FamilyName.Title($TITLE), FamilyName.Monospace },
+            names = { $TITLE_1, FamilyName.Title($TITLE_2), FamilyName.Monospace },
             style = Style.Italic,
             weight = Weight.Thin,
             stretch = Stretch.SemiCondensed,
@@ -193,7 +195,11 @@ mod tests {
         assert_eq!(
             selector,
             FontSelector::System(SystemSelector {
-                names: vec![FamilyName::Title(TITLE.to_string()), FamilyName::Monospace],
+                names: vec![
+                    FamilyName::Title(TITLE_1.to_string()),
+                    FamilyName::Title(TITLE_2.to_string()),
+                    FamilyName::Monospace
+                ],
                 style: Style::Italic,
                 weight: Weight::Thin,
                 stretch: Stretch::SemiCondensed,
