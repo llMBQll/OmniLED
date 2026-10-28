@@ -294,12 +294,6 @@ impl UserData for EventKey {
 #[derive(Debug, Clone, Copy)]
 pub struct DurationWrapper(pub Duration);
 
-impl DurationWrapper {
-    pub fn transform(wrapper: Self, _: &Lua) -> mlua::Result<Duration> {
-        Ok(wrapper.0)
-    }
-}
-
 impl LuaName for DurationWrapper {
     const NAME: &str = "Duration";
 }
