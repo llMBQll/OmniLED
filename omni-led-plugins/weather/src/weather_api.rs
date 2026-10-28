@@ -1,6 +1,5 @@
 use chrono::Timelike;
-use image::codecs::png::PngEncoder;
-use image::{ExtendedColorType, ImageEncoder, ImageFormat};
+use image::ImageFormat;
 use omni_led_api::cli_types::TemperatureUnit;
 use omni_led_api::types::Image;
 use serde::de;
@@ -263,23 +262,9 @@ pub fn load_images() -> Vec<(&'static str, Image)> {
     IMAGES
         .into_iter()
         .map(|(name, bytes)| {
-            let mut image =
-                image::load_from_memory_with_format(bytes, image::ImageFormat::Png).unwrap();
-            image.invert();
-
-            let mut bytes = Vec::new();
-            PngEncoder::new(&mut bytes)
-                .write_image(
-                    image.as_bytes(),
-                    image.width(),
-                    image.height(),
-                    ExtendedColorType::Rgba8,
-                )
-                .unwrap();
-
             let image = Image {
                 format: ImageFormat::Png,
-                bytes,
+                bytes: bytes.to_vec(),
             };
             (*name, image)
         })
