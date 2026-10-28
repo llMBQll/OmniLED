@@ -5,11 +5,11 @@ hid_device {
         height = 40,
     },
     hid_settings = {
-        vendor_id = '0x1038',
-        product_id = '0x161C',
-        interface = '0x01',
+        vendor_id = 0x1038,
+        product_id = 0x161C,
+        interface = 0x01,
     },
-    transform = transform_data({ prepend = {0x61}, append = {0x00} }),
+    transform = transform_data({ prepend = { 0x61 }, append = { 0x00 } }),
     memory_layout = MemoryLayout.SteelSeries,
 }
 
@@ -20,11 +20,11 @@ hid_device {
         height = 40,
     },
     hid_settings = {
-        vendor_id = '0x1038',
-        product_id = '0x1618',
-        interface = '0x01',
+        vendor_id = 0x1038,
+        product_id = 0x1618,
+        interface = 0x01,
     },
-    transform = transform_data({ prepend = {0x61}, append = {0x00} }),
+    transform = transform_data({ prepend = { 0x61 }, append = { 0x00 } }),
     memory_layout = MemoryLayout.SteelSeries,
 }
 
@@ -35,11 +35,11 @@ hid_device {
         height = 40,
     },
     hid_settings = {
-        vendor_id = '0x1038',
-        product_id = '0x1610',
-        interface = '0x01',
+        vendor_id = 0x1038,
+        product_id = 0x1610,
+        interface = 0x01,
     },
-    transform = transform_data({ prepend = {0x61}, append = {0x00} }),
+    transform = transform_data({ prepend = { 0x61 }, append = { 0x00 } }),
     memory_layout = MemoryLayout.SteelSeries,
 }
 
@@ -50,11 +50,11 @@ hid_device {
         height = 40,
     },
     hid_settings = {
-        vendor_id = '0x1038',
-        product_id = '0x1642',
-        interface = '0x01',
+        vendor_id = 0x1038,
+        product_id = 0x1642,
+        interface = 0x01,
     },
-    transform = transform_data({ prepend = {0x38, 0x83, 0x00, 0x00} }),
+    transform = transform_data({ prepend = { 0x38, 0x83, 0x00, 0x00 } }),
     memory_layout = MemoryLayout.SteelSeries2,
 }
 
@@ -65,11 +65,11 @@ hid_device {
         height = 40,
     },
     hid_settings = {
-        vendor_id = '0x1038',
-        product_id = '0x1644',
-        interface = '0x03',
+        vendor_id = 0x1038,
+        product_id = 0x1644,
+        interface = 0x03,
     },
-    transform = transform_data({ prepend = {0x4a} }),
+    transform = transform_data({ prepend = { 0x4a } }),
     memory_layout = MemoryLayout.SteelSeries2,
 }
 
@@ -80,11 +80,11 @@ hid_device {
         height = 40,
     },
     hid_settings = {
-        vendor_id = '0x1038',
-        product_id = '0x1646',
-        interface = '0x03',
+        vendor_id = 0x1038,
+        product_id = 0x1646,
+        interface = 0x03,
     },
-    transform = transform_data({ prepend = {0x0a} }),
+    transform = transform_data({ prepend = { 0x0a } }),
     memory_layout = MemoryLayout.SteelSeries2,
 }
 

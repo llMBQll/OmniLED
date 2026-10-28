@@ -260,7 +260,7 @@ impl ScriptHandler {
         ctx.device.update(lua, image)?;
 
         if new_update {
-            ctx.time_remaining = output.duration;
+            ctx.time_remaining = output.duration.0;
         }
         ctx.last_priority = to_update;
         ctx.state = animation_state;
@@ -326,17 +326,8 @@ struct Layout {
 struct LayoutData {
     widgets: Vec<Widget>,
 
-    #[omni(transform = Self::transform_duration)]
-    duration: Duration,
-}
-
-impl LayoutData {
-    fn transform_duration(duration: Option<DurationWrapper>, _lua: &Lua) -> mlua::Result<Duration> {
-        let duration = duration
-            .and_then(|duration| Some(duration.0))
-            .unwrap_or(DEFAULT_UPDATE_TIME);
-        Ok(duration)
-    }
+    #[omni(default = DurationWrapper(DEFAULT_UPDATE_TIME))]
+    duration: DurationWrapper,
 }
 
 #[derive(Clone)]

@@ -29,7 +29,7 @@ pub fn render_image<'a>(
 }
 
 fn render_static_image(image: &ImageData, size: Size, threshold: u8) -> Vec<BitBuffer> {
-    let image = image::load_from_memory_with_format(&image.bytes, image.format).unwrap();
+    let image = image::load_from_memory_with_format(&image.bytes, image.format.0).unwrap();
 
     vec![render_into_buffer(image, size, threshold)]
 }
@@ -37,7 +37,7 @@ fn render_static_image(image: &ImageData, size: Size, threshold: u8) -> Vec<BitB
 fn render_animated_image(image: &ImageData, size: Size, threshold: u8) -> Vec<BitBuffer> {
     let reader = BufReader::new(Cursor::new(&image.bytes));
 
-    let frames = match image.format {
+    let frames = match image.format.0 {
         ImageFormat::Png => {
             let decoder = PngDecoder::new(reader).unwrap().apng().unwrap();
             decoder.into_frames()

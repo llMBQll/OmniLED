@@ -3,7 +3,7 @@ use mlua::{Lua, Table, Value as LuaValue};
 use omni_led_api::types::{Image, Tagged};
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-use crate::script_handler::script_data_types::ImageData;
+use crate::script_handler::script_data_types::{ImageData, ImageFormatWrapper};
 
 const CLEANUP_ENTRIES: &str = "__cleanup_entries";
 
@@ -48,7 +48,7 @@ pub fn cbor_to_lua_value(lua: &Lua, value: CborValue) -> mlua::Result<LuaValue> 
 
                 let hash = hash(&image.bytes);
                 let image_data = ImageData {
-                    format: image.format,
+                    format: ImageFormatWrapper(image.format),
                     bytes: image.bytes,
                     hash: Some(hash),
                 };

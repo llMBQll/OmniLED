@@ -36,40 +36,15 @@ impl UserData for Rectangle {}
 
 #[derive(Debug, Clone, FromLuaValue)]
 pub struct ImageData {
-    #[omni(transform = Self::parse_format)]
-    pub format: image::ImageFormat,
+    pub format: ImageFormatWrapper,
     pub bytes: Vec<u8>,
     pub hash: Option<u64>,
 }
 
-impl ImageData {
-    fn parse_format(format: ImageFormat, _: &Lua) -> mlua::Result<image::ImageFormat> {
-        match format {
-            ImageFormat::Avif => Ok(image::ImageFormat::Avif),
-            ImageFormat::Bmp => Ok(image::ImageFormat::Bmp),
-            ImageFormat::Dds => Ok(image::ImageFormat::Dds),
-            ImageFormat::Farbfeld => Ok(image::ImageFormat::Farbfeld),
-            ImageFormat::Gif => Ok(image::ImageFormat::Gif),
-            ImageFormat::Hdr => Ok(image::ImageFormat::Hdr),
-            ImageFormat::Ico => Ok(image::ImageFormat::Ico),
-            ImageFormat::Jpeg => Ok(image::ImageFormat::Jpeg),
-            ImageFormat::OpenExr => Ok(image::ImageFormat::OpenExr),
-            #[allow(deprecated)]
-            ImageFormat::Pcx => Ok(image::ImageFormat::Pcx),
-            ImageFormat::Png => Ok(image::ImageFormat::Png),
-            ImageFormat::Pnm => Ok(image::ImageFormat::Pnm),
-            ImageFormat::Qoi => Ok(image::ImageFormat::Qoi),
-            ImageFormat::Tga => Ok(image::ImageFormat::Tga),
-            ImageFormat::Tiff => Ok(image::ImageFormat::Tiff),
-            ImageFormat::WebP => Ok(image::ImageFormat::WebP),
-        }
-    }
-}
-
 impl UserData for ImageData {}
 
-// 1:1 equivalent to image::ImageFormat, only used to facilitate the conversion from lua values
-#[derive(Clone, Debug, LuaEnum)]
+// 1:1 equivalent to image::ImageFormat, only used to expose a scripting-side enum
+#[derive(Clone, Copy, Debug, LuaEnum)]
 pub enum ImageFormat {
     Avif,
     Bmp,
@@ -89,7 +64,41 @@ pub enum ImageFormat {
     WebP,
 }
 
+impl Into<image::ImageFormat> for ImageFormat {
+    fn into(self) -> image::ImageFormat {
+        match self {
+            ImageFormat::Avif => image::ImageFormat::Avif,
+            ImageFormat::Bmp => image::ImageFormat::Bmp,
+            ImageFormat::Dds => image::ImageFormat::Dds,
+            ImageFormat::Farbfeld => image::ImageFormat::Farbfeld,
+            ImageFormat::Gif => image::ImageFormat::Gif,
+            ImageFormat::Hdr => image::ImageFormat::Hdr,
+            ImageFormat::Ico => image::ImageFormat::Ico,
+            ImageFormat::Jpeg => image::ImageFormat::Jpeg,
+            ImageFormat::OpenExr => image::ImageFormat::OpenExr,
+            #[allow(deprecated)]
+            ImageFormat::Pcx => image::ImageFormat::Pcx,
+            ImageFormat::Png => image::ImageFormat::Png,
+            ImageFormat::Pnm => image::ImageFormat::Pnm,
+            ImageFormat::Qoi => image::ImageFormat::Qoi,
+            ImageFormat::Tga => image::ImageFormat::Tga,
+            ImageFormat::Tiff => image::ImageFormat::Tiff,
+            ImageFormat::WebP => image::ImageFormat::WebP,
+        }
+    }
+}
+
 impl UserData for ImageFormat {}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ImageFormatWrapper(pub image::ImageFormat);
+
+impl FromLua for ImageFormatWrapper {
+    fn from_lua(value: Value, lua: &Lua) -> mlua::Result<Self> {
+        let inner = ImageFormat::from_lua(value, lua)?;
+        Ok(Self(inner.into()))
+    }
+}
 
 #[derive(Clone, Debug, LuaEnum)]
 pub enum Widget {
@@ -293,12 +302,6 @@ impl UserData for EventKey {
 
 #[derive(Debug, Clone, Copy)]
 pub struct DurationWrapper(pub Duration);
-
-impl DurationWrapper {
-    pub fn transform(wrapper: Self, _: &Lua) -> mlua::Result<Duration> {
-        Ok(wrapper.0)
-    }
-}
 
 impl LuaName for DurationWrapper {
     const NAME: &str = "Duration";

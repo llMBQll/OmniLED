@@ -2,7 +2,6 @@ use mlua::{FromLua, Function, Lua, UserData, Value};
 use omni_led_derive::FromLuaValue;
 
 use crate::devices::device::{Device, MemoryLayout, Settings, Size};
-use crate::devices::usb_device::parse::from_hex;
 use crate::renderer::buffer::Buffer;
 
 pub struct HidDevice {
@@ -102,11 +101,8 @@ impl UserData for HidDeviceSettings {}
 
 #[derive(FromLuaValue, Clone)]
 pub struct HidSettings {
-    #[omni(transform = from_hex)]
     pub vendor_id: u16,
-    #[omni(transform = from_hex)]
     pub product_id: u16,
-    #[omni(transform = from_hex)]
     pub interface: u8,
 }
 

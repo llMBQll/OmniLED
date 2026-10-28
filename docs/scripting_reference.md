@@ -968,15 +968,15 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 >
 > HID USB device settings.
 >
-> > `vendor_id: string`
+> > `vendor_id: integer`
 > >
 > > Device vendor ID.
 >
-> > `product_id: string`
+> > `product_id: integer`
 > >
 > > Device product ID.
 >
-> > `interface: string`
+> > `interface: integer`
 > >
 > > USB interface number.
 
@@ -1015,35 +1015,35 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 >
 > Raw USB device settings.
 >
-> > `vendor_id: string`
+> > `vendor_id: integer`
 > >
 > > Device vendor ID.
 >
-> > `product_id: string`
+> > `product_id: integer`
 > >
 > > Device product ID.
 >
-> > `interface: string`
+> > `interface: integer`
 > >
 > > USB interface number.
 >
-> > `alternate_setting: string`
+> > `alternate_setting: integer`
 > >
 > > Alternate setting.
 >
-> > `request_type: string`
+> > `request_type: integer`
 > >
 > > USB control transfer request type.
 >
-> > `request: string`
+> > `request: integer`
 > >
 > > USB control transfer request ID.
 >
-> > `value: string`
+> > `value: integer`
 > >
 > > USB control transfer value.
 >
-> > `index: string`
+> > `index: integer`
 > >
 > > USB control transfer index.
 

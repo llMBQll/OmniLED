@@ -76,15 +76,8 @@ fn generate_initializer(name: &Ident, data: &Data) -> (TokenStream, Option<Token
                     let mask_ref = quote! { Self::#mask_name };
 
                     // for `init_field`
-                    let write_value = quote! { <_ as mlua::FromLua>::from_lua(value, lua) };
-                    let write_value = match attrs.transform {
-                        Some(transform) => {
-                            quote! { #write_value.and_then(|value| #transform(value, lua)) }
-                        }
-                        None => write_value,
-                    };
                     let write_value = quote! {
-                        #write_value.with_context(|_| {
+                        <_ as mlua::FromLua>::from_lua(value, lua).with_context(|_| {
                             format!(
                                 "Error occurred when parsing '{}.{}'",
                                 stringify!(#name), stringify!(#field)
@@ -336,7 +329,6 @@ fn get_struct_attributes(attributes: &Vec<Attribute>) -> StructAttributes {
 
 struct FieldAttributes {
     default: Option<TokenStream>,
-    transform: Option<TokenStream>,
 }
 
 fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
@@ -348,7 +340,6 @@ fn get_field_attributes(attributes: &Vec<Attribute>) -> FieldAttributes {
             "default",
             quote!(Default::default()),
         ),
-        transform: get_attribute(&mut attributes, "transform"),
     }
 }
 

@@ -5,7 +5,6 @@ use rusb::{DeviceHandle, GlobalContext};
 use std::time::Duration;
 
 use crate::devices::device::{Device, MemoryLayout, Settings, Size};
-use crate::devices::usb_device::parse::from_hex;
 use crate::renderer::buffer::Buffer;
 
 pub struct RawUsbDevice {
@@ -151,21 +150,13 @@ impl UserData for RawUsbDeviceSettings {}
 
 #[derive(FromLuaValue, Clone)]
 pub struct RawUsbSettings {
-    #[omni(transform = from_hex)]
     pub vendor_id: u16,
-    #[omni(transform = from_hex)]
     pub product_id: u16,
-    #[omni(transform = from_hex)]
     pub interface: u8,
-    #[omni(transform = from_hex)]
     pub alternate_setting: u8,
-    #[omni(transform = from_hex)]
     pub request_type: u8,
-    #[omni(transform = from_hex)]
     pub request: u8,
-    #[omni(transform = from_hex)]
     pub value: u16,
-    #[omni(transform = from_hex)]
     pub index: u16,
 }
 
