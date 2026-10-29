@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use crate::common::lua_traits::{LuaTypeStaticMembers, StaticMembers};
 use crate::logging::logger::LevelFilter;
+use crate::register_lua_type;
 
 #[derive(Clone, Debug, LuaName)]
 pub struct LevelFilterTable {}
@@ -50,5 +51,6 @@ impl LuaTypeStaticMembers for LevelFilterTable {
         });
     }
 }
+register_lua_type!(LevelFilterTable);
 
 impl UserData for LevelFilterTable {}

@@ -11,19 +11,10 @@ use crate::common::{
 
 pub fn expand_lua_enum_derive(input: DeriveInput) -> proc_macro::TokenStream {
     let name = input.ident;
-    let table_initializer = generate_initializers(&input.data);
+    let table_initializer = generate_initializers(&name, &input.data);
     let (builtin, userdata) = generate_constructors(&input.data);
 
     let expanded = quote! {
-        impl #name {
-            pub fn set_lua_enum(lua: &mlua::Lua, env: &mlua::Table) -> mlua::Result<()> {
-                let table = lua.create_table()?;
-                #table_initializer
-                env.set(stringify!(#name), table)?;
-                Ok(())
-            }
-        }
-
         impl mlua::FromLua for #name {
              fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
                 match value {
@@ -38,12 +29,22 @@ pub fn expand_lua_enum_derive(input: DeriveInput) -> proc_macro::TokenStream {
                 }
             }
         }
+
+        const _: () = {
+            #[linkme::distributed_slice(crate::common::lua_register::LUA_ENUMS)]
+            static LUA_ENUM: fn(&mlua::Lua, &mlua::Table) -> mlua::Result<()> = |lua, env| {
+                let table = lua.create_table()?;
+                #table_initializer
+                env.set(stringify!(#name), table)?;
+                Ok(())
+            };
+        };
     };
 
     proc_macro::TokenStream::from(expanded)
 }
 
-fn generate_initializers(data: &Data) -> TokenStream {
+fn generate_initializers(enum_ident: &Ident, data: &Data) -> TokenStream {
     match *data {
         Data::Struct(_) => panic!("Expected enum"),
         Data::Enum(ref data) => {
@@ -56,26 +57,26 @@ fn generate_initializers(data: &Data) -> TokenStream {
                     (EnumFieldType::Unnamed, ident, ty, attrs) => {
                         let initializer = quote! {
                             table.set(stringify!(#ident), lua.create_function(|_, value| {
-                                Ok(Self::#ident(value))
+                                Ok(#enum_ident::#ident(value))
                             })?)?;
                         };
                         initializers.push(initializer);
 
                         if attrs.implicit_construct.is_some() {
                             let constructor = quote! {
-                                .or_else(|_| user_data.borrow::<#ty>().map(|x| Self::#ident(x.clone())))
+                                .or_else(|_| user_data.borrow::<#ty>().map(|x| #enum_ident::#ident(x.clone())))
                             };
                             constructors.push(constructor);
                         }
                     }
                     (EnumFieldType::Unit, ident, _ty, attrs) => {
                         let initializer = quote! {
-                            table.set(stringify!(#ident), Self::#ident)?;
+                            table.set(stringify!(#ident), #enum_ident::#ident)?;
                         };
 
                         let alias = attrs.alias.map(|alias| {
                             quote! {
-                                table.set(#alias, Self::#ident)?;
+                                table.set(#alias, #enum_ident::#ident)?;
                             }
                         });
 

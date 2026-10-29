@@ -3,6 +3,7 @@ use omni_led_derive::{FromLuaValue, LuaEnum, LuaName};
 use std::{hash::Hash, time::Duration};
 
 use crate::common::lua_traits::{FromUserdata, LuaName, LuaTypeStaticMembers, StaticMembers};
+use crate::register_lua_type;
 
 #[derive(Debug, Clone, Copy, FromLuaValue)]
 pub struct Point {
@@ -258,6 +259,7 @@ impl LuaTypeStaticMembers for Regex {
         functions.add_function("new", |_, re: String| Regex::new(&re))
     }
 }
+register_lua_type!(Regex);
 
 impl UserData for Regex {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
@@ -328,6 +330,7 @@ impl LuaTypeStaticMembers for DurationWrapper {
         members.add_member("ZERO", DurationWrapper(Duration::ZERO));
     }
 }
+register_lua_type!(DurationWrapper);
 
 impl UserData for DurationWrapper {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {

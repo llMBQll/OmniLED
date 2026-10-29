@@ -21,9 +21,9 @@ use crate::logging::logger::Log;
 use crate::renderer::animation::State;
 use crate::renderer::animation_group::AnimationGroup;
 use crate::renderer::renderer::Renderer;
-use crate::sandbox_value;
 use crate::script_handler::script_data_types::{DurationWrapper, EventKey, Regex, Widget};
 use crate::settings::settings::Settings;
+use crate::{register_lua_type, sandbox_value};
 
 #[derive(LuaName)]
 pub struct ScriptHandler {
@@ -449,6 +449,7 @@ impl LuaTypeStaticMembers for ScreenBuilder {
         functions.add_function("new", |_lua, names: Names| Ok(Self::new(names.names)));
     }
 }
+register_lua_type!(ScreenBuilder);
 
 impl UserData for ScreenBuilder {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {

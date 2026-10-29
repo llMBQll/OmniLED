@@ -1,35 +1,31 @@
+use linkme::distributed_slice;
 use mlua::{Lua, Table};
 
-use crate::{
-    common::lua_traits::LuaTypeStaticMembers,
-    devices::device::MemoryLayout,
-    logging::level_filter_table::LevelFilterTable,
-    logging::logger::LevelFilter,
-    renderer::font_selector::{FamilyName, FontSelector, Stretch, Style, Weight},
-    script_handler::script_data_types::{
-        DurationWrapper, EventKey, FontSize, ImageFormat, Regex, Repeat, Widget,
-    },
-    script_handler::script_handler::ScreenBuilder,
-};
+#[distributed_slice]
+pub static LUA_ENUMS: [fn(&Lua, &Table) -> mlua::Result<()>];
+
+#[distributed_slice]
+pub static LUA_TYPES: [fn(&Lua, &Table) -> mlua::Result<()>];
 
 pub fn set_lua_enums(lua: &Lua, env: &Table) {
-    EventKey::set_lua_enum(lua, env).unwrap();
-    FamilyName::set_lua_enum(lua, env).unwrap();
-    FontSelector::set_lua_enum(lua, env).unwrap();
-    FontSize::set_lua_enum(lua, env).unwrap();
-    ImageFormat::set_lua_enum(lua, env).unwrap();
-    LevelFilter::set_lua_enum(lua, env).unwrap();
-    MemoryLayout::set_lua_enum(lua, env).unwrap();
-    Repeat::set_lua_enum(lua, env).unwrap();
-    Stretch::set_lua_enum(lua, env).unwrap();
-    Style::set_lua_enum(lua, env).unwrap();
-    Weight::set_lua_enum(lua, env).unwrap();
-    Widget::set_lua_enum(lua, env).unwrap();
+    for lua_enum in LUA_ENUMS {
+        lua_enum(lua, env).unwrap();
+    }
 }
 
 pub fn set_lua_types(lua: &Lua, env: &Table) {
-    DurationWrapper::register_members(lua, env).unwrap();
-    LevelFilterTable::register_members(lua, env).unwrap();
-    Regex::register_members(lua, env).unwrap();
-    ScreenBuilder::register_members(lua, env).unwrap();
+    for lua_type in LUA_TYPES {
+        lua_type(lua, env).unwrap();
+    }
+}
+
+#[macro_export]
+macro_rules! register_lua_type {
+    ($ty:ty) => {
+        const _: () = {
+            #[linkme::distributed_slice(crate::common::lua_register::LUA_TYPES)]
+            static LUA_TYPE: fn(&mlua::Lua, &mlua::Table) -> mlua::Result<()> =
+                <$ty as crate::common::lua_traits::LuaTypeStaticMembers>::register_members;
+        };
+    };
 }
