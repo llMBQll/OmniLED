@@ -1,10 +1,11 @@
 use mlua::{FromLua, Lua, Value};
 use std::borrow::Borrow;
-use std::cell::RefCell;
-use std::collections::HashSet;
+use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::hash::Hash;
 use std::ops::Deref;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
 #[derive(Debug)]
 pub struct Interned<T: ?Sized>(Rc<T>);
@@ -43,26 +44,31 @@ impl<T: ?Sized + FromLuaInternEnabled> FromLua for Interned<T> {
     }
 }
 
-pub trait InternEnabled {
+pub trait InternEnabled: Hash + Eq {
+    fn with_interner<R>(f: impl FnOnce(&mut Interner<Self>) -> R) -> R;
+
     fn intern<I>(value: I) -> Interned<Self>
     where
         I: Sized + Borrow<Self>,
-        Rc<Self>: From<I>;
+        Rc<Self>: From<I>,
+    {
+        Self::with_interner(|interner| interner.intern(value))
+    }
+
+    fn sweep(threshold: Duration) {
+        Self::with_interner(|interner| interner.sweep(threshold));
+    }
 }
 
 macro_rules! enable_interning {
     ($ty:ty) => {
         impl InternEnabled for $ty {
-            fn intern<I>(value: I) -> Interned<Self>
-            where
-                I: Sized + Borrow<Self>,
-                Rc<Self>: From<I>,
-            {
+            fn with_interner<R>(f: impl FnOnce(&mut Interner<$ty>) -> R) -> R {
                 thread_local! {
                     static INTERNER: RefCell<Interner<$ty>> =
                         RefCell::new(Interner::new());
                 };
-                INTERNER.with(|c| c.borrow_mut().intern(value))
+                INTERNER.with(|c| f(&mut c.borrow_mut()))
             }
         }
     };
@@ -89,14 +95,14 @@ macro_rules! enable_from_lua_interning {
 enable_from_lua_interning!(str, String);
 enable_from_lua_interning!([u8], Vec<u8>);
 
-struct Interner<T: ?Sized> {
-    values: HashSet<Rc<T>>,
+pub struct Interner<T: ?Sized> {
+    values: HashMap<Rc<T>, Cell<Instant>>,
 }
 
 impl<T: ?Sized> Interner<T> {
     pub fn new() -> Self {
         Self {
-            values: HashSet::new(),
+            values: HashMap::new(),
         }
     }
 }
@@ -107,12 +113,23 @@ impl<T: ?Sized + Hash + Eq> Interner<T> {
         I: Sized + Borrow<T>,
         Rc<T>: From<I>,
     {
-        if let Some(existing) = self.values.get(value.borrow()) {
-            return Interned(existing.clone());
+        if let Some((value, access)) = self.values.get_key_value(value.borrow()) {
+            access.set(Instant::now());
+            return Interned(value.clone());
         }
+
         let value = Rc::from(value);
-        self.values.insert(value.clone());
+        self.values.insert(value.clone(), Cell::new(Instant::now()));
         Interned(value)
+    }
+
+    pub fn sweep(&mut self, threshold: Duration) {
+        self.values.retain(|value, access_time| {
+            let count = Rc::strong_count(&value);
+            // Retain if there are other references **OR** threshlod time hasn't elapsed
+            // This is to keep alive interned values inbetween renderer refresh
+            count > 1 || access_time.get().elapsed() < threshold
+        });
     }
 }
 
@@ -124,12 +141,10 @@ mod tests {
 
     #[test]
     fn intern_value() {
-        let mut interner = Interner::<str>::new();
+        let a = <str>::intern(String::from("Omegalul"));
+        let b = <str>::intern("Omegalul");
 
-        let a = interner.intern(String::from("Omegalul"));
-        let b = interner.intern("Omegalul");
-
-        assert_eq!(interner.values.len(), 1);
+        assert_eq!(<str>::with_interner(|i| i.values.len()), 1);
         assert_eq!(a.as_ptr(), b.as_ptr());
     }
 
@@ -150,6 +165,66 @@ mod tests {
             .eval()
             .unwrap();
 
+        assert_eq!(<str>::with_interner(|i| i.values.len()), 1);
         assert_eq!(a.as_ptr(), b.as_ptr());
+    }
+
+    #[test]
+    fn sweep_clears_unused() {
+        let a: Interned<str> = <str>::intern("Omegalul");
+
+        <str>::sweep(Duration::ZERO);
+        assert_eq!(<str>::with_interner(|i| i.values.len()), 1);
+
+        std::mem::drop(a);
+        <str>::sweep(Duration::ZERO);
+        assert_eq!(<str>::with_interner(|i| i.values.len()), 0);
+    }
+
+    #[test]
+    fn sweep_keeps_live_values() {
+        let a: Interned<str> = <str>::intern("Omegalul");
+
+        <str>::sweep(Duration::ZERO);
+        assert_eq!(<str>::with_interner(|i| i.values.len()), 1);
+
+        let b: Interned<str> = <str>::intern("Omegalul");
+
+        assert_eq!(<str>::with_interner(|i| i.values.len()), 1);
+        assert_eq!(a.as_ptr(), b.as_ptr());
+    }
+
+    #[test]
+    fn sweep_threshold() {
+        let a: Interned<str> = <str>::intern("Omegalul");
+        std::mem::drop(a);
+
+        <str>::sweep(Duration::from_millis(100));
+        assert_eq!(<str>::with_interner(|i| i.values.len()), 1);
+
+        std::thread::sleep(Duration::from_millis(200));
+        <str>::sweep(Duration::from_millis(100));
+        assert_eq!(<str>::with_interner(|i| i.values.len()), 0);
+    }
+
+    #[test]
+    fn sweep_touched_entry_threshold() {
+        let a: Interned<str> = <str>::intern("Omegalul");
+        std::mem::drop(a);
+
+        <str>::sweep(Duration::from_millis(100));
+        assert_eq!(<str>::with_interner(|i| i.values.len()), 1);
+
+        std::thread::sleep(Duration::from_millis(200));
+
+        let a: Interned<str> = <str>::intern("Omegalul");
+        std::mem::drop(a);
+
+        <str>::sweep(Duration::from_millis(100));
+        assert_eq!(<str>::with_interner(|i| i.values.len()), 1);
+
+        std::thread::sleep(Duration::from_millis(200));
+        <str>::sweep(Duration::from_millis(100));
+        assert_eq!(<str>::with_interner(|i| i.values.len()), 0);
     }
 }

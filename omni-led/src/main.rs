@@ -11,6 +11,7 @@ use omni_led_lib::{
     },
     devices::devices::Devices,
     events::{dispatcher::Dispatcher, event_loop::EventLoop, events::Events, shortcuts::Shortcuts},
+    interning::interner::InternEnabled,
     keyboard::keyboard::process_events,
     logging::file_logger::FileLogger,
     logging::logger::Log,
@@ -23,9 +24,9 @@ use omni_led_lib::{
         handler::{HandlerBuilder, PROXY},
     },
 };
-use std::sync;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
+use std::{sync, time::Duration};
 
 #[cfg(target_os = "windows")]
 mod console;
@@ -93,6 +94,8 @@ fn main() {
 
             let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
             script_handler.get_mut().update(&lua, time_passed).unwrap();
+
+            <str as InternEnabled>::sweep(Duration::from_secs(10));
         });
     });
 
