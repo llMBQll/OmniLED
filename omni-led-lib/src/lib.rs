@@ -3,6 +3,7 @@ pub mod common;
 pub mod constants;
 pub mod devices;
 pub mod events;
+pub mod interning;
 pub mod keyboard;
 pub mod logging;
 pub mod plugin_loader;
