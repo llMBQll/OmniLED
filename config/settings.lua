@@ -2,6 +2,7 @@ Settings = {
     animation_ticks_delay = 8,
     animation_ticks_rate = 2,
     font = FontSelector.Default,
+    intern_retention_period = Duration.from_secs(10),
     level_filter_table = LevelFilterTable.default_with(LevelFilter.Debug),
     keyboard_ticks_repeat_delay = 2,
     keyboard_ticks_repeat_rate = 2,

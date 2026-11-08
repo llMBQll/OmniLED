@@ -27,6 +27,9 @@ pub struct Settings {
     #[omni(default = FontSelector::Default)]
     pub font: FontSelector,
 
+    #[omni(default = DurationWrapper(Duration::from_secs(10)))]
+    pub intern_retention_period: DurationWrapper,
+
     #[omni(default = LevelFilterTable::default())]
     #[omni(on_set = Log::set_filter_map)]
     pub level_filter_table: HashMap<String, LevelFilter>,
