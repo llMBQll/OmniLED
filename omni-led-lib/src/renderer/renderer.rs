@@ -2,7 +2,6 @@ use mlua::Lua;
 use num_traits::clamp;
 use std::cmp::max;
 use std::collections::HashMap;
-use std::hash::{DefaultHasher, Hash, Hasher};
 use std::str::Chars;
 
 use crate::common::user_data::UserDataRef;
@@ -275,9 +274,7 @@ impl Renderer {
                         continue;
                     }
 
-                    Self::calculate_animation_hash(&image.image.bytes, &mut image.image.hash);
-
-                    let key = Self::image_animation_key(&image);
+                    let key = Self::image_animation_key(image);
                     let group = Self::get_animation_group(animation_groups, image.animation_group);
                     group.entry(key).or_insert_with(|| {
                         let (ticks_at_edge, ticks_per_move) =
@@ -334,17 +331,6 @@ impl Renderer {
             .or_insert(AnimationGroup::new(synced))
     }
 
-    fn calculate_animation_hash<H: Hash>(value: &H, hash: &mut Option<u64>) {
-        *hash = match hash {
-            Some(hash) => Some(*hash),
-            None => {
-                let mut s = DefaultHasher::new();
-                value.hash(&mut s);
-                Some(s.finish())
-            }
-        }
-    }
-
     fn animation_state(animation_groups: &HashMap<usize, AnimationGroup>) -> State {
         let states = animation_groups
             .iter()
@@ -389,7 +375,7 @@ impl Renderer {
 
     fn image_animation_key(image: &Image) -> AnimationKey {
         AnimationKey::Image(ImageAnimationKey {
-            hash: image.image.hash.unwrap(),
+            image: image.image.bytes.clone(),
         })
     }
 }

@@ -4,10 +4,11 @@ use image::{AnimationDecoder, DynamicImage, ImageFormat};
 use std::collections::HashMap;
 use std::io::{BufReader, Cursor};
 
+use crate::interning::interner::Interned;
 use crate::renderer::buffer::{BitBuffer, BufferTrait};
 use crate::script_handler::script_data_types::{ImageData, Size};
 
-pub type CacheKey = (u64, Size, u8);
+pub type CacheKey = (Interned<[u8]>, Size, u8);
 pub type ImageCache = HashMap<CacheKey, Vec<BitBuffer>>;
 
 pub fn render_image<'a>(
@@ -18,7 +19,7 @@ pub fn render_image<'a>(
     animated: bool,
 ) -> &'a Vec<BitBuffer> {
     cache
-        .entry((image.hash.unwrap(), size, threshold))
+        .entry((image.bytes.clone(), size, threshold))
         .or_insert_with(|| {
             if animated {
                 render_animated_image(image, size, threshold)
@@ -35,7 +36,7 @@ fn render_static_image(image: &ImageData, size: Size, threshold: u8) -> Vec<BitB
 }
 
 fn render_animated_image(image: &ImageData, size: Size, threshold: u8) -> Vec<BitBuffer> {
-    let reader = BufReader::new(Cursor::new(&image.bytes));
+    let reader = BufReader::new(Cursor::new(&*image.bytes));
 
     let frames = match image.format.0 {
         ImageFormat::Png => {

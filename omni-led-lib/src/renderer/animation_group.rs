@@ -11,7 +11,7 @@ pub struct TextAnimationKey {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ImageAnimationKey {
-    pub hash: u64,
+    pub image: Interned<[u8]>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

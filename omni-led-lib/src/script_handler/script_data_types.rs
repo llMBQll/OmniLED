@@ -39,8 +39,7 @@ impl UserData for Rectangle {}
 #[derive(Debug, Clone, FromLuaValue)]
 pub struct ImageData {
     pub format: ImageFormatWrapper,
-    pub bytes: Vec<u8>,
-    pub hash: Option<u64>,
+    pub bytes: Interned<[u8]>,
 }
 
 impl UserData for ImageData {}
