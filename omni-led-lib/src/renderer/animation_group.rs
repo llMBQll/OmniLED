@@ -1,5 +1,28 @@
+use crate::interning::interner::Interned;
 use crate::renderer::animation::{Animation, State};
-use crate::script_handler::script_data_types::Repeat;
+use crate::script_handler::script_data_types::{Repeat, Size};
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct TextAnimationKey {
+    pub text: Interned<str>,
+    pub size: Size,
+    pub font_size: usize,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ImageAnimationKey {
+    pub hash: u64,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum AnimationKey {
+    Text(TextAnimationKey),
+    Image(ImageAnimationKey),
+
+    // TODO find a better alternative or consider using real Text and Image keys in testing
+    #[cfg(test)]
+    Test(u64),
+}
 
 #[derive(Clone)]
 pub struct AnimationGroup {
@@ -17,10 +40,10 @@ impl AnimationGroup {
         }
     }
 
-    pub fn entry(&mut self, hash: u64) -> Entry<'_> {
+    pub fn entry(&mut self, key: AnimationKey) -> Entry<'_> {
         let mut index = None;
         for (i, item) in self.items.iter_mut().enumerate() {
-            if item.hash == hash {
+            if item.key == key {
                 index = Some(i);
                 break;
             }
@@ -28,10 +51,13 @@ impl AnimationGroup {
 
         match index {
             Some(index) => Entry::Occupied(OccupiedEntry {
-                _hash: hash,
+                _key: key,
                 item: &mut self.items[index],
             }),
-            None => Entry::Vacant(VacantEntry { hash, group: self }),
+            None => Entry::Vacant(VacantEntry {
+                key: key,
+                group: self,
+            }),
         }
     }
 
@@ -81,7 +107,7 @@ impl AnimationGroup {
 
 #[derive(Clone)]
 pub struct AnimationEntry {
-    hash: u64,
+    key: AnimationKey,
     animation: Animation,
     accessed: bool,
     current_step: Option<usize>,
@@ -110,7 +136,7 @@ impl<'a> Entry<'a> {
             Entry::Vacant(entry) => {
                 entry.group.new_data = true;
                 entry.group.items.push(AnimationEntry {
-                    hash: entry.hash,
+                    key: entry.key,
                     animation: f(),
                     accessed: true,
                     current_step: None,
@@ -128,19 +154,19 @@ impl<'a> Entry<'a> {
                 entry.item
             }
             Entry::Vacant(entry) => {
-                panic!("Entry with hash {} doesn't exist", entry.hash);
+                panic!("Entry {:?} doesn't exist", entry.key);
             }
         }
     }
 }
 
 pub struct OccupiedEntry<'a> {
-    _hash: u64,
+    _key: AnimationKey,
     item: &'a mut AnimationEntry,
 }
 
 pub struct VacantEntry<'a> {
-    hash: u64,
+    key: AnimationKey,
     group: &'a mut AnimationGroup,
 }
 
@@ -151,13 +177,19 @@ mod tests {
     use crate::script_handler::script_data_types::Repeat;
     use test_case::test_case;
 
+    macro_rules! key {
+        ($value:expr) => {
+            AnimationKey::Test($value)
+        };
+    }
+
     fn run_animation(group: &mut AnimationGroup, n: usize) -> Vec<Vec<(usize, State)>> {
         let mut data = Vec::new();
         for _ in 0..n {
             let mut current_step_data = Vec::new();
             group.pre_sync();
             for entry in &mut group.items {
-                // Simulate multiple entries with the same hash
+                // Simulate multiple equal entries
                 for _ in 0..5 {
                     _ = entry.step();
                 }
@@ -180,33 +212,33 @@ mod tests {
     #[test_case(true  ; "Synced")]
     #[test_case(false ; "Not synced")]
     fn insertion(synced: bool) {
-        const HASH: u64 = 1337;
+        const KEY: AnimationKey = key!(1337);
 
         let mut group = AnimationGroup::new(synced);
         let mut insert_count = 0;
 
-        _ = group.entry(HASH).or_insert_with(|| {
+        _ = group.entry(KEY).or_insert_with(|| {
             insert_count += 1;
             create_test_animation()
         });
 
         assert_eq!(insert_count, 1);
         assert_eq!(group.items.len(), 1);
-        assert_eq!(group.items[0].hash, HASH);
+        assert_eq!(group.items[0].key, KEY);
         assert_eq!(group.items[0].accessed, true);
         assert_eq!(group.new_data, true);
 
         group.items[0].accessed = false;
         group.new_data = false;
 
-        _ = group.entry(HASH).or_insert_with(|| {
+        _ = group.entry(KEY).or_insert_with(|| {
             insert_count += 1;
             create_test_animation()
         });
 
         assert_eq!(insert_count, 1);
         assert_eq!(group.items.len(), 1);
-        assert_eq!(group.items[0].hash, HASH);
+        assert_eq!(group.items[0].key, KEY);
         assert_eq!(group.items[0].accessed, true);
         assert_eq!(group.new_data, false);
     }
@@ -215,9 +247,15 @@ mod tests {
     #[test_case(false ; "Not synced")]
     fn pre_sync_resets_accessed_flag(synced: bool) {
         let mut group = AnimationGroup::new(synced);
-        group.entry(1).or_insert_with(|| create_test_animation());
-        group.entry(2).or_insert_with(|| create_test_animation());
-        group.entry(3).or_insert_with(|| create_test_animation());
+        group
+            .entry(key!(1))
+            .or_insert_with(|| create_test_animation());
+        group
+            .entry(key!(2))
+            .or_insert_with(|| create_test_animation());
+        group
+            .entry(key!(3))
+            .or_insert_with(|| create_test_animation());
 
         assert_eq!(group.items.len(), 3);
         for item in &group.items {
@@ -236,9 +274,15 @@ mod tests {
     #[test_case(false ; "Not synced")]
     fn pre_sync_removes_unaccessed_items(synced: bool) {
         let mut group = AnimationGroup::new(synced);
-        group.entry(1).or_insert_with(|| create_test_animation());
-        group.entry(2).or_insert_with(|| create_test_animation());
-        group.entry(3).or_insert_with(|| create_test_animation());
+        group
+            .entry(key!(1))
+            .or_insert_with(|| create_test_animation());
+        group
+            .entry(key!(2))
+            .or_insert_with(|| create_test_animation());
+        group
+            .entry(key!(3))
+            .or_insert_with(|| create_test_animation());
 
         assert_eq!(group.items.len(), 3);
 
@@ -249,8 +293,8 @@ mod tests {
         group.pre_sync();
 
         assert_eq!(group.items.len(), 2);
-        assert_eq!(group.items[0].hash, 1);
-        assert_eq!(group.items[1].hash, 3);
+        assert_eq!(group.items[0].key, key!(1));
+        assert_eq!(group.items[1].key, key!(3));
     }
 
     #[test_case(true  ; "Synced")]
@@ -259,8 +303,8 @@ mod tests {
         let animation = Animation::new(1, 1, 2, Repeat::Once);
 
         let mut group = AnimationGroup::new(synced);
-        group.entry(1).or_insert_with(|| animation.clone());
-        group.entry(2).or_insert_with(|| animation.clone());
+        group.entry(key!(1)).or_insert_with(|| animation.clone());
+        group.entry(key!(2)).or_insert_with(|| animation.clone());
 
         let r = run_animation(&mut group, 3);
         assert_eq!(r[0], vec![(0, State::InProgress), (0, State::InProgress)]);
@@ -275,8 +319,8 @@ mod tests {
         let animation_b = Animation::new(1, 1, 4, Repeat::Once);
 
         let mut group = AnimationGroup::new(synced);
-        group.entry(1).or_insert_with(|| animation_a);
-        group.entry(2).or_insert_with(|| animation_b);
+        group.entry(key!(1)).or_insert_with(|| animation_a);
+        group.entry(key!(2)).or_insert_with(|| animation_b);
 
         let r = run_animation(&mut group, 5);
         assert_eq!(r[0], vec![(0, State::InProgress), (0, State::InProgress)]);
@@ -292,8 +336,8 @@ mod tests {
         let animation = Animation::new(1, 1, 2, Repeat::ForDuration);
 
         let mut group = AnimationGroup::new(synced);
-        group.entry(1).or_insert_with(|| animation.clone());
-        group.entry(2).or_insert_with(|| animation.clone());
+        group.entry(key!(1)).or_insert_with(|| animation.clone());
+        group.entry(key!(2)).or_insert_with(|| animation.clone());
 
         let r = run_animation(&mut group, 4);
         assert_eq!(r[0], vec![(0, State::CanFinish), (0, State::CanFinish)]);
@@ -309,8 +353,8 @@ mod tests {
         let animation_b = Animation::new(1, 1, 4, Repeat::ForDuration);
 
         let mut group = AnimationGroup::new(synced);
-        group.entry(1).or_insert_with(|| animation_a);
-        group.entry(2).or_insert_with(|| animation_b);
+        group.entry(key!(1)).or_insert_with(|| animation_a);
+        group.entry(key!(2)).or_insert_with(|| animation_b);
 
         let r = run_animation(&mut group, 6);
         if synced {
@@ -337,8 +381,8 @@ mod tests {
         let animation_b = Animation::new(1, 1, 4, Repeat::Once);
 
         let mut group = AnimationGroup::new(synced);
-        group.entry(1).or_insert_with(|| animation_a);
-        group.entry(2).or_insert_with(|| animation_b);
+        group.entry(key!(1)).or_insert_with(|| animation_a);
+        group.entry(key!(2)).or_insert_with(|| animation_b);
 
         let r = run_animation(&mut group, 5);
         if synced {
@@ -364,8 +408,8 @@ mod tests {
         let animation_c = Animation::new(1, 1, 4, Repeat::ForDuration);
 
         let mut group = AnimationGroup::new(synced);
-        group.entry(1).or_insert_with(|| animation_a);
-        group.entry(2).or_insert_with(|| animation_b);
+        group.entry(key!(1)).or_insert_with(|| animation_a);
+        group.entry(key!(2)).or_insert_with(|| animation_b);
 
         let r = run_animation(&mut group, 3);
         if synced {
@@ -379,7 +423,7 @@ mod tests {
         }
 
         // Simulate new data replacing one of the entries
-        group.entry(3).or_insert_with(|| animation_c);
+        group.entry(key!(3)).or_insert_with(|| animation_c);
         group.items[1].accessed = false;
 
         let r = run_animation(&mut group, 3);
@@ -402,8 +446,8 @@ mod tests {
         let animation_c = Animation::new(1, 1, 4, Repeat::Once);
 
         let mut group = AnimationGroup::new(synced);
-        group.entry(1).or_insert_with(|| animation_a);
-        group.entry(2).or_insert_with(|| animation_b);
+        group.entry(key!(1)).or_insert_with(|| animation_a);
+        group.entry(key!(2)).or_insert_with(|| animation_b);
 
         let r = run_animation(&mut group, 3);
         if synced {
@@ -417,7 +461,7 @@ mod tests {
         }
 
         // Simulate new data replacing one of the entries
-        group.entry(3).or_insert_with(|| animation_c);
+        group.entry(key!(3)).or_insert_with(|| animation_c);
         group.items[1].accessed = false;
 
         let r = run_animation(&mut group, 3);

@@ -7,7 +7,9 @@ use std::str::Chars;
 
 use crate::common::user_data::UserDataRef;
 use crate::renderer::animation::{Animation, State};
-use crate::renderer::animation_group::AnimationGroup;
+use crate::renderer::animation_group::{
+    AnimationGroup, AnimationKey, ImageAnimationKey, TextAnimationKey,
+};
 use crate::renderer::buffer::{BitBuffer, Buffer, BufferTrait};
 use crate::renderer::font_manager::FontManager;
 use crate::renderer::images;
@@ -143,9 +145,9 @@ impl Renderer {
         );
 
         let frame = if widget.animated {
-            let hash = widget.image.hash.unwrap();
+            let key = Self::image_animation_key(&widget);
             let group = Self::get_animation_group(animation_groups, widget.animation_group);
-            let animation = group.entry(hash).unwrap();
+            let animation = group.entry(key).unwrap();
             let step = animation.step();
             &image[step]
         } else {
@@ -191,9 +193,9 @@ impl Renderer {
         let mut characters = widget.text.chars();
 
         if widget.scrolling {
-            let hash = widget.hash.unwrap();
+            let key = Self::text_animation_key(&mut self.font_manager, &widget);
             let group = Self::get_animation_group(animation_groups, widget.animation_group);
-            let animation = group.entry(hash).unwrap();
+            let animation = group.entry(key).unwrap();
             let step = animation.step();
 
             for _ in 0..step {
@@ -275,8 +277,9 @@ impl Renderer {
 
                     Self::calculate_animation_hash(&image.image.bytes, &mut image.image.hash);
 
+                    let key = Self::image_animation_key(&image);
                     let group = Self::get_animation_group(animation_groups, image.animation_group);
-                    group.entry(image.image.hash.unwrap()).or_insert_with(|| {
+                    group.entry(key).or_insert_with(|| {
                         let (ticks_at_edge, ticks_per_move) =
                             get_animation_settings!(self.animation_settings, image);
                         let rendered = images::render_image(
@@ -294,10 +297,9 @@ impl Renderer {
                         continue;
                     }
 
-                    Self::calculate_animation_hash(&text.text, &mut text.hash);
-
+                    let key = Self::text_animation_key(&mut self.font_manager, text);
                     let group = Self::get_animation_group(animation_groups, text.animation_group);
-                    group.entry(text.hash.unwrap()).or_insert_with(|| {
+                    group.entry(key).or_insert_with(|| {
                         let (ticks_at_edge, ticks_per_move) =
                             get_animation_settings!(self.animation_settings, text);
                         let steps = Self::pre_render_text(&mut self.font_manager, text);
@@ -375,6 +377,20 @@ impl Renderer {
         } else {
             len - max_characters + 1
         }
+    }
+
+    fn text_animation_key(font_manager: &mut FontManager, text: &Text) -> AnimationKey {
+        AnimationKey::Text(TextAnimationKey {
+            text: text.text.clone(),
+            size: text.size,
+            font_size: font_manager.get_font_size(text.font_size, text.size.height),
+        })
+    }
+
+    fn image_animation_key(image: &Image) -> AnimationKey {
+        AnimationKey::Image(ImageAnimationKey {
+            hash: image.image.hash.unwrap(),
+        })
     }
 }
 

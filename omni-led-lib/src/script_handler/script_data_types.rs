@@ -3,6 +3,7 @@ use omni_led_derive::{FromLuaValue, LuaEnum, LuaName};
 use std::{hash::Hash, time::Duration};
 
 use crate::common::lua_traits::{FromUserdata, LuaName, LuaTypeStaticMembers, StaticMembers};
+use crate::interning::interner::Interned;
 use crate::register_lua_type;
 
 #[derive(Debug, Clone, Copy, FromLuaValue)]
@@ -179,7 +180,7 @@ impl UserData for Image {}
 
 #[derive(Clone, Debug, FromLuaValue)]
 pub struct Text {
-    pub text: String,
+    pub text: Interned<str>,
     pub text_offset: Option<isize>,
     #[omni(default = FontSize::Auto)]
     pub font_size: FontSize,
@@ -192,7 +193,6 @@ pub struct Text {
     pub animation_ticks_rate: Option<usize>,
     pub position: Point,
     pub size: Size,
-    pub hash: Option<u64>,
 
     #[omni(default)]
     pub modifiers: Modifiers,
