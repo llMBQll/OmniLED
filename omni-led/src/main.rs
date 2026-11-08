@@ -11,6 +11,7 @@ use omni_led_lib::{
     },
     devices::devices::Devices,
     events::{dispatcher::Dispatcher, event_loop::EventLoop, events::Events, shortcuts::Shortcuts},
+    interning::interner::InternEnabled,
     keyboard::keyboard::process_events,
     logging::file_logger::FileLogger,
     logging::logger::Log,
@@ -86,6 +87,7 @@ fn main() {
         debug!("Initialized in {:?}", init_end - init_begin);
 
         let interval = SettingsValue::new(&lua, |s| s.update_interval);
+        let intern_retention_period = SettingsValue::new(&lua, |s| s.intern_retention_period);
         EventLoop::new().run(interval, &RUNNING, move |time_passed, events| {
             for event in events {
                 dispatcher.dispatch(&lua, event).unwrap();
@@ -93,6 +95,8 @@ fn main() {
 
             let mut script_handler = UserDataRef::<ScriptHandler>::load(&lua);
             script_handler.get_mut().update(&lua, time_passed).unwrap();
+
+            <str as InternEnabled>::sweep(intern_retention_period.get().0);
         });
     });
 

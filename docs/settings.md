@@ -8,6 +8,7 @@ them be missing.
 
 - [Animation](#animation)
 - [Font](#font)
+- [Interning](#interning)
 - [Level Filter Table](#level-filter-table)
 - [Keyboard](#keyboard)
 - [Steelseries API](#steelseries-api)
@@ -74,6 +75,23 @@ them be missing.
 > >   weight = 'Bold',
 > >   stretch = 'Condensed',
 > > }
+> > ```
+
+> ### Interning
+>
+> > `intern_retention_period`: `Duration`
+> >
+> > Set how long unreferenced values are kept around in the interner cache.
+> > Setting a relatively small value (around or below [update interval](#update-interval-tick-duration)) might result
+> > in increased amount of allocations and dealocations.
+> > Setting a very large value may result in excessive memory usage due to keeping unused strings in memory.
+> >
+> > _Optional_. Default: `Duration.from_secs(10)`
+>
+> > Example `settings.lua` that sets the retention period to 5 seconds.
+> >
+> > ```lua
+> > Settings.intern_retention_period = Duration.from_secs(5)
 > > ```
 
 > ### Level Filter Table

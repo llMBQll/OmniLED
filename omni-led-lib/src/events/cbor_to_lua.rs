@@ -1,8 +1,8 @@
 use ciborium::Value as CborValue;
 use mlua::{Lua, Table, Value as LuaValue};
 use omni_led_api::types::{Image, Tagged};
-use std::hash::{DefaultHasher, Hash, Hasher};
 
+use crate::interning::interner::InternEnabled;
 use crate::script_handler::script_data_types::{ImageData, ImageFormatWrapper};
 
 const CLEANUP_ENTRIES: &str = "__cleanup_entries";
@@ -46,11 +46,9 @@ pub fn cbor_to_lua_value(lua: &Lua, value: CborValue) -> mlua::Result<LuaValue> 
             Image::TAG => {
                 let image: Image = value.deserialized().map_err(mlua::Error::external)?;
 
-                let hash = hash(&image.bytes);
                 let image_data = ImageData {
                     format: ImageFormatWrapper(image.format),
-                    bytes: image.bytes,
-                    hash: Some(hash),
+                    bytes: <[u8]>::intern(image.bytes),
                 };
                 let user_data = lua.create_any_userdata(image_data)?;
                 Ok(LuaValue::UserData(user_data))
@@ -91,12 +89,6 @@ pub fn cbor_to_lua_value(lua: &Lua, value: CborValue) -> mlua::Result<LuaValue> 
             other
         ))),
     }
-}
-
-fn hash<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
-    t.hash(&mut s);
-    s.finish()
 }
 
 #[cfg(test)]
