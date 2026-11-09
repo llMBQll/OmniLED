@@ -76,11 +76,14 @@ jobs:
             | macOS    | [OmniLED-${{ github.ref_name }}-aarch64.dmg][macos_url]     | Run the `.dmg` file and install the application (also see [macOS installation note][macos_install_url])      |
             | Windows  | [OmniLED-${{ github.ref_name }}-x86_64.msi][windows_url]    | Run the `.msi` installer and follow the setup wizard                                                         |
 
+            See the [migration guide][migration_guide_url] for help on breaking changes.
+
             [linux_url]: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/OmniLED-${{ github.ref_name }}-x86_64.AppImage
             [macos_url]: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/OmniLED-${{ github.ref_name }}-aarch64.dmg
             [windows_url]: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/OmniLED-${{ github.ref_name }}-x86_64.msi
             [macos_install_url]: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/README.md#macos-installation-note
             [post_install_url]: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/install.md#post-installation-steps
+            [migration_guide_url]: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/UPGRADING.md
 
             ---
           generate_release_notes: true
