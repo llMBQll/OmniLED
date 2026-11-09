@@ -28,7 +28,9 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@v21
         with:
           config: ".markdownlint.json"
-          globs: "**/*.md"
+          globs: |
+            **/*.md
+            !target/**/*.md
 
       - name: Build
         run: cargo build --workspace
