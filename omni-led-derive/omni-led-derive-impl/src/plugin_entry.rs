@@ -33,7 +33,7 @@ pub fn expand_plugin_entry_attr(_attr: TokenStream, item: TokenStream) -> TokenS
             c_api: omni_led_api::c_api::OmniLedApi,
             argc:  ::std::os::raw::c_int,
             argv:  *mut *mut ::std::os::raw::c_char,
-        ) {
+        ) -> ::std::os::raw::c_int {
             let result = ::std::panic::catch_unwind(|| {
                 let api = omni_led_api::rust_api::OmniLedApi::new(c_api);
                 let plugin = omni_led_api::new_plugin!(api);
@@ -51,7 +51,7 @@ pub fn expand_plugin_entry_attr(_attr: TokenStream, item: TokenStream) -> TokenS
                 #call_inner
             });
 
-            omni_led_api::rust_api::__panic_handler(result);
+            omni_led_api::rust_api::__panic_handler(result)
         }
     };
 
