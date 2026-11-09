@@ -7,7 +7,7 @@ edition = "2024"
 
 [dependencies]
 ciborium = "0.2"
-image = { version = "0.25", features = ["serde"] }
+image = { version = "0.25", default-features = false, features = ["serde"] }
 log = { version = "0.4", features = ["std"] }
 serde = { version = "1", features = ["derive"] }
 

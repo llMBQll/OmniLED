@@ -27,7 +27,7 @@ windows = { version = "0.62", features = [
 
 [target.'cfg(target_os = "linux")'.dependencies]
 futures-util = "0.3"
-zbus = { version = "5", features = ["tokio"] }
+zbus = { version = "5", default-features = false, features = ["tokio"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 media-remote = { version = "0.5.2", default-features = false }

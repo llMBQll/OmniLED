@@ -19,7 +19,9 @@ lazy_static = "1.4"
 libloading = "0.9"
 linkme = "0.3"
 log = { version = "0.4", features = ["std"] }
-log4rs = "1.4"
+log4rs = { version = "1.4", default-features = false, features = [
+    "file_appender",
+] }
 mlua = { version = "0.12", features = ["lua54", "vendored", "macros"] }
 num-traits = "0.2"
 opener = { version = "0.9", features = ["reveal"] }
@@ -27,7 +29,12 @@ regex = "1.10"
 rusb = "0.9"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
-softbuffer = "0.4"
+softbuffer = { version = "0.4", default-features = false, features = [
+    "x11",
+    "x11-dlopen",
+    "wayland",
+    "wayland-dlopen",
+] }
 omni-led-api = { path = "../omni-led-api" }
 omni-led-derive = { path = "../omni-led-derive", features = [
     "default-impl",
@@ -37,7 +44,7 @@ omni-led-derive = { path = "../omni-led-derive", features = [
     "lua-settings",
 ] }
 tray-icon = "0.26"
-ureq = { version = "3.1", features = ["json"] }
+ureq = { version = "3.1", default-features = false }
 winit = "0.30"
 
 [target.'cfg(target_os = "windows")'.dependencies]

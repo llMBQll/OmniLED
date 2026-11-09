@@ -28,7 +28,6 @@ windows = { version = "0.62", features = [
     "Win32_UI_Shell_PropertiesSystem",
 ] }
 windows-core = "0.62"
-windows-implement = "0.60"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 pulse = { version = "2.0", package = "libpulse-binding" }
