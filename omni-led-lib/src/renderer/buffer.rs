@@ -1,7 +1,7 @@
 use mlua::{FromLua, Lua, UserData, UserDataMethods, Value};
 
+use crate::common::bit::{Bit, BitMut};
 use crate::devices::device::MemoryLayout;
-use crate::renderer::bit::{Bit, BitMut};
 use crate::script_handler::script_data_types::Modifiers;
 use crate::script_handler::script_data_types::{Rectangle, Size};
 

@@ -85,14 +85,14 @@ local function clock()
         widgets = {
             Widget.Text {
                 text = string.format("%02d", CLOCK.Hours),
-                font_size = 50,
+                font_size = 48,
                 text_offset = 1,
                 position = { x = 10, y = 0 },
                 size = { width = SCREEN.Width / 2, height = SCREEN.Height - 3 },
             },
             Widget.Text {
                 text = string.format("%02d", CLOCK.Minutes),
-                font_size = 37,
+                font_size = 34,
                 text_offset = 1,
                 position = { x = SCREEN.Width / 2 + 3, y = 0 },
                 size = { width = 54, height = 26 },

@@ -1,3 +1,4 @@
+pub mod bit;
 pub mod common;
 pub mod defer;
 pub mod lua_access_handler;

@@ -1,41 +1,18 @@
-use font_kit::font::Font;
-use font_kit::properties::Properties;
-use font_kit::source::SystemSource;
-use freetype::RenderMode;
-use freetype::face::LoadFlag;
-use log::{debug, error};
+use freetype::{Face, RenderMode, face::LoadFlag};
+use mlua::UserData;
 use std::collections::HashMap;
-use std::error::Error;
-use std::sync::Arc;
 
-use crate::renderer::bit::Bit;
-use crate::renderer::font_selector::FontSelector;
-use crate::script_handler::script_data_types::FontSize;
+use crate::{common::bit::Bit, script_handler::script_data_types::FontSize};
 
-pub struct FontManager {
-    _library: freetype::Library,
+#[derive(Debug)]
+pub struct Font {
     face: freetype::Face,
     metrics: FontMetrics,
     cache: HashMap<(char, usize), Character>,
 }
 
-struct FontMetrics {
-    full_scale: f64,
-    ascender_only_scale: f64,
-    offset_scale: f64,
-}
-
-impl FontManager {
-    pub fn new(selector: FontSelector) -> Self {
-        let library = freetype::Library::init().unwrap();
-
-        let (data, font_index) = Self::load_font(selector);
-        let face = library
-            .new_memory_face(data.to_vec(), font_index as isize)
-            .unwrap_or_else(|_| {
-                panic!("Selected font doesn't have a face at index {}", font_index)
-            });
-
+impl Font {
+    pub fn new(face: Face) -> Self {
         let ascender = face.ascender() as f64;
         let descender = face.descender() as f64;
         let em_size = face.em_size() as f64;
@@ -45,7 +22,6 @@ impl FontManager {
         let offset_scale = descender.abs() / (ascender - descender);
 
         Self {
-            _library: library,
             face,
             metrics: FontMetrics {
                 full_scale,
@@ -98,61 +74,18 @@ impl FontManager {
             }
         })
     }
-
-    fn select_font(selector: FontSelector) -> Result<(Font, u32), Box<dyn Error>> {
-        match selector.clone() {
-            FontSelector::Default => Ok(Self::load_default_font()),
-            FontSelector::Filesystem(selector) => {
-                let font_index = selector.font_index;
-                let font = Font::from_path(&selector.path, font_index)?;
-                Ok((font, font_index))
-            }
-            FontSelector::System(selector) => {
-                let names: Vec<_> = selector.names.into_iter().map(|name| name.into()).collect();
-                let properties = Properties {
-                    style: selector.style.into(),
-                    weight: selector.weight.into(),
-                    stretch: selector.stretch.into(),
-                };
-                let handle = SystemSource::new().select_best_match(&names, &properties)?;
-                let font = handle.load()?;
-                Ok((font, 0 /* will this always be zero? */))
-            }
-        }
-    }
-
-    fn load_font(selector: FontSelector) -> (Arc<Vec<u8>>, u32) {
-        let (font, font_index) = match Self::select_font(selector.clone()) {
-            Ok((font, font_index)) => (font, font_index),
-            Err(err) => {
-                error!(
-                    "Failed to load font with selector '{:?}': {:?}. Falling back to default",
-                    selector, err
-                );
-                Self::load_default_font()
-            }
-        };
-        debug!(
-            "Loaded font: {:?}, {:?}",
-            font.full_name(),
-            font.properties()
-        );
-
-        (font.copy_font_data().unwrap(), font_index)
-    }
-
-    fn load_default_font() -> (Font, u32) {
-        const DEFAULT_FONT: &[u8] =
-            include_bytes!("../../../assets/fonts/FiraMono/FiraMono-Bold.ttf");
-        const DEFAULT_FONT_INDEX: u32 = 0;
-
-        let default_font = Arc::new(DEFAULT_FONT.to_vec());
-        let font = Font::from_bytes(default_font, DEFAULT_FONT_INDEX).unwrap();
-
-        (font, DEFAULT_FONT_INDEX)
-    }
 }
 
+impl UserData for Font {}
+
+#[derive(Debug)]
+struct FontMetrics {
+    full_scale: f64,
+    ascender_only_scale: f64,
+    offset_scale: f64,
+}
+
+#[derive(Debug)]
 pub struct Character {
     pub metrics: Metrics,
     pub bitmap: Bitmap,

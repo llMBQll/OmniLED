@@ -9,9 +9,9 @@ use crate::common::sandbox::Sandbox;
 use crate::common::user_data::{UserDataRef, set_mutable_unique_user_data};
 use crate::constants::config::{ConfigType, load_config};
 use crate::constants::constants::Constants;
+use crate::font::font_selector::FontSelector;
 use crate::logging::level_filter_table::LevelFilterTable;
 use crate::logging::logger::{LevelFilter, Log};
-use crate::renderer::font_selector::FontSelector;
 use crate::sandbox_value;
 use crate::script_handler::script_data_types::DurationWrapper;
 use crate::steelseries_engine::api::ApiSettings;
@@ -24,8 +24,8 @@ pub struct Settings {
     #[omni(default = 2)]
     pub animation_ticks_rate: usize,
 
-    #[omni(default = FontSelector::Default)]
-    pub font: FontSelector,
+    #[omni(default = FontSelector::Builtin)]
+    pub default_font: FontSelector,
 
     #[omni(default = DurationWrapper(Duration::from_secs(10)))]
     pub intern_retention_period: DurationWrapper,

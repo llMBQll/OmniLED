@@ -1,15 +1,18 @@
 use mlua::Lua;
+use std::cell::RefCell;
 use std::cmp::max;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::str::Chars;
 
 use crate::common::user_data::UserDataRef;
+use crate::font::font::Font;
+use crate::font::font_manager::FontManager;
 use crate::renderer::animation::{Animation, State};
 use crate::renderer::animation_group::{
     AnimationGroup, AnimationKey, ImageAnimationKey, TextAnimationKey,
 };
 use crate::renderer::buffer::{BitBuffer, Buffer, BufferTrait};
-use crate::renderer::font_manager::FontManager;
 use crate::renderer::images;
 use crate::renderer::images::ImageCache;
 use crate::script_handler::script_data_types::{
@@ -32,20 +35,24 @@ macro_rules! get_animation_settings {
 }
 
 pub struct Renderer {
-    font_manager: FontManager,
     image_cache: ImageCache,
     animation_settings: AnimationSettings,
+    default_font: Rc<RefCell<Font>>,
 }
 
 impl Renderer {
     pub fn new(lua: &Lua) -> Self {
+        let mut font_manager = UserDataRef::<FontManager>::load(lua);
         let settings = UserDataRef::<Settings>::load(lua);
-        let font_selector = settings.get().font.clone();
+        let default_font = font_manager
+            .get_mut()
+            .get_font(settings.get().default_font.clone())
+            .unwrap();
 
         Self {
-            font_manager: FontManager::new(font_selector),
             image_cache: ImageCache::new(),
             animation_settings: AnimationSettings::new(lua),
+            default_font,
         }
     }
 
@@ -191,7 +198,7 @@ impl Renderer {
         let mut characters = widget.text.chars();
 
         if widget.scrolling {
-            let key = Self::text_animation_key(&mut self.font_manager, &widget);
+            let key = Self::text_animation_key(&self.default_font, &widget);
             let group = Self::get_animation_group(animation_groups, widget.animation_group);
             let animation = group.entry(key).unwrap();
             let step = animation.step();
@@ -201,12 +208,12 @@ impl Renderer {
             }
         }
 
-        Self::render_text_impl(buffer, &mut self.font_manager, &widget, characters);
+        Self::render_text_impl(buffer, &self.default_font, &widget, characters);
     }
 
     fn render_text_impl(
         buffer: &mut Buffer,
-        font_manager: &mut FontManager,
+        default_font: &Rc<RefCell<Font>>,
         widget: &Text,
         characters: Chars,
     ) {
@@ -215,16 +222,19 @@ impl Renderer {
             size: widget.size,
         };
 
-        let font_size = font_manager.get_font_size(widget.font_size, widget.size.height);
+        let font = widget.font.as_ref().map(|f| &f.0).unwrap_or(default_font);
+        let mut font = font.borrow_mut();
+
+        let font_size = font.get_font_size(widget.font_size, widget.size.height);
         let text_offset = widget
             .text_offset
-            .unwrap_or_else(|| font_manager.get_offset(widget.font_size, font_size));
+            .unwrap_or_else(|| font.get_offset(widget.font_size, font_size));
 
         let mut cursor_x = 0;
         let cursor_y = widget.size.height as isize;
 
         for character in characters {
-            let character = font_manager.get_character(character, font_size);
+            let character = font.get_character(character, font_size);
             let bitmap = &character.bitmap;
 
             for bitmap_y in 0..bitmap.rows as isize {
@@ -293,12 +303,12 @@ impl Renderer {
                         continue;
                     }
 
-                    let key = Self::text_animation_key(&mut self.font_manager, text);
+                    let key = Self::text_animation_key(&self.default_font, text);
                     let group = Self::get_animation_group(animation_groups, text.animation_group);
                     group.entry(key).or_insert_with(|| {
                         let (ticks_at_edge, ticks_per_move) =
                             get_animation_settings!(self.animation_settings, text);
-                        let steps = Self::pre_render_text(&mut self.font_manager, text);
+                        let steps = Self::pre_render_text(&self.default_font, text);
                         Animation::new(ticks_at_edge, ticks_per_move, steps, text.repeats)
                     });
                 }
@@ -349,10 +359,13 @@ impl Renderer {
         }
     }
 
-    fn pre_render_text(font_manager: &mut FontManager, text: &Text) -> usize {
-        let font_size = font_manager.get_font_size(text.font_size, text.size.height);
+    fn pre_render_text(default_font: &Rc<RefCell<Font>>, text: &Text) -> usize {
+        let font = text.font.as_ref().map(|f| &f.0).unwrap_or(default_font);
+        let mut font = font.borrow_mut();
+
+        let font_size = font.get_font_size(text.font_size, text.size.height);
         let text_width = text.size.width;
-        let character = font_manager.get_character('a', font_size);
+        let character = font.get_character('a', font_size);
         let char_width = character.metrics.advance as usize;
         let max_characters = text_width / max(char_width, 1);
         let len = text.text.chars().count();
@@ -364,11 +377,14 @@ impl Renderer {
         }
     }
 
-    fn text_animation_key(font_manager: &mut FontManager, text: &Text) -> AnimationKey {
+    fn text_animation_key(default_font: &Rc<RefCell<Font>>, text: &Text) -> AnimationKey {
+        let font = text.font.as_ref().map(|f| &f.0).unwrap_or(default_font);
+        let font = font.borrow();
+
         AnimationKey::Text(TextAnimationKey {
             text: text.text.clone(),
             size: text.size,
-            font_size: font_manager.get_font_size(text.font_size, text.size.height),
+            font_size: font.get_font_size(text.font_size, text.size.height),
         })
     }
 

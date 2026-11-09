@@ -3,6 +3,7 @@ pub mod common;
 pub mod constants;
 pub mod devices;
 pub mod events;
+pub mod font;
 pub mod interning;
 pub mod keyboard;
 pub mod logging;

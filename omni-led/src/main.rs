@@ -11,10 +11,10 @@ use omni_led_lib::{
     },
     devices::devices::Devices,
     events::{dispatcher::Dispatcher, event_loop::EventLoop, events::Events, shortcuts::Shortcuts},
+    font::font_manager::FontManager,
     interning::interner::InternEnabled,
     keyboard::keyboard::process_events,
-    logging::file_logger::FileLogger,
-    logging::logger::Log,
+    logging::{file_logger::FileLogger, logger::Log},
     plugin_loader::plugin_loader::PluginLoader,
     script_handler::script_handler::ScriptHandler,
     settings::{settings::Settings, settings_value::SettingsValue},
@@ -80,6 +80,7 @@ fn main() {
         Shortcuts::load(&lua);
         steelseries_engine::api::Api::load(&lua);
         Devices::load(&lua, devices_config);
+        FontManager::load(&lua);
         ScriptHandler::load(&lua, scripts_config);
         PluginLoader::load(&lua, plugins_config);
 

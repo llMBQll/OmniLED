@@ -1,8 +1,10 @@
 use mlua::{FromLua, Lua, MetaMethod, UserData, UserDataFields, UserDataMethods, Value};
 use omni_led_derive::{FromLuaValue, LuaEnum, LuaName};
-use std::{hash::Hash, time::Duration};
+use std::rc::Rc;
+use std::{cell::RefCell, hash::Hash, time::Duration};
 
 use crate::common::lua_traits::{FromUserdata, LuaName, LuaTypeStaticMembers, StaticMembers};
+use crate::font::font::Font;
 use crate::interning::interner::Interned;
 use crate::register_lua_type;
 
@@ -192,6 +194,7 @@ pub struct Text {
     pub animation_ticks_rate: Option<usize>,
     pub position: Point,
     pub size: Size,
+    pub font: Option<FontWrapper>,
 
     #[omni(default)]
     pub modifiers: Modifiers,
@@ -369,6 +372,23 @@ impl UserData for DurationWrapper {
 impl FromUserdata for DurationWrapper {}
 
 impl FromLua for DurationWrapper {
+    fn from_lua(value: Value, lua: &Lua) -> mlua::Result<Self> {
+        Self::from_userdata(lua, value)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FontWrapper(pub Rc<RefCell<Font>>);
+
+impl LuaName for FontWrapper {
+    const NAME: &str = "Font";
+}
+
+impl UserData for FontWrapper {}
+
+impl FromUserdata for FontWrapper {}
+
+impl FromLua for FontWrapper {
     fn from_lua(value: Value, lua: &Lua) -> mlua::Result<Self> {
         Self::from_userdata(lua, value)
     }
