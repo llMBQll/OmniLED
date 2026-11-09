@@ -9,7 +9,7 @@ edition = "2024"
 ciborium = "0.2"
 convert_case = "0.12"
 device_query = "4.0"
-dirs-next = "2.0"
+dirs = "7.0"
 font-kit = "0.14"
 freetype-rs = "0.36"
 hidapi = "2.6"
@@ -19,26 +19,45 @@ lazy_static = "1.4"
 libloading = "0.9"
 linkme = "0.3"
 log = { version = "0.4", features = ["std"] }
-log4rs = "1.4"
+log4rs = { version = "1.4", default-features = false, features = [
+    "file_appender",
+] }
 mlua = { version = "0.12", features = ["lua54", "vendored", "macros"] }
-num-traits = "0.2"
 opener = { version = "0.9", features = ["reveal"] }
 regex = "1.10"
 rusb = "0.9"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
-softbuffer = "0.4"
+softbuffer = { version = "0.4", default-features = false, features = [
+    "x11",
+    "x11-dlopen",
+    "wayland",
+    "wayland-dlopen",
+] }
 omni-led-api = { path = "../omni-led-api" }
-omni-led-derive = { path = "../omni-led-derive", features = ["default-impl", "from-lua-value", "lua-enum", "lua-name", "lua-settings"] }
-tray-icon = "0.26"
-ureq = { version = "3.1", features = ["json"] }
+omni-led-derive = { path = "../omni-led-derive", features = [
+    "default-impl",
+    "from-lua-value",
+    "lua-enum",
+    "lua-name",
+    "lua-settings",
+] }
+tray-icon = { version = "0.26", default-features = false, features = ["ksni"] }
+ureq = { version = "3.1", default-features = false }
 winit = "0.30"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Security", "Win32_UI_Shell", "Win32_System", "Win32_System_Com", "Win32_System_Threading"] }
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_UI_Shell",
+    "Win32_System",
+    "Win32_System_Com",
+    "Win32_System_Threading",
+] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-gtk = "0.18"
+gtk = "0.19"
 libc = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]

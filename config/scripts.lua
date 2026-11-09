@@ -6,15 +6,15 @@ local function volume()
                 scrolling = true,
                 repeats = Repeat.Once,
                 position = { x = 0, y = offset },
-                size = { width = SCREEN.Width * 2 / 3, height = SCREEN.Height / 2 },
+                size = { width = math.floor(SCREEN.Width * 2 / 3), height = SCREEN.Height / 2 },
                 animation_group = 1,
             })
             table.insert(widgets, Widget.Text {
                 text = device.IsMuted and ' M ' or string.format("%3d", device.Volume),
                 font_size = 24,
                 text_offset = 1,
-                position = { x = SCREEN.Width * 2 / 3, y = offset },
-                size = { width = SCREEN.Width / 3, height = SCREEN.Height / 2 },
+                position = { x = math.floor(SCREEN.Width * 2 / 3), y = offset },
+                size = { width = math.floor(SCREEN.Width / 3), height = SCREEN.Height / 2 },
             })
         else
             table.insert(widgets, Widget.Text {
@@ -136,7 +136,7 @@ local function weather()
                 font_size = 30,
                 text_offset = 1,
                 position = { x = SCREEN.Height, y = 0 },
-                size = { width = SCREEN.Height * 2, height = SCREEN.Height * 2 / 3 },
+                size = { width = SCREEN.Height * 2, height = math.floor(SCREEN.Height * 2 / 3) },
             },
             Widget.Text {
                 text = unit,
@@ -173,19 +173,19 @@ local function system()
                 text = string.format('CPU: %.1f%% %d°%s', cpu.Utilization, math.round(cpu.Temperature or 0), SYSTEM.TemperatureUnit),
                 font_size = 13,
                 position = { x = 0, y = 0 },
-                size = { width = SCREEN.Width, height = SCREEN.Height / 3 },
+                size = { width = SCREEN.Width, height = math.floor(SCREEN.Height / 3) },
             },
             Widget.Text {
                 text = string.format('GPU: %.1f%% %d°%s', gpu.Utilization, math.round(gpu.Temperature), SYSTEM.TemperatureUnit),
                 font_size = 13,
-                position = { x = 0, y = SCREEN.Height / 3 },
-                size = { width = SCREEN.Width, height = SCREEN.Height / 3 },
+                position = { x = 0, y = math.floor(SCREEN.Height / 3) },
+                size = { width = SCREEN.Width, height = math.floor(SCREEN.Height / 3) },
             },
             Widget.Text {
                 text = string.format('MEM: %.1f/%.1fGB', bytes_to_gb(mem.Used), bytes_to_gb(mem.Total)),
                 font_size = 13,
-                position = { x = 0, y = SCREEN.Height * 2 / 3 },
-                size = { width = SCREEN.Width, height = SCREEN.Height / 3 },
+                position = { x = 0, y = math.floor(SCREEN.Height * 2 / 3) },
+                size = { width = SCREEN.Width, height = math.floor(SCREEN.Height / 3) },
             },
         },
         duration = Duration.from_secs(1),
