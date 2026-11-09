@@ -1,5 +1,4 @@
 use mlua::Lua;
-use num_traits::clamp;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::str::Chars;
@@ -100,7 +99,7 @@ impl Renderer {
             Self::clear_background(buffer, widget.position, widget.size, &widget.modifiers);
         }
 
-        let value = clamp(widget.value, widget.range.min, widget.range.max);
+        let value = widget.value.clamp(widget.range.min, widget.range.max);
         let percentage = (value - widget.range.min) / (widget.range.max - widget.range.min);
 
         let (height, width) = match widget.vertical {

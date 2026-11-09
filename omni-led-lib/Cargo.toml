@@ -23,7 +23,6 @@ log4rs = { version = "1.4", default-features = false, features = [
     "file_appender",
 ] }
 mlua = { version = "0.12", features = ["lua54", "vendored", "macros"] }
-num-traits = "0.2"
 opener = { version = "0.9", features = ["reveal"] }
 regex = "1.10"
 rusb = "0.9"
