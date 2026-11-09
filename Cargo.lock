@@ -463,7 +463,7 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "audio"
-version = "0.11.5"
+version = "0.12.0"
 dependencies = [
  "libpulse-binding",
  "log",
@@ -1062,7 +1062,7 @@ checksum = "1c133bc6a41be0d194c306b5506d15e6feeea7b1d6604bd3f8310dfb2ca96486"
 
 [[package]]
 name = "clock"
-version = "0.11.5"
+version = "0.12.0"
 dependencies = [
  "chrono",
  "omni-led-api",
@@ -2886,7 +2886,7 @@ dependencies = [
 
 [[package]]
 name = "images"
-version = "0.11.5"
+version = "0.12.0"
 dependencies = [
  "clap",
  "image",
@@ -3456,7 +3456,7 @@ checksum = "7ebb8d8732c6a6df3d8f032a82911cfc747e00efb95cc46e8d0acd5b5b88570c"
 
 [[package]]
 name = "media"
-version = "0.11.5"
+version = "0.12.0"
 dependencies = [
  "clap",
  "futures-util",
@@ -4392,7 +4392,7 @@ dependencies = [
 
 [[package]]
 name = "omni-led"
-version = "0.11.5"
+version = "0.12.0"
 dependencies = [
  "clap",
  "log",
@@ -4403,7 +4403,7 @@ dependencies = [
 
 [[package]]
 name = "omni-led-api"
-version = "0.11.5"
+version = "0.12.0"
 dependencies = [
  "bindgen",
  "ciborium",
@@ -4414,7 +4414,7 @@ dependencies = [
 
 [[package]]
 name = "omni-led-derive"
-version = "0.11.5"
+version = "0.12.0"
 dependencies = [
  "mlua",
  "omni-led-derive-impl",
@@ -4423,7 +4423,7 @@ dependencies = [
 
 [[package]]
 name = "omni-led-derive-impl"
-version = "0.11.5"
+version = "0.12.0"
 dependencies = [
  "convert_case",
  "mlua",
@@ -4435,7 +4435,7 @@ dependencies = [
 
 [[package]]
 name = "omni-led-lib"
-version = "0.11.5"
+version = "0.12.0"
 dependencies = [
  "ciborium",
  "convert_case",
@@ -6459,7 +6459,7 @@ dependencies = [
 
 [[package]]
 name = "system"
-version = "0.11.5"
+version = "0.12.0"
 dependencies = [
  "all-smi",
  "clap",
@@ -7482,7 +7482,7 @@ dependencies = [
 
 [[package]]
 name = "weather"
-version = "0.11.5"
+version = "0.12.0"
 dependencies = [
  "chrono",
  "clap",
