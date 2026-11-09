@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use clap::Parser;
-use log::debug;
+use log::{debug, error};
 use omni_led_api::cli_types::{TEMPERATURE_UNIT_DEFAULT, TEMPERATURE_UNIT_OPTIONS};
 use omni_led_api::plugin::Plugin;
 use omni_led_api::types::Image;
@@ -28,8 +28,10 @@ pub fn omni_led_run(plugin: Plugin, args: Vec<&str>) {
     debug!("Mapped to {} at {:?}", name, coordinates);
 
     loop {
-        let weather = weather_api::get_weather(&coordinates, name, &options);
-        plugin.update(&weather).unwrap();
+        match weather_api::get_weather(&coordinates, name, &options) {
+            Ok(weather) => plugin.update(&weather).unwrap(),
+            Err(error) => error!("Failed to get weather: {error}"),
+        }
 
         std::thread::sleep(options.interval);
     }

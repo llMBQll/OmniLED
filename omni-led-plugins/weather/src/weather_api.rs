@@ -8,7 +8,11 @@ use ureq::Agent;
 
 use crate::{Coordinates, Options, WeatherData};
 
-pub fn get_weather(coordinates: &Coordinates, city: &String, options: &Options) -> WeatherData {
+pub fn get_weather(
+    coordinates: &Coordinates,
+    city: &String,
+    options: &Options,
+) -> Result<WeatherData, Box<dyn std::error::Error>> {
     const OPEN_METEO_BASE: &str = "https://api.open-meteo.com/v1/forecast";
 
     let agent = Agent::new_with_defaults();
@@ -25,19 +29,17 @@ pub fn get_weather(coordinates: &Coordinates, city: &String, options: &Options) 
             "temperature_unit",
             temperature_unit_param(&options.temperature_unit),
         )
-        .call()
-        .unwrap();
-    let result: WeatherResult = response.body_mut().read_json().unwrap();
+        .call()?;
+    let result: WeatherResult = response.body_mut().read_json()?;
 
     let time = format!("{}:00-00:00", result.current_weather.time);
-    let time: chrono::DateTime<chrono::Local> = chrono::DateTime::parse_from_rfc3339(time.as_str())
-        .unwrap()
-        .into();
+    let time: chrono::DateTime<chrono::Local> =
+        chrono::DateTime::parse_from_rfc3339(time.as_str())?.into();
 
     let is_day = result.current_weather.is_day != 0;
     let weather = result.current_weather.weather_code;
 
-    WeatherData {
+    Ok(WeatherData {
         city: city.clone(),
         image_key: get_image_key(weather, is_day),
         is_day,
@@ -51,7 +53,7 @@ pub fn get_weather(coordinates: &Coordinates, city: &String, options: &Options) 
         wind_direction: result.current_weather.wind_direction,
         wind_speed: result.current_weather.wind_speed,
         wind_speed_unit: options.wind_speed_unit.clone(),
-    }
+    })
 }
 
 fn speed_unit_param(unit: &str) -> &'static str {
@@ -200,7 +202,7 @@ where
         95 => Weather::Thunderstorm,
         96 => Weather::ThunderstormWithSlightHail,
         99 => Weather::ThunderstormWithHeavyHail,
-        _value => todo!("Handle error"),
+        _value => return Err(de::Error::custom(format!("Unknown weather code: {code}"))),
     };
 
     Ok(weather)
