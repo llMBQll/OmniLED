@@ -7,8 +7,7 @@ pub struct AutoStart;
 
 impl AutoStart {
     fn autostart_file_path() -> mlua::Result<PathBuf> {
-        let home =
-            dirs_next::home_dir().ok_or(mlua::Error::runtime("Failed to get home directory"))?;
+        let home = dirs::home_dir().ok_or(mlua::Error::runtime("Failed to get home directory"))?;
         Ok(home.join("Library/LaunchAgents/io.github.llMBQll.OmniLED.plist"))
     }
 

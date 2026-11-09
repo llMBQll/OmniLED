@@ -93,7 +93,7 @@ impl Constants {
     }
 
     pub fn system_config_dir() -> PathBuf {
-        dirs_next::config_dir().unwrap().join("OmniLED")
+        dirs::config_dir().unwrap().join("OmniLED")
     }
 
     #[cfg(not(feature = "dev"))]
