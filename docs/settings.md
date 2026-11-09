@@ -54,13 +54,13 @@ them be missing.
 > > Example `settings.lua` that loads default font
 > >
 > > ```lua
-> > Settings.font = FontSelector.Default
+> > Settings.default_font = FontSelector.Builtin
 > > ```
 >
 > > Example `settings.lua` that loads font from the file system
 > >
 > > ```lua
-> > Settings.font = FontSelector.Filesystem {
+> > Settings.default_font = FontSelector.Filesystem {
 > >   path = '/path/to/my/font',
 > >   font_index = 0,
 > > }
@@ -69,7 +69,7 @@ them be missing.
 > > Example `settings.lua` that loads installed system font
 > >
 > > ```lua
-> > Settings.font = FontSelector.System {
+> > Settings.default_font = FontSelector.System {
 > >   names = { 'FiraMono', 'Monospace' },
 > >   style = 'Normal',
 > >   weight = 'Bold',
@@ -111,7 +111,7 @@ them be missing.
 > > Example `settings.lua` that accepts debug log levels and above using default targets.
 > >
 > > ```lua
-> > Settings.level_filter_table = 'LevelFilterTable.default_with(LevelFilter.Debug)'
+> > Settings.level_filter_table = LevelFilterTable.default_with(LevelFilter.Debug)
 > > ```
 >
 > > Example `settings.lua` that accepts custom per target levels.
