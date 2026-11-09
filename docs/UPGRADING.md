@@ -106,3 +106,65 @@ Widget.Text {
   size = { width = math.ceil(3.9), height = math.round(4) },
 }
 ```
+
+### Per widget font setting
+
+Settings now control the default font that can be overwritten per-widget.
+
+Update settings to use `default_font` and `FontSelector.Builtin`:
+
+```lua
+-- 0.11
+Settings {
+  font = FontSelector.Default,
+}
+
+-- 0.12 - set base font for all widgets
+Settings = {
+  default_font = FontSelector.Builtin,
+}
+```
+
+(Optional) Set per widget font in `scripts.lua`:
+
+```lua
+local fira_mono = FontManager:get_font(FontSelector.System {
+  names = { 'FiraMono' },
+  weight = Weight.Bold,
+})
+
+local widget = Widget.Text {
+  text = 'Example',
+  position = { x = 0, y = 0 },
+  size = { width = 100, height = 40 },
+  font = fira_mono,
+}
+```
+
+### Default font changed to DejaVu Sans Mono
+
+If you liked the previous FiraMono Bold font it can be downloaded from the
+[previous release files](https://github.com/llMBQll/OmniLED/tree/v0.11.5/assets/fonts/FiraMono) or from
+[google fonts](https://fonts.google.com/specimen/Fira+Mono).
+
+```lua
+-- 0.11
+Settings {
+  font = FontSelector.Default,
+}
+
+-- 0.12 - if font is installed for the user/system
+Settings = {
+  default_font = FontSelector.System {
+    names = { 'FiraMono' },
+    weight = Weight.Bold,
+  },
+}
+
+-- 0.12 - if font is just placed into some directory
+Settings = {
+  default_font = FontSelector.Filesystem {
+    path = '/path/to/FiraMono-Bold.ttf'
+  },
+}
+```

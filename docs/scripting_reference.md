@@ -592,6 +592,23 @@ Enum variants marked with _implicit contruct_ can be used to implicitly construc
 
 ---
 
+> ### `Font`
+>
+> Opaque type that serves as a handle to a loaded font.
+
+---
+
+> ### `FontManager`
+>
+> Manages loading fonts. Fonts are cached, so requesting the same selector again returns the same font object.
+>
+> > `get_font: fn(self, selector: FontSelector) -> Font`
+> >
+> > Loads (or returns cached) font selected by `selector`. Returned object can be used as the `font` field of the
+> > [`Text`](#text) widget.
+
+---
+
 > ### `LevelFilterTable`
 >
 > Provides utility functions for creating log level filter tables.  
@@ -1195,6 +1212,12 @@ All widgets have the following common attributes in addition to widget-specific 
 > > _Optional_. Default: `"Auto"`.
 > >
 > > Sets the font size of the text.
+> >
+> > `font`: `Font`
+> >
+> > _Optional_. Default: The [default font](settings.md#font) from settings.
+> >
+> > Overrides the default font for this widget.
 >
 > > `repeats: Repeat`
 > >
