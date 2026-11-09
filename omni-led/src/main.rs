@@ -98,6 +98,7 @@ fn main() {
             script_handler.get_mut().update(&lua, time_passed).unwrap();
 
             <str as InternEnabled>::sweep(intern_retention_period.get().0);
+            <[u8] as InternEnabled>::sweep(intern_retention_period.get().0);
         });
     });
 
