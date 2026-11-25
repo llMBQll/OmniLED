@@ -1,4 +1,5 @@
 use log::error;
+use std::sync::Arc;
 use tray_icon::TrayIconBuilder;
 use tray_icon::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem};
 
@@ -44,7 +45,7 @@ impl TrayIcon {
 
         let config_path = Constants::config_dir();
         let license_path = Constants::license_path();
-        MenuEvent::set_event_handler(Some(move |e: MenuEvent| {
+        MenuEvent::set_event_handler(Some(Arc::new(move |e: MenuEvent| {
             match e.id.as_ref() {
                 RELOAD_SCRIPTS => {
                     Events::reload_scripts();
@@ -68,7 +69,7 @@ impl TrayIcon {
                 QUIT_ID => proxy.send(Event::Quit),
                 _ => return,
             };
-        }));
+        })));
 
         let tray = TrayIconBuilder::new()
             .with_id("com.github.llMBQll.OmniLED")
